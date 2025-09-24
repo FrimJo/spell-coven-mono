@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MTG Card Lookup</title>
+  <style>
+    body { font-family: sans-serif; padding: 1em; }
+    #queryImg { max-width: 256px; margin-top: 1em; }
+    #results div { margin: 1em 0; }
+    #spinner {
+      display: none;
+      margin: 1em 0;
+      font-style: italic;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <h1>MTG Card Lookup</h1>
+  <p>Upload a card image to find the closest matches.</p>
+
+  <input type="file" id="fileInput" accept="image/*" disabled />
+  <div id="spinner">Loading…</div>
+
+  <div>
+    <img id="queryImg" src="" />
+  </div>
+  <div id="results"></div>
+
+  <script type="module">
+    import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers/dist/transformers.min.js";
+
+    let meta = null;
+    let db = null;
+    let extractor = null;
+    const D = 512;
+
+    function float16ToFloat32(uint16) {
+      const out = new Float32Array(uint16.length);
+      for (let i = 0; i < uint16.length; i++) {
+        const h = uint16[i];
+        const s = (h & 0x8000) >> 15;
+        const e = (h & 0x7C00) >> 10;
+        const f = h & 0x03FF;
+        let v;
+        if (e === 0) v = (f ? (f / 1024) * Math.pow(2, -14) : 0);
+        else if (e === 31) v = f ? NaN : Infinity;
+        else v = (1 + f / 1024) * Math.pow(2, e - 15);
+        out[i] = (s ? -1 : 1) * v;
+      }
+      return out;
+    }
+
+    function l2norm(x) {
+      let s = 0;
+      for (let i = 0; i < x.length; i++) s += x[i] * x[i];
+      s = Math.sqrt(s) || 1;
+      for (let i = 0; i < x.length; i++) x[i] /= s;
+      return x;
+    }
+
+    async function loadData() {
+      console.log("Loading embeddings + metadata...");
+      meta = await (await fetch("index_out/meta.json")).json();
+      const buf = await (await fetch("index_out/embeddings.f16bin")).arrayBuffer();
+      const embF16 = new Uint16Array(buf);
+      db = float16ToFloat32(embF16);
+      console.log("Loaded", meta.length, "embeddings");
+    }
+
+    async function setupExtractor() {
+      console.log("Loading CLIP model (first run may take a while)...");
+      document.getElementById("spinner").style.display = "block";
+      extractor = await pipeline(
+        "feature-extraction",
+        "Xenova/clip-vit-base-patch32",
+        {
+          quantized: false,
+          progress_callback: (p) => {
+            console.log(p.status, p.progress ?? "", p.file ?? "");
+            document.getElementById("spinner").textContent =
+              `${p.status} ${p.progress ?? ""} ${p.file ?? ""}`;
+          }
+        }
+      );
+      document.getElementById("spinner").style.display = "none";
+      console.log("CLIP ready!");
+      document.getElementById("fileInput").disabled = false;
+    }
+
+    async function embedImage(imgEl) {
+      const out = await extractor(imgEl, { pooling: "mean", normalize: true });
+      return l2norm(Float32Array.from(out.data));
+    }
+
+    function topK(query, K = 5) {
+      const scores = new Float32Array(meta.length);
+      for (let i = 0; i < meta.length; i++) {
+        let s = 0;
+        const offset = i * D;
+        for (let j = 0; j < D; j++) s += query[j] * db[offset + j];
+        scores[i] = s;
+      }
+      const idx = [...scores.keys()];
+      idx.sort((a, b) => scores[b] - scores[a]);
+      return idx.slice(0, K).map(i => ({ score: scores[i], ...meta[i] }));
+    }
+
+    function handleFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = document.getElementById("queryImg");
+      img.onload = async () => {
+        console.log("Image loaded, embedding...");
+        document.getElementById("spinner").style.display = "block";
+        try {
+          const q = await embedImage(img);
+          const results = topK(q, 5);
+          const resDiv = document.getElementById("results");
+          resDiv.innerHTML = "";
+          results.forEach(r => {
+            const card = document.createElement("div");
+            card.innerHTML = `
+              <b>${r.name}</b> [${r.set}] (score ${r.score.toFixed(3)})<br>
+              <img src="${r.image_url}" width="180">
+            `;
+            resDiv.appendChild(card);
+          });
+        } catch (err) {
+          console.error("Embedding/search failed:", err);
+        } finally {
+          document.getElementById("spinner").style.display = "none";
+        }
+      };
+      img.src = URL.createObjectURL(file);
+    }
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      await loadData();
+      await setupExtractor();
+      document.getElementById("fileInput").addEventListener("change", handleFile);
+    });
+  </script>
+</body>
+</html>
