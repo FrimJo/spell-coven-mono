@@ -69,27 +69,26 @@
     }
 
     async function setupExtractor() {
-      console.log("Loading CLIP model (first run may take a while)...");
+      console.log("Loading CLIP vision model (first run may take a while)...");
       document.getElementById("spinner").style.display = "block";
       extractor = await pipeline(
-        "feature-extraction",
+        "image-feature-extraction",              // <-- image pipeline
         "Xenova/clip-vit-base-patch32",
         {
           quantized: false,
-          progress_callback: (p) => {
-            console.log(p.status, p.progress ?? "", p.file ?? "");
-            document.getElementById("spinner").textContent =
-              `${p.status} ${p.progress ?? ""} ${p.file ?? ""}`;
-          }
+          progress_callback: (p) =>
+            (document.getElementById("spinner").textContent =
+              `${p.status} ${p.progress ?? ""} ${p.file ?? ""}`)
         }
       );
       document.getElementById("spinner").style.display = "none";
-      console.log("CLIP ready!");
+      console.log("CLIP vision ready!");
       document.getElementById("fileInput").disabled = false;
     }
 
     async function embedImage(imgEl) {
-      const out = await extractor(imgEl, { pooling: "mean", normalize: true });
+      const imgData = imageToImageData(imgEl);
+      const out = await extractor({ image: imgData });
       return l2norm(Float32Array.from(out.data));
     }
 
@@ -133,6 +132,15 @@
         }
       };
       img.src = URL.createObjectURL(file);
+    }
+
+    function imageToImageData(imgEl) {
+      const canvas = document.createElement("canvas");
+      canvas.width = imgEl.naturalWidth;
+      canvas.height = imgEl.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(imgEl, 0, 0);
+      return ctx.getImageData(0, 0, canvas.width, canvas.height);
     }
 
     window.addEventListener("DOMContentLoaded", async () => {
