@@ -1,0 +1,37 @@
+import json
+import faiss
+import torch
+import clip
+from PIL import Image
+import numpy as np
+
+# --- Load FAISS + metadata ---
+index = faiss.read_index("index_out/mtg_art.faiss")
+meta = [json.loads(line) for line in open("index_out/mtg_meta.jsonl", "r", encoding="utf-8")]
+
+# --- Init CLIP ---
+device = "mps" if torch.backends.mps.is_available() else (
+    "cuda" if torch.cuda.is_available() else "cpu"
+)
+print("Using device:", device)
+
+model, preprocess = clip.load("ViT-B/32", device=device)
+
+def embed_image(img_path: str) -> np.ndarray:
+    img = Image.open(img_path).convert("RGB")
+    with torch.no_grad():
+        x = preprocess(img).unsqueeze(0).to(device)
+        v = model.encode_image(x)
+        v = v / v.norm(dim=-1, keepdim=True)
+    return v.cpu().numpy().astype("float32")
+
+# --- Query ---
+query_path = "image_cache/000f60d1f5c3a4a9dc0448744bd97c02c8437a2d.jpg"   # replace with a path to a cached image
+vec = embed_image(query_path)
+D, I = index.search(vec, k=5)
+
+print("\nTop 5 matches for:", query_path)
+for rank, (dist, idx) in enumerate(zip(D[0], I[0]), 1):
+    m = meta[int(idx)]
+    score = 1 - dist  # cosine similarity
+    print(f"{rank}. {m['name']} [{m['set']}] score={score:.3f} url={m['image_url']}")
