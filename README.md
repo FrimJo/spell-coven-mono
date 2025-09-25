@@ -100,10 +100,9 @@ python -m http.server 8000
 
 ## Makefile (optional convenience)
 
-Common tasks are available if you prefer `make`:
+Common tasks are available if you prefer `make` (note: `make install` is deprecated in favor of Conda targets):
 
 ```bash
-make install   # install Python deps
 make build     # run the index builder
 make export    # export browser artifacts
 make query     # run sample query (edit path in query_index.py)
@@ -114,6 +113,11 @@ make clean     # remove caches and outputs
 make conda-cpu  # create/update mtg-faiss-cpu
 make conda-gpu  # create/update mtg-faiss-gpu
 make conda-mps  # create/update mtg-faiss-mps
+
+# Aliases
+make install-cpu  # same as make conda-cpu
+make install-gpu  # same as make conda-gpu
+make install-mps  # same as make conda-mps
 ```
 
 ## Troubleshooting
