@@ -9,6 +9,19 @@
     #results > div { margin: 0.8rem 0; }
     #spinner { display:none; margin: 0.8rem 0; color:#555; }
     code { background:#f4f4f4; padding:0.15rem 0.35rem; border-radius:4px; }
+
+    /* Webcam UI */
+    .camWrap { position: relative; width: 640px; height: 480px; }
+    #video, #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 640px; height: 480px;
+      border: 1px solid #ccc;
+    }
+    #overlay { cursor: pointer; z-index: 1; }
+    #video { z-index: 0; }
+    #cropped { border: 1px solid #ccc; width: 223px; height: 310px; margin-top: 8px; }
+    #webcamControls { display:flex; gap: 8px; align-items:center; margin: 8px 0; flex-wrap: wrap; }
   </style>
 </head>
 <body>
@@ -21,6 +34,32 @@
   <img id="queryImg" alt="preview" />
   <div id="results"></div>
 
+  <hr>
+  <h2>Webcam (prototype)</h2>
+  <div id="webcamControls">
+    <label for="cameraSelect">Camera:</label>
+    <select id="cameraSelect"></select>
+    <button id="startCamBtn">Start Webcam</button>
+    <button id="searchCroppedBtn" disabled>Search Cropped</button>
+    <span id="camStatus" style="color:#666"></span>
+  </div>
+  <div class="camWrap">
+    <video id="video" autoplay muted playsinline width="640" height="480"></video>
+    <canvas id="overlay" width="640" height="480"></canvas>
+  </div>
+  <canvas id="cropped" width="446" height="620"></canvas>
+  <canvas id="fullRes" width="640" height="480" style="display:none"></canvas>
+
+  <!-- Provide a global promise we can await in the module when OpenCV is ready. -->
+  <script>
+    (function(){
+      let _resolve;
+      window.cvReadyPromise = new Promise((res)=>{ _resolve = res; });
+      window.onOpenCvReady = function(){ _resolve(); };
+    })();
+  </script>
+  <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady()"></script>
+
   <script type="module">
     import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers/dist/transformers.min.js";
 
@@ -28,6 +67,20 @@
     let meta = null;
     let db = null;
     let extractor = null;
+
+    // Webcam globals
+    let video = null;
+    let overlay = null;
+    let overlayCtx = null;
+    let fullResCanvas = null;
+    let fullResCtx = null;
+    let croppedCanvas = null;
+    let croppedCtx = null;
+    let detectedCards = [];
+    const MIN_CARD_AREA = 4000;
+    let currentStream = null;
+    let currentDeviceId = null;
+    let animationStarted = false;
 
     // ----------------- Utilities -----------------
     function float16ToFloat32(uint16) {
@@ -82,6 +135,11 @@
       return ctx.getImageData(0, 0, w, h);
     }
 
+    function setCamStatus(text) {
+      const el = document.getElementById("camStatus");
+      if (el) el.textContent = text || "";
+    }
+
     // ----------------- Data + Model -----------------
     async function loadEmbeddingsAndMeta() {
       console.log("Loading embeddings + metadata…");
@@ -118,6 +176,12 @@
       const url = imgEl.src; // already a blob: URL
       console.log("Calling extractor with blob URL:", url);
       const out = await extractor(url);
+      return l2norm(Float32Array.from(out.data));
+    }
+
+    async function embedFromCanvas(canvas) {
+      // transformers.js accepts HTMLCanvasElement as input
+      const out = await extractor(canvas);
       return l2norm(Float32Array.from(out.data));
     }
 
@@ -176,11 +240,231 @@
       imgEl.src = URL.createObjectURL(file);
     }
 
+    // ----------------- Webcam + Detection -----------------
+    function orderPoints(pts) {
+      pts.sort((a, b) => a.x - b.x);
+      let leftMost = pts.slice(0, 2);
+      let rightMost = pts.slice(2, 4);
+      leftMost.sort((a, b) => a.y - b.y);
+      rightMost.sort((a, b) => a.y - b.y);
+      return [leftMost[0], rightMost[0], rightMost[1], leftMost[1]];
+    }
+
+    function drawPolygon(ctx, points, color = 'lime', lineWidth = 3) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    let src, gray, blurred, edged, contours, hierarchy;
+    function initOpenCVMats() {
+      src = new cv.Mat(overlay.height, overlay.width, cv.CV_8UC4);
+      gray = new cv.Mat();
+      blurred = new cv.Mat();
+      edged = new cv.Mat();
+      contours = new cv.MatVector();
+      hierarchy = new cv.Mat();
+    }
+
+    function detectCards() {
+      overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+      detectedCards = [];
+      overlayCtx.drawImage(video, 0, 0, overlay.width, overlay.height);
+      const imageData = overlayCtx.getImageData(0, 0, overlay.width, overlay.height);
+      src.data.set(imageData.data);
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+      cv.GaussianBlur(gray, blurred, new cv.Size(5,5), 0);
+      cv.Canny(blurred, edged, 75, 200);
+      cv.findContours(edged, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+      for (let i = 0; i < contours.size(); i++) {
+        const contour = contours.get(i);
+        const approx = new cv.Mat();
+        cv.approxPolyDP(contour, approx, 0.02 * cv.arcLength(contour, true), true);
+        if (approx.rows === 4) {
+          const area = cv.contourArea(approx);
+          if (area > MIN_CARD_AREA) {
+            const pts = [];
+            for (let j = 0; j < 4; j++) {
+              const p = approx.intPtr(j);
+              pts.push({ x: p[0], y: p[1] });
+            }
+            const ordered = orderPoints(pts);
+            detectedCards.push(ordered);
+            drawPolygon(overlayCtx, ordered);
+          }
+        }
+        approx.delete();
+        contour.delete();
+      }
+      requestAnimationFrame(detectCards);
+    }
+
+    function cropCardAt(x, y) {
+      if (!detectedCards.length) return;
+      let closestIndex = -1, minDist = Infinity;
+      for (let i = 0; i < detectedCards.length; i++) {
+        const poly = detectedCards[i];
+        let cx = 0, cy = 0;
+        for (const p of poly) { cx += p.x; cy += p.y; }
+        cx /= poly.length; cy /= poly.length;
+        const d = Math.hypot(cx - x, cy - y);
+        if (d < minDist) { minDist = d; closestIndex = i; }
+      }
+      if (closestIndex === -1) return;
+      const card = detectedCards[closestIndex];
+      if (video.videoWidth && video.videoHeight) {
+        fullResCanvas.width = video.videoWidth;
+        fullResCanvas.height = video.videoHeight;
+        fullResCtx.drawImage(video, 0, 0, fullResCanvas.width, fullResCanvas.height);
+      }
+      const scaleX = fullResCanvas.width / overlay.width;
+      const scaleY = fullResCanvas.height / overlay.height;
+      const coords = [
+        card[0].x * scaleX, card[0].y * scaleY,
+        card[1].x * scaleX, card[1].y * scaleY,
+        card[2].x * scaleX, card[2].y * scaleY,
+        card[3].x * scaleX, card[3].y * scaleY,
+      ];
+      const srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, coords);
+      const dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        0, 0,
+        croppedCanvas.width, 0,
+        croppedCanvas.width, croppedCanvas.height,
+        0, croppedCanvas.height,
+      ]);
+      const M = cv.getPerspectiveTransform(srcTri, dstTri);
+      const frImage = fullResCtx.getImageData(0, 0, fullResCanvas.width, fullResCanvas.height);
+      const frMat = cv.matFromImageData(frImage);
+      const dst = new cv.Mat();
+      cv.warpPerspective(frMat, dst, M, new cv.Size(croppedCanvas.width, croppedCanvas.height));
+      const imgData = new ImageData(new Uint8ClampedArray(dst.data), dst.cols, dst.rows);
+      croppedCtx.putImageData(imgData, 0, 0);
+      document.getElementById('searchCroppedBtn').disabled = false;
+      srcTri.delete(); dstTri.delete(); M.delete(); dst.delete(); frMat.delete();
+    }
+
+    async function startVideo(deviceId = null) {
+      try {
+        if (currentStream) {
+          currentStream.getTracks().forEach(t => t.stop());
+          currentStream = null;
+        }
+        const constraints = {
+          audio: false,
+          video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+                           : { width: { ideal: 1920 }, height: { ideal: 1080 } }
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        currentStream = stream;
+        video.srcObject = stream;
+        const track = stream.getVideoTracks()[0];
+        const settings = track.getSettings ? track.getSettings() : {};
+        currentDeviceId = settings.deviceId || deviceId;
+        video.onloadedmetadata = () => {
+          video.play();
+          if (!src) initOpenCVMats();
+          if (!animationStarted) { animationStarted = true; requestAnimationFrame(detectCards); }
+        };
+        await populateCameraSelect();
+        setCamStatus('Webcam started');
+      } catch (e) {
+        console.error('Error accessing webcam:', e);
+        setCamStatus('Error accessing webcam');
+      }
+    }
+
+    async function getCameras() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      return devices.filter(d => d.kind === 'videoinput');
+    }
+    async function populateCameraSelect() {
+      const sel = document.getElementById('cameraSelect');
+      if (!sel) return;
+      const cams = await getCameras();
+      const prev = sel.value;
+      sel.innerHTML = '';
+      cams.forEach((cam, idx) => {
+        const opt = document.createElement('option');
+        opt.value = cam.deviceId; opt.text = cam.label || `Camera ${idx+1}`;
+        sel.appendChild(opt);
+      });
+      if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+      else if (currentDeviceId && [...sel.options].some(o => o.value === currentDeviceId)) sel.value = currentDeviceId;
+    }
+
     // ----------------- Init -----------------
     window.addEventListener("DOMContentLoaded", async () => {
       await loadEmbeddingsAndMeta();
       await loadModel();
       document.getElementById("fileInput").addEventListener("change", handleFileChange);
+
+      // Init webcam DOM refs
+      video = document.getElementById('video');
+      overlay = document.getElementById('overlay');
+      overlayCtx = overlay.getContext('2d', { willReadFrequently: true });
+      fullResCanvas = document.getElementById('fullRes');
+      fullResCtx = fullResCanvas.getContext('2d', { willReadFrequently: true });
+      croppedCanvas = document.getElementById('cropped');
+      croppedCtx = croppedCanvas.getContext('2d');
+
+      // Wait for OpenCV to be ready before enabling webcam start
+      await window.cvReadyPromise;
+      setCamStatus('OpenCV ready');
+
+      // Populate cameras after permission or on demand
+      document.getElementById('startCamBtn').addEventListener('click', async () => {
+        const sel = document.getElementById('cameraSelect');
+        await startVideo(sel?.value || null);
+      });
+      document.getElementById('cameraSelect').addEventListener('change', async (e) => {
+        const id = e.target.value;
+        if (id && id !== currentDeviceId) await startVideo(id);
+      });
+      if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+        navigator.mediaDevices.addEventListener('devicechange', populateCameraSelect);
+      }
+
+      // Click to crop
+      overlay.addEventListener('click', (evt) => {
+        const rect = overlay.getBoundingClientRect();
+        const x = evt.clientX - rect.left;
+        const y = evt.clientY - rect.top;
+        cropCardAt(x, y);
+      });
+
+      // Search cropped
+      document.getElementById('searchCroppedBtn').addEventListener('click', async () => {
+        const spinner = document.getElementById('spinner');
+        spinner.style.display = 'block';
+        spinner.textContent = 'Embedding cropped…';
+        try {
+          const q = await embedFromCanvas(croppedCanvas);
+          spinner.textContent = 'Searching…';
+          const results = topK(q, 5);
+          const resDiv = document.getElementById('results');
+          resDiv.innerHTML = '';
+          results.forEach(r => {
+            const cardUrl = (r.card_url) || (r.image_url ? r.image_url.replace('/art_crop/', '/normal/') : null);
+            const scry = r.scryfall_uri || null;
+            const card = document.createElement('div');
+            card.innerHTML = `
+              <b>${r.name}</b> [${r.set}] (score ${r.score.toFixed(3)})
+              ${scry ? ` — <a href="${scry}" target="_blank" rel="noopener">Scryfall</a>` : ""}
+              <br>
+              ${cardUrl ? `<img src="${cardUrl}" width="240" loading="lazy" decoding="async">` : ""}
+            `;
+            resDiv.appendChild(card);
+          });
+          spinner.style.display = 'none';
+        } catch (err) {
+          console.error('Embedding/search failed:', err);
+          document.getElementById('spinner').textContent = 'Failed to embed/search (see console).';
+        }
+      });
     });
   </script>
 </body>
