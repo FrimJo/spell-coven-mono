@@ -151,10 +151,16 @@
           const resDiv = document.getElementById("results");
           resDiv.innerHTML = "";
           results.forEach(r => {
+            const cardUrl =
+              (r.card_url) ||
+              (r.image_url ? r.image_url.replace("/art_crop/", "/normal/") : null);
+            const scry = r.scryfall_uri || null;
             const card = document.createElement("div");
             card.innerHTML = `
-              <b>${r.name}</b> [${r.set}] (score ${r.score.toFixed(3)})<br>
-              <img src="${r.image_url}" width="180" loading="lazy">
+              <b>${r.name}</b> [${r.set}] (score ${r.score.toFixed(3)})
+              ${scry ? ` — <a href="${scry}" target="_blank" rel="noopener">Scryfall</a>` : ""}
+              <br>
+              ${cardUrl ? `<img src="${cardUrl}" width="240" loading="lazy" decoding="async">` : ""}
             `;
             resDiv.appendChild(card);
           });

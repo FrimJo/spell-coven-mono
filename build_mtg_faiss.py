@@ -35,26 +35,28 @@ def load_bulk(kind: str) -> List[dict]:
     cards = json.loads(raw)
     return cards
 
-def face_image_urls(card: dict) -> List[Tuple[str, str, str]]:
-    """
-    Returns a list of tuples (display_name, image_url, face_id)
-    face_id is a stable UUID-like scryfall id for the card (or face).
-    """
+def face_image_urls(card: dict):
     out = []
-    def pick(uris):
+    def pick_art(uris):   # for embeddings
         return uris.get("art_crop") or uris.get("normal") or uris.get("large")
+    def pick_card(uris):  # for display
+        # 'normal' loads fast and looks great; use 'png' if you want text-perfect render
+        return uris.get("normal") or uris.get("border_crop") or uris.get("png") or uris.get("large")
 
     if "image_uris" in card:
-        u = pick(card["image_uris"])
-        if u:
-            out.append((card["name"], u, card.get("id")))
+        art = pick_art(card["image_uris"])
+        full = pick_card(card["image_uris"])
+        if art:
+            out.append((card["name"], art, full, card.get("id")))
+
     for i, f in enumerate(card.get("card_faces", [])):
         if "image_uris" in f:
-            u = pick(f["image_uris"])
-            if u:
+            art = pick_art(f["image_uris"])
+            full = pick_card(f["image_uris"])
+            if art:
                 name = f.get("name") or card["name"]
                 face_id = (card.get("id") or "") + f":face:" + str(i)
-                out.append((name, u, face_id))
+                out.append((name, art, full, face_id))
     return out
 
 def safe_filename(url: str) -> str:
@@ -160,7 +162,7 @@ def build_index(
     # Gather (name, url, id, set, collector_number, frame, colors)
     records: List[Dict] = []
     for c in cards:
-        for name, url, face_id in face_image_urls(c):
+        for name, art_url, card_url, face_id in face_image_urls(c):
             records.append({
                 "name": name,
                 "scryfall_id": c.get("id"),
@@ -171,7 +173,9 @@ def build_index(
                 "layout": c.get("layout"),
                 "lang": c.get("lang"),
                 "colors": c.get("colors"),
-                "image_url": url,
+                "image_url": art_url,      # used for embedding
+                "card_url": card_url,      # used for display
+                "scryfall_uri": c.get("scryfall_uri"),
             })
     if limit:
         records = records[:limit]
