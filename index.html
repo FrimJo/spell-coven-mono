@@ -2,39 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MTG Card Lookup</title>
+  <title>MTG Card Lookup (Browser CLIP)</title>
   <style>
-    body { font-family: sans-serif; padding: 1em; }
-    #queryImg { max-width: 256px; margin-top: 1em; }
-    #results div { margin: 1em 0; }
-    #spinner {
-      display: none;
-      margin: 1em 0;
-      font-style: italic;
-      color: #666;
-    }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 1rem; }
+    #queryImg { max-width: 256px; margin-top: 1rem; display:block; }
+    #results > div { margin: 0.8rem 0; }
+    #spinner { display:none; margin: 0.8rem 0; color:#555; }
+    code { background:#f4f4f4; padding:0.15rem 0.35rem; border-radius:4px; }
   </style>
 </head>
 <body>
   <h1>MTG Card Lookup</h1>
-  <p>Upload a card image to find the closest matches.</p>
+  <p>Pick a local image (a card or cropped art). The model runs fully in your browser.</p>
 
   <input type="file" id="fileInput" accept="image/*" disabled />
   <div id="spinner">Loading…</div>
 
-  <div>
-    <img id="queryImg" src="" />
-  </div>
+  <img id="queryImg" alt="preview" />
   <div id="results"></div>
 
   <script type="module">
     import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers/dist/transformers.min.js";
 
+    const D = 512;
     let meta = null;
     let db = null;
     let extractor = null;
-    const D = 512;
 
+    // ----------------- Utilities -----------------
     function float16ToFloat32(uint16) {
       const out = new Float32Array(uint16.length);
       for (let i = 0; i < uint16.length; i++) {
@@ -50,70 +45,108 @@
       }
       return out;
     }
-
     function l2norm(x) {
       let s = 0;
-      for (let i = 0; i < x.length; i++) s += x[i] * x[i];
+      for (let i = 0; i < x.length; i++) s += x[i]*x[i];
       s = Math.sqrt(s) || 1;
       for (let i = 0; i < x.length; i++) x[i] /= s;
       return x;
     }
-
-    async function loadData() {
-      console.log("Loading embeddings + metadata...");
-      meta = await (await fetch("index_out/meta.json")).json();
-      const buf = await (await fetch("index_out/embeddings.f16bin")).arrayBuffer();
-      const embF16 = new Uint16Array(buf);
-      db = float16ToFloat32(embF16);
-      console.log("Loaded", meta.length, "embeddings");
+    async function toImageBitmap(file) {
+      if ('createImageBitmap' in window) {
+        try {
+          return await createImageBitmap(file);
+        } catch { /* fall through */ }
+      }
+      // Fallback via <img> -> <canvas>
+      const img = await new Promise((resolve, reject) => {
+        const _img = new Image();
+        _img.onload = () => resolve(_img);
+        _img.onerror = reject;
+        _img.src = URL.createObjectURL(file);
+      });
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      return canvas; // canvas is also accepted by transformers.js
+    }
+    function toImageDataFromElement(imgEl) {
+      const canvas = document.createElement('canvas');
+      const w = imgEl.naturalWidth || imgEl.width;
+      const h = imgEl.naturalHeight || imgEl.height;
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(imgEl, 0, 0);
+      return ctx.getImageData(0, 0, w, h);
     }
 
-    async function setupExtractor() {
-      console.log("Loading CLIP vision model (first run may take a while)...");
-      document.getElementById("spinner").style.display = "block";
+    // ----------------- Data + Model -----------------
+    async function loadEmbeddingsAndMeta() {
+      console.log("Loading embeddings + metadata…");
+      meta = await (await fetch("index_out/meta.json")).json();
+      const buf = await (await fetch("index_out/embeddings.f16bin")).arrayBuffer();
+      db = float16ToFloat32(new Uint16Array(buf));
+      console.log(`Loaded ${meta.length} embeddings`);
+    }
+
+    async function loadModel() {
+      const spinner = document.getElementById("spinner");
+      spinner.style.display = "block";
+      spinner.textContent = "Downloading CLIP (vision) model…";
+      console.log("Loading CLIP vision model (first load may take a bit)…");
       extractor = await pipeline(
-        "image-feature-extraction",              // <-- image pipeline
+        "image-feature-extraction",
         "Xenova/clip-vit-base-patch32",
         {
           quantized: false,
-          progress_callback: (p) =>
-            (document.getElementById("spinner").textContent =
-              `${p.status} ${p.progress ?? ""} ${p.file ?? ""}`)
+          progress_callback: (p) => {
+            const msg = `${p.status} ${p.progress ?? ""} ${p.file ?? ""}`;
+            spinner.textContent = msg;
+            console.log(msg);
+          }
         }
       );
-      document.getElementById("spinner").style.display = "none";
-      console.log("CLIP vision ready!");
+      spinner.style.display = "none";
+      console.log("Model ready");
       document.getElementById("fileInput").disabled = false;
     }
 
-    async function embedImage(imgEl) {
-      const imgData = imageToImageData(imgEl);
-      const out = await extractor({ image: imgData });
+    // ----------------- Embedding + Search -----------------
+    async function embedFile(file, imgEl) {
+      const url = imgEl.src; // already a blob: URL
+      console.log("Calling extractor with blob URL:", url);
+      const out = await extractor(url);
       return l2norm(Float32Array.from(out.data));
     }
 
-    function topK(query, K = 5) {
-      const scores = new Float32Array(meta.length);
-      for (let i = 0; i < meta.length; i++) {
-        let s = 0;
-        const offset = i * D;
-        for (let j = 0; j < D; j++) s += query[j] * db[offset + j];
+    function topK(query, K=5) {
+      const N = meta.length;
+      const scores = new Float32Array(N);
+      for (let i = 0; i < N; i++) {
+        let s = 0, off = i * D;
+        for (let j = 0; j < D; j++) s += query[j] * db[off + j];
         scores[i] = s;
       }
       const idx = [...scores.keys()];
-      idx.sort((a, b) => scores[b] - scores[a]);
+      idx.sort((a,b) => scores[b] - scores[a]);
       return idx.slice(0, K).map(i => ({ score: scores[i], ...meta[i] }));
     }
 
-    function handleFile(e) {
-      const file = e.target.files[0];
+    // ----------------- UI wiring -----------------
+    function handleFileChange(e) {
+      const file = e.target.files?.[0];
       if (!file) return;
-      const img = document.getElementById("queryImg");
-      img.onload = async () => {
-        console.log("Image loaded, embedding...");
-        document.getElementById("spinner").style.display = "block";
+
+      const imgEl = document.getElementById("queryImg");
+      imgEl.onload = async () => {
+        const spinner = document.getElementById("spinner");
+        spinner.style.display = "block";
+        spinner.textContent = "Embedding image…";
         try {
-          const q = await embedImage(img);
+          const q = await embedFile(file, imgEl);
+          spinner.textContent = "Searching…";
           const results = topK(q, 5);
           const resDiv = document.getElementById("results");
           resDiv.innerHTML = "";
@@ -121,32 +154,27 @@
             const card = document.createElement("div");
             card.innerHTML = `
               <b>${r.name}</b> [${r.set}] (score ${r.score.toFixed(3)})<br>
-              <img src="${r.image_url}" width="180">
+              <img src="${r.image_url}" width="180" loading="lazy">
             `;
             resDiv.appendChild(card);
           });
+          spinner.style.display = "none";
+          console.log("Done.");
         } catch (err) {
           console.error("Embedding/search failed:", err);
-        } finally {
-          document.getElementById("spinner").style.display = "none";
+          document.getElementById("spinner").textContent =
+            "Failed to embed/search (see console).";
         }
       };
-      img.src = URL.createObjectURL(file);
+      // Show preview (and give us a DOM source for ImageData fallback)
+      imgEl.src = URL.createObjectURL(file);
     }
 
-    function imageToImageData(imgEl) {
-      const canvas = document.createElement("canvas");
-      canvas.width = imgEl.naturalWidth;
-      canvas.height = imgEl.naturalHeight;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(imgEl, 0, 0);
-      return ctx.getImageData(0, 0, canvas.width, canvas.height);
-    }
-
+    // ----------------- Init -----------------
     window.addEventListener("DOMContentLoaded", async () => {
-      await loadData();
-      await setupExtractor();
-      document.getElementById("fileInput").addEventListener("change", handleFile);
+      await loadEmbeddingsAndMeta();
+      await loadModel();
+      document.getElementById("fileInput").addEventListener("change", handleFileChange);
     });
   </script>
 </body>
