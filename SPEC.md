@@ -42,7 +42,8 @@ Build a visual search system for Magic: The Gathering (MTG) cards. The system do
   - Python scripts run on macOS/Linux with CPU or GPU/MPS acceleration if available.
   - Browser demo runs on modern Chromium/Firefox/Safari.
 - Reproducibility
-  - `requirements.txt` pins core libraries to compatible ranges.
+  - Conda environment files (`environment-cpu.yml`, `environment-gpu.yml`, `environment-mps.yml`) are the single source of truth for dependency versions.
+  - `requirements.txt` is informational only and points users to Conda envs.
   - Makefile tasks provide one-command flows.
 
 ## 5. Architecture Overview
