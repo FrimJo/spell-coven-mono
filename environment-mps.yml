@@ -1,0 +1,16 @@
+name: mtg-faiss-mps
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip=24.2
+  - pytorch=2.4.1
+  - faiss-cpu=1.7.4
+  - pip:
+      - requests==2.32.3
+      - Pillow==10.4.0
+      - numpy==1.26.4
+      - tqdm==4.66.5
+      - git+https://github.com/openai/CLIP.git@a1d4862

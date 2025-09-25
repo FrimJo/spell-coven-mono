@@ -12,20 +12,40 @@ See the full specification in `SPEC.md`.
 - For Python-only search: CPU works, GPU/MPS accelerates embedding.
 - For browser search: any modern browser (Chrome/Firefox/Safari). Serve the repo via HTTP.
 
-### 1) Install dependencies
+### 1) Install dependencies (Conda – single source of truth)
 
-You can use a virtual environment (recommended):
+This project uses Conda environment files as the single source of truth for dependency versions. Pick one:
+
+```bash
+# CPU-only (portable)
+conda env create -f environment-cpu.yml  # or: conda env update -f environment-cpu.yml
+conda activate mtg-faiss-cpu
+
+# NVIDIA GPU (uses CUDA 12.1 build from pytorch/nvidia channels)
+conda env create -f environment-gpu.yml  # or: conda env update -f environment-gpu.yml
+conda activate mtg-faiss-gpu
+
+# Apple Silicon (MPS acceleration)
+conda env create -f environment-mps.yml  # or: conda env update -f environment-mps.yml
+conda activate mtg-faiss-mps
+```
+
+## Optional: pip-only setup (not recommended)
+
+You can still use a classic virtualenv and pip, but GPU/MPS setups are more reliable with Conda. You will need to install platform-appropriate PyTorch and FAISS manually.
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt
+# Manually install PyTorch for your platform: https://pytorch.org/get-started/locally/
+# Example (CPU only): pip install torch==2.4.1
+# Example (CPU FAISS): pip install faiss-cpu==1.7.4
+# Then install the rest:
+pip install requests==2.32.3 Pillow==10.4.0 numpy==1.26.4 tqdm==4.66.5 git+https://github.com/openai/CLIP.git@a1d4862
 ```
 
-Notes:
-- `torch` install may be platform specific; see https://pytorch.org for tailored instructions if needed.
-- If you have issues with `faiss-cpu`, consult platform docs or install via conda (`conda install -c pytorch faiss-cpu`).
+If you prefer pip-only (not recommended), see the optional section below. The `requirements.txt` file is just a pointer and does not contain pinned packages anymore.
 
 ### 2) Build the index
 
@@ -89,6 +109,11 @@ make export    # export browser artifacts
 make query     # run sample query (edit path in query_index.py)
 make serve     # start a static web server
 make clean     # remove caches and outputs
+
+# Conda helpers
+make conda-cpu  # create/update mtg-faiss-cpu
+make conda-gpu  # create/update mtg-faiss-gpu
+make conda-mps  # create/update mtg-faiss-mps
 ```
 
 ## Troubleshooting

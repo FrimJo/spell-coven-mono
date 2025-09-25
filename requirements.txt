@@ -1,9 +1,13 @@
-requests>=2.31.0
-Pillow>=9.5.0
-numpy>=1.23.0
-tqdm>=4.66.0
-faiss-cpu>=1.7.4
-# Torch: choose the variant that matches your environment (CPU/GPU/MPS)
-torch>=2.1.0
-# OpenAI CLIP (official) – installed from GitHub
-git+https://github.com/openai/CLIP.git
+# This project uses Conda environment files as the single source of truth for dependencies and versions.
+# Please create one of the following environments instead of using requirements.txt:
+#   - environment-cpu.yml   (portable CPU)
+#   - environment-gpu.yml   (NVIDIA CUDA)
+#   - environment-mps.yml   (Apple Silicon MPS)
+#
+# Example:
+#   conda env create -f environment-cpu.yml
+#   conda activate mtg-faiss-cpu
+#
+# If you still prefer pip-only installation, consult SPEC.md/README.md and
+# assemble packages manually for your platform. Note that GPU/MPS setups are
+# more reliable with Conda (PyTorch and FAISS).
