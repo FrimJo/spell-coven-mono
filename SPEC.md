@@ -73,13 +73,19 @@ Build a visual search system for Magic: The Gathering (MTG) cards. The system do
 - Browser Query
   - Running `make serve` and opening `index.html` allows selecting a local image and returns top matches with thumbnails and links.
 
-## 8. Risks & Mitigations
-- Dependency installation (Torch, FAISS) may be platform-specific.
-  - Provide guidance in README and allow CPU-only setups (faiss-cpu).
-- Large dataset size → heavy memory/CPU in browser.
-  - Browser path is intended for moderate N; note scaling strategies in README.
 
-## 9. Future Work
-- In-browser ANN (e.g., IVF/HNSW) or WebGPU-accelerated similarity search.
-- Lightweight backend with FAISS for very large datasets.
-- Better UI/UX in `index.html` (drag-and-drop, progress bars, error states).
+## 8. Webcam Prototype Purpose
+- Purpose
+  - Provide a convenient way to acquire a clean, perspective-correct crop of a physical MTG card using the on-device webcam. The resulting crop is intended as the query image for the visual search system (either Python FAISS path or the in-browser demo).
+- Scope (What the prototype does)
+  - Use OpenCV.js to detect card-like quadrilateral contours on a live webcam preview.
+  - Allow the user to click on/near a detected card to select it.
+  - Perform a perspective transform on the corresponding area from the full-resolution frame to produce a rectified card image (displayed in a canvas).
+- Out of Scope (Explicitly excluded)
+  - Any functionality after cropping and displaying the selected card (e.g., OCR, fuzzy matching, card identification) is not part of this spec item and is not covered by acceptance criteria.
+- File
+  - `index_old.html` contains the prototype implementation. Only steps up to and including contour detection, user-assisted selection, and perspective-correct cropping are considered in scope.
+- Rationale
+  - Speeds up demo workflows by avoiding manual photo capture/upload steps and yields consistent, aspect-correct query images that can improve search quality.
+- Acceptance & Status
+  - This is an optional utility for acquiring query images and is not included in Section 7 acceptance criteria.
