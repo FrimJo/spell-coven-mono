@@ -1,4 +1,5 @@
 import json
+import argparse
 import faiss
 import torch
 import clip
@@ -25,13 +26,19 @@ def embed_image(img_path: str) -> np.ndarray:
         v = v / v.norm(dim=-1, keepdim=True)
     return v.cpu().numpy().astype("float32")
 
-# --- Query ---
-query_path = "image_cache/000f60d1f5c3a4a9dc0448744bd97c02c8437a2d.jpg"   # replace with a path to a cached image
-vec = embed_image(query_path)
-D, I = index.search(vec, k=5)
+if __name__ == "__main__":
+    # --- CLI args ---
+    ap = argparse.ArgumentParser(description="Query the MTG FAISS index with a local image")
+    ap.add_argument("--k", type=int, default=1, help="Number of top results to return (default: 1)")
+    args = ap.parse_args()
 
-print("\nTop 5 matches for:", query_path)
-for rank, (dist, idx) in enumerate(zip(D[0], I[0]), 1):
-    m = meta[int(idx)]
-    score = 1 - dist  # cosine similarity
-    print(f"{rank}. {m['name']} [{m['set']}] score={score:.3f} url={m['image_url']}")
+    # --- Query ---
+    query_path = "image_cache/000f60d1f5c3a4a9dc0448744bd97c02c8437a2d.jpg"   # replace with a path to a cached image
+    vec = embed_image(query_path)
+    D, I = index.search(vec, k=args.k)
+
+    print(f"\nTop {args.k} matches for:", query_path)
+    for rank, (dist, idx) in enumerate(zip(D[0], I[0]), 1):
+        m = meta[int(idx)]
+        score = 1 - dist  # cosine similarity
+        print(f"{rank}. {m['name']} [{m['set']}] score={score:.3f} url={m['image_url']}")
