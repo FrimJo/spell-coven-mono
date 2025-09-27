@@ -1,7 +1,9 @@
 # Project Specification: MTG Card Art Visual Search
 
 ## 1. Summary
-Build a visual search system for Magic: The Gathering (MTG) cards. The system downloads Scryfall bulk data, caches card art, embeds images using CLIP (ViT-B/32), builds a FAISS index for fast similarity search, and provides two query paths: (1) local Python via FAISS, and (2) fully in-browser via Transformers.js using pre-exported embeddings.
+Build a Magic: The Gathering (MTG) visual search platform designed for online gameplay, where each player streams their board state via webcam (or similar). Users can click a card visible in any player’s stream to identify it and retrieve detailed card information. To enable this, the system fetches MTG card art (from Scryfall bulk data), embeds images using CLIP (ViT-B/32), and builds a searchable index that supports querying with a cropped image of the selected card. The index/database artifacts are shipped to the client so the entire search can run locally in the browser using Transformers.js; the match result is then used to fetch or display the full card details.
+
+Technically, the system downloads and processes Scryfall bulk data, caches card art, produces CLIP embeddings, and builds a FAISS index for fast similarity search. It supports two query paths: (1) local Python via FAISS, and (2) fully in-browser via Transformers.js using pre-exported embeddings.
 
 ## 2. Goals and Non-Goals
 - Goals
@@ -10,7 +12,7 @@ Build a visual search system for Magic: The Gathering (MTG) cards. The system do
   - Enable fully offline, backend-free browser search with pre-generated artifacts.
   - Provide ergonomic developer experience with Makefile tasks and clear docs.
 - Non-Goals
-  - Perfect OCR or real-time webcam recognition (an experimental prototype exists in `index_old.html`).
+  - Perfect OCR or real-time webcam recognition.
   - Multi-modal text+image search.
   - Cloud deployment or server-side ANN services.
 
@@ -32,7 +34,13 @@ Build a visual search system for Magic: The Gathering (MTG) cards. The system do
   - Export artifacts for browser use:
     - `embeddings.f16bin` (float16 binary concatenation of embeddings)
     - `meta.json` (JSON array of metadata)
-  - `index.html` fetches artifacts, embeds user image using Transformers.js (`Xenova/clip-vit-base-patch32`), and shows top results.
+  - `index.html` uses modules in `lib/` to perform fully client-side search:
+    - `lib/search.js` loads `index_out/meta.json` and `index_out/embeddings.f16bin`, converts float16→float32, initializes the CLIP vision pipeline via Transformers.js (`Xenova/clip-vit-base-patch32`), embeds a user-provided image or canvas, and computes cosine similarity (dot products on L2-normalized vectors) to return top-K matches.
+    - `lib/webcam.js` manages webcam devices, detects card-like quadrilateral contours on a live overlay using OpenCV.js, and performs a perspective-correct crop to a fixed-size canvas upon click.
+    - `lib/main.js` orchestrates UI controls (file upload, start camera, camera selection, Search Cropped) and renders results including thumbnails and Scryfall links.
+  - Supported query sources in the browser:
+    - File upload: user selects a local image; the image element is embedded and searched.
+    - Webcam crop: user starts webcam, clicks near a detected card polygon to crop; the cropped canvas is embedded and searched.
 
 ## 4. Non-Functional Requirements
 - Performance
@@ -53,7 +61,10 @@ Build a visual search system for Magic: The Gathering (MTG) cards. The system do
 - Export for Browser:
   - `export_for_browser.py` → `.npy` → `.f16bin`, `.jsonl` → `.json`.
 - Browser:
-  - `index.html` → loads `embeddings.f16bin` + `meta.json` → CLIP image embedder (Transformers.js) → cosine search in JS.
+  - `index.html` → loads `lib/search.js`, `lib/webcam.js`, `lib/main.js`:
+    - `lib/search.js`: fetch `index_out/embeddings.f16bin` + `index_out/meta.json`, convert float16→float32, initialize CLIP vision extractor via Transformers.js, embed query (image element or canvas), compute dot products for top-K.
+    - `lib/webcam.js`: manage webcam devices, detect card-like contours on an overlay using OpenCV.js, allow click-to-crop, and perform perspective transform to a normalized canvas.
+    - `lib/main.js`: wire up UI controls: file input, start camera, camera selection, “Search Cropped”, and render results with thumbnail (`card_url` or derived) and Scryfall link.
 
 ## 6. Data Contracts
 - `index_out/mtg_meta.jsonl`: one JSON object per line with keys including:
@@ -71,21 +82,23 @@ Build a visual search system for Magic: The Gathering (MTG) cards. The system do
 - Python Query
   - Running `make query` prints top-K matches for a sample query image (path can be edited in `query_index.py`).
 - Browser Query
-  - Running `make serve` and opening `index.html` allows selecting a local image and returns top matches with thumbnails and links.
+  - Running `make serve` and opening `index.html` supports both:
+    - File upload: selecting a local image embeds it via Transformers.js and displays top-K matches with thumbnail and link (Scryfall when available).
+    - Webcam crop: starting the webcam, clicking near a detected card polygon performs a perspective-correct crop; pressing “Search Cropped” embeds the canvas and displays top-K matches with thumbnail and link.
+  - All browser-side embedding and search occurs locally using pre-shipped artifacts (`embeddings.f16bin`, `meta.json`).
 
-
-## 8. Webcam Prototype Purpose
+## 8. Webcam Crop & Click-to-Identify
 - Purpose
-  - Provide a convenient way to acquire a clean, perspective-correct crop of a physical MTG card using the on-device webcam. The resulting crop is intended as the query image for the visual search system (either Python FAISS path or the in-browser demo).
-- Scope (What the prototype does)
-  - Use OpenCV.js to detect card-like quadrilateral contours on a live webcam preview.
+  - Provide an integrated way to acquire a clean, perspective-correct crop of a physical MTG card using the on-device webcam. The cropped canvas serves as the query image for the browser search flow.
+- Scope (What it does)
+  - Use OpenCV.js to detect card-like quadrilateral contours on a live webcam overlay.
   - Allow the user to click on/near a detected card to select it.
-  - Perform a perspective transform on the corresponding area from the full-resolution frame to produce a rectified card image (displayed in a canvas).
+  - Perform a perspective transform from the full-resolution frame to produce a rectified card image in a fixed-size canvas.
+  - Enable a “Search Cropped” action that embeds the canvas with Transformers.js and searches locally against the preloaded embeddings.
 - Out of Scope (Explicitly excluded)
-  - Any functionality after cropping and displaying the selected card (e.g., OCR, fuzzy matching, card identification) is not part of this spec item and is not covered by acceptance criteria.
-- File
-  - `index_old.html` contains the prototype implementation. Only steps up to and including contour detection, user-assisted selection, and perspective-correct cropping are considered in scope.
+  - OCR, rules text parsing, heuristic post-processing, or real-time, continuous recognition.
+- Files
+  - `lib/webcam.js` (detection + crop), `lib/search.js` (embedding + ANN), `lib/main.js` (UI orchestration).
 - Rationale
-  - Speeds up demo workflows by avoiding manual photo capture/upload steps and yields consistent, aspect-correct query images that can improve search quality.
-- Acceptance & Status
-  - This is an optional utility for acquiring query images and is not included in Section 7 acceptance criteria.
+  - Speeds up gameplay identification workflows by avoiding manual photo capture and yields consistent, aspect-correct query images for better search quality.
+
