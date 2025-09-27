@@ -35,12 +35,11 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
     - `embeddings.f16bin` (float16 binary concatenation of embeddings)
     - `meta.json` (JSON array of metadata)
   - `index.html` uses modules in `lib/` to perform fully client-side search:
-    - `lib/search.js` loads `index_out/meta.json` and `index_out/embeddings.f16bin`, converts float16→float32, initializes the CLIP vision pipeline via Transformers.js (`Xenova/clip-vit-base-patch32`) using the `image-feature-extraction` task, provides `loadEmbeddingsAndMeta()`, `loadModel()`, `embedFromImageElement()`, `embedFromCanvas()`, and computes cosine similarity (dot products on L2-normalized vectors) via `topK()` to return top-K matches.
+    - `lib/search.js` loads `index_out/meta.json` and `index_out/embeddings.f16bin`, converts float16→float32, initializes the CLIP vision pipeline via Transformers.js (`Xenova/clip-vit-base-patch32`) using the `image-feature-extraction` task, provides `loadEmbeddingsAndMeta()`, `loadModel()`, `embedFromCanvas()`, and computes cosine similarity (dot products on L2-normalized vectors) via `topK()` to return top-K matches.
     - `lib/webcam.js` manages webcam devices, detects card-like quadrilateral contours on a live overlay using OpenCV.js, and performs a perspective-correct crop to a fixed-size canvas upon click. It awaits a global `window.cvReadyPromise` provided by the OpenCV loader.
     - `lib/opencv-loader.js` is responsible for loading OpenCV.js and resolving `window.cvReadyPromise` when ready.
-    - `lib/main.js` orchestrates UI controls (file upload, start camera, camera selection, Search Cropped) and renders results including thumbnails and Scryfall links.
+    - `lib/main.js` orchestrates UI controls (start camera, camera selection, Search Cropped) and renders results including thumbnails and Scryfall links.
   - Supported query sources in the browser:
-    - File upload: user selects a local image; the image element is embedded and searched.
     - Webcam crop: user starts webcam, clicks near a detected card polygon to crop; the cropped canvas is embedded and searched.
 
 ## 4. Non-Functional Requirements
@@ -63,10 +62,10 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
   - `export_for_browser.py` → `.npy` → `.f16bin`, `.jsonl` → `.json`.
 - Browser:
   - `index.html` → loads `lib/search.js`, `lib/opencv-loader.js`, `lib/webcam.js`, `lib/main.js`:
-    - `lib/search.js`: fetch `index_out/embeddings.f16bin` + `index_out/meta.json`, convert float16→float32, initialize CLIP vision extractor via Transformers.js (`image-feature-extraction`), embed query (image element via blob URL or canvas), compute dot products for top-K.
+    - `lib/search.js`: fetch `index_out/embeddings.f16bin` + `index_out/meta.json`, convert float16→float32, initialize CLIP vision extractor via Transformers.js (`image-feature-extraction`), embed query from the cropped canvas, compute dot products for top-K.
     - `lib/opencv-loader.js`: load OpenCV.js and expose a readiness promise consumed by `webcam.js`.
     - `lib/webcam.js`: manage webcam devices, detect card-like contours on an overlay using OpenCV.js, allow click-to-crop, and perform perspective transform to a normalized canvas.
-    - `lib/main.js`: wire up UI controls: file input, start camera, camera selection, “Search Cropped”, and render results with thumbnail (`card_url` or derived) and Scryfall link.
+    - `lib/main.js`: wire up UI controls: start camera, camera selection, “Search Cropped”, and render results with thumbnail (`card_url` or derived) and Scryfall link.
 
 ## 6. Data Contracts
 - `index_out/mtg_meta.jsonl`: one JSON object per line with keys including:
@@ -84,8 +83,7 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
 - Python Query
   - Running `python3 query_index.py` prints top-K matches for a sample query image (edit `query_path` in `query_index.py`). Alternatively, `make query` performs the same.
 - Browser Query
-  - Serving the repository root with any static HTTP server (for example, `python3 -m http.server 8000` or `make serve`) and opening `index.html` supports both:
-    - File upload: selecting a local image embeds it via Transformers.js and displays top-K matches with thumbnail and link (Scryfall when available).
+  - Serving the repository root with any static HTTP server (for example, `python3 -m http.server 8000` or `make serve`) and opening `index.html` supports:
     - Webcam crop: starting the webcam, clicking near a detected card polygon performs a perspective-correct crop; pressing “Search Cropped” embeds the canvas and displays top-K matches with thumbnail and link.
   - All browser-side embedding and search occurs locally using pre-shipped artifacts (`embeddings.f16bin`, `meta.json`).
 
