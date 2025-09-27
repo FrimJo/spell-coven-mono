@@ -5,7 +5,7 @@ It downloads Scryfall bulk data, caches images, embeds them with CLIP, builds a 
 
 See the full specification in `SPEC.md`.
 
-## Quick Start
+## Get Started
 
 - Python 3.10+
 - macOS or Linux recommended
@@ -29,6 +29,18 @@ conda activate mtg-faiss-gpu
 conda env create -f environment-mps.yml  # or: conda env update -f environment-mps.yml
 conda activate mtg-faiss-mps
 ```
+
+#### Choosing CPU vs GPU vs MPS
+
+- **CPU (mtg-faiss-cpu)**
+  - Best portability; works on most machines.
+  - Slower embedding; acceptable for small/medium subsets or first runs.
+- **GPU/CUDA (mtg-faiss-gpu)**
+  - Best throughput on NVIDIA GPUs.
+  - Requires compatible CUDA drivers and toolkit; follow PyTorch’s install matrix.
+- **Apple MPS (mtg-faiss-mps)**
+  - Good acceleration on Apple Silicon (M1/M2/M3).
+  - Uses Metal Performance Shaders via PyTorch.
 
 ## Optional: pip-only setup (not recommended)
 
@@ -98,6 +110,14 @@ python -m http.server 8000
 - The CLIP model (`Xenova/clip-vit-base-patch32`) runs fully in your browser.
 - Top matches are shown with thumbnails and Scryfall links.
 
+## Development Tips
+
+- **Start with a small subset**: add `--limit 2000` to `build_mtg_faiss.py` for faster iterations.
+- **Adjust query image**: edit `query_path` in `query_index.py` to point to a cached art in `image_cache/`.
+- **Static server**: any static HTTP server works (Node, Python, etc.). Ensure paths like `index_out/meta.json` resolve from project root.
+- **Model cache**: the first browser load downloads the CLIP model; subsequent loads are faster due to caching.
+- **Troubleshooting devices**: if webcams aren’t listed, grant camera permissions and try `Start Webcam` again; change camera from the dropdown.
+
 ## Makefile (optional convenience)
 
 Common tasks are available if you prefer `make` (note: `make install` is deprecated in favor of Conda targets):
@@ -132,10 +152,14 @@ make install-mps  # same as make conda-mps
 - `build_mtg_faiss.py` – Build pipeline (download, cache, embed, FAISS, metadata)
 - `query_index.py` – Python query using FAISS
 - `export_for_browser.py` – Export embeddings/metadata for browser
-- `index.html` – Browser-only search UI (Transformers.js)
-- `index_old.html` – Experimental webcam + OpenCV.js + OCR prototype
+- `index.html` – Browser search UI (Transformers.js) with file upload and webcam crop prototype
+- `lib/opencv-loader.js` – Bootstraps OpenCV.js and exposes `window.cvReadyPromise`
+- `lib/main.js` – UI orchestration for browser demo
+- `lib/search.js` – Loads embeddings/metadata, CLIP pipeline setup, embedding and top-K search
+- `lib/webcam.js` – OpenCV.js-based contour detection and perspective-correct crop
 - `image_cache/` – Cached images
 - `index_out/` – Generated artifacts
+- `Makefile` – Convenience tasks: `build`, `export`, `query`, `serve`, `clean`, and Conda helpers
 - `SPEC.md` – Specification, requirements, acceptance criteria
 
 ## License
