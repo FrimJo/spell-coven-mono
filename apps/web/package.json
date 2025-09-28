@@ -26,6 +26,8 @@
       "vite-tsconfig-paths": "^5.1.4"
     },
     "devDependencies": {
+      "playwright": "catalog:",
+      "@playwright/test": "catalog:",
       "@repo/eslint-config": "workspace:*",
       "@repo/prettier-config": "workspace:*",
       "@repo/tailwind-config": "workspace:*",
