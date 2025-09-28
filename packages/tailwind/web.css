@@ -1,0 +1,34 @@
+@import './base.css';
+
+@layer base {
+  html {
+    min-width: 0;
+    flex-grow: 0;
+    flex-shrink: 0;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    text-wrap: balance;
+  }
+
+  p,
+  li,
+  figcaption,
+  blockquote {
+    text-wrap: pretty;
+    max-width: 65ch;
+  }
+
+  header,
+  footer,
+  main,
+  section,
+  article {
+    container-type: inline-size;
+  }
+}
