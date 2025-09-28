@@ -1,5 +1,5 @@
 {
-  "name": "spell-coven-mono",
+  "name": "spell-coven",
   "engines": {
     "node": "~22.20",
     "pnpm": "10.4.1"
