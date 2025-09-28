@@ -1,0 +1,9 @@
+{
+  "name": "@repo/mtg-faiss",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "python3 build_mtg_faiss.py --out index_out --cache image_cache && python3 export_for_browser.py",
+    "export-browser": "python3 export_for_browser.py"
+  }
+}
