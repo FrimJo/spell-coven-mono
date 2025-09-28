@@ -2,6 +2,12 @@
   "name": "@repo/mtg-image-db",
   "private": true,
   "type": "module",
+  "files": [
+    "index_out"
+  ],
+  "exports": {
+    "./*": "./index_out/*"
+  },
   "scripts": {
     "build": "python3 build_mtg_faiss.py --out index_out --cache image_cache && python3 export_for_browser.py",
     "export-browser": "python3 export_for_browser.py"

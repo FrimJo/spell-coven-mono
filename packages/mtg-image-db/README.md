@@ -3,7 +3,8 @@
 This project builds a visual search engine for Magic: The Gathering (MTG) card art.
 It downloads Scryfall bulk data, caches images, embeds them with CLIP, builds a FAISS index for Python querying, and exports artifacts for a fully in-browser search experience using Transformers.js.
 
-See the full specification in `SPEC.md`.
+See the full specification for the data and pipelines in `SPEC.md`.
+For the browser client and UI spec, see `apps/web/SPEC.md`.
 
 ## Get Started
 
@@ -96,19 +97,10 @@ python query_index.py
 
 It prints the top-5 nearest images by cosine similarity, along with names and URLs.
 
-### 5) Browser UI
+### 5) Browser UI (moved)
 
-Serve the repository over HTTP (so `fetch()` can read the exported files) and open `index.html`:
-
-```bash
-# from project root
-python -m http.server 8000
-# open http://localhost:8000/index.html
-```
-
-- Click “Choose file” to select a card or cropped art.
-- The CLIP model (`Xenova/clip-vit-base-patch32`) runs fully in your browser.
-- Top matches are shown with thumbnails and Scryfall links.
+The browser UI and client-side search have moved to the web app documentation.
+See `apps/web/README.md` and `apps/web/SPEC.md` for setup, usage, and acceptance criteria.
 
 ## Development Tips
 

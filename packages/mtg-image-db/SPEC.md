@@ -1,10 +1,12 @@
 # Project Specification: MTG Card Art Visual Search
 
 ## Spec Version
-- Version: v0.1.0
-- Date: 2025-09-27T23:54:00+02:00
+- Version: v0.1.1
+- Date: 2025-09-28T23:45:43+02:00
 
 ## Changelog
+- v0.1.1
+  - Split specification: package-level (pipelines, exports) remains here; browser client spec moved to `apps/web/SPEC.md`. This file now links to the web spec for browser-related requirements.
 - v0.1.0
   - Introduced SPEC IDs across Functional Requirements and Acceptance Criteria.
   - Added Spec Version and Changelog sections. No functional behavior changes.
@@ -40,6 +42,7 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
   - Load FAISS index and metadata. [SPEC-FR-PY-01]
   - Embed a given query image and return top-K results with names and URLs. [SPEC-FR-PY-02]
 - Browser Query [SPEC-FR-BR]
+  - Note: Canonical browser client requirements and acceptance criteria are defined in `apps/web/SPEC.md`. This section summarizes expected artifacts only.
   - Export artifacts for browser use: [SPEC-FR-BR-01]
     - `embeddings.f16bin` (float16 binary concatenation of embeddings) [SPEC-FR-BR-01a]
     - `meta.json` (JSON array of metadata) [SPEC-FR-BR-01b]

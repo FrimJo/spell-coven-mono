@@ -13,6 +13,16 @@ let meta: CardMeta[] | null = null
 let db: Float32Array | null = null
 let extractor: any = null
 
+// If available (bundled via Vite), these URLs resolve to files exported by @repo/mtg-image-db
+// The `?url` suffix tells Vite to treat them as static assets and return their public URL at runtime.
+// These imports are optional at runtime; they will be tree-shaken if unused.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import META_URL from '@repo/mtg-image-db/meta.json?url'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import EMB_URL from '@repo/mtg-image-db/embeddings.f16bin?url'
+
 function float16ToFloat32(uint16: Uint16Array) {
   const out = new Float32Array(uint16.length)
   for (let i = 0; i < uint16.length; i++) {
@@ -45,6 +55,16 @@ export async function loadEmbeddingsAndMeta(basePath: string = '/') {
   meta = m
   db = float16ToFloat32(new Uint16Array(buf))
   // Optional: console.log(`Loaded ${meta.length} embeddings`)
+}
+
+// Convenience: load assets directly from the published package using Vite asset URLs.
+// This avoids copying files into public/ and works in dev/preview/build.
+export async function loadEmbeddingsAndMetaFromPackage() {
+  if (meta && db) return
+  const m = await (await fetch(META_URL as string)).json()
+  const buf = await (await fetch(EMB_URL as string)).arrayBuffer()
+  meta = m
+  db = float16ToFloat32(new Uint16Array(buf))
 }
 
 export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
