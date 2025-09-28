@@ -1,167 +1,135 @@
-# MTG Card Art Visual Search
+# Turborepo starter
 
-This project builds a visual search engine for Magic: The Gathering (MTG) card art.
-It downloads Scryfall bulk data, caches images, embeds them with CLIP, builds a FAISS index for Python querying, and exports artifacts for a fully in-browser search experience using Transformers.js.
+This Turborepo starter is maintained by the Turborepo core team.
 
-See the full specification in `SPEC.md`.
+## Using this example
 
-## Get Started
+Run the following command:
 
-- Python 3.10+
-- macOS or Linux recommended
-- For Python-only search: CPU works, GPU/MPS accelerates embedding.
-- For browser search: any modern browser (Chrome/Firefox/Safari). Serve the repo via HTTP.
-
-### 1) Install dependencies (Conda – single source of truth)
-
-This project uses Conda environment files as the single source of truth for dependency versions. Pick one:
-
-```bash
-# CPU-only (portable)
-conda env create -f environment-cpu.yml  # or: conda env update -f environment-cpu.yml
-conda activate mtg-faiss-cpu
-
-# NVIDIA GPU (uses CUDA 12.1 build from pytorch/nvidia channels)
-conda env create -f environment-gpu.yml  # or: conda env update -f environment-gpu.yml
-conda activate mtg-faiss-gpu
-
-# Apple Silicon (MPS acceleration)
-conda env create -f environment-mps.yml  # or: conda env update -f environment-mps.yml
-conda activate mtg-faiss-mps
+```sh
+npx create-turbo@latest
 ```
 
-#### Choosing CPU vs GPU vs MPS
+## What's inside?
 
-- **CPU (mtg-faiss-cpu)**
-  - Best portability; works on most machines.
-  - Slower embedding; acceptable for small/medium subsets or first runs.
-- **GPU/CUDA (mtg-faiss-gpu)**
-  - Best throughput on NVIDIA GPUs.
-  - Requires compatible CUDA drivers and toolkit; follow PyTorch’s install matrix.
-- **Apple MPS (mtg-faiss-mps)**
-  - Good acceleration on Apple Silicon (M1/M2/M3).
-  - Uses Metal Performance Shaders via PyTorch.
+This Turborepo includes the following packages/apps:
 
-## Optional: pip-only setup (not recommended)
+### Apps and Packages
 
-You can still use a classic virtualenv and pip, but GPU/MPS setups are more reliable with Conda. You will need to install platform-appropriate PyTorch and FAISS manually.
+- `docs`: a [Next.js](https://nextjs.org/) app
+- `web`: another [Next.js](https://nextjs.org/) app
+- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
+- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
+- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-# Manually install PyTorch for your platform: https://pytorch.org/get-started/locally/
-# Example (CPU only): pip install torch==2.4.1
-# Example (CPU FAISS): pip install faiss-cpu==1.7.4
-# Then install the rest:
-pip install requests==2.32.3 Pillow==10.4.0 numpy==1.26.4 tqdm==4.66.5 git+https://github.com/openai/CLIP.git@a1d4862
+Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+
+### Utilities
+
+This Turborepo has some additional tools already setup for you:
+
+- [TypeScript](https://www.typescriptlang.org/) for static type checking
+- [ESLint](https://eslint.org/) for code linting
+- [Prettier](https://prettier.io) for code formatting
+
+### Build
+
+To build all apps and packages, run the following command:
+
+```
+cd my-turborepo
+
+# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
+turbo build
+
+# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
+npx turbo build
+yarn dlx turbo build
+pnpm exec turbo build
 ```
 
-If you prefer pip-only (not recommended), see the optional section below. The `requirements.txt` file is just a pointer and does not contain pinned packages anymore.
+You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
 
-### 2) Build the index
+```
+# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
+turbo build --filter=docs
 
-Downloads Scryfall bulk data, caches images to `image_cache/`, computes CLIP embeddings, and writes artifacts to `index_out/`.
-
-```bash
-python build_mtg_faiss.py --kind unique_artwork --out index_out --cache image_cache
+# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
+npx turbo build --filter=docs
+yarn exec turbo build --filter=docs
+pnpm exec turbo build --filter=docs
 ```
 
-Artifacts written:
-- `index_out/mtg_embeddings.npy`
-- `index_out/mtg_art.faiss`
-- `index_out/mtg_meta.jsonl`
+### Develop
 
-You can limit for quick tests, e.g. `--limit 2000`.
+To develop all apps and packages, run the following command:
 
-### 3) Export for the browser
+```
+cd my-turborepo
 
-Converts the `.npy` embeddings to a float16 binary for the browser and the JSONL to a JSON array.
+# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
+turbo dev
 
-```bash
-python export_for_browser.py
+# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
+npx turbo dev
+yarn exec turbo dev
+pnpm exec turbo dev
 ```
 
-Artifacts written:
-- `index_out/embeddings.f16bin`
-- `index_out/meta.json`
+You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
 
-### 4) Python query example
+```
+# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
+turbo dev --filter=web
 
-Edit `query_index.py` to point `query_path` to an image (e.g. from `image_cache/`), then run:
-
-```bash
-python query_index.py
+# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
+npx turbo dev --filter=web
+yarn exec turbo dev --filter=web
+pnpm exec turbo dev --filter=web
 ```
 
-It prints the top-5 nearest images by cosine similarity, along with names and URLs.
+### Remote Caching
 
-### 5) Browser UI
+> [!TIP]
+> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
 
-Serve the repository over HTTP (so `fetch()` can read the exported files) and open `index.html`:
+Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
 
-```bash
-# from project root
-python -m http.server 8000
-# open http://localhost:8000/index.html
+By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+
+```
+cd my-turborepo
+
+# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
+turbo login
+
+# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
+npx turbo login
+yarn exec turbo login
+pnpm exec turbo login
 ```
 
-- Click “Choose file” to select a card or cropped art.
-- The CLIP model (`Xenova/clip-vit-base-patch32`) runs fully in your browser.
-- Top matches are shown with thumbnails and Scryfall links.
+This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
 
-## Development Tips
+Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
 
-- **Start with a small subset**: add `--limit 2000` to `build_mtg_faiss.py` for faster iterations.
-- **Adjust query image**: edit `query_path` in `query_index.py` to point to a cached art in `image_cache/`.
-- **Static server**: any static HTTP server works (Node, Python, etc.). Ensure paths like `index_out/meta.json` resolve from project root.
-- **Model cache**: the first browser load downloads the CLIP model; subsequent loads are faster due to caching.
-- **Troubleshooting devices**: if webcams aren’t listed, grant camera permissions and try `Start Webcam` again; change camera from the dropdown.
+```
+# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
+turbo link
 
-## Makefile (optional convenience)
-
-Common tasks are available if you prefer `make` (note: `make install` is deprecated in favor of Conda targets):
-
-```bash
-make build     # run the index builder
-make export    # export browser artifacts
-make query     # run sample query (edit path in query_index.py)
-make serve     # start a static web server
-make clean     # remove caches and outputs
-
-# Conda helpers
-make conda-cpu  # create/update mtg-faiss-cpu
-make conda-gpu  # create/update mtg-faiss-gpu
-make conda-mps  # create/update mtg-faiss-mps
-
-# Aliases
-make install-cpu  # same as make conda-cpu
-make install-gpu  # same as make conda-gpu
-make install-mps  # same as make conda-mps
+# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
+npx turbo link
+yarn exec turbo link
+pnpm exec turbo link
 ```
 
-## Troubleshooting
+## Useful Links
 
-- Torch install issues: follow the official selector at https://pytorch.org/get-started/locally/
-- FAISS install issues: try `faiss-cpu` via conda or consult FAISS docs.
-- Large datasets in browser: `index.html` performs a brute-force cosine search; performance may degrade with very large N. Consider smaller subsets, or future enhancements like WebGPU or ANN.
-- Model download time in browser: first load may take a bit; subsequent runs are faster due to caching.
+Learn more about the power of Turborepo:
 
-## Project Layout
-
-- `build_mtg_faiss.py` – Build pipeline (download, cache, embed, FAISS, metadata)
-- `query_index.py` – Python query using FAISS
-- `export_for_browser.py` – Export embeddings/metadata for browser
-- `index.html` – Browser search UI (Transformers.js) with file upload and webcam crop prototype
-- `lib/opencv-loader.js` – Bootstraps OpenCV.js and exposes `window.cvReadyPromise`
-- `lib/main.js` – UI orchestration for browser demo
-- `lib/search.js` – Loads embeddings/metadata, CLIP pipeline setup, embedding and top-K search
-- `lib/webcam.js` – OpenCV.js-based contour detection and perspective-correct crop
-- `image_cache/` – Cached images
-- `index_out/` – Generated artifacts
-- `Makefile` – Convenience tasks: `build`, `export`, `query`, `serve`, `clean`, and Conda helpers
-- `SPEC.md` – Specification, requirements, acceptance criteria
-
-## License
-
-This repository consumes data and images from Scryfall. Follow Scryfall’s policies when using their API and assets. CLIP model license applies to the chosen implementation. Consult respective licenses for redistribution or commercial use.
+- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
+- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
+- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
+- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
+- [Configuration Options](https://turborepo.com/docs/reference/configuration)
+- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
