@@ -1,5 +1,5 @@
 {
-  "name": "@repo/mtg-faiss",
+  "name": "@repo/mtg-image-db",
   "private": true,
   "type": "module",
   "scripts": {
