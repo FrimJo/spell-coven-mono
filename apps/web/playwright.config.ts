@@ -7,7 +7,7 @@ export default defineConfig({
   timeout: 60_000,
   retries: 0,
   use: {
-    baseURL: 'http://localhost:8000',
+    baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     permissions: ['camera'],
     video: 'retain-on-failure',
@@ -19,8 +19,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'python3 -m http.server 8000',
-    url: 'http://localhost:8000',
+    // Use Vite preview to serve the SPA on port 3000
+    command: 'pnpm serve',
+    url: 'http://localhost:3000',
+    timeout: 60_000,
     reuseExistingServer: true,
     stdout: 'ignore',
     stderr: 'pipe',

@@ -1,12 +1,14 @@
 import { test, expect, Page } from '@playwright/test';
+import { readFile } from 'fs/promises';
+import path from 'path';
 
-// Option B: Override getUserMedia to stream from a prerecorded video via captureStream().
-// Place your file at tests/assets/card_demo.webm (or .mp4) and update videoUrl if needed.
+// Load the demo video from the local filesystem and pass it to the page as a data URL.
+// Place your file at tests/assets/card_demo.webm
 const VIDEO_RELATIVE = 'tests/assets/card_demo.webm';
 
-// Helper to wait for OpenCV readiness via window.cvReadyPromise
+// Helper to wait for app readiness by checking status text rendered by the app.
 async function waitForOpenCv(page: Page) {
-  await page.waitForFunction(() => (window as any).cvReadyPromise?.then?.(() => true));
+  await expect(page.getByText('OpenCV ready')).toBeVisible({ timeout: 180_000 });
 }
 
 // Add an init script that monkey-patches getUserMedia
@@ -33,11 +35,15 @@ test.describe('Webcam click-and-search (mocked getUserMedia)', () => {
   test.use({ permissions: ['camera'] });
 
   test('click a detected card and search', async ({ page, baseURL }) => {
-    const videoUrl = `${baseURL}/${VIDEO_RELATIVE}`;
+    // Build a data URL for the demo video to avoid relying on server static paths
+    const videoPath = path.join(process.cwd(), VIDEO_RELATIVE);
+    const bytes = await readFile(videoPath);
+    const base64 = bytes.toString('base64');
+    const videoUrl = `data:video/webm;base64,${base64}`;
 
     await mockGetUserMedia(page, videoUrl);
 
-    await page.goto(`${baseURL}/index.html`);
+    await page.goto(`${baseURL}/`);
     await waitForOpenCv(page);
 
     // Start webcam via UI
