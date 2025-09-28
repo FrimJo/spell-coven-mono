@@ -10,3 +10,8 @@ count.txt
 .output
 .vinxi
 todos.json
+
+# Ignore heavy Python artifacts from index_out, but keep browser assets
+public/index_out/*
+!public/index_out/embeddings.f16bin
+!public/index_out/meta.json
