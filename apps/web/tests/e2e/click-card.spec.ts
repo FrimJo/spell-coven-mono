@@ -1,18 +1,17 @@
-import { test, expect } from '@playwright/test';
-import path from 'path';
+import { test, expect, Page } from '@playwright/test';
 
 // Option B: Override getUserMedia to stream from a prerecorded video via captureStream().
 // Place your file at tests/assets/card_demo.webm (or .mp4) and update videoUrl if needed.
 const VIDEO_RELATIVE = 'tests/assets/card_demo.webm';
 
 // Helper to wait for OpenCV readiness via window.cvReadyPromise
-async function waitForOpenCv(page) {
+async function waitForOpenCv(page: Page) {
   await page.waitForFunction(() => (window as any).cvReadyPromise?.then?.(() => true));
 }
 
 // Add an init script that monkey-patches getUserMedia
-async function mockGetUserMedia(page, videoUrl: string) {
-  await page.addInitScript(({ videoUrl }) => {
+async function mockGetUserMedia(page: Page, videoUrl: string) {
+  await page.addInitScript(({ videoUrl }: { videoUrl: string }) => {
     const original = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
     navigator.mediaDevices.getUserMedia = async (_constraints: MediaStreamConstraints) => {
       const video = document.createElement('video');
