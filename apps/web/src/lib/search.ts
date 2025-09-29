@@ -12,6 +12,7 @@ export type CardMeta = {
 let meta: CardMeta[] | null = null
 let db: Float32Array | null = null
 let extractor: any = null
+let loadTask: Promise<void> | null = null
 
 // If available (bundled via Vite), these URLs resolve to files exported by @repo/mtg-image-db
 // The `?url` suffix tells Vite to treat them as static assets and return their public URL at runtime.
@@ -22,6 +23,8 @@ import META_URL from '@repo/mtg-image-db/meta.json?url'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import EMB_URL from '@repo/mtg-image-db/embeddings.f16bin?url'
+// Top-level import for transformers (no SSR)
+import { pipeline, env } from '@xenova/transformers'
 
 function float16ToFloat32(uint16: Uint16Array) {
   const out = new Float32Array(uint16.length)
@@ -47,24 +50,49 @@ function l2norm(x: Float32Array) {
   return x
 }
 
-export async function loadEmbeddingsAndMeta(basePath: string = '/') {
-  if (meta && db) return
-  // Files are expected to be served from public/index_out
-  const m = await (await fetch(`${basePath}index_out/meta.json`)).json()
-  const buf = await (await fetch(`${basePath}index_out/embeddings.f16bin`)).arrayBuffer()
-  meta = m
-  db = float16ToFloat32(new Uint16Array(buf))
-  // Optional: console.log(`Loaded ${meta.length} embeddings`)
-}
-
 // Convenience: load assets directly from the published package using Vite asset URLs.
 // This avoids copying files into public/ and works in dev/preview/build.
 export async function loadEmbeddingsAndMetaFromPackage() {
   if (meta && db) return
-  const m = await (await fetch(META_URL as string)).json()
-  const buf = await (await fetch(EMB_URL as string)).arrayBuffer()
-  meta = m
-  db = float16ToFloat32(new Uint16Array(buf))
+  if (loadTask) {
+    return loadTask
+  }
+  loadTask = (async () => {
+    const metaUrl = META_URL as string
+    // eslint-disable-next-line no-console
+    console.debug('[search] fetching package meta.json:', metaUrl)
+    const metaRes = await fetch(metaUrl)
+    if (!metaRes.ok) {
+      const text = await metaRes.text().catch(() => '')
+      throw new Error(`Failed to fetch META_URL (${metaUrl}): ${metaRes.status} ${metaRes.statusText} ${text?.slice(0,200)}`)
+    }
+    const metaType = metaRes.headers.get('content-type') || ''
+    const metaText = await metaRes.text()
+    if (!metaType.includes('application/json')) {
+      throw new Error(`META_URL has unexpected content-type at ${metaUrl}: ${metaType}. First bytes: ${metaText.slice(0, 200)}`)
+    }
+    let m: any
+    try {
+      m = JSON.parse(metaText)
+    } catch (e) {
+      throw new Error(`Failed to parse META_URL at ${metaUrl}: ${(e as Error).message}. First bytes: ${metaText.slice(0, 200)}`)
+    }
+    const embUrl = EMB_URL as string
+    // eslint-disable-next-line no-console
+    console.debug('[search] fetching package embeddings:', embUrl)
+    const embRes = await fetch(embUrl)
+    if (!embRes.ok) {
+      throw new Error(`Failed to fetch EMB_URL (${embUrl}): ${embRes.status} ${embRes.statusText}`)
+    }
+    const buf = await embRes.arrayBuffer()
+    meta = m
+    db = float16ToFloat32(new Uint16Array(buf))
+  })()
+  try {
+    await loadTask
+  } finally {
+    // keep the resolved promise for future callers
+  }
 }
 
 export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
@@ -76,9 +104,22 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
       opts?.onProgress?.(msg)
     },
   }
-  // Dynamic import to avoid SSR requiring 'sharp'
-  const { pipeline } = await import('@xenova/transformers')
-  extractor = await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch32', options)
+  try {
+    // Configure environment for remote models via CDN/Hugging Face
+    // See: https://xenova.github.io/transformers.js/environments
+    env.useBrowserCache = true
+    env.allowRemoteModels = true
+    // Use stable CDN for ONNX WASM runtime
+    env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/'
+    // Initialize pipeline (will fetch model files remotely)
+    extractor = await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch32', options)
+  } catch (e: any) {
+    // eslint-disable-next-line no-console
+    console.error('[model] Failed to initialize transformers pipeline. This often indicates a network/CORS error fetching model files (JSON or WASM) which may return HTML instead of JSON. Original error:', e)
+    throw new Error(
+      `Model load failed (transformers). Check network requests to huggingface/CDN for non-200 or text/html responses. Original: ${e?.message || e}`,
+    )
+  }
 }
 
 export async function embedFromImageElement(imgEl: HTMLImageElement) {

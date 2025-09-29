@@ -2,17 +2,13 @@
   "extends": ["//"],
   "$schema": "https://turborepo.com/schema.json",
   "tasks": {
-    "prepare-assets": {
-      "cache": false,
-      "outputs": ["public/index_out/**"]
-    },
     "build": {
-      "dependsOn": ["@repo/mtg-image-db#build", "prepare-assets", "^build"],
+      "dependsOn": ["@repo/mtg-image-db#build", "^build"],
       "inputs": ["$TURBO_DEFAULT$"],
       "outputs": ["dist/**"]
     },
     "dev": {
-      "dependsOn": ["@repo/mtg-image-db#build", "prepare-assets"],
+      "dependsOn": ["@repo/mtg-image-db#build", "^build"],
       "cache": false,
       "persistent": true
     }

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { embedFromCanvas, loadEmbeddingsAndMeta, loadModel, top1 } from '@/lib/search'
+import { embedFromCanvas, loadEmbeddingsAndMetaFromPackage, loadModel, top1 } from '@/lib/search'
 import { setupWebcam } from '@/lib/webcam';
 
 
@@ -35,7 +35,7 @@ function ScannerPage() {
     async function init() {
       try {
         setSpinner('Loading embeddings…', true)
-        await loadEmbeddingsAndMeta()
+        await loadEmbeddingsAndMetaFromPackage()
         setSpinner('Downloading CLIP (vision) model…', true)
         await loadModel({ onProgress: (msg) => mounted && setSpinner(msg, true) })
 
