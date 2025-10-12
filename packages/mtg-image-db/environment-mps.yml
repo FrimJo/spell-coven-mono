@@ -13,4 +13,4 @@ dependencies:
       - Pillow==10.4.0
       - numpy==1.26.4
       - tqdm==4.66.5
-      - git+https://github.com/openai/CLIP.git@a1d4862
+      - git+https://github.com/openai/CLIP.git

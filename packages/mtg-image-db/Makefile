@@ -1,6 +1,6 @@
 .PHONY: install build export query serve clean conda-cpu conda-gpu conda-mps install-cpu install-gpu install-mps
 
-PYTHON ?= python3
+PYTHON ?= python
 PORT ?= 8000
 
 install:
@@ -25,8 +25,8 @@ serve:
 	$(PYTHON) -m http.server $(PORT)
 
 clean:
-	rm -rf image_cache/*
-	rm -rf index_out/*
+	rm -rf image_cache
+	rm -rf index_out
 
 # Conda helpers
 conda-cpu:

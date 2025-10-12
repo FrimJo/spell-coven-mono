@@ -173,7 +173,7 @@ def build_index(
                 "layout": c.get("layout"),
                 "lang": c.get("lang"),
                 "colors": c.get("colors"),
-                "image_url": art_url,      # used for embedding
+                "image_url": card_url,     # used for embedding (full card)
                 "card_url": card_url,      # used for display
                 "scryfall_uri": c.get("scryfall_uri"),
             })
