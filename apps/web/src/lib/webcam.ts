@@ -17,12 +17,32 @@ function ensureOpenCVScript(): Promise<void> {
   if (window.__cvReadyPromise) return window.__cvReadyPromise
 
   window.__cvReadyPromise = new Promise<void>((resolve, reject) => {
-    window.__resolveCvReady = resolve
+    // OpenCV.js expects this global callback
+    (window as any).onOpenCvReady = () => {
+      console.log('OpenCV.js is ready (via callback)')
+      resolve()
+    }
+    
     const script = document.createElement('script')
     script.async = true
     script.src = 'https://docs.opencv.org/4.x/opencv.js'
-    script.onload = () => resolve()
     script.onerror = () => reject(new Error('Failed to load OpenCV.js'))
+    
+    // Fallback: poll for cv.Mat to be available if callback doesn't fire
+    script.onload = () => {
+      console.log('OpenCV.js script loaded, waiting for initialization...')
+      const checkReady = () => {
+        if (typeof (window as any).cv !== 'undefined' && typeof (window as any).cv.Mat !== 'undefined') {
+          console.log('OpenCV.js is ready (via polling)')
+          resolve()
+        } else {
+          setTimeout(checkReady, 100)
+        }
+      }
+      // Start polling after a short delay
+      setTimeout(checkReady, 100)
+    }
+    
     document.head.appendChild(script)
   })
 
@@ -202,6 +222,7 @@ export async function setupWebcam(args: {
 
   return {
     async startVideo(deviceId: string | null = null) {
+      console.log('[webcam] startVideo called with deviceId:', deviceId)
       if (currentStream) {
         currentStream.getTracks().forEach((t) => t.stop())
         currentStream = null
@@ -212,22 +233,31 @@ export async function setupWebcam(args: {
           ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
           : { width: { ideal: 1920 }, height: { ideal: 1080 } },
       }
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
-      currentStream = stream
-      videoEl.srcObject = stream
-      const track = stream.getVideoTracks()[0]
-      const settings = (track.getSettings ? track.getSettings() : {}) as MediaTrackSettings
-      currentDeviceId = settings.deviceId || deviceId || null
-      return new Promise<void>((resolve) => {
-        videoEl.onloadedmetadata = () => {
-          void videoEl.play()
-          if (!animationStarted) {
-            animationStarted = true
-            requestAnimationFrame(detectCards)
+      console.log('[webcam] Requesting camera access with constraints:', constraints)
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints)
+        console.log('[webcam] Camera access granted, stream:', stream)
+        currentStream = stream
+        videoEl.srcObject = stream
+        const track = stream.getVideoTracks()[0]
+        const settings = (track.getSettings ? track.getSettings() : {}) as MediaTrackSettings
+        currentDeviceId = settings.deviceId || deviceId || null
+        console.log('[webcam] Video track settings:', settings)
+        return new Promise<void>((resolve) => {
+          videoEl.onloadedmetadata = () => {
+            console.log('[webcam] Video metadata loaded, starting playback')
+            void videoEl.play()
+            if (!animationStarted) {
+              animationStarted = true
+              requestAnimationFrame(detectCards)
+            }
+            resolve()
           }
-          resolve()
-        }
-      })
+        })
+      } catch (err) {
+        console.error('[webcam] Failed to get camera access:', err)
+        throw err
+      }
     },
     async getCameras() {
       const devices = await navigator.mediaDevices.enumerateDevices()
