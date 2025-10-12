@@ -24,8 +24,7 @@ import META_URL from '@repo/mtg-image-db/meta.json?url'
 // @ts-ignore
 import EMB_URL from '@repo/mtg-image-db/embeddings.f16bin?url'
 // Top-level import for transformers (no SSR)
-import { pipeline, env } from '@xenova/transformers'
-import type { ExtendedPretrainedOptions } from '../types/transformers'
+import { pipeline, env } from '@huggingface/transformers'
 
 function float16ToFloat32(uint16: Uint16Array) {
   const out = new Float32Array(uint16.length)
@@ -119,15 +118,21 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
     // Initialize pipeline with proper options
     // Using ViT (Vision Transformer) instead of CLIP - better for pure image matching
     console.log('[model] Loading pipeline from Hugging Face CDN: Xenova/vit-base-patch16-224')
-    const pipelineOptions: ExtendedPretrainedOptions = {
+    extractor = await pipeline('image-feature-extraction', 'Xenova/vit-base-patch16-224', {
       dtype: 'q8', // Use 8-bit quantization (good balance of size and quality)
       progress_callback: (progress) => {
-        const msg = `${progress.status ?? ''} ${progress.progress ?? ''} ${progress.file ?? ''}`.trim()
+        // Handle different progress types
+        let msg = progress.status
+        if ('file' in progress) {
+          msg += ` ${progress.file}`
+        }
+        if ('progress' in progress && progress.progress !== undefined) {
+          msg += ` ${progress.progress}%`
+        }
         console.log('[model] Progress:', progress)
-        opts?.onProgress?.(msg)
+        opts?.onProgress?.(msg.trim())
       }
-    }
-    extractor = await pipeline('image-feature-extraction', 'Xenova/vit-base-patch16-224', pipelineOptions as any)
+    })
     console.log('[model] Pipeline loaded successfully (cached in browser)')
   } catch (e: any) {
     // eslint-disable-next-line no-console
