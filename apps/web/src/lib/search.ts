@@ -101,21 +101,44 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
     quantized: false,
     progress_callback: (p: any) => {
       const msg = `${p.status ?? ''} ${p.progress ?? ''} ${p.file ?? ''}`.trim()
+      console.log('[model] Progress:', p)
       opts?.onProgress?.(msg)
     },
   }
   try {
-    // Configure environment for remote models via CDN/Hugging Face
+    // Configure environment for Transformers.js
+    // Models are downloaded directly to browser cache from Hugging Face CDN
     // See: https://xenova.github.io/transformers.js/environments
+    console.log('[model] Configuring transformers environment...')
+    
+    // Enable browser caching - models download once, then cached
     env.useBrowserCache = true
     env.allowRemoteModels = true
-    // Use stable CDN for ONNX WASM runtime
+    env.allowLocalModels = false
+    
+    // Use CDN for WASM runtime
     env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/'
-    // Initialize pipeline (will fetch model files remotely)
-    extractor = await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch32', options)
+    
+    console.log('[model] Environment config:', {
+      useBrowserCache: env.useBrowserCache,
+      allowRemoteModels: env.allowRemoteModels,
+      allowLocalModels: env.allowLocalModels,
+      wasmPaths: env.backends.onnx.wasm.wasmPaths
+    })
+    
+    // Initialize pipeline - downloads model files to browser cache on first run
+    // Subsequent loads use cached files (no re-download)
+    console.log('[model] Loading pipeline from Hugging Face CDN: Xenova/clip-vit-base-patch32')
+    const pipelineOptions = {
+      ...options,
+      quantized: true, // Use quantized model (147MB vs 578MB)
+    }
+    extractor = await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch32', pipelineOptions)
+    console.log('[model] Pipeline loaded successfully (cached in browser)')
   } catch (e: any) {
     // eslint-disable-next-line no-console
     console.error('[model] Failed to initialize transformers pipeline. This often indicates a network/CORS error fetching model files (JSON or WASM) which may return HTML instead of JSON. Original error:', e)
+    console.error('[model] Error stack:', e.stack)
     throw new Error(
       `Model load failed (transformers). Check network requests to huggingface/CDN for non-200 or text/html responses. Original: ${e?.message || e}`,
     )

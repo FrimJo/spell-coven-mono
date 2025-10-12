@@ -1,14 +1,23 @@
-# Turborepo starter
+# MTG Card Lookup - Spell Coven
 
-This Turborepo starter is maintained by the Turborepo core team.
+A browser-based Magic: The Gathering card recognition system using computer vision. Point your webcam at a card and get instant identification using CLIP (Contrastive Language-Image Pre-training) running entirely in your browser.
 
-## Using this example
+## Quick Start
 
-Run the following command:
+1. **Install dependencies:**
+   ```sh
+   pnpm install
+   ```
 
-```sh
-npx create-turbo@latest
-```
+2. **Start the development server:**
+   ```sh
+   pnpm dev
+   ```
+
+3. **Open the app:**
+   Navigate to http://localhost:3000 and click "Start Webcam" to begin scanning cards.
+
+**Note**: On first load, the CLIP model (~150MB quantized) downloads directly to your browser's cache from Hugging Face CDN. Subsequent loads are instant.
 
 ## What's inside?
 
@@ -16,13 +25,22 @@ This Turborepo includes the following packages/apps:
 
 ### Apps and Packages
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
+- `web`: MTG card recognition web app (Vite + React + TanStack Router)
+- `@repo/mtg-image-db`: Pre-generated card embeddings and metadata
 - `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
 - `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+- `@repo/tailwind-config`: Shared Tailwind CSS configuration
+- `@repo/prettier-config`: Shared Prettier configuration
 
 Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+
+### Key Technologies
+
+- **Computer Vision**: CLIP (via [@xenova/transformers](https://github.com/xenova/transformers.js)) for image feature extraction
+- **Card Detection**: OpenCV.js for real-time card boundary detection
+- **Frontend**: React 19, TanStack Router, Tailwind CSS
+- **Build Tool**: Vite with TypeScript
+- **Monorepo**: Turborepo with pnpm workspaces
 
 ### Utilities
 
