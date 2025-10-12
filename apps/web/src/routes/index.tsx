@@ -33,36 +33,62 @@ function ScannerPage() {
     let mounted = true
 
     async function init() {
-      try {
-        setSpinner('Loading embeddings…', true)
-        await loadEmbeddingsAndMetaFromPackage()
-        setSpinner('Downloading CLIP (vision) model…', true)
-        await loadModel({ onProgress: (msg) => mounted && setSpinner(msg, true) })
-
+      // Initialize webcam independently of model loading
+      const initWebcam = async () => {
         if (
           videoRef.current &&
           overlayRef.current &&
           croppedRef.current &&
           fullResRef.current
         ) {
-          webcamController.current = await setupWebcam({
-            video: videoRef.current,
-            overlay: overlayRef.current,
-            cropped: croppedRef.current,
-            fullRes: fullResRef.current,
-            onCrop: () => {
-              const btn = document.getElementById('searchCroppedBtn') as HTMLButtonElement | null
-              if (btn) btn.disabled = false
-            },
+          try {
+            setSpinner('Loading OpenCV…', true)
+            webcamController.current = await setupWebcam({
+              video: videoRef.current,
+              overlay: overlayRef.current,
+              cropped: croppedRef.current,
+              fullRes: fullResRef.current,
+              onCrop: () => {
+                const btn = document.getElementById('searchCroppedBtn') as HTMLButtonElement | null
+                if (btn) btn.disabled = false
+              },
+            })
+            console.log('Webcam controller initialized:', webcamController.current)
+            setStatus('Webcam ready (model loading in background)')
+          } catch (err) {
+            console.error('Webcam initialization error:', err)
+            setStatus(`Webcam error: ${err instanceof Error ? err.message : 'Unknown error'}`)
+          }
+        } else {
+          console.error('Missing refs:', { 
+            video: !!videoRef.current, 
+            overlay: !!overlayRef.current, 
+            cropped: !!croppedRef.current, 
+            fullRes: !!fullResRef.current 
           })
-          setStatus('OpenCV ready')
+          setStatus('Error: Missing canvas/video elements')
         }
-      } catch (err) {
-        console.error(err)
-        setSpinner('Initialization failed. See console.', true)
-      } finally {
-        setSpinner('', false)
       }
+
+      // Initialize model in background
+      const initModel = async () => {
+        try {
+          setSpinner('Loading embeddings…', true)
+          await loadEmbeddingsAndMetaFromPackage()
+          setSpinner('Downloading CLIP (vision) model…', true)
+          await loadModel({ onProgress: (msg) => mounted && setSpinner(msg, true) })
+          setStatus('Model and webcam ready')
+        } catch (err) {
+          console.error('Model initialization error:', err)
+          setStatus('Webcam ready (model failed to load)')
+        } finally {
+          setSpinner('', false)
+        }
+      }
+
+      // Run both initializations, but don't let model failure block webcam
+      await initWebcam()
+      await initModel()
     }
 
     init()
@@ -72,10 +98,19 @@ function ScannerPage() {
   }, [])
 
   const handleStartCam = async () => {
-    if (!webcamController.current) return
-    await webcamController.current.startVideo(cameraSelectRef.current?.value || null)
-    await webcamController.current.populateCameraSelect(cameraSelectRef.current)
-    setStatus('Webcam started')
+    if (!webcamController.current) {
+      console.error('Webcam controller not initialized')
+      setStatus('Error: Webcam controller not ready')
+      return
+    }
+    try {
+      await webcamController.current.startVideo(cameraSelectRef.current?.value || null)
+      await webcamController.current.populateCameraSelect(cameraSelectRef.current)
+      setStatus('Webcam started')
+    } catch (err) {
+      console.error('Failed to start webcam:', err)
+      setStatus(`Error: ${err instanceof Error ? err.message : 'Failed to start webcam'}`)
+    }
   }
 
   const handleCameraChange: React.ChangeEventHandler<HTMLSelectElement> = async (e) => {
