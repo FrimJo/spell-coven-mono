@@ -97,43 +97,37 @@ export async function loadEmbeddingsAndMetaFromPackage() {
 
 export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
   if (extractor) return
-  const options= {
-    quantized: false,
-    progress_callback: (p: any) => {
-      const msg = `${p.status ?? ''} ${p.progress ?? ''} ${p.file ?? ''}`.trim()
-      console.log('[model] Progress:', p)
-      opts?.onProgress?.(msg)
-    },
-  }
+  
   try {
     // Configure environment for Transformers.js
     // Models are downloaded directly to browser cache from Hugging Face CDN
     // See: https://xenova.github.io/transformers.js/environments
     console.log('[model] Configuring transformers environment...')
     
-    // Enable browser caching - models download once, then cached
+    // Enable browser caching - models download once, then cached in IndexedDB
     env.useBrowserCache = true
     env.allowRemoteModels = true
     env.allowLocalModels = false
     
-    // Use CDN for WASM runtime
-    env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/'
-    
     console.log('[model] Environment config:', {
       useBrowserCache: env.useBrowserCache,
       allowRemoteModels: env.allowRemoteModels,
-      allowLocalModels: env.allowLocalModels,
-      wasmPaths: env.backends.onnx.wasm.wasmPaths
+      allowLocalModels: env.allowLocalModels
     })
     
-    // Initialize pipeline - downloads model files to browser cache on first run
-    // Subsequent loads use cached files (no re-download)
-    console.log('[model] Loading pipeline from Hugging Face CDN: Xenova/clip-vit-base-patch32')
-    const pipelineOptions = {
-      ...options,
-      quantized: true, // Use quantized model (147MB vs 578MB)
-    }
-    extractor = await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch32', pipelineOptions)
+    // Initialize pipeline with proper options
+    // dtype options: 'fp32', 'fp16', 'q8', 'q4', 'q4f16'
+    // Using 'q8' for quantized model (better quality than q4, smaller than fp16)
+    // Using ViT (Vision Transformer) instead of CLIP - better for pure image matching
+    console.log('[model] Loading pipeline from Hugging Face CDN: Xenova/vit-base-patch16-224')
+    extractor = await pipeline('image-feature-extraction', 'Xenova/vit-base-patch16-224', {
+      dtype: 'q8', // Use 8-bit quantization (good balance of size and quality)
+      progress_callback: (progress: any) => {
+        const msg = `${progress.status ?? ''} ${progress.progress ?? ''} ${progress.file ?? ''}`.trim()
+        console.log('[model] Progress:', progress)
+        opts?.onProgress?.(msg)
+      }
+    })
     console.log('[model] Pipeline loaded successfully (cached in browser)')
   } catch (e: any) {
     // eslint-disable-next-line no-console
