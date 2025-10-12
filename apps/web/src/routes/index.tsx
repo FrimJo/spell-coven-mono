@@ -15,6 +15,7 @@ function ScannerPage() {
   const [spinnerVisible, setSpinnerVisible] = useState<boolean>(false)
   const [results, setResults] = useState<Result[]>([])
   const [status, setStatus] = useState<string>('')
+  const [hasCroppedImage, setHasCroppedImage] = useState<boolean>(false)
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const overlayRef = useRef<HTMLCanvasElement | null>(null)
@@ -49,8 +50,7 @@ function ScannerPage() {
               cropped: croppedRef.current,
               fullRes: fullResRef.current,
               onCrop: () => {
-                const btn = document.getElementById('searchCroppedBtn') as HTMLButtonElement | null
-                if (btn) btn.disabled = false
+                setHasCroppedImage(true)
               },
             })
             console.log('Webcam controller initialized:', webcamController.current)
@@ -120,16 +120,41 @@ function ScannerPage() {
   }
 
   const handleSearchCropped = async () => {
-    if (!croppedRef.current) return
+    if (!croppedRef.current) {
+      console.error('Cropped canvas ref not available')
+      setStatus('Error: Cropped canvas not ready')
+      return
+    }
+
+    // Check if the cropped canvas has actual image data
+    const ctx = croppedRef.current.getContext('2d')
+    if (!ctx) {
+      console.error('Could not get 2d context from cropped canvas')
+      setStatus('Error: Canvas context not available')
+      return
+    }
+
+    const imageData = ctx.getImageData(0, 0, croppedRef.current.width, croppedRef.current.height)
+    const hasData = imageData.data.some((pixel) => pixel !== 0)
+    
+    if (!hasData) {
+      console.warn('Cropped canvas is empty - please select a card first')
+      setStatus('Please select a card from the webcam stream first')
+      return
+    }
+
     try {
       setSpinner('Embedding cropped…', true)
       const q = await embedFromCanvas(croppedRef.current)
       setSpinner('Searching…', true)
       const best = top1(q)
       setResults([best as Result])
+      setStatus('Search completed')
     } catch (err) {
       console.error('Embedding/search failed:', err)
-      setSpinner('Failed to embed/search (see console).', true)
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error'
+      setStatus(`Search failed: ${errorMsg}`)
+      setSpinner('', false)
     } finally {
       setSpinner('', false)
     }
@@ -176,7 +201,7 @@ function ScannerPage() {
         <label htmlFor="cameraSelect">Camera:</label>
         <select id="cameraSelect" ref={cameraSelectRef} onChange={handleCameraChange} />
         <button id="startCamBtn" onClick={handleStartCam}>Start Webcam</button>
-        <button id="searchCroppedBtn" onClick={handleSearchCropped} disabled>
+        <button id="searchCroppedBtn" onClick={handleSearchCropped} disabled={!hasCroppedImage}>
           Search Cropped
         </button>
         <span style={{ color: '#666' }}>{status}</span>
