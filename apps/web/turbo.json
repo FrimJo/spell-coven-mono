@@ -6,11 +6,6 @@
       "dependsOn": ["@repo/mtg-image-db#build", "^build"],
       "inputs": ["$TURBO_DEFAULT$"],
       "outputs": ["dist/**"]
-    },
-    "dev": {
-      "dependsOn": ["@repo/mtg-image-db#build", "^build"],
-      "cache": false,
-      "persistent": true
     }
   }
 }
