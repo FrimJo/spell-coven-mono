@@ -25,6 +25,7 @@ import META_URL from '@repo/mtg-image-db/meta.json?url'
 import EMB_URL from '@repo/mtg-image-db/embeddings.f16bin?url'
 // Top-level import for transformers (no SSR)
 import { pipeline, env } from '@xenova/transformers'
+import type { ExtendedPretrainedOptions } from '../types/transformers'
 
 function float16ToFloat32(uint16: Uint16Array) {
   const out = new Float32Array(uint16.length)
@@ -116,18 +117,17 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
     })
     
     // Initialize pipeline with proper options
-    // dtype options: 'fp32', 'fp16', 'q8', 'q4', 'q4f16'
-    // Using 'q8' for quantized model (better quality than q4, smaller than fp16)
     // Using ViT (Vision Transformer) instead of CLIP - better for pure image matching
     console.log('[model] Loading pipeline from Hugging Face CDN: Xenova/vit-base-patch16-224')
-    extractor = await pipeline('image-feature-extraction', 'Xenova/vit-base-patch16-224', {
+    const pipelineOptions: ExtendedPretrainedOptions = {
       dtype: 'q8', // Use 8-bit quantization (good balance of size and quality)
-      progress_callback: (progress: any) => {
+      progress_callback: (progress) => {
         const msg = `${progress.status ?? ''} ${progress.progress ?? ''} ${progress.file ?? ''}`.trim()
         console.log('[model] Progress:', progress)
         opts?.onProgress?.(msg)
       }
-    })
+    }
+    extractor = await pipeline('image-feature-extraction', 'Xenova/vit-base-patch16-224', pipelineOptions as any)
     console.log('[model] Pipeline loaded successfully (cached in browser)')
   } catch (e: any) {
     // eslint-disable-next-line no-console
