@@ -7,7 +7,7 @@ from PIL import Image
 import numpy as np
 
 # --- Load FAISS + metadata ---
-index = faiss.read_index("index_out/mtg_art.faiss")
+index = faiss.read_index("index_out/mtg_cards.faiss")
 meta = [json.loads(line) for line in open("index_out/mtg_meta.jsonl", "r", encoding="utf-8")]
 
 # --- Init CLIP ---

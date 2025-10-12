@@ -1,7 +1,7 @@
-# MTG Card Art Visual Search
+# MTG Card Visual Search
 
-This project builds a visual search engine for Magic: The Gathering (MTG) card art.
-It downloads Scryfall bulk data, caches images, embeds them with CLIP, builds a FAISS index for Python querying, and exports artifacts for a fully in-browser search experience using Transformers.js.
+This project builds a visual search engine for Magic: The Gathering (MTG) cards.
+It downloads Scryfall bulk data, caches full card images, embeds them with CLIP, builds a FAISS index for Python querying, and exports artifacts for a fully in-browser search experience using Transformers.js.
 
 See the full specification for the data and pipelines in `SPEC.md`.
 For the browser client and UI spec, see `apps/web/SPEC.md`.
@@ -70,7 +70,7 @@ python build_mtg_faiss.py --kind unique_artwork --out index_out --cache image_ca
 
 Artifacts written:
 - `index_out/mtg_embeddings.npy`
-- `index_out/mtg_art.faiss`
+- `index_out/mtg_cards.faiss`
 - `index_out/mtg_meta.jsonl`
 
 You can limit for quick tests, e.g. `--limit 2000`.
@@ -105,7 +105,7 @@ See `apps/web/README.md` and `apps/web/SPEC.md` for setup, usage, and acceptance
 ## Development Tips
 
 - **Start with a small subset**: add `--limit 2000` to `build_mtg_faiss.py` for faster iterations.
-- **Adjust query image**: edit `query_path` in `query_index.py` to point to a cached art in `image_cache/`.
+- **Adjust query image**: edit `query_path` in `query_index.py` to point to a cached card image in `image_cache/`.
 - **Static server**: any static HTTP server works (Node, Python, etc.). Ensure paths like `index_out/meta.json` resolve from project root.
 - **Model cache**: the first browser load downloads the CLIP model; subsequent loads are faster due to caching.
 - **Troubleshooting devices**: if webcams aren’t listed, grant camera permissions and try `Start Webcam` again; change camera from the dropdown.

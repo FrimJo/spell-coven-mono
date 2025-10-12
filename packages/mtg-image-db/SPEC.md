@@ -1,4 +1,4 @@
-# Project Specification: MTG Card Art Visual Search
+# Project Specification: MTG Card Visual Search
 
 ## Spec Version
 - Version: v0.1.1
@@ -12,9 +12,9 @@
   - Added Spec Version and Changelog sections. No functional behavior changes.
 
 ## 1. Summary
-Build a Magic: The Gathering (MTG) visual search platform designed for online gameplay, where each player streams their board state via webcam (or similar). Users can click a card visible in any player’s stream to identify it and retrieve detailed card information. To enable this, the system fetches MTG card art (from Scryfall bulk data), embeds images using CLIP (ViT-B/32), and builds a searchable index that supports querying with a cropped image of the selected card. The index/database artifacts are shipped to the client so the entire search can run locally in the browser using Transformers.js; the match result is then used to fetch or display the full card details.
+Build a Magic: The Gathering (MTG) visual search platform designed for online gameplay, where each player streams their board state via webcam (or similar). Users can click a card visible in any player's stream to identify it and retrieve detailed card information. To enable this, the system fetches MTG card images (from Scryfall bulk data), embeds full card images using CLIP (ViT-B/32), and builds a searchable index that supports querying with a cropped image of the selected card. The index/database artifacts are shipped to the client so the entire search can run locally in the browser using Transformers.js; the match result is then used to fetch or display the full card details.
 
-Technically, the system downloads and processes Scryfall bulk data, caches card art, produces CLIP embeddings, and builds a FAISS index for fast similarity search. It supports two query paths: (1) local Python via FAISS, and (2) fully in-browser via Transformers.js using pre-exported embeddings.
+Technically, the system downloads and processes Scryfall bulk data, caches card images, produces CLIP embeddings, and builds a FAISS index for fast similarity search. It supports two query paths: (1) local Python via FAISS, and (2) fully in-browser via Transformers.js using pre-exported embeddings.
 
 ## 2. Goals and Non-Goals
 - Goals
@@ -36,7 +36,7 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
   - Embed all available images using CLIP ViT-B/32 to 512-dim L2-normalized vectors. [SPEC-FR-EI-01]
   - Persist artifacts to `index_out/`: [SPEC-FR-EI-02]
     - `mtg_embeddings.npy` (float32) [SPEC-FR-EI-02a]
-    - `mtg_art.faiss` (FAISS IP index over normalized vectors) [SPEC-FR-EI-02b]
+    - `mtg_cards.faiss` (FAISS IP index over normalized vectors) [SPEC-FR-EI-02b]
     - `mtg_meta.jsonl` (per-vector JSON metadata lines) [SPEC-FR-EI-02c]
 - Python Query [SPEC-FR-PY]
   - Load FAISS index and metadata. [SPEC-FR-PY-01]
@@ -83,13 +83,13 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
 - `index_out/mtg_meta.jsonl`: one JSON object per line with keys including:
   - `name`, `scryfall_id`, `face_id`, `set`, `collector_number`, `frame`, `layout`, `lang`, `colors`, `image_url`, `card_url`, `scryfall_uri`.
 - `index_out/mtg_embeddings.npy`: float32 array of shape `[N, 512]`, L2-normalized.
-- `index_out/mtg_art.faiss`: FAISS index over `[N, 512]` vectors using inner product.
+- `index_out/mtg_cards.faiss`: FAISS index over `[N, 512]` vectors using inner product.
 - `index_out/embeddings.f16bin`: flat float16 buffer of length `N*512`.
 - `index_out/meta.json`: JSON array of length `N`, same order as embeddings.
 
 ## 7. Acceptance Criteria
 - Build [SPEC-AC-BUILD-01]
-  - Running `python3 build_mtg_faiss.py --kind unique_artwork --out index_out --cache image_cache` produces `index_out/mtg_embeddings.npy`, `index_out/mtg_art.faiss`, `index_out/mtg_meta.jsonl` without errors. Alternatively, `make build` performs the same. [SPEC-AC-BUILD-01.1]
+  - Running `python3 build_mtg_faiss.py --kind unique_artwork --out index_out --cache image_cache` produces `index_out/mtg_embeddings.npy`, `index_out/mtg_cards.faiss`, `index_out/mtg_meta.jsonl` without errors. Alternatively, `make build` performs the same. [SPEC-AC-BUILD-01.1]
 - Export [SPEC-AC-EXP-01]
   - Running `python3 export_for_browser.py` produces `index_out/embeddings.f16bin` and `index_out/meta.json` with matching counts. Alternatively, `make export` performs the same. [SPEC-AC-EXP-01.1]
 - Python Query [SPEC-AC-PY-01]

@@ -37,26 +37,22 @@ def load_bulk(kind: str) -> List[dict]:
 
 def face_image_urls(card: dict):
     out = []
-    def pick_art(uris):   # for embeddings
-        return uris.get("art_crop") or uris.get("normal") or uris.get("large")
-    def pick_card(uris):  # for display
+    def pick_card_image(uris):
         # 'normal' loads fast and looks great; use 'png' if you want text-perfect render
         return uris.get("normal") or uris.get("border_crop") or uris.get("png") or uris.get("large")
 
     if "image_uris" in card:
-        art = pick_art(card["image_uris"])
-        full = pick_card(card["image_uris"])
-        if art:
-            out.append((card["name"], art, full, card.get("id")))
+        card_url = pick_card_image(card["image_uris"])
+        if card_url:
+            out.append((card["name"], card_url, card_url, card.get("id")))
 
     for i, f in enumerate(card.get("card_faces", [])):
         if "image_uris" in f:
-            art = pick_art(f["image_uris"])
-            full = pick_card(f["image_uris"])
-            if art:
+            card_url = pick_card_image(f["image_uris"])
+            if card_url:
                 name = f.get("name") or card["name"]
                 face_id = (card.get("id") or "") + f":face:" + str(i)
-                out.append((name, art, full, face_id))
+                out.append((name, card_url, card_url, face_id))
     return out
 
 def safe_filename(url: str) -> str:
@@ -162,7 +158,7 @@ def build_index(
     # Gather (name, url, id, set, collector_number, frame, colors)
     records: List[Dict] = []
     for c in cards:
-        for name, art_url, card_url, face_id in face_image_urls(c):
+        for name, card_img_url, display_url, face_id in face_image_urls(c):
             records.append({
                 "name": name,
                 "scryfall_id": c.get("id"),
@@ -173,8 +169,8 @@ def build_index(
                 "layout": c.get("layout"),
                 "lang": c.get("lang"),
                 "colors": c.get("colors"),
-                "image_url": card_url,     # used for embedding (full card)
-                "card_url": card_url,      # used for display
+                "image_url": card_img_url,     # used for embedding (full card)
+                "card_url": display_url,       # used for display
                 "scryfall_uri": c.get("scryfall_uri"),
             })
     if limit:
@@ -231,8 +227,8 @@ def build_index(
     if not index.is_trained:
       index.train(X)
     index.add_with_ids(X, np.arange(X.shape[0]).astype("int64"))
-    faiss.write_index(index, str(out_dir / "mtg_art.faiss"))
-    print(f"Saved FAISS index to {out_dir/'mtg_art.faiss'}")
+    faiss.write_index(index, str(out_dir / "mtg_cards.faiss"))
+    print(f"Saved FAISS index to {out_dir/'mtg_cards.faiss'}")
 
     # Save metadata line-by-line (easy to stream later)
     meta_path = out_dir / "mtg_meta.jsonl"
@@ -242,7 +238,7 @@ def build_index(
     print(f"Saved metadata for {len(meta)} vectors to {meta_path}")
 
 def main():
-    ap = argparse.ArgumentParser(description="Build a FAISS index of MTG card art from Scryfall bulk.")
+    ap = argparse.ArgumentParser(description="Build a FAISS index of MTG cards from Scryfall bulk.")
     ap.add_argument("--kind", default="unique_artwork",
                     choices=["unique_artwork", "default_cards", "all_cards"],
                     help="Which Scryfall bulk to use.")
