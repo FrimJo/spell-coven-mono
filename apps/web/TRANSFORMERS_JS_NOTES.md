@@ -2,6 +2,12 @@
 
 Based on official Transformers.js documentation (Context7).
 
+## Version Note
+
+**Package Version**: `@xenova/transformers@^2.17.2`
+
+⚠️ **TypeScript Type Mismatch**: The `dtype` parameter exists in the runtime API but is not included in the TypeScript type definitions for v2.17.2. We use `@ts-expect-error` to suppress the type error while the feature works correctly at runtime.
+
 ## Key Changes Made
 
 ### 1. Correct `dtype` Configuration
