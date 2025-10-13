@@ -221,14 +221,15 @@ def build_index(
     np.save(out_dir / "mtg_embeddings.npy", X)
     print(f"Saved raw embeddings to {out_dir/'mtg_embeddings.npy'}")
 
-    # Build FAISS (HNSW over inner-product; vectors already L2-normalized)
+    # Build FAISS index with HNSW for speed (vectors already L2-normalized)
     d = X.shape[1]
-    index = faiss.IndexIDMap(faiss.IndexFlatIP(d))
-    if not index.is_trained:
-      index.train(X)
+    # M=64 for better recall, efConstruction=400 for high accuracy
+    hnsw_index = faiss.IndexHNSWFlat(d, 64)
+    hnsw_index.hnsw.efConstruction = 400  # Higher = better accuracy (slower build, but we don't care)
+    index = faiss.IndexIDMap(hnsw_index)
     index.add_with_ids(X, np.arange(X.shape[0]).astype("int64"))
     faiss.write_index(index, str(out_dir / "mtg_cards.faiss"))
-    print(f"Saved FAISS index to {out_dir/'mtg_cards.faiss'}")
+    print(f"Saved HNSW index (M=64, efConstruction=400) to {out_dir/'mtg_cards.faiss'}")
 
     # Save metadata line-by-line (easy to stream later)
     meta_path = out_dir / "mtg_meta.jsonl"
