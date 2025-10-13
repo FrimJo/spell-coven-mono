@@ -1,6 +1,6 @@
 # MTG Image DB - Recommended Improvements
 
-**Document Version**: 1.9
+**Document Version**: 2.0
 **Date**: 2025-10-13
 **Status**: In Progress
 
@@ -79,9 +79,11 @@ Better visibility into failures and data quality issues. **Important for product
 
 ### P3.1: Add Logging for Failed Downloads
 
-**File**: `build_mtg_faiss.py`
-**Lines**: 66-84
+**Files**: `download_images.py`, `build_mtg_faiss.py` (legacy)
+**Lines**: 66-84 (in build_mtg_faiss.py)
 **Issue**: Silent failures when images fail to download.
+
+**Note**: `download_images.py` now provides a download summary with success/failure counts. This improvement is partially addressed.
 
 **Proposed**:
 ```python
@@ -107,9 +109,11 @@ def download_image(url: str, cache_dir: Path, retries: int = 3, timeout: int = 2
 
 ### P3.2: Add Summary Statistics After Build
 
-**File**: `build_mtg_faiss.py`
-**Line**: 238 (end of build_index)
+**Files**: `build_embeddings.py`, `build_mtg_faiss.py` (legacy)
+**Line**: 238 (end of build_index in build_mtg_faiss.py)
 **Issue**: No summary of success/failure rates.
+
+**Note**: `build_embeddings.py` now provides a build summary with cache status and indexing statistics. This improvement is partially addressed.
 
 **Proposed**:
 ```python
@@ -132,8 +136,8 @@ print(f"Successfully indexed: {X.shape[0]:,} ({X.shape[0]/len(records)*100:.1f}%
 
 ### P3.3: Validate Downloaded Images
 
-**File**: `build_mtg_faiss.py`
-**Line**: 79
+**Files**: `download_images.py`, `build_mtg_faiss.py` (legacy)
+**Line**: 79 (in build_mtg_faiss.py)
 **Issue**: No validation that downloaded file is a valid image.
 
 **Proposed**:
@@ -191,8 +195,8 @@ Reduce technical debt and improve long-term maintainability. **Implement when st
 
 ### P4.1: Extract Device Selection to Shared Utility
 
-**Files**: `build_mtg_faiss.py` (lines 104-110), `query_index.py` (lines 14-16)
-**Issue**: Duplicated device selection logic.
+**Files**: `build_embeddings.py`, `build_mtg_faiss.py` (lines 104-110), `query_index.py` (lines 14-16)
+**Issue**: Duplicated device selection logic across multiple scripts.
 
 **Proposed**: Create `utils.py`:
 ```python
@@ -237,8 +241,8 @@ def load_bulk(kind: str) -> List[dict]:
 
 ### P4.3: Make Image Preference Configurable
 
-**File**: `build_mtg_faiss.py`
-**Line**: 40-42
+**Files**: `build_mtg_faiss.py`, `download_images.py`, `build_embeddings.py`
+**Line**: 40-42 (in build_mtg_faiss.py)
 **Issue**: Hardcoded image quality preference.
 
 **Proposed**:
@@ -366,19 +370,28 @@ index:
 
 ---
 
-### P6.2: Add Resume/Incremental Build Support
+### ✅ P6.2: Add Resume/Incremental Build Support
 
-**File**: `build_mtg_faiss.py`
-**Issue**: No way to resume interrupted builds.
+**Status**: Partially completed via two-step build process.
 
-**Proposed**:
-- Save checkpoint after download phase
-- Save checkpoint after embedding phase
-- Add `--resume` flag to continue from checkpoint
+**Files**: `download_images.py`, `build_embeddings.py`
+**Previous Issue**: No way to resume interrupted builds in single-step `build_mtg_faiss.py`.
 
-**Impact**: Saves hours on interrupted builds.
+**Solution Implemented**:
+- Split build into two steps: `download_images.py` (step 1) and `build_embeddings.py` (step 2)
+- Images are cached persistently in `image_cache/`
+- If download is interrupted, cached images are preserved and download can resume
+- Embedding step can be re-run without re-downloading
+- `build_embeddings.py` checks cache and warns about missing images
 
-**Effort**: 3-4 hours
+**Remaining Work**:
+- Add explicit `--resume` flag for partial downloads
+- Add checkpoint files for embedding phase
+- Track which images have been successfully downloaded
+
+**Impact**: Significantly improved - downloads can now be resumed by re-running `make download`.
+
+**Effort**: 1-2 hours for remaining checkpoint features
 
 ---
 
@@ -632,6 +645,7 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 
 ## Change Log
 
+- **2025-10-13 v2.0**: Split build process into two steps (download_images.py + build_embeddings.py) for better resumability. Marked P6.2 as partially completed. Updated all documentation to reference new two-step workflow. Legacy single-step build (build_mtg_faiss.py) still available.
 - **2025-10-13 v1.9**: Removed P2.5 (ViT-L/14 upgrade) as not relevant. Discovered and documented critical model mismatch bug: frontend was using wrong ViT model instead of CLIP. Fixed in apps/web/src/lib/search.ts to use Xenova/clip-vit-base-patch32.
 - **2025-10-13 v1.8**: Fixed documentation inconsistencies (P4.3 and P6.1 examples now reflect current defaults from P2.1 and P2.2)
 - **2025-10-13 v1.7**: Marked P2.4 as completed (int8 quantization for browser)
