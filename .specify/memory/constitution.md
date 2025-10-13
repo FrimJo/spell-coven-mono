@@ -1,13 +1,14 @@
 <!--
 Sync Impact Report:
-- Version change: none → 1.0.0
-- Modified principles: Initial creation
-- Added sections: All core principles, Browser-First Architecture, Data Contracts, Development Workflow, Governance
+- Version change: 1.0.0 → 1.1.0
+- Modified principles: Development Workflow
+- Added sections: Continuous Verification (type checking, linting, Context7 usage)
 - Templates requiring updates:
-  ✅ spec-template.md (reviewed - aligns with user story prioritization and data contracts)
-  ✅ plan-template.md (reviewed - aligns with technical context and constitution check)
-  ✅ tasks-template.md (reviewed - aligns with user story organization and testing discipline)
+  ⏳ plan-template.md (may need review for continuous verification practices)
+  ⏳ tasks-template.md (may need review for continuous verification practices)
 - Follow-up TODOs: None
+- Previous changes:
+  - 1.0.0 (2025-10-13): Initial creation with all core principles
 -->
 
 # Spell Coven Constitution
@@ -175,6 +176,16 @@ Errors MUST include:
 - Contract tests MUST validate data format compliance
 - Integration tests MUST verify end-to-end user journeys
 
+### Continuous Verification
+
+During development:
+- Run type checking OFTEN (`pnpm check-types`) to catch type errors early
+- Run linting OFTEN (`pnpm lint`) to maintain code quality and consistency
+- Fix type and lint errors immediately rather than accumulating technical debt
+- Use Context7 (`mcp1_resolve-library-id` and `mcp1_get-library-docs`) to get up-to-date documentation for any npm package
+
+**Rationale:** Frequent type checking and linting prevents error accumulation and maintains code quality. Context7 provides accurate, version-specific documentation for npm packages, reducing reliance on potentially outdated information.
+
 ### Quality Gates
 
 Before merging:
@@ -212,4 +223,4 @@ Any violation of simplicity principles (e.g., adding architectural layers, intro
 - Code reviews MUST check for unjustified complexity
 - Specifications MUST align with user-centric prioritization
 
-**Version**: 1.0.0 | **Ratified**: 2025-10-13 | **Last Amended**: 2025-10-13
+**Version**: 1.1.0 | **Ratified**: 2025-10-13 | **Last Amended**: 2025-10-14
