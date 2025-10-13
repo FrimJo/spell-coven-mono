@@ -78,6 +78,10 @@
   --sidebar-ring: oklch(0.439 0 0);
 }
 
+@theme {
+  --radius-button: 14px;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

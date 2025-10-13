@@ -15,7 +15,7 @@ function Input({ className, type, style, ...props }: React.ComponentProps<"input
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
-      style={{ borderRadius: '0.875rem', ...style }}
+      style={{ borderRadius: '14px', ...style }}
       {...props}
     />
   );

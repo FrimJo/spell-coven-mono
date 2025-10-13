@@ -51,7 +51,7 @@ function Button({
     <Comp
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
-      style={{ borderRadius: '0.875rem', ...style }}
+      style={{ borderRadius: '14px', ...style }}
       {...props}
     />
   );
