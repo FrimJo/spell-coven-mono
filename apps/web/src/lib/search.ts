@@ -9,6 +9,17 @@ export type CardMeta = {
   card_url?: string
 }
 
+export type MetaWithQuantization = {
+  quantization: {
+    dtype: string
+    scale_factor: number
+    original_dtype: string
+    note: string
+  }
+  shape: [number, number]
+  records: CardMeta[]
+}
+
 let meta: CardMeta[] | null = null
 let db: Float32Array | null = null
 let extractor: any = null
@@ -22,22 +33,14 @@ let loadTask: Promise<void> | null = null
 import META_URL from '@repo/mtg-image-db/meta.json?url'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import EMB_URL from '@repo/mtg-image-db/embeddings.f16bin?url'
+import EMB_URL from '@repo/mtg-image-db/embeddings.i8bin?url'
 // Top-level import for transformers (no SSR)
 import { pipeline, env } from '@huggingface/transformers'
 
-function float16ToFloat32(uint16: Uint16Array) {
-  const out = new Float32Array(uint16.length)
-  for (let i = 0; i < uint16.length; i++) {
-    const h = uint16[i]
-    const s = (h & 0x8000) >> 15
-    const e = (h & 0x7c00) >> 10
-    const f = h & 0x03ff
-    let v
-    if (e === 0) v = f ? (f / 1024) * Math.pow(2, -14) : 0
-    else if (e === 31) v = f ? NaN : Infinity
-    else v = (1 + f / 1024) * Math.pow(2, e - 15)
-    out[i] = (s ? -1 : 1) * v
+function int8ToFloat32(int8Array: Int8Array, scaleFactor = 127) {
+  const out = new Float32Array(int8Array.length)
+  for (let i = 0; i < int8Array.length; i++) {
+    out[i] = int8Array[i] / scaleFactor
   }
   return out
 }
@@ -85,8 +88,28 @@ export async function loadEmbeddingsAndMetaFromPackage() {
       throw new Error(`Failed to fetch EMB_URL (${embUrl}): ${embRes.status} ${embRes.statusText}`)
     }
     const buf = await embRes.arrayBuffer()
-    meta = m
-    db = float16ToFloat32(new Uint16Array(buf))
+    
+    // Handle both old format (array) and new format (object with quantization metadata)
+    if (Array.isArray(m)) {
+      // Old format: direct array of records
+      meta = m
+      // Assume old float16 format if no quantization metadata
+      throw new Error('Old float16 format no longer supported. Please re-export with int8 quantization.')
+    } else {
+      // New format: object with quantization metadata and records
+      const metaObj = m as MetaWithQuantization
+      meta = metaObj.records
+      
+      // Dequantize based on metadata
+      if (metaObj.quantization.dtype === 'int8') {
+        const scaleFactor = metaObj.quantization.scale_factor
+        db = int8ToFloat32(new Int8Array(buf), scaleFactor)
+        // eslint-disable-next-line no-console
+        console.debug(`[search] Dequantized ${meta.length} embeddings from int8 (scale=${scaleFactor})`)
+      } else {
+        throw new Error(`Unsupported quantization dtype: ${metaObj.quantization.dtype}`)
+      }
+    }
   })()
   try {
     await loadTask
