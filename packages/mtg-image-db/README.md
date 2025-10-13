@@ -81,6 +81,8 @@ Converts the `.npy` embeddings to a float16 binary for the browser and the JSONL
 
 ```bash
 python export_for_browser.py
+# Or with custom directories:
+python export_for_browser.py --input-dir index_out --output-dir index_out
 ```
 
 Artifacts written:
@@ -89,13 +91,15 @@ Artifacts written:
 
 ### 4) Python query example
 
-Edit `query_index.py` to point `query_path` to an image (e.g. from `image_cache/`), then run:
+Query the index with any image:
 
 ```bash
-python query_index.py
+python query_index.py image_cache/your_image.jpg
+# Or get top-10 results:
+python query_index.py image_cache/your_image.jpg --k 10
 ```
 
-It prints the top-5 nearest images by cosine similarity, along with names and URLs.
+It prints the top-k nearest images by cosine similarity, along with names and URLs.
 
 ### 5) Browser UI (moved)
 
@@ -105,7 +109,7 @@ See `apps/web/README.md` and `apps/web/SPEC.md` for setup, usage, and acceptance
 ## Development Tips
 
 - **Start with a small subset**: add `--limit 2000` to `build_mtg_faiss.py` for faster iterations.
-- **Adjust query image**: edit `query_path` in `query_index.py` to point to a cached card image in `image_cache/`.
+- **Query any image**: pass the image path as an argument to `query_index.py`.
 - **Static server**: any static HTTP server works (Node, Python, etc.). Ensure paths like `index_out/meta.json` resolve from project root.
 - **Model cache**: the first browser load downloads the CLIP model; subsequent loads are faster due to caching.
 - **Troubleshooting devices**: if webcams aren’t listed, grant camera permissions and try `Start Webcam` again; change camera from the dropdown.

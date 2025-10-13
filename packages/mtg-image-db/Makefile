@@ -18,7 +18,8 @@ export:
 	$(PYTHON) export_for_browser.py
 
 query:
-	$(PYTHON) query_index.py
+	@echo "Usage: $(PYTHON) query_index.py <image_path> [--k N]"
+	@echo "Example: $(PYTHON) query_index.py image_cache/your_image.jpg --k 5"
 
 serve:
 	@echo "Serving on http://localhost:$(PORT)"
