@@ -162,10 +162,10 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
     })
     
     // Initialize pipeline with proper options
-    // Using ViT (Vision Transformer) instead of CLIP - better for pure image matching
-    console.log('[model] Loading pipeline from Hugging Face CDN: Xenova/vit-base-patch16-224')
-    extractor = await pipeline('image-feature-extraction', 'Xenova/vit-base-patch16-224', {
-      dtype: 'q8', // Use 8-bit quantization (good balance of size and quality)
+    // CRITICAL: Must use CLIP ViT-B/32 to match backend embeddings (build_mtg_faiss.py line 111)
+    console.log('[model] Loading pipeline from Hugging Face CDN: Xenova/clip-vit-base-patch32')
+    extractor = await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch32', {
+      dtype: 'fp32', // CLIP requires full precision for accurate embeddings
       progress_callback: (progress) => {
         // Handle different progress types
         let msg = progress.status

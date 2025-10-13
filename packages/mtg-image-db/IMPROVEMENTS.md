@@ -1,6 +1,6 @@
 # MTG Image DB - Recommended Improvements
 
-**Document Version**: 1.8
+**Document Version**: 1.9
 **Date**: 2025-10-13
 **Status**: In Progress
 
@@ -50,37 +50,16 @@ This document tracks recommended improvements for the `mtg-image-db` package bas
 
 ---
 
-### P2.5: 🟢 LOW PRIORITY - Consider CLIP ViT-L/14 for Maximum Accuracy
+### ❌ P2.5: REMOVED - Consider CLIP ViT-L/14 for Maximum Accuracy
 
-**File**: `build_mtg_faiss.py`
-**Line**: 111
-**Issue**: ViT-B/32 (512-dim) is fast but ViT-L/14 (768-dim) is more accurate, especially with degraded images.
+**Reason**: Not relevant. Current ViT-B/32 (512-dim) provides good accuracy and matches browser capabilities. Upgrading to ViT-L/14 (768-dim) would require:
+- 50% larger browser download (768-dim vs 512-dim)
+- Slower browser queries (~1.5x)
+- Browser model availability uncertain (Transformers.js may not support ViT-L/14)
 
-**User Impact**: **Best possible accuracy from blurry images (Priority #1)**
+**Decision**: Keep ViT-B/32 for optimal browser performance. If accuracy needs improvement, consider other approaches like better image preprocessing or data augmentation.
 
-**Proposed Solution**:
-```python
-# Add model selection argument
-ap.add_argument("--model", default="ViT-B/32", 
-                choices=["ViT-B/32", "ViT-L/14"],
-                help="CLIP model: ViT-B/32 (512-dim, fast) or ViT-L/14 (768-dim, accurate)")
-
-# In Embedder:
-self.model, self.preprocess = clip.load(model_name, device=self.device)
-```
-
-**Trade-offs**:
-- ✅ 10-15% better accuracy on challenging queries
-- ✅ Better feature extraction from blurry/degraded images
-- ⚠️ 3x slower build time (not a concern)
-- ⚠️ 50% larger browser download (768-dim vs 512-dim)
-- ⚠️ Slower browser queries (~1.5x)
-
-**Recommendation**: Test with ViT-B/32 first. Only upgrade if accuracy is insufficient, as the browser size/speed trade-off is significant.
-
-**Impact**: Maximum accuracy, but at cost of browser performance.
-
-**Effort**: 30 minutes
+**Note**: A critical model mismatch bug was discovered and fixed (2025-10-13): Frontend was using `Xenova/vit-base-patch16-224` instead of `Xenova/clip-vit-base-patch32`. This has been corrected to match the backend CLIP ViT-B/32 model.
 
 ---
 
@@ -653,6 +632,7 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 
 ## Change Log
 
+- **2025-10-13 v1.9**: Removed P2.5 (ViT-L/14 upgrade) as not relevant. Discovered and documented critical model mismatch bug: frontend was using wrong ViT model instead of CLIP. Fixed in apps/web/src/lib/search.ts to use Xenova/clip-vit-base-patch32.
 - **2025-10-13 v1.8**: Fixed documentation inconsistencies (P4.3 and P6.1 examples now reflect current defaults from P2.1 and P2.2)
 - **2025-10-13 v1.7**: Marked P2.4 as completed (int8 quantization for browser)
 - **2025-10-13 v1.6**: Marked P2.3 as completed (implemented HNSW index for fast queries)
