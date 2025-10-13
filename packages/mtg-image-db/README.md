@@ -77,7 +77,7 @@ You can limit for quick tests, e.g. `--limit 2000`.
 
 ### 3) Export for the browser
 
-Converts the `.npy` embeddings to a float16 binary for the browser and the JSONL to a JSON array.
+Converts the `.npy` embeddings to an int8 quantized binary for the browser (75% smaller than float32) and the JSONL to a JSON array with quantization metadata.
 
 ```bash
 python export_for_browser.py
@@ -86,8 +86,8 @@ python export_for_browser.py --input-dir index_in --output-dir index_out
 ```
 
 Artifacts written:
-- `index_out/embeddings.f16bin`
-- `index_out/meta.json`
+- `index_out/embeddings.i8bin` (int8 quantized, ~75% smaller than float32)
+- `index_out/meta.json` (includes quantization metadata for browser dequantization)
 
 ### 4) Python query example
 
