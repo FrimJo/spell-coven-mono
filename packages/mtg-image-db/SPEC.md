@@ -1,10 +1,15 @@
 # Project Specification: MTG Card Visual Search
 
 ## Spec Version
-- Version: v0.1.1
-- Date: 2025-09-28T23:45:43+02:00
+- Version: v0.2.0
+- Date: 2025-10-13
 
 ## Changelog
+- v0.2.0
+  - Updated browser export format from float16 to int8 quantization for 75% size reduction.
+  - Changed artifact filename: `embeddings.f16bin` → `embeddings.i8bin`.
+  - Added quantization metadata to `meta.json` for browser-side dequantization.
+  - Updated HNSW index implementation (M=64, efConstruction=400) for faster queries.
 - v0.1.1
   - Split specification: package-level (pipelines, exports) remains here; browser client spec moved to `apps/web/SPEC.md`. This file now links to the web spec for browser-related requirements.
 - v0.1.0
@@ -44,10 +49,10 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
 - Browser Query [SPEC-FR-BR]
   - Note: Canonical browser client requirements and acceptance criteria are defined in `apps/web/SPEC.md`. This section summarizes expected artifacts only.
   - Export artifacts for browser use: [SPEC-FR-BR-01]
-    - `embeddings.f16bin` (float16 binary concatenation of embeddings) [SPEC-FR-BR-01a]
-    - `meta.json` (JSON array of metadata) [SPEC-FR-BR-01b]
+    - `embeddings.i8bin` (int8 quantized binary, 75% smaller than float32) [SPEC-FR-BR-01a]
+    - `meta.json` (JSON object with quantization metadata and records array) [SPEC-FR-BR-01b]
   - `index.html` uses modules in `lib/` to perform fully client-side search: [SPEC-FR-BR-02]
-    - `lib/search.js` loads `index_out/meta.json` and `index_out/embeddings.f16bin`, converts float16→float32, initializes the CLIP vision pipeline via Transformers.js (`Xenova/clip-vit-base-patch32`) using the `image-feature-extraction` task, provides `loadEmbeddingsAndMeta()`, `loadModel()`, `embedFromCanvas()`, and computes cosine similarity (dot products on L2-normalized vectors) via `topK()` to return top-K matches. [SPEC-FR-BR-02a]
+    - `lib/search.js` loads `index_out/meta.json` and `index_out/embeddings.i8bin`, dequantizes int8→float32 (divide by 127), initializes the CLIP vision pipeline via Transformers.js (`Xenova/clip-vit-base-patch32`) using the `image-feature-extraction` task, provides `loadEmbeddingsAndMeta()`, `loadModel()`, `embedFromCanvas()`, and computes cosine similarity (dot products on L2-normalized vectors) via `topK()` to return top-K matches. [SPEC-FR-BR-02a]
     - `lib/webcam.js` manages webcam devices, detects card-like quadrilateral contours on a live overlay using OpenCV.js, and performs a perspective-correct crop to a fixed-size canvas upon click. It awaits a global `window.cvReadyPromise` provided by the OpenCV loader. [SPEC-FR-BR-02b]
     - `lib/opencv-loader.js` is responsible for loading OpenCV.js and resolving `window.cvReadyPromise` when ready. [SPEC-FR-BR-02c]
     - `lib/main.js` orchestrates UI controls (start camera, camera selection, Search Cropped) and renders results including thumbnails and Scryfall links. [SPEC-FR-BR-02d]
@@ -71,10 +76,10 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
   - `build_mtg_faiss.py` → downloads/caches images → embeds via CLIP → saves FAISS + metadata.
   - `query_index.py` → embeds query image → FAISS nearest neighbors → prints results.
 - Export for Browser:
-  - `export_for_browser.py` → `.npy` → `.f16bin`, `.jsonl` → `.json`.
+  - `export_for_browser.py` → `.npy` → `.i8bin` (int8 quantized), `.jsonl` → `.json` (with quantization metadata).
 - Browser:
   - `index.html` → loads `lib/search.js`, `lib/opencv-loader.js`, `lib/webcam.js`, `lib/main.js`:
-    - `lib/search.js`: fetch `index_out/embeddings.f16bin` + `index_out/meta.json`, convert float16→float32, initialize CLIP vision extractor via Transformers.js (`image-feature-extraction`), embed query from the cropped canvas, compute dot products for top-K. [SPEC-ARCH-BR-SEARCH]
+    - `lib/search.js`: fetch `index_out/embeddings.i8bin` + `index_out/meta.json`, dequantize int8→float32 (divide by 127), initialize CLIP vision extractor via Transformers.js (`image-feature-extraction`), embed query from the cropped canvas, compute dot products for top-K. [SPEC-ARCH-BR-SEARCH]
     - `lib/opencv-loader.js`: load OpenCV.js and expose a readiness promise consumed by `webcam.js`. [SPEC-ARCH-BR-OPENCV]
     - `lib/webcam.js`: manage webcam devices, detect card-like contours on an overlay using OpenCV.js, allow click-to-crop, and perform perspective transform to a normalized canvas. [SPEC-ARCH-BR-WEBCAM]
     - `lib/main.js`: wire up UI controls: start camera, camera selection, “Search Cropped”, and render results with thumbnail (`card_url` or derived) and Scryfall link. [SPEC-ARCH-BR-MAIN]
@@ -83,21 +88,24 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
 - `index_out/mtg_meta.jsonl`: one JSON object per line with keys including:
   - `name`, `scryfall_id`, `face_id`, `set`, `collector_number`, `frame`, `layout`, `lang`, `colors`, `image_url`, `card_url`, `scryfall_uri`.
 - `index_out/mtg_embeddings.npy`: float32 array of shape `[N, 512]`, L2-normalized.
-- `index_out/mtg_cards.faiss`: FAISS index over `[N, 512]` vectors using inner product.
-- `index_out/embeddings.f16bin`: flat float16 buffer of length `N*512`.
-- `index_out/meta.json`: JSON array of length `N`, same order as embeddings.
+- `index_out/mtg_cards.faiss`: FAISS HNSW index (M=64, efConstruction=400) over `[N, 512]` vectors using inner product.
+- `index_out/embeddings.i8bin`: flat int8 buffer of length `N*512`, quantized from [-1,1] to [-127,127].
+- `index_out/meta.json`: JSON object with structure:
+  - `quantization`: object with `dtype`, `scale_factor`, `original_dtype`, and dequantization instructions
+  - `shape`: array `[N, 512]`
+  - `records`: array of length `N` with metadata objects, same order as embeddings
 
 ## 7. Acceptance Criteria
 - Build [SPEC-AC-BUILD-01]
   - Running `python3 build_mtg_faiss.py --kind unique_artwork --out index_out --cache image_cache` produces `index_out/mtg_embeddings.npy`, `index_out/mtg_cards.faiss`, `index_out/mtg_meta.jsonl` without errors. Alternatively, `make build` performs the same. [SPEC-AC-BUILD-01.1]
 - Export [SPEC-AC-EXP-01]
-  - Running `python3 export_for_browser.py` produces `index_out/embeddings.f16bin` and `index_out/meta.json` with matching counts. Alternatively, `make export` performs the same. [SPEC-AC-EXP-01.1]
+  - Running `python3 export_for_browser.py` produces `index_out/embeddings.i8bin` (int8 quantized) and `index_out/meta.json` (with quantization metadata and records) with matching counts. Alternatively, `make export` performs the same. [SPEC-AC-EXP-01.1]
 - Python Query [SPEC-AC-PY-01]
   - Running `python3 query_index.py` prints top-K matches for a sample query image (edit `query_path` in `query_index.py`). Alternatively, `make query` performs the same. [SPEC-AC-PY-01.1]
 - Browser Query [SPEC-AC-BR-01]
   - Serving the repository root with any static HTTP server (for example, `python3 -m http.server 8000` or `make serve`) and opening `index.html` supports: [SPEC-AC-BR-01.1]
     - Webcam crop: starting the webcam, clicking near a detected card polygon performs a perspective-correct crop; pressing “Search Cropped” embeds the canvas and displays top-K matches with thumbnail and link. [SPEC-AC-BR-01.1a]
-  - All browser-side embedding and search occurs locally using pre-shipped artifacts (`embeddings.f16bin`, `meta.json`). [SPEC-AC-BR-01.2]
+  - All browser-side embedding and search occurs locally using pre-shipped artifacts (`embeddings.i8bin`, `meta.json`). [SPEC-AC-BR-01.2]
 
 ## 8. Webcam Crop & Click-to-Identify
 - Purpose
