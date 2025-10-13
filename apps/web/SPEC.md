@@ -1,10 +1,13 @@
 # Project Specification: MTG Web Client (Browser Search)
 
 ## Spec Version
-- Version: v0.1.0
-- Date: 2025-09-28T23:45:43+02:00
+- Version: v0.2.0
+- Date: 2025-10-13T16:19:00+02:00
 
 ## Changelog
+- v0.2.0
+  - Updated data contracts to reflect int8 quantization (was float16). Updated file references from `embeddings.f16bin` to `embeddings.i8bin`.
+  - Clarified that `meta.json` now includes quantization metadata wrapper (version 1.0 format).
 - v0.1.0
   - Initial split from `packages/mtg-image-db/SPEC.md`. Defines browser-side requirements, data contracts, and acceptance criteria.
 
@@ -13,7 +16,7 @@ This spec defines the browser client that performs on-device visual search over 
 
 ## 2. Goals and Non-Goals
 - Goals
-  - Load and use exported artifacts (`embeddings.f16bin`, `meta.json`) fully client-side.
+  - Load and use exported artifacts (`embeddings.i8bin`, `meta.json`) fully client-side.
   - Provide functions to load the CLIP model, embed a query image/canvas, and compute top-K results.
   - Offer simple UI integration points for file-upload or webcam crop flows.
 - Non-Goals
@@ -22,8 +25,8 @@ This spec defines the browser client that performs on-device visual search over 
 
 ## 3. Functional Requirements [WEB]
 - Artifacts Loading [WEB-FR-AL]
-  - Load `index_out/meta.json` as an array of metadata in the same order as the embeddings. [WEB-FR-AL-01]
-  - Load `index_out/embeddings.f16bin` and convert float16 → float32 to a contiguous `Float32Array` of shape `[N * 512]`. [WEB-FR-AL-02]
+  - Load `index_out/meta.json` (version 1.0 format with quantization metadata) containing an array of card records in the same order as the embeddings. [WEB-FR-AL-01]
+  - Load `index_out/embeddings.i8bin` and dequantize int8 → float32 using the scale factor from `meta.json` to a contiguous `Float32Array` of shape `[N * 512]`. [WEB-FR-AL-02]
 - Model Init [WEB-FR-MI]
   - Initialize Transformers.js pipeline: `image-feature-extraction` with `Xenova/clip-vit-base-patch32`. [WEB-FR-MI-01]
   - Provide a progress callback to surface model download/status. [WEB-FR-MI-02]
@@ -48,14 +51,14 @@ This spec defines the browser client that performs on-device visual search over 
 
 ## 5. Data Contracts
 - Inputs (from `packages/mtg-image-db` export):
-  - `index_out/embeddings.f16bin`: flat float16 buffer of length `N*512`. [WEB-DC-IN-01]
-  - `index_out/meta.json`: JSON array of length `N` with keys at minimum: `name`, `set`, and optionally `scryfall_uri`, `image_url`, `card_url`. [WEB-DC-IN-02]
+  - `index_out/embeddings.i8bin`: flat int8 buffer of length `N*512`. [WEB-DC-IN-01]
+  - `index_out/meta.json`: JSON object (version 1.0) with `{version, quantization: {dtype, scale_factor, ...}, shape: [N, 512], records: [...]}`. Each record has at minimum: `name`, `set`, and optionally `scryfall_uri`, `image_url`, `card_url`. [WEB-DC-IN-02]
 - Derived in browser:
-  - `Float32Array` database `db` of length `N*512`, L2-normalized per vector. [WEB-DC-DRV-01]
+  - `Float32Array` database `db` of length `N*512`, dequantized from int8 and L2-normalized per vector. [WEB-DC-DRV-01]
 
 ## 6. Acceptance Criteria
 - Assets Load [WEB-AC-ASSETS-01]
-  - When `public/index_out/{embeddings.f16bin, meta.json}` are present, calling `loadEmbeddingsAndMeta()` resolves and keeps `meta.length === (embeddings.length / 512)`.
+  - When `public/index_out/{embeddings.i8bin, meta.json}` are present, calling `loadEmbeddingsAndMeta()` resolves and keeps `meta.records.length === (embeddings.length / 512)`.
 - Model Load [WEB-AC-MODEL-01]
   - Calling `loadModel()` resolves and subsequent embed calls succeed without throwing.
 - Query [WEB-AC-QUERY-01]
