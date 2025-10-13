@@ -3,8 +3,11 @@
 This project builds a visual search engine for Magic: The Gathering (MTG) cards.
 It downloads Scryfall bulk data, caches full card images, embeds them with CLIP, builds a FAISS index for Python querying, and exports artifacts for a fully in-browser search experience using Transformers.js.
 
-See the full specification for the data and pipelines in `SPEC.md`.
-For the browser client and UI spec, see `apps/web/SPEC.md`.
+## Documentation
+
+- **Feature Specifications**: See [`/specs/`](../../specs/) for complete requirements and technical details
+  - [001: Card Recognition](../../specs/001-enable-mtg-players/) - User requirements, technical plan, data contracts
+  - [003: Quality Improvements](../../specs/003-improve-mtg-image/) - Observability, testing, code quality, configuration
 
 ## Get Started
 
@@ -128,7 +131,7 @@ It prints the top-k nearest images by cosine similarity, along with names and UR
 ### 5) Browser UI (moved)
 
 The browser UI and client-side search have moved to the web app documentation.
-See `apps/web/README.md` and `apps/web/SPEC.md` for setup, usage, and acceptance criteria.
+See `apps/web/README.md` for setup and usage.
 
 ## Development Tips
 
@@ -185,7 +188,6 @@ make install-mps  # same as make conda-mps
 - `image_cache/` – Cached images
 - `index_out/` – Generated artifacts
 - `Makefile` – Convenience tasks: `download`, `embed`, `build-all`, `export`, `query`, `serve`, `clean`, and Conda helpers
-- `SPEC.md` – Specification, requirements, acceptance criteria
 
 ## License
 
