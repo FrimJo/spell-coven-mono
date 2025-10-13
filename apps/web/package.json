@@ -9,7 +9,7 @@
       "serve": "vite preview",
       "test": "vitest run",
       "format": "prettier --check . --ignore-path ./.prettierignore --ignore-path ./.gitignore --ignore-path ../../.gitignore",
-      "lint": "next lint --max-warnings 0",
+      "lint": "eslint . --max-warnings 0",
       "check-types": "tsc --noEmit",
       "e2e": "playwright test",
       "e2e:ui": "playwright test --ui"
@@ -22,6 +22,7 @@
       "@tanstack/router-plugin": "^1.132.0",
       "react": "^19.0.0",
       "react-dom": "^19.0.0",
+      "react-error-boundary": "^4.0.0",
       "tailwindcss": "^4.0.6",
       "vite-tsconfig-paths": "^5.1.4"
     },
@@ -38,6 +39,7 @@
       "@types/react": "^19.0.8",
       "@types/react-dom": "^19.0.3",
       "@vitejs/plugin-react": "^4.3.4",
+      "eslint": "^9.34.0",
       "jsdom": "^26.0.0",
       "typescript": "catalog:",
       "vite": "^7.1.7",
