@@ -82,7 +82,7 @@ Converts the `.npy` embeddings to a float16 binary for the browser and the JSONL
 ```bash
 python export_for_browser.py
 # Or with custom directories:
-python export_for_browser.py --input-dir index_out --output-dir index_out
+python export_for_browser.py --input-dir index_in --output-dir index_out
 ```
 
 Artifacts written:
