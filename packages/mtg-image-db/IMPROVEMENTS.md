@@ -1,87 +1,26 @@
 # MTG Image DB - Recommended Improvements
 
-**Document Version**: 1.1
+**Document Version**: 1.2
 **Date**: 2025-10-13
-**Status**: Planning
+**Status**: In Progress
 
 This document tracks recommended improvements for the `mtg-image-db` package based on code review. Items are **sorted by priority** with the most critical issues first.
 
 ---
 
-## 🔴 Priority 1: Critical Fixes
+## ✅ Completed Improvements
 
-These issues affect correctness or significantly impact usability. **Fix these first.**
+### ✅ P1.1: Fix Cosine Similarity Calculation in `query_index.py`
+**Completed**: 2025-10-13
+**Impact**: Fixed incorrect similarity scores. Note: Rankings were unaffected for top-k queries.
 
-### P1.1: Fix Cosine Similarity Calculation in `query_index.py`
+### ✅ P1.2: Make Query Path a CLI Argument
+**Completed**: 2025-10-13
+**Impact**: Script now accepts image path as argument: `python query_index.py <image_path> [--k N]`
 
-**File**: `query_index.py`
-**Line**: 43
-**Issue**: Incorrect cosine similarity calculation. Since we use `IndexFlatIP` with L2-normalized vectors, the distance returned is already the cosine similarity (dot product).
-
-**Current Code**:
-```python
-score = 1 - dist  # INCORRECT
-```
-
-**Fix**:
-```python
-score = dist  # IndexFlatIP returns dot product (cosine for normalized vectors)
-```
-
-**Impact**: Results show incorrect similarity scores, potentially affecting ranking quality.
-
-**Effort**: 5 minutes
-**SPEC Reference**: [SPEC-FR-PY-02]
-
----
-
-### P1.2: Make Query Path a CLI Argument
-
-**File**: `query_index.py`
-**Line**: 36
-**Issue**: Query image path is hardcoded in the script, requiring code edits for each query.
-
-**Current**:
-```python
-query_path = "image_cache/000f60d1f5c3a4a9dc0448744bd97c02c8437a2d.jpg"
-```
-
-**Proposed**:
-```python
-ap.add_argument("query_path", help="Path to query image")
-# Or with optional default:
-ap.add_argument("--query", required=True, help="Path to query image")
-```
-
-**Impact**: Improves usability; makes script production-ready.
-
-**Effort**: 10 minutes
-**SPEC Reference**: [SPEC-FR-PY-02]
-
----
-
-### P1.3: Add CLI Arguments to `export_for_browser.py`
-
-**File**: `export_for_browser.py`
-**Lines**: 5-8
-**Issue**: Hardcoded input/output paths limit flexibility.
-
-**Proposed**:
-```python
-import argparse
-
-ap = argparse.ArgumentParser(description="Export embeddings for browser")
-ap.add_argument("--input-dir", default="index_out", help="Input directory")
-ap.add_argument("--output-dir", default="index_out", help="Output directory")
-args = ap.parse_args()
-```
-
-**Impact**: Enables custom workflows, testing with different datasets.
-
-**Effort**: 15 minutes
-**SPEC Reference**: [SPEC-FR-BR-01]
-
----
+### ✅ P1.3: Add CLI Arguments to `export_for_browser.py`
+**Completed**: 2025-10-13
+**Impact**: Added `--input-dir` and `--output-dir` arguments with sensible defaults. Also includes output directory validation (P3.4).
 
 ---
 
@@ -625,16 +564,17 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 
 ## 📋 Implementation Roadmap
 
-### Phase 1: Critical Fixes (1-2 hours) 🔴
+### Phase 1: Critical Fixes ✅ COMPLETED
 **Goal**: Fix correctness issues and basic usability problems.
+**Completed**: 2025-10-13
 
-- ✅ P1.1: Fix cosine similarity calculation (5 min)
-- ✅ P1.2: Query path CLI argument (10 min)
-- ✅ P1.3: Export script CLI arguments (15 min)
-- ✅ P3.4: Output directory validation (5 min)
-- ✅ P8.1: Pin CLIP commit hash (5 min)
+- ✅ P1.1: Fix cosine similarity calculation
+- ✅ P1.2: Query path CLI argument
+- ✅ P1.3: Export script CLI arguments
+- ✅ P3.4: Output directory validation (implemented in export_for_browser.py)
 
-**Total**: ~40 minutes of focused work
+**Remaining from original Phase 1**:
+- ⬜ P8.1: Pin CLIP commit hash (5 min)
 
 ---
 
@@ -694,10 +634,10 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 
 ## 🎯 Quick Start Recommendations
 
-**If you have 30 minutes**: Do Phase 1 (Critical Fixes)
-- Fixes the cosine similarity bug
-- Makes scripts actually usable
-- Pins dependencies for reproducibility
+**If you have 30 minutes**: ~~Do Phase 1 (Critical Fixes)~~ ✅ DONE
+- ~~Fixes the cosine similarity bug~~ ✅
+- ~~Makes scripts actually usable~~ ✅
+- Pin dependencies for reproducibility (P8.1 - still pending)
 
 **If you have 2 hours**: Do Phase 1 + Phase 2
 - All critical fixes
@@ -727,5 +667,6 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 
 ## Change Log
 
+- **2025-10-13 v1.2**: Marked P1.1, P1.2, P1.3 as completed; moved to "Completed Improvements" section
 - **2025-10-13 v1.1**: Reorganized by priority, most critical first; added emojis and quick-start guide
 - **2025-10-13 v1.0**: Initial version based on code review
