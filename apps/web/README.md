@@ -9,7 +9,12 @@ This app provides a browser-based visual search over pre-generated MTG card art 
 - **Fully Client-Side**: All processing happens in your browser (CLIP model + OpenCV)
 - **No Server Required**: Model files served locally, embeddings pre-computed
 
-See the browser spec: `apps/web/SPEC.md`.
+## Documentation
+
+- **Feature Specification**: See [`/specs/001-enable-mtg-players/`](../../specs/001-enable-mtg-players/) for complete requirements and technical details
+  - [User Requirements & Stories](../../specs/001-enable-mtg-players/spec.md)
+  - [Technical Implementation Plan](../../specs/001-enable-mtg-players/plan.md)
+  - [Browser Data Contracts](../../specs/001-enable-mtg-players/contracts/browser-artifacts.md)
 
 ## Prerequisites
 
