@@ -38,8 +38,8 @@ def load_bulk(kind: str) -> List[dict]:
 def face_image_urls(card: dict):
     out = []
     def pick_card_image(uris):
-        # 'normal' loads fast and looks great; use 'png' if you want text-perfect render
-        return uris.get("normal") or uris.get("border_crop") or uris.get("png") or uris.get("large")
+        # PNG > large > normal for best quality and accuracy with blurry inputs
+        return uris.get("png") or uris.get("large") or uris.get("normal") or uris.get("border_crop")
 
     if "image_uris" in card:
         card_url = pick_card_image(card["image_uris"])
