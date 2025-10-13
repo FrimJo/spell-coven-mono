@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Wand2, Video, Camera, Users, Sparkles, Play, Plus } from 'lucide-react';
 import { Button } from '@repo/ui/components/button';
 import { Input } from '@repo/ui/components/input';

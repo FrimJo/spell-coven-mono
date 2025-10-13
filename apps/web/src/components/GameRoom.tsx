@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, Copy, Check, Users, Settings } from 'lucide-react';
 import { Button } from '@repo/ui/components/button';
 import { VideoPanel } from './VideoPanel';
