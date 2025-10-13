@@ -83,7 +83,7 @@ def download_image(url: str, cache_dir: Path, retries: int = 3, timeout: int = 2
             time.sleep(0.8 * attempt)
     return None
 
-def load_image_rgb(path: Path, target_size: int = 256) -> Optional[Image.Image]:
+def load_image_rgb(path: Path, target_size: int = 384) -> Optional[Image.Image]:
     try:
         img = Image.open(path).convert("RGB")
         # Simple square center-crop to be robust to non-uniform borders
@@ -246,7 +246,7 @@ def main():
     ap.add_argument("--cache", default="image_cache", help="Directory to cache downloaded images.")
     ap.add_argument("--limit", type=int, default=None, help="Limit number of faces (for testing).")
     ap.add_argument("--batch", type=int, default=64, help="Embedding batch size.")
-    ap.add_argument("--size", type=int, default=256, help="Square resize for images before CLIP preprocess.")
+    ap.add_argument("--size", type=int, default=384, help="Square resize for images before CLIP preprocess.")
     args = ap.parse_args()
 
     build_index(
