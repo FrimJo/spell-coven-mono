@@ -1,4 +1,4 @@
-.PHONY: install build export query serve clean conda-cpu conda-gpu conda-mps install-cpu install-gpu install-mps
+.PHONY: install build build-all download embed export query serve clean conda-cpu conda-gpu conda-mps install-cpu install-gpu install-mps
 
 PYTHON ?= python
 PORT ?= 8000
@@ -11,6 +11,17 @@ install:
 	echo "See README.md for details." && \
 	false
 
+# Two-step build process (recommended)
+download:
+	$(PYTHON) download_images.py --kind unique_artwork --cache image_cache
+
+embed:
+	$(PYTHON) build_embeddings.py --kind unique_artwork --out index_out --cache image_cache
+
+# Combined build (runs both steps)
+build-all: download embed
+
+# Legacy single-step build (kept for compatibility)
 build:
 	$(PYTHON) build_mtg_faiss.py --kind unique_artwork --out index_out --cache image_cache
 
