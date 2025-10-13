@@ -1,11 +1,10 @@
-import React from 'react'
+import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { RouterProvider } from '@tanstack/react-router'
-import { getRouter } from './router'
+import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { routeTree } from './routeTree.gen'
 
-const router = getRouter()
+const router = createRouter({ routeTree })
 
-// Type augmentation for TanStack Router
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router
@@ -18,7 +17,7 @@ if (!rootEl) {
 }
 
 createRoot(rootEl).render(
-  <React.StrictMode>
+  <StrictMode>
     <RouterProvider router={router} />
-  </React.StrictMode>,
+  </StrictMode>,
 )
