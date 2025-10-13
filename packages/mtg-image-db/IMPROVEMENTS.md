@@ -1,6 +1,6 @@
 # MTG Image DB - Recommended Improvements
 
-**Document Version**: 1.7
+**Document Version**: 1.8
 **Date**: 2025-10-13
 **Status**: In Progress
 
@@ -272,7 +272,7 @@ def pick_card_image(uris, preference=None):
         preference: List of preferred keys in order, e.g. ['png', 'normal']
     """
     if preference is None:
-        preference = ['normal', 'border_crop', 'png', 'large']
+        preference = ['png', 'large', 'normal', 'border_crop']  # Current default (P2.1)
 
     for key in preference:
         if key in uris:
@@ -364,18 +364,18 @@ paths:
 
 embedding:
   batch_size: 64
-  target_size: 256
+  target_size: 384  # Current default (P2.2)
   device: auto  # auto, cpu, cuda, mps
 
 download:
   retries: 3
   timeout: 20
   max_workers: 10
-  image_preference:
-    - normal
-    - border_crop
+  image_preference:  # Current default (P2.1)
     - png
     - large
+    - normal
+    - border_crop
 
 index:
   use_hnsw: auto  # auto, true, false
@@ -653,6 +653,7 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 
 ## Change Log
 
+- **2025-10-13 v1.8**: Fixed documentation inconsistencies (P4.3 and P6.1 examples now reflect current defaults from P2.1 and P2.2)
 - **2025-10-13 v1.7**: Marked P2.4 as completed (int8 quantization for browser)
 - **2025-10-13 v1.6**: Marked P2.3 as completed (implemented HNSW index for fast queries)
 - **2025-10-13 v1.5**: Marked P2.2 as completed (increased image resolution to 384)
