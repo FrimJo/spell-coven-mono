@@ -1,16 +1,33 @@
 import json
 import numpy as np
+import argparse
 from pathlib import Path
 
-EMB_NPY  = Path("index_out/mtg_embeddings.npy")
-META_LJL = Path("index_out/mtg_meta.jsonl")
-OUT_BIN  = Path("index_out/embeddings.f16bin")
-OUT_META = Path("index_out/meta.json")
-
 def main():
+    # --- CLI args ---
+    ap = argparse.ArgumentParser(description="Export embeddings for browser")
+    ap.add_argument("--input-dir", default="index_out", help="Input directory (default: index_out)")
+    ap.add_argument("--output-dir", default="index_out", help="Output directory (default: index_out)")
+    args = ap.parse_args()
+
+    # --- Paths ---
+    input_dir = Path(args.input_dir)
+    output_dir = Path(args.output_dir)
+    
+    EMB_NPY  = input_dir / "mtg_embeddings.npy"
+    META_LJL = input_dir / "mtg_meta.jsonl"
+    OUT_BIN  = output_dir / "embeddings.f16bin"
+    OUT_META = output_dir / "meta.json"
+
+    # --- Validate ---
     if not EMB_NPY.exists():
         raise SystemExit(f"Missing {EMB_NPY}. Re-run the builder after adding the np.save() line.")
+    
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if not output_dir.is_dir():
+        raise SystemExit(f"Output directory {output_dir} is not accessible")
 
+    # --- Export ---
     X = np.load(EMB_NPY)                 # float32 [N,512], already L2-normalized
     X16 = X.astype(np.float16)
     X16.tofile(OUT_BIN)
