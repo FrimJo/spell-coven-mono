@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Copy, Check, Users, Settings } from 'lucide-react';
-import { Button } from './ui/button';
+import { Button } from '@repo/ui/components/button';
 import { VideoPanel } from './VideoPanel';
 import { GameBoard } from './GameBoard';
 import { PlayerStats } from './PlayerStats';
 import { TurnTracker } from './TurnTracker';
 import { CardScanner } from './CardScanner';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { toast } from 'sonner@2.0.3';
-import { Toaster } from './ui/sonner';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@repo/ui/components/tooltip';
+import { toast } from 'sonner';
+import { Toaster } from '@repo/ui/components/sonner';
 
 interface GameRoomProps {
   gameId: string;
