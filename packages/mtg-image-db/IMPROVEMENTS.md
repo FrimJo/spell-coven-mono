@@ -1,6 +1,6 @@
 # MTG Image DB - Recommended Improvements
 
-**Document Version**: 1.5
+**Document Version**: 1.6
 **Date**: 2025-10-13
 **Status**: In Progress
 
@@ -32,6 +32,10 @@ This document tracks recommended improvements for the `mtg-image-db` package bas
 **Completed**: 2025-10-13
 **Impact**: Increased default target_size from 256 to 384 pixels for better feature extraction from degraded images. Provides 10-20% better accuracy on blurry/low-quality queries.
 
+### ✅ P2.3: Implement HNSW Index for Fast Queries
+**Completed**: 2025-10-13
+**Impact**: Replaced IndexFlatIP with IndexHNSWFlat (M=64, efConstruction=400) for 10-100x faster queries and 30-50% smaller index size. Critical for browser performance with 50k+ cards.
+
 ---
 
 ## 🟠 Priority 2: User Experience Improvements
@@ -39,47 +43,6 @@ This document tracks recommended improvements for the `mtg-image-db` package bas
 **User Priorities**: 1) Accuracy from blurry/bad images, 2) Query speed for users, 3) Browser DB size. Build time is not a concern.
 
 **Dataset Size**: ~50k cards currently, won't exceed 60k for many years.
-
----
-
-### P2.3: 🔴 HIGH PRIORITY - Implement HNSW Index for Fast Queries
-
-**File**: `build_mtg_faiss.py`
-**Line**: 226
-**Issue**: `IndexFlatIP` is brute-force O(N); slow for 50k+ cards in browser.
-
-**User Impact**: **10-100x faster queries (Priority #2), smaller index size (Priority #3)**
-
-**Proposed Solution**:
-```python
-# Build FAISS index with HNSW for speed
-d = X.shape[1]
-
-# For 50k-60k cards, HNSW provides massive speedup with minimal accuracy loss
-if X.shape[0] > 10000:
-    # M=64 for better recall, efConstruction=400 for high accuracy
-    index = faiss.IndexHNSWFlat(d, 64)
-    index.hnsw.efConstruction = 400  # Higher = better accuracy (slower build, but we don't care)
-    index.add(X)
-    print(f"Built HNSW index with M=64, efConstruction=400")
-else:
-    # Small datasets can use brute-force
-    index = faiss.IndexFlatIP(d)
-    index.add(X)
-
-faiss.write_index(index, str(out_dir / "mtg_cards.faiss"))
-```
-
-**Trade-offs**:
-- ✅ 10-100x faster queries in browser
-- ✅ 30-50% smaller index file size
-- ⚠️ ~1-2% accuracy loss (mitigated by high efConstruction=400)
-- ⚠️ Slower build time (not a concern)
-
-**Impact**: Enables instant queries even with 50k+ cards. Critical for browser performance.
-
-**Effort**: 15 minutes
-**SPEC Reference**: [SPEC-FR-EI-02b]
 
 ---
 
@@ -638,7 +601,7 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 
 - ✅ P2.1: Use higher quality images (PNG priority) (2 min) - **Better accuracy**
 - ✅ P2.2: Increase image resolution to 384 (2 min) - **10-20% better accuracy**
-- ⬜ P2.3: Implement HNSW index (15 min) - **10-100x faster queries, smaller index**
+- ✅ P2.3: Implement HNSW index (15 min) - **10-100x faster queries, smaller index**
 - ⬜ P2.4: int8 quantization for browser (1 hour) - **50% smaller download**
 - ⬜ P3.1: Add logging for failures (20 min)
 - ⬜ P3.2: Build summary statistics (10 min)
@@ -698,9 +661,9 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 - ✅ P2.2 completed: Increased resolution to 384
 - **Impact**: 10-20% better accuracy on blurry images
 
-**If you have 30 minutes**: Add P2.3 (HNSW index)
+**If you have 30 minutes**: HNSW index ✅ COMPLETED
 - ✅ All quick accuracy improvements (P2.1, P2.2 completed)
-- ✅ 10-100x faster queries
+- ✅ P2.3 completed: 10-100x faster queries with HNSW
 - ✅ Smaller index file
 - **Impact**: Massive query speed improvement + better accuracy
 
@@ -734,6 +697,7 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 
 ## Change Log
 
+- **2025-10-13 v1.6**: Marked P2.3 as completed (implemented HNSW index for fast queries)
 - **2025-10-13 v1.5**: Marked P2.2 as completed (increased image resolution to 384)
 - **2025-10-13 v1.4**: Marked P2.1 as completed (PNG image priority implemented)
 - **2025-10-13 v1.3**: Completely rewrote Priority 2 based on user priorities (accuracy > query speed > DB size). Removed build-time optimizations (parallel downloads, batch size tuning). Added accuracy improvements (PNG images, higher resolution), HNSW index for query speed, int8 quantization for smaller DB, and optional ViT-L/14 for maximum accuracy. Updated roadmap and quick-start recommendations.
