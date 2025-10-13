@@ -1,3 +1,5 @@
+![landing page of application](landing.png)
+
 # Spell Coven - MTG Remote Play Platform
 
 A browser-based platform for playing paper Magic: The Gathering remotely with friends. Spell Coven enables MTG players to play their physical cards online through video chat, card recognition, and game management tools—all running in your browser with no downloads required.
