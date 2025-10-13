@@ -1,10 +1,17 @@
 # Project Specification: MTG Card Visual Search
 
 ## Spec Version
-- Version: v0.2.0
+- Version: v0.2.1
 - Date: 2025-10-13
 
 ## Changelog
+- v0.2.1
+  - Strengthened data contract specification with formal JSON schema for `meta.json`.
+  - Added version field (`"version": "1.0"`) to `meta.json` for compatibility tracking.
+  - Documented binary format details (byte order, layout, validation rules).
+  - Specified embedding normalization invariants and error handling contract.
+  - Added compatibility matrix showing version support.
+  - Defined required vs optional metadata fields for browser dependencies.
 - v0.2.0
   - Updated browser export format from float16 to int8 quantization for 75% size reduction.
   - Changed artifact filename: `embeddings.f16bin` → `embeddings.i8bin`.
@@ -85,15 +92,108 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
     - `lib/main.js`: wire up UI controls: start camera, camera selection, “Search Cropped”, and render results with thumbnail (`card_url` or derived) and Scryfall link. [SPEC-ARCH-BR-MAIN]
 
 ## 6. Data Contracts
-- `index_out/mtg_meta.jsonl`: one JSON object per line with keys including:
+
+### 6.1 Python Artifacts (for FAISS querying)
+- **`index_out/mtg_meta.jsonl`**: One JSON object per line with keys including:
   - `name`, `scryfall_id`, `face_id`, `set`, `collector_number`, `frame`, `layout`, `lang`, `colors`, `image_url`, `card_url`, `scryfall_uri`.
-- `index_out/mtg_embeddings.npy`: float32 array of shape `[N, 512]`, L2-normalized.
-- `index_out/mtg_cards.faiss`: FAISS HNSW index (M=64, efConstruction=400) over `[N, 512]` vectors using inner product.
-- `index_out/embeddings.i8bin`: flat int8 buffer of length `N*512`, quantized from [-1,1] to [-127,127].
-- `index_out/meta.json`: JSON object with structure:
-  - `quantization`: object with `dtype`, `scale_factor`, `original_dtype`, and dequantization instructions
-  - `shape`: array `[N, 512]`
-  - `records`: array of length `N` with metadata objects, same order as embeddings
+- **`index_out/mtg_embeddings.npy`**: NumPy array, float32, shape `[N, 512]`, L2-normalized.
+- **`index_out/mtg_cards.faiss`**: FAISS HNSW index (M=64, efConstruction=400) over `[N, 512]` vectors using inner product (cosine similarity for normalized vectors).
+
+### 6.2 Browser Artifacts (exported by `export_for_browser.py`)
+
+#### 6.2.1 `index_out/embeddings.i8bin`
+**Binary Format**:
+- **Encoding**: Signed int8 (range: -127 to 127)
+- **Byte order**: Native (little-endian on x86/ARM)
+- **Layout**: Row-major, shape `[N, 512]`
+- **Quantization**: Maps float32 range `[-1.0, 1.0]` to int8 range `[-127, 127]`
+  - Formula: `int8_value = clip(float32_value * 127, -127, 127)`
+- **Total size**: Exactly `N * 512` bytes
+- **Validation**: File size MUST equal `shape[0] * shape[1]` bytes
+
+**Invariants**:
+- Source embeddings in `mtg_embeddings.npy` MUST be L2-normalized before quantization
+- After dequantization (`float32_value = int8_value / 127.0`), vectors will have `||v|| ≈ 1.0` (within quantization error ±0.008)
+- Browser MUST NOT re-normalize after dequantization
+- Cosine similarity = dot product (valid for normalized vectors)
+
+#### 6.2.2 `index_out/meta.json`
+**JSON Schema**:
+```json
+{
+  "type": "object",
+  "required": ["version", "quantization", "shape", "records"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Format version for compatibility tracking"
+    },
+    "quantization": {
+      "type": "object",
+      "required": ["dtype", "scale_factor", "original_dtype", "note"],
+      "properties": {
+        "dtype": {"type": "string", "enum": ["int8"]},
+        "scale_factor": {"type": "number", "const": 127},
+        "original_dtype": {"type": "string", "const": "float32"},
+        "note": {"type": "string"}
+      }
+    },
+    "shape": {
+      "type": "array",
+      "items": {"type": "integer"},
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "[N, D] where N=number of cards, D=512"
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "set", "image_url", "card_url"],
+        "properties": {
+          "name": {"type": "string"},
+          "set": {"type": "string"},
+          "scryfall_id": {"type": "string"},
+          "face_id": {"type": "string"},
+          "collector_number": {"type": "string"},
+          "frame": {"type": "string"},
+          "layout": {"type": "string"},
+          "lang": {"type": "string"},
+          "colors": {"type": "array"},
+          "image_url": {"type": "string"},
+          "card_url": {"type": "string"},
+          "scryfall_uri": {"type": "string"}
+        }
+      },
+      "description": "Array of length N, same order as embeddings"
+    }
+  }
+}
+```
+
+**Required Fields** (browser dependencies):
+- `name`: Card name for display (REQUIRED)
+- `set`: Set code for display (REQUIRED)
+- `image_url`: URL for card image (REQUIRED for display)
+- `card_url`: URL for card display (REQUIRED for display)
+- `scryfall_uri`: Link to Scryfall page (OPTIONAL but recommended)
+
+**Error Handling Contract**:
+- `embeddings.i8bin` size ≠ `shape[0] * shape[1]`: Browser MUST throw with message "Embedding file size mismatch"
+- `records.length` ≠ `shape[0]`: Browser MUST throw with message "Metadata count mismatch"
+- `quantization.dtype` ≠ "int8": Browser MUST throw with message "Unsupported quantization dtype"
+- Missing required fields: Browser MUST throw with clear field name
+- Old format (array instead of object): Browser MUST throw with migration message
+
+### 6.3 Compatibility Matrix
+| Export Version | meta.json Format | Browser Client | Status |
+|----------------|------------------|----------------|--------|
+| v2.0+ (current) | v1.0 (int8 object) | v2.0+ | ✅ Supported |
+| v1.x (legacy) | v0.x (float16 array) | v1.x | ❌ Deprecated |
+| v1.x (legacy) | v0.x (float16 array) | v2.0+ | ❌ Rejected with error |
+
+**Backward Compatibility**: None. Browser client v2.0+ explicitly rejects old float16 format and instructs users to re-export.
 
 ## 7. Acceptance Criteria
 - Build [SPEC-AC-BUILD-01]

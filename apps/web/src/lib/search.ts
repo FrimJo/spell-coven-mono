@@ -10,6 +10,7 @@ export type CardMeta = {
 }
 
 export type MetaWithQuantization = {
+  version: string
   quantization: {
     dtype: string
     scale_factor: number
@@ -98,14 +99,36 @@ export async function loadEmbeddingsAndMetaFromPackage() {
     } else {
       // New format: object with quantization metadata and records
       const metaObj = m as MetaWithQuantization
+      
+      // Validate version
+      if (!metaObj.version || metaObj.version !== '1.0') {
+        throw new Error(`Unsupported meta.json version: ${metaObj.version || 'missing'}. Expected version 1.0`)
+      }
+      
+      // Validate required fields
+      if (!metaObj.quantization || !metaObj.shape || !metaObj.records) {
+        throw new Error('Invalid meta.json: missing required fields (quantization, shape, or records)')
+      }
+      
+      // Validate shape matches buffer size
+      const expectedSize = metaObj.shape[0] * metaObj.shape[1]
+      if (buf.byteLength !== expectedSize) {
+        throw new Error(`Embedding file size mismatch: expected ${expectedSize} bytes, got ${buf.byteLength} bytes`)
+      }
+      
       meta = metaObj.records
+      
+      // Validate metadata count matches embeddings
+      if (meta.length !== metaObj.shape[0]) {
+        throw new Error(`Metadata count mismatch: ${meta.length} records but shape indicates ${metaObj.shape[0]}`)
+      }
       
       // Dequantize based on metadata
       if (metaObj.quantization.dtype === 'int8') {
         const scaleFactor = metaObj.quantization.scale_factor
         db = int8ToFloat32(new Int8Array(buf), scaleFactor)
         // eslint-disable-next-line no-console
-        console.debug(`[search] Dequantized ${meta.length} embeddings from int8 (scale=${scaleFactor})`)
+        console.debug(`[search] Loaded meta.json v${metaObj.version}: ${meta.length} embeddings, int8 quantized (scale=${scaleFactor})`)
       } else {
         throw new Error(`Unsupported quantization dtype: ${metaObj.quantization.dtype}`)
       }

@@ -43,6 +43,7 @@ def main():
     
     # Add quantization metadata as header
     meta_with_header = {
+        "version": "1.0",
         "quantization": {
             "dtype": "int8",
             "scale_factor": 127,
