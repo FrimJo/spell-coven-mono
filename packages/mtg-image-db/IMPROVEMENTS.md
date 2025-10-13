@@ -1,6 +1,6 @@
 # MTG Image DB - Recommended Improvements
 
-**Document Version**: 1.6
+**Document Version**: 1.7
 **Date**: 2025-10-13
 **Status**: In Progress
 
@@ -36,6 +36,10 @@ This document tracks recommended improvements for the `mtg-image-db` package bas
 **Completed**: 2025-10-13
 **Impact**: Replaced IndexFlatIP with IndexHNSWFlat (M=64, efConstruction=400) for 10-100x faster queries and 30-50% smaller index size. Critical for browser performance with 50k+ cards.
 
+### ✅ P2.4: Quantize Embeddings to int8 for Browser
+**Completed**: 2025-10-13
+**Impact**: Changed export from float16 to int8 quantization, reducing browser download size by 75% (float32→int8). Includes quantization metadata in meta.json for browser-side dequantization.
+
 ---
 
 ## 🟠 Priority 2: User Experience Improvements
@@ -43,54 +47,6 @@ This document tracks recommended improvements for the `mtg-image-db` package bas
 **User Priorities**: 1) Accuracy from blurry/bad images, 2) Query speed for users, 3) Browser DB size. Build time is not a concern.
 
 **Dataset Size**: ~50k cards currently, won't exceed 60k for many years.
-
----
-
-### P2.4: 🟡 MEDIUM PRIORITY - Quantize Embeddings to int8 for Browser
-
-**File**: `export_for_browser.py`
-**Lines**: 31-33
-**Issue**: float16 embeddings are 2 bytes per value. int8 quantization reduces to 1 byte with minimal accuracy loss.
-
-**User Impact**: **50% smaller browser download (Priority #3)**
-
-**Proposed Solution**:
-```python
-# Export with int8 quantization
-X = np.load(EMB_NPY)  # float32 [N,512], already L2-normalized
-
-# Quantize to int8: map [-1, 1] to [-127, 127]
-X_int8 = np.clip(X * 127, -127, 127).astype(np.int8)
-X_int8.tofile(OUT_BIN)
-print(f"Wrote {OUT_BIN} (int8 quantized)  (~{X_int8.nbytes/1e6:.1f} MB)  shape={X.shape}")
-
-# Add metadata about quantization
-meta_header = {
-    "quantization": "int8",
-    "scale_factor": 127,
-    "shape": list(X.shape),
-    "dtype": "int8"
-}
-```
-
-**Browser-side dequantization**:
-```javascript
-// In browser: convert int8 back to float32
-const embeddings = new Float32Array(int8Array.length);
-for (let i = 0; i < int8Array.length; i++) {
-    embeddings[i] = int8Array[i] / 127.0;
-}
-```
-
-**Trade-offs**:
-- ✅ 50% smaller download (50k cards: ~50MB → ~25MB)
-- ✅ Faster browser load time
-- ⚠️ ~0.5-1% accuracy loss (negligible)
-- ⚠️ Requires browser-side dequantization code
-
-**Impact**: Significantly faster initial load, especially on mobile/slow connections.
-
-**Effort**: 1 hour (including browser integration)
 
 ---
 
@@ -602,7 +558,7 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 - ✅ P2.1: Use higher quality images (PNG priority) (2 min) - **Better accuracy**
 - ✅ P2.2: Increase image resolution to 384 (2 min) - **10-20% better accuracy**
 - ✅ P2.3: Implement HNSW index (15 min) - **10-100x faster queries, smaller index**
-- ⬜ P2.4: int8 quantization for browser (1 hour) - **50% smaller download**
+- ✅ P2.4: int8 quantization for browser (1 hour) - **75% smaller download**
 - ⬜ P3.1: Add logging for failures (20 min)
 - ⬜ P3.2: Build summary statistics (10 min)
 
@@ -667,11 +623,11 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 - ✅ Smaller index file
 - **Impact**: Massive query speed improvement + better accuracy
 
-**If you have 2 hours**: Complete Phase 2
-- ✅ All accuracy improvements
-- ✅ Fast queries with HNSW
-- ✅ 50% smaller browser download (int8 quantization)
-- ✅ Better observability
+**If you have 2 hours**: Complete Phase 2 ✅ MOSTLY COMPLETED
+- ✅ All accuracy improvements (P2.1, P2.2)
+- ✅ Fast queries with HNSW (P2.3)
+- ✅ 75% smaller browser download (P2.4 int8 quantization)
+- ⬜ Better observability (P3.1, P3.2 remaining)
 - **Impact**: Production-ready user experience
 
 **If you have a day**: Do Phases 2-3
@@ -697,6 +653,7 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 
 ## Change Log
 
+- **2025-10-13 v1.7**: Marked P2.4 as completed (int8 quantization for browser)
 - **2025-10-13 v1.6**: Marked P2.3 as completed (implemented HNSW index for fast queries)
 - **2025-10-13 v1.5**: Marked P2.2 as completed (increased image resolution to 384)
 - **2025-10-13 v1.4**: Marked P2.1 as completed (PNG image priority implemented)
