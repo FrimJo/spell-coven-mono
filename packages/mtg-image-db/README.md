@@ -62,10 +62,29 @@ If you prefer pip-only (not recommended), see the optional section below. The `r
 
 ### 2) Build the index
 
-Downloads Scryfall bulk data, caches images to `image_cache/`, computes CLIP embeddings, and writes artifacts to `index_out/`.
+**Two-step process (recommended):**
 
+Step 1: Download and cache images (can be resumed if interrupted):
+```bash
+python download_images.py --kind unique_artwork --cache image_cache
+# Or: make download
+```
+
+Step 2: Build embeddings and FAISS index from cached images:
+```bash
+python build_embeddings.py --kind unique_artwork --out index_out --cache image_cache
+# Or: make embed
+```
+
+**Single-step process (legacy):**
 ```bash
 python build_mtg_faiss.py --kind unique_artwork --out index_out --cache image_cache
+# Or: make build
+```
+
+**Combined two-step:**
+```bash
+make build-all  # Runs both download and embed steps
 ```
 
 Artifacts written:
@@ -74,6 +93,11 @@ Artifacts written:
 - `index_out/mtg_meta.jsonl`
 
 You can limit for quick tests, e.g. `--limit 2000`.
+
+**Benefits of two-step process:**
+- Resume downloads if interrupted (images are cached)
+- Re-run embedding with different parameters without re-downloading
+- Better progress visibility and error handling
 
 ### 3) Export for the browser
 
@@ -119,11 +143,19 @@ See `apps/web/README.md` and `apps/web/SPEC.md` for setup, usage, and acceptance
 Common tasks are available if you prefer `make` (note: `make install` is deprecated in favor of Conda targets):
 
 ```bash
-make build     # run the index builder
-make export    # export browser artifacts
-make query     # run sample query (edit path in query_index.py)
-make serve     # start a static web server
-make clean     # remove caches and outputs
+# Two-step build (recommended)
+make download   # download and cache images (step 1)
+make embed      # build embeddings from cache (step 2)
+make build-all  # run both download and embed steps
+
+# Legacy single-step build
+make build      # run the index builder (single step)
+
+# Other tasks
+make export     # export browser artifacts
+make query      # run sample query (edit path in query_index.py)
+make serve      # start a static web server
+make clean      # remove caches and outputs
 
 # Conda helpers
 make conda-cpu  # create/update mtg-faiss-cpu
@@ -145,17 +177,14 @@ make install-mps  # same as make conda-mps
 
 ## Project Layout
 
-- `build_mtg_faiss.py` – Build pipeline (download, cache, embed, FAISS, metadata)
+- `download_images.py` – Step 1: Download and cache images from Scryfall
+- `build_embeddings.py` – Step 2: Build embeddings and FAISS index from cache
+- `build_mtg_faiss.py` – Legacy single-step build pipeline (download + embed)
 - `query_index.py` – Python query using FAISS
 - `export_for_browser.py` – Export embeddings/metadata for browser
-- `index.html` – Browser search UI (Transformers.js) with file upload and webcam crop prototype
-- `lib/opencv-loader.js` – Bootstraps OpenCV.js and exposes `window.cvReadyPromise`
-- `lib/main.js` – UI orchestration for browser demo
-- `lib/search.js` – Loads embeddings/metadata, CLIP pipeline setup, embedding and top-K search
-- `lib/webcam.js` – OpenCV.js-based contour detection and perspective-correct crop
 - `image_cache/` – Cached images
 - `index_out/` – Generated artifacts
-- `Makefile` – Convenience tasks: `build`, `export`, `query`, `serve`, `clean`, and Conda helpers
+- `Makefile` – Convenience tasks: `download`, `embed`, `build-all`, `export`, `query`, `serve`, `clean`, and Conda helpers
 - `SPEC.md` – Specification, requirements, acceptance criteria
 
 ## License

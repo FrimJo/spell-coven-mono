@@ -80,7 +80,10 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
 
 ## 5. Architecture Overview
 - Offline (Python):
-  - `build_mtg_faiss.py` → downloads/caches images → embeds via CLIP → saves FAISS + metadata.
+  - **Two-step process (recommended)**:
+    - `download_images.py` → downloads/caches images from Scryfall.
+    - `build_embeddings.py` → loads cached images → embeds via CLIP → saves FAISS + metadata.
+  - **Single-step process (legacy)**: `build_mtg_faiss.py` → downloads/caches images → embeds via CLIP → saves FAISS + metadata.
   - `query_index.py` → embeds query image → FAISS nearest neighbors → prints results.
 - Export for Browser:
   - `export_for_browser.py` → `.npy` → `.i8bin` (int8 quantized), `.jsonl` → `.json` (with quantization metadata).
@@ -197,7 +200,8 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
 
 ## 7. Acceptance Criteria
 - Build [SPEC-AC-BUILD-01]
-  - Running `python3 build_mtg_faiss.py --kind unique_artwork --out index_out --cache image_cache` produces `index_out/mtg_embeddings.npy`, `index_out/mtg_cards.faiss`, `index_out/mtg_meta.jsonl` without errors. Alternatively, `make build` performs the same. [SPEC-AC-BUILD-01.1]
+  - **Two-step process**: Running `python3 download_images.py` followed by `python3 build_embeddings.py` produces `index_out/mtg_embeddings.npy`, `index_out/mtg_cards.faiss`, `index_out/mtg_meta.jsonl` without errors. Alternatively, `make download && make embed` or `make build-all` performs the same. [SPEC-AC-BUILD-01.1]
+  - **Single-step process**: Running `python3 build_mtg_faiss.py --kind unique_artwork --out index_out --cache image_cache` produces the same artifacts. Alternatively, `make build` performs the same. [SPEC-AC-BUILD-01.2]
 - Export [SPEC-AC-EXP-01]
   - Running `python3 export_for_browser.py` produces `index_out/embeddings.i8bin` (int8 quantized) and `index_out/meta.json` (with quantization metadata and records) with matching counts. Alternatively, `make export` performs the same. [SPEC-AC-EXP-01.1]
 - Python Query [SPEC-AC-PY-01]
