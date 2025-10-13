@@ -1,6 +1,6 @@
 # MTG Image DB - Recommended Improvements
 
-**Document Version**: 1.3
+**Document Version**: 1.4
 **Date**: 2025-10-13
 **Status**: In Progress
 
@@ -24,6 +24,10 @@ This document tracks recommended improvements for the `mtg-image-db` package bas
 **Completed**: 2025-10-13
 **Impact**: Added `--input-dir` and `--output-dir` arguments with sensible defaults. Also includes output directory validation (P3.4).
 
+### ✅ P2.1: Use Higher Quality Images for Better Accuracy
+**Completed**: 2025-10-13
+**Impact**: Changed image priority to PNG > large > normal > border_crop for better feature extraction and accuracy with blurry query images.
+
 ---
 
 ## 🟠 Priority 2: User Experience Improvements
@@ -31,32 +35,6 @@ This document tracks recommended improvements for the `mtg-image-db` package bas
 **User Priorities**: 1) Accuracy from blurry/bad images, 2) Query speed for users, 3) Browser DB size. Build time is not a concern.
 
 **Dataset Size**: ~50k cards currently, won't exceed 60k for many years.
-
----
-
-### P2.1: 🔴 HIGH PRIORITY - Use Higher Quality Images for Better Accuracy
-
-**File**: `build_mtg_faiss.py`
-**Lines**: 40-42
-**Issue**: Currently prioritizes 'normal' images, but PNG images are higher quality and better for matching blurry/low-quality query images.
-
-**User Impact**: **Directly improves accuracy from blurry images (Priority #1)**
-
-**Proposed Solution**:
-```python
-def pick_card_image(uris):
-    # PNG > large > normal for best quality and accuracy with blurry inputs
-    return uris.get("png") or uris.get("large") or uris.get("normal") or uris.get("border_crop")
-```
-
-**Trade-offs**: 
-- ✅ Better feature extraction from high-quality source images
-- ✅ More robust matching against blurry query images
-- ⚠️ Larger downloads during build (but build time is not a concern)
-
-**Impact**: Significantly better accuracy, especially with poor quality query images.
-
-**Effort**: 2 minutes
 
 ---
 
@@ -684,7 +662,7 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 ### Phase 2: User Experience Improvements (2-3 hours) 🟠
 **Goal**: Maximize accuracy, query speed, and minimize browser DB size.
 
-- ⬜ P2.1: Use higher quality images (PNG priority) (2 min) - **Better accuracy**
+- ✅ P2.1: Use higher quality images (PNG priority) (2 min) - **Better accuracy**
 - ⬜ P2.2: Increase image resolution to 384 (2 min) - **10-20% better accuracy**
 - ⬜ P2.3: Implement HNSW index (15 min) - **10-100x faster queries, smaller index**
 - ⬜ P2.4: int8 quantization for browser (1 hour) - **50% smaller download**
@@ -741,9 +719,9 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 
 **User Priorities**: 1) Accuracy from blurry images, 2) Query speed, 3) Browser DB size
 
-**If you have 5 minutes**: Do P2.1 + P2.2 (Quick wins)
-- ✅ Switch to PNG images for better quality
-- ✅ Increase resolution to 384
+**If you have 5 minutes**: Do P2.2 (Quick win)
+- ✅ P2.1 completed: Now using PNG images for better quality
+- ⬜ Increase resolution to 384
 - **Impact**: 10-20% better accuracy on blurry images
 
 **If you have 30 minutes**: Add P2.3 (HNSW index)
@@ -782,6 +760,7 @@ Future enhancements and quality-of-life improvements. **Implement when time perm
 
 ## Change Log
 
+- **2025-10-13 v1.4**: Marked P2.1 as completed (PNG image priority implemented)
 - **2025-10-13 v1.3**: Completely rewrote Priority 2 based on user priorities (accuracy > query speed > DB size). Removed build-time optimizations (parallel downloads, batch size tuning). Added accuracy improvements (PNG images, higher resolution), HNSW index for query speed, int8 quantization for smaller DB, and optional ViT-L/14 for maximum accuracy. Updated roadmap and quick-start recommendations.
 - **2025-10-13 v1.2**: Marked P1.1, P1.2, P1.3 as completed; moved to "Completed Improvements" section
 - **2025-10-13 v1.1**: Reorganized by priority, most critical first; added emojis and quick-start guide
