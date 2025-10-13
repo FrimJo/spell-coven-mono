@@ -1,6 +1,55 @@
-# MTG Card Lookup - Spell Coven
+# Spell Coven - MTG Remote Play Platform
 
-A browser-based Magic: The Gathering card recognition system using computer vision. Point your webcam at a card and get instant identification using CLIP (Contrastive Language-Image Pre-training) running entirely in your browser.
+A browser-based platform for playing paper Magic: The Gathering remotely with friends. Spell Coven enables MTG players to play their physical cards online through video chat, card recognition, and game management tools—all running in your browser with no downloads required.
+
+## Vision
+
+Spell Coven aims to provide a comprehensive remote play experience for Magic: The Gathering players, competing with platforms like SpellTable by offering:
+
+- **Multi-party Video & Voice**: Browser-based video chat optimized for overhead camera views of playmats (2-4 players per game)
+- **Intelligent Card Recognition**: Computer vision powered by CLIP to identify cards in real-time and display rulings/details
+- **Game Management Tools**: Life total tracking, commander damage tracking, turn indicators, and game timers
+- **Flexible Room System**: Create or join private/public game rooms with format and power level metadata for better matchmaking
+- **Device Flexibility**: Use standard webcams or mobile devices as overhead cameras without separate apps
+- **Fully Browser-Based**: No installation required—works on modern browsers (Chrome, Firefox, Safari)
+
+## Current Status
+
+**Phase 1 (Current)**: Card recognition system with real-time visual search
+- ✅ Browser-based CLIP model for card identification
+- ✅ OpenCV.js for card boundary detection
+- ✅ Webcam integration with real-time processing
+- ✅ Pre-computed embeddings for ~20k+ MTG cards
+
+**Phase 2 (Planned)**: Multi-party video/audio and room system
+**Phase 3 (Planned)**: Game aids (life tracking, commander damage, turn management)
+**Phase 4 (Planned)**: Enhanced matchmaking and social features
+
+## Target Use Case
+
+Spell Coven is designed for Magic: The Gathering players who want to play with their physical cards remotely against friends. The platform enables:
+
+- **Remote Play Sessions**: Play paper MTG with friends across distances using video chat
+- **Casual & Competitive Play**: Support for various formats (Commander, Modern, Standard, etc.) with power level indicators
+- **Card Identification**: Quickly identify cards on camera for rules lookups and oracle text
+- **Game State Tracking**: Keep track of life totals, commander damage, and turn order
+- **Flexible Setup**: Use any webcam or smartphone as an overhead camera—no special equipment needed
+
+### Competitive Landscape
+
+**SpellTable** (by Wizards of the Coast) is the current market leader, offering:
+- Free browser-based platform for remote paper Magic
+- Multi-party video chat (2-4 players)
+- Card recognition with click-to-identify
+- Built-in life/commander damage tracking
+- Turn indicators and timers
+- Mobile device support as overhead cameras
+
+**Spell Coven's Differentiators** (planned):
+- Advanced AI-powered card recognition using state-of-the-art CLIP models
+- Open-source and community-driven development
+- Extensible architecture for custom features and integrations
+- Privacy-focused with optional self-hosting capabilities
 
 ## Quick Start
 
@@ -21,26 +70,39 @@ A browser-based Magic: The Gathering card recognition system using computer visi
 
 ## What's inside?
 
-This Turborepo includes the following packages/apps:
+This Turborepo monorepo houses all applications and packages needed to drive the Spell Coven platform:
 
 ### Apps and Packages
 
-- `web`: MTG card recognition web app (Vite + React + TanStack Router)
-- `@repo/mtg-image-db`: Pre-generated card embeddings and metadata
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-- `@repo/tailwind-config`: Shared Tailwind CSS configuration
-- `@repo/prettier-config`: Shared Prettier configuration
+- **`web`**: Main web application for remote MTG play (Vite + React + TanStack Router)
+  - Card recognition with computer vision (Phase 1 - ✅ Complete)
+  - Video/audio chat rooms (Phase 2 - Planned)
+  - Game management tools (Phase 3 - Planned)
+- **`@repo/mtg-image-db`**: Pre-generated CLIP embeddings and metadata for MTG card database
+  - Python pipeline for downloading Scryfall data
+  - FAISS index builder for efficient similarity search
+  - Browser-optimized export (int8 quantization)
+- **`@repo/eslint-config`**: Shared ESLint configurations
+- **`@repo/typescript-config`**: Shared TypeScript configurations
+- **`@repo/tailwind-config`**: Shared Tailwind CSS configuration
+- **`@repo/prettier-config`**: Shared Prettier configuration
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+Each package/app is 100% [TypeScript](https://www.typescriptlang.org/) (Python for data pipeline).
 
 ### Key Technologies
 
+**Current (Phase 1)**:
 - **Computer Vision**: CLIP (via [@xenova/transformers](https://github.com/xenova/transformers.js)) for image feature extraction
 - **Card Detection**: OpenCV.js for real-time card boundary detection
 - **Frontend**: React 19, TanStack Router, Tailwind CSS
 - **Build Tool**: Vite with TypeScript
 - **Monorepo**: Turborepo with pnpm workspaces
+- **Data Pipeline**: Python with PyTorch, FAISS, Scryfall API
+
+**Planned (Phase 2+)**:
+- **WebRTC**: For peer-to-peer video/audio communication
+- **Real-time Sync**: For game state management across players
+- **Backend Services**: Room management, matchmaking, user sessions
 
 ### Utilities
 
@@ -140,6 +202,47 @@ npx turbo link
 yarn exec turbo link
 pnpm exec turbo link
 ```
+
+## Development Roadmap
+
+### Phase 1: Card Recognition ✅ (Current)
+- [x] CLIP-based visual search engine
+- [x] OpenCV.js card boundary detection
+- [x] Real-time webcam integration
+- [x] Pre-computed embeddings for MTG card database
+- [x] Browser-optimized model delivery
+
+### Phase 2: Multi-Party Video & Rooms (Next)
+- [ ] WebRTC integration for peer-to-peer video/audio
+- [ ] Room creation and joining system
+- [ ] Multi-party video layouts (grid, spotlight, focus views)
+- [ ] Room metadata (format, power level, player count)
+- [ ] Mobile device support as overhead camera
+
+### Phase 3: Game Management Tools
+- [ ] Life total tracking
+- [ ] Commander damage tracking
+- [ ] Turn indicator system
+- [ ] Game timer/turn clock
+- [ ] Card lookup drawer (click-to-identify integration)
+
+### Phase 4: Enhanced Features
+- [ ] Public/private room matchmaking
+- [ ] User accounts and game history
+- [ ] Replay and spectator modes
+- [ ] Custom game rules and formats
+- [ ] Community features (friends, invites)
+
+## Contributing
+
+This is an open-source project and contributions are welcome! Whether you're interested in:
+- Adding new features (WebRTC, game tools, UI improvements)
+- Improving card recognition accuracy
+- Optimizing performance
+- Writing documentation
+- Reporting bugs
+
+Please feel free to open issues or submit pull requests.
 
 ## Useful Links
 
