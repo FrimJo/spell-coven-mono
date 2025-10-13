@@ -74,7 +74,12 @@ make conda-cpu    # for CPU-only
 make conda-gpu    # for NVIDIA CUDA
 make conda-mps    # for Apple Silicon (MPS)
 
-# Build the embedding database
+# Build the embedding database (two-step process recommended)
+make download  # Step 1: Download and cache images
+make embed     # Step 2: Build embeddings from cache
+# Or combined: make build-all
+
+# Legacy single-step build
 make build
 
 # Export embeddings for browser use
@@ -107,8 +112,10 @@ pnpm --filter @repo/web test -- --watch
 - **`routes/index.tsx`**: Main scanner UI with webcam controls and result display
 
 ### Data Pipeline (`packages/mtg-image-db/`)
-- **`build_mtg_faiss.py`**: Downloads Scryfall data, generates CLIP embeddings, builds FAISS index
-- **`export_for_browser.py`**: Converts embeddings to browser-compatible format (float16 + JSON)
+- **`download_images.py`**: Downloads and caches Scryfall card images (step 1)
+- **`build_embeddings.py`**: Generates CLIP embeddings from cache, builds FAISS index (step 2)
+- **`build_mtg_faiss.py`**: Legacy single-step pipeline (download + embed)
+- **`export_for_browser.py`**: Converts embeddings to browser-compatible format (int8 quantized + JSON)
 - **`query_index.py`**: Python-based search testing utility
 
 ### Configuration
@@ -120,13 +127,21 @@ pnpm --filter @repo/web test -- --watch
 ### Setting up for Development
 1. Clone repository and run `pnpm install`
 2. Set up Python environment in `packages/mtg-image-db` using appropriate `make conda-*` command
-3. Build initial dataset: `cd packages/mtg-image-db && make build && make export`
+3. Build initial dataset:
+   ```bash
+   cd packages/mtg-image-db
+   make download  # Download and cache images (step 1)
+   make embed     # Build embeddings (step 2)
+   make export    # Export for browser
+   # Or use: make build-all && make export
+   ```
 4. Start development: `pnpm dev` (runs web app on port 3000)
 
 ### Working with the Data Pipeline
 - The Python pipeline must be run before the browser app can function
 - Embeddings are exported to `packages/mtg-image-db/index_out/` and consumed by the web app
-- Changes to the dataset require rebuilding with `make build && make export`
+- Two-step build process allows resuming interrupted downloads and re-running embeddings without re-downloading
+- Changes to the dataset require rebuilding: `make download && make embed && make export` (or `make build-all && make export`)
 
 ### Browser-side Search Flow
 - All ML inference happens client-side using Transformers.js
