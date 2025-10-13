@@ -82,6 +82,7 @@ This Turborepo monorepo houses all applications and packages needed to drive the
   - Python pipeline for downloading Scryfall data
   - FAISS index builder for efficient similarity search
   - Browser-optimized export (int8 quantization)
+- **`@repo/ui`**: Shared React component library
 - **`@repo/eslint-config`**: Shared ESLint configurations
 - **`@repo/typescript-config`**: Shared TypeScript configurations
 - **`@repo/tailwind-config`**: Shared Tailwind CSS configuration
@@ -92,7 +93,7 @@ Each package/app is 100% [TypeScript](https://www.typescriptlang.org/) (Python f
 ### Key Technologies
 
 **Current (Phase 1)**:
-- **Computer Vision**: CLIP (via [@xenova/transformers](https://github.com/xenova/transformers.js)) for image feature extraction
+- **Computer Vision**: CLIP (via [@huggingface/transformers](https://huggingface.co/docs/transformers.js)) for image feature extraction
 - **Card Detection**: OpenCV.js for real-time card boundary detection
 - **Frontend**: React 19, TanStack Router, Tailwind CSS
 - **Build Tool**: Vite with TypeScript
