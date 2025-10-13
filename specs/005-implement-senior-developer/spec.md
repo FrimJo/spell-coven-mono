@@ -158,7 +158,7 @@ A developer runs a multi-hour embedding job. The system periodically saves progr
 - **FR-006**: System MUST validate each cached image file by attempting to load it with an image library before using it for embeddings
 - **FR-007**: System MUST reject and log any cached files that are not valid images (e.g., HTML error pages, truncated files, corrupted data)
 - **FR-008**: Cache filename generation MUST include a stable hash of the source URL to prevent collisions when URL paths change
-- **FR-009**: System MUST persist the mapping between kept indices and metadata for auditability and validation
+- **FR-009**: System MUST persist the mapping between kept indices and metadata for auditability and validation (kept indices used to filter both embeddings and metadata arrays before writing)
 - **FR-010**: System MUST verify that all vectors are L2-normalized (unit norm) before indexing
 
 #### Edge Case Handling
@@ -171,7 +171,7 @@ A developer runs a multi-hour embedding job. The system periodically saves progr
 #### Performance & Scalability
 
 - **FR-015**: Download system MUST support parallel downloads using a configurable thread pool (default 10-32 workers) to improve throughput
-- **FR-016**: Download system MUST coordinate retry logic across parallel workers to avoid thundering herd problems during rate limiting
+- **FR-016**: Download system MUST coordinate retry logic across parallel workers to avoid thundering herd problems during rate limiting (via shared session with connection pooling)
 - **FR-017**: Embedding system MUST support memory-mapped output for large datasets to avoid RAM spikes and improve resilience
 - **FR-018**: Embedding system MUST support periodic checkpoints every 500 images to enable resumability of long-running jobs with minimal rework on interruption
 - **FR-019**: System MUST expose FAISS HNSW parameters (M, efConstruction) as CLI flags with sensible defaults (M=32, efConstruction=200)
