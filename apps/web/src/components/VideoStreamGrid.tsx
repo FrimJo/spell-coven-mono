@@ -16,6 +16,11 @@ import {
 
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@repo/ui/components/popover'
 
 interface Player {
   id: string
@@ -60,6 +65,10 @@ export function VideoStreamGrid({
     [],
   )
   const [currentCameraIndex, setCurrentCameraIndex] = useState(0)
+  const [currentCameraId, setCurrentCameraId] = useState<string | undefined>(
+    undefined,
+  )
+  const [cameraPopoverOpen, setCameraPopoverOpen] = useState(false)
 
   const [streamStates, setStreamStates] = useState<Record<string, StreamState>>(
     players.reduce(
@@ -90,6 +99,19 @@ export function VideoStreamGrid({
     if (nextCamera) {
       await startStream(nextCamera.deviceId)
       setCurrentCameraIndex(nextIndex)
+      setCurrentCameraId(nextCamera.deviceId)
+    }
+  }
+
+  const selectCamera = async (deviceId: string) => {
+    const cameraIndex = availableCameras.findIndex(
+      (cam) => cam.deviceId === deviceId,
+    )
+    if (cameraIndex !== -1) {
+      await startStream(deviceId)
+      setCurrentCameraIndex(cameraIndex)
+      setCurrentCameraId(deviceId)
+      setCameraPopoverOpen(false)
     }
   }
 
@@ -166,11 +188,12 @@ export function VideoStreamGrid({
                     height: '100%',
                     objectFit: 'cover',
                     zIndex: 0,
-                    display: videoEnabled && localStreamActive ? 'block' : 'none',
+                    display:
+                      videoEnabled && localStreamActive ? 'block' : 'none',
                   }}
                 />
               )}
-              
+
               {/* Placeholder UI */}
               {videoEnabled ? (
                 <>
@@ -275,7 +298,7 @@ export function VideoStreamGrid({
                     className={`h-10 w-10 p-0 ${
                       videoEnabled
                         ? 'border-slate-700 text-white hover:bg-slate-800'
-                        : 'bg-red-600 hover:bg-red-700 text-white border-red-600'
+                        : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
                     }`}
                   >
                     {videoEnabled ? (
@@ -291,7 +314,7 @@ export function VideoStreamGrid({
                     className={`h-10 w-10 p-0 ${
                       audioEnabled
                         ? 'border-slate-700 text-white hover:bg-slate-800'
-                        : 'bg-red-600 hover:bg-red-700 text-white border-red-600'
+                        : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
                     }`}
                     disabled={!localStreamActive}
                   >
@@ -302,27 +325,90 @@ export function VideoStreamGrid({
                     )}
                   </Button>
                   <div className="mx-1 h-6 w-px bg-slate-700" />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={switchCamera}
-                    className="h-10 w-10 border-white bg-white p-0 text-black hover:bg-gray-100"
-                    disabled={!localStreamActive || availableCameras.length <= 1}
-                    title={
-                      availableCameras.length > 1
-                        ? `Switch camera (${availableCameras.length} available)`
-                        : 'No other cameras available'
-                    }
+                  <Popover
+                    open={cameraPopoverOpen}
+                    onOpenChange={setCameraPopoverOpen}
                   >
-                    <SwitchCamera className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-10 w-10 border-white bg-white p-0 text-black hover:bg-gray-100"
-                  >
-                    <Maximize2 className="h-5 w-5" />
-                  </Button>
+                    <PopoverTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-10 w-10 border-white bg-white p-0 text-black hover:bg-gray-100"
+                        disabled={
+                          !localStreamActive || availableCameras.length <= 1
+                        }
+                        title={
+                          availableCameras.length > 1
+                            ? `Switch camera (${availableCameras.length} available)`
+                            : 'No other cameras available'
+                        }
+                      >
+                        <SwitchCamera className="h-5 w-5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-80 border-slate-800 bg-slate-950/95 p-0 backdrop-blur-sm"
+                      align="end"
+                      sideOffset={8}
+                    >
+                      <div className="border-b border-slate-800 px-4 py-3">
+                        <h3 className="text-sm font-semibold text-white">
+                          Select Camera
+                        </h3>
+                        <p className="text-xs text-slate-400">
+                          {availableCameras.length} camera
+                          {availableCameras.length !== 1 ? 's' : ''} available
+                        </p>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto p-2">
+                        {availableCameras.map((camera, index) => {
+                          const isActive =
+                            currentCameraId === camera.deviceId ||
+                            (!currentCameraId && index === currentCameraIndex)
+                          return (
+                            <button
+                              key={camera.deviceId}
+                              onClick={() => selectCamera(camera.deviceId)}
+                              className={
+                                'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-slate-800/50 ' +
+                                (isActive
+                                  ? 'bg-purple-500/20 text-white'
+                                  : 'text-slate-300')
+                              }
+                            >
+                              <div
+                                className={
+                                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full ' +
+                                  (isActive
+                                    ? 'bg-purple-500/30'
+                                    : 'bg-slate-800')
+                                }
+                              >
+                                <Camera
+                                  className={
+                                    'h-4 w-4 ' +
+                                    (isActive
+                                      ? 'text-purple-400'
+                                      : 'text-slate-400')
+                                  }
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-medium">
+                                  {camera.label || `Camera ${index + 1}`}
+                                </div>
+                                {isActive && (
+                                  <div className="text-xs text-purple-400">
+                                    Currently active
+                                  </div>
+                                )}
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               )}
 
@@ -336,7 +422,7 @@ export function VideoStreamGrid({
                     className={`h-10 w-10 p-0 backdrop-blur-sm ${
                       audioEnabled
                         ? 'border-slate-700 bg-slate-950/90 text-white hover:bg-slate-800'
-                        : 'bg-red-600 hover:bg-red-700 text-white border-red-600'
+                        : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
                     }`}
                   >
                     {audioEnabled ? (
