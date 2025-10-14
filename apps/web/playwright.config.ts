@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test'
 
 // Serve the repo root as a static site for tests.
 // Requires Python to be available (python3 -m http.server 8000).
@@ -27,4 +27,4 @@ export default defineConfig({
     stdout: 'ignore',
     stderr: 'pipe',
   },
-});
+})

@@ -47,12 +47,12 @@ pnpm --filter @repo/web serve
 
 ```ts
 import {
-  loadEmbeddingsAndMetaFromPackage,
-  loadModel,
   embedFromCanvas,
   embedFromImageElement,
-  topK,
+  loadEmbeddingsAndMetaFromPackage,
+  loadModel,
   top1,
+  topK,
 } from './src/lib/search'
 
 await loadEmbeddingsAndMetaFromPackage() // resolves @repo/mtg-image-db/index_out/* via Vite `?url` imports
@@ -64,6 +64,7 @@ const results = topK(q, 5)
 ```
 
 Notes:
+
 - Embedding dimension is 512 and cosine similarity is used via dot product on L2-normalized vectors.
 - If you need to serve assets from a custom path, you can still use `loadEmbeddingsAndMeta(basePath)` instead of the package-based helper.
 
@@ -89,17 +90,18 @@ Transformers.js downloads the CLIP model directly to the browser's cache from Hu
 
 ```typescript
 // Configured in src/lib/search.ts
-env.useBrowserCache = true      // Cache in browser (IndexedDB)
-env.allowRemoteModels = true    // Download from Hugging Face
-env.allowLocalModels = false    // Don't serve from web server
+env.useBrowserCache = true // Cache in browser (IndexedDB)
+env.allowRemoteModels = true // Download from Hugging Face
+env.allowLocalModels = false // Don't serve from web server
 
 // Model downloads to browser cache on first use
 await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch32', {
-  quantized: true // Uses 147MB quantized model instead of 578MB
+  quantized: true, // Uses 147MB quantized model instead of 578MB
 })
 ```
 
 **Benefits:**
+
 - ✅ No server storage needed (model stays in browser cache)
 - ✅ Automatic updates when model is updated on Hugging Face
 - ✅ Works offline after first download
@@ -120,4 +122,3 @@ await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch32', {
 - **Card detection**: 30+ FPS (OpenCV.js)
 - **Embedding generation**: ~100-200ms per card (CLIP)
 - **Search**: <1ms (dot product over ~20k cards)
-

@@ -13,6 +13,7 @@ Based on official Transformers.js documentation (Context7).
 ### 1. Correct `dtype` Configuration
 
 **Before:**
+
 ```typescript
 const options = {
   quantized: false,  // ❌ Wrong parameter
@@ -25,6 +26,7 @@ const pipelineOptions = {
 ```
 
 **After:**
+
 ```typescript
 await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch32', {
   dtype: 'q8',  // ✅ Correct parameter
@@ -33,6 +35,7 @@ await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch32', {
 ```
 
 **Available `dtype` options:**
+
 - `'fp32'` - Full precision (largest, highest quality)
 - `'fp16'` - Half precision (medium size, good quality)
 - `'q8'` - 8-bit quantization (good balance) ✅ **We use this**
@@ -42,6 +45,7 @@ await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch32', {
 ### 2. Progress Callback Placement
 
 **Before:**
+
 ```typescript
 const options = {
   progress_callback: (p) => { ... }
@@ -51,12 +55,13 @@ await pipeline('task', 'model', pipelineOptions)
 ```
 
 **After:**
+
 ```typescript
 await pipeline('task', 'model', {
   dtype: 'q8',
   progress_callback: (progress) => {
     console.log(progress.status, progress.file, progress.progress)
-  }
+  },
 })
 ```
 
@@ -65,12 +70,13 @@ await pipeline('task', 'model', {
 The models are automatically cached in **IndexedDB** by the browser:
 
 ```typescript
-env.useBrowserCache = true  // ✅ Enable caching (default)
-env.allowRemoteModels = true  // ✅ Download from Hugging Face
-env.allowLocalModels = false  // ✅ Don't serve from web server
+env.useBrowserCache = true // ✅ Enable caching (default)
+env.allowRemoteModels = true // ✅ Download from Hugging Face
+env.allowLocalModels = false // ✅ Don't serve from web server
 ```
 
 **How it works:**
+
 1. First load: Downloads ~150MB from Hugging Face CDN
 2. Stores in browser's IndexedDB
 3. Subsequent loads: Instant (uses cached files)
@@ -115,12 +121,12 @@ Some models are better supported:
 ```typescript
 // Try these well-tested models:
 await pipeline('image-feature-extraction', 'Xenova/vit-base-patch16-224', {
-  dtype: 'q8'
+  dtype: 'q8',
 })
 
 // Or use a different CLIP variant:
 await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch16', {
-  dtype: 'q8'
+  dtype: 'q8',
 })
 ```
 
@@ -151,21 +157,25 @@ If supported:
 const webgpuSupported = await env.backends.onnx.webgpu.isSupported()
 
 if (webgpuSupported) {
-  extractor = await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch32', {
-    dtype: 'fp16',  // WebGPU works better with fp16
-    device: 'webgpu'  // Use GPU acceleration
-  })
+  extractor = await pipeline(
+    'image-feature-extraction',
+    'Xenova/clip-vit-base-patch32',
+    {
+      dtype: 'fp16', // WebGPU works better with fp16
+      device: 'webgpu', // Use GPU acceleration
+    },
+  )
 }
 ```
 
 ## Performance Expectations
 
-| Scenario | Time | Notes |
-|----------|------|-------|
-| First load | 10-30s | Downloads ~150MB (q8 model) |
-| Cached load | 2-3s | Loads from IndexedDB |
-| Embedding generation | 100-200ms | Per image |
-| Search | <1ms | Dot product over 20k cards |
+| Scenario             | Time      | Notes                       |
+| -------------------- | --------- | --------------------------- |
+| First load           | 10-30s    | Downloads ~150MB (q8 model) |
+| Cached load          | 2-3s      | Loads from IndexedDB        |
+| Embedding generation | 100-200ms | Per image                   |
+| Search               | <1ms      | Dot product over 20k cards  |
 
 ## Browser Compatibility
 

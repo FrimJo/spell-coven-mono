@@ -10,11 +10,9 @@ import {
 import { ArrowLeft, Check, Copy, Settings, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
-
-import { TurnTracker } from './TurnTracker'
 import { PlayerList } from './PlayerList'
+import { TurnTracker } from './TurnTracker'
 import { VideoStreamGrid } from './VideoStreamGrid'
-
 
 interface GameRoomProps {
   gameId: string

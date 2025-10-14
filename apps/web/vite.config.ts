@@ -1,9 +1,9 @@
-import { defineConfig } from 'vite'
-import viteReact from '@vitejs/plugin-react'
-import viteTsConfigPaths from 'vite-tsconfig-paths'
+import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
-import path from 'path'
+import viteReact from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+import viteTsConfigPaths from 'vite-tsconfig-paths'
 
 const config = defineConfig({
   plugins: [
