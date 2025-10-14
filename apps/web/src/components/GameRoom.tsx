@@ -1,65 +1,85 @@
-import { useState } from 'react';
-import { ArrowLeft, Copy, Check, Users, Settings } from 'lucide-react';
-import { Button } from '@repo/ui/components/button';
-import { VideoPanel } from './VideoPanel';
-import { GameBoard } from './GameBoard';
-import { PlayerStats } from './PlayerStats';
-import { TurnTracker } from './TurnTracker';
-import { CardScanner } from './CardScanner';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@repo/ui/components/tooltip';
-import { toast } from 'sonner';
-import { Toaster } from '@repo/ui/components/sonner';
+import { useState } from 'react'
+import { Button } from '@repo/ui/components/button'
+import { Toaster } from '@repo/ui/components/sonner'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@repo/ui/components/tooltip'
+import { ArrowLeft, Check, Copy, Settings, Users } from 'lucide-react'
+import { toast } from 'sonner'
+
+
+import { TurnTracker } from './TurnTracker'
+import { PlayerList } from './PlayerList'
+import { VideoStreamGrid } from './VideoStreamGrid'
+
 
 interface GameRoomProps {
-  gameId: string;
-  playerName: string;
-  onLeaveGame: () => void;
+  gameId: string
+  playerName: string
+  onLeaveGame: () => void
+  isLobbyOwner?: boolean
 }
 
 interface Player {
-  id: string;
-  name: string;
-  life: number;
-  isActive: boolean;
+  id: string
+  name: string
+  life: number
+  isActive: boolean
 }
 
-export function GameRoom({ gameId, playerName, onLeaveGame }: GameRoomProps) {
-  const [copied, setCopied] = useState(false);
-  const [showScanner, setShowScanner] = useState(false);
+export function GameRoom({
+  gameId,
+  playerName,
+  onLeaveGame,
+  isLobbyOwner = true,
+}: GameRoomProps) {
+  const [copied, setCopied] = useState(false)
   const [players, setPlayers] = useState<Player[]>([
     { id: '1', name: playerName, life: 20, isActive: true },
-    { id: '2', name: 'Opponent', life: 20, isActive: false },
-  ]);
+    { id: '2', name: 'Alex', life: 20, isActive: false },
+    { id: '3', name: 'Jordan', life: 20, isActive: false },
+    { id: '4', name: 'Sam', life: 20, isActive: false },
+  ])
 
   const handleCopyGameId = () => {
-    navigator.clipboard.writeText(gameId);
-    setCopied(true);
-    toast.success('Game ID copied to clipboard!');
-    setTimeout(() => setCopied(false), 2000);
-  };
+    navigator.clipboard.writeText(gameId)
+    setCopied(true)
+    toast.success('Game ID copied to clipboard!')
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const handleLifeChange = (playerId: string, newLife: number) => {
-    setPlayers(players.map(p => 
-      p.id === playerId ? { ...p, life: newLife } : p
-    ));
-  };
+    setPlayers(
+      players.map((p) => (p.id === playerId ? { ...p, life: newLife } : p)),
+    )
+  }
 
   const handleNextTurn = () => {
-    const currentIndex = players.findIndex(p => p.isActive);
-    const nextIndex = (currentIndex + 1) % players.length;
-    setPlayers(players.map((p, i) => ({
-      ...p,
-      isActive: i === nextIndex
-    })));
-  };
+    const currentIndex = players.findIndex((p) => p.isActive)
+    const nextIndex = (currentIndex + 1) % players.length
+    setPlayers(
+      players.map((p, i) => ({
+        ...p,
+        isActive: i === nextIndex,
+      })),
+    )
+  }
+
+  const handleRemovePlayer = (playerId: string) => {
+    setPlayers(players.filter((p) => p.id !== playerId))
+    toast.success('Player removed from game')
+  }
 
   return (
-    <div className="h-screen flex flex-col bg-slate-950">
+    <div className="flex h-screen flex-col bg-slate-950">
       <Toaster />
-      
+
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm flex-shrink-0">
-        <div className="px-4 py-3 flex items-center justify-between">
+      <header className="flex-shrink-0 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
+        <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-4">
             <TooltipProvider>
               <Tooltip>
@@ -70,7 +90,7 @@ export function GameRoom({ gameId, playerName, onLeaveGame }: GameRoomProps) {
                     onClick={onLeaveGame}
                     className="text-slate-400 hover:text-white"
                   >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    <ArrowLeft className="mr-2 h-4 w-4" />
                     Leave
                   </Button>
                 </TooltipTrigger>
@@ -83,8 +103,8 @@ export function GameRoom({ gameId, playerName, onLeaveGame }: GameRoomProps) {
             <div className="h-6 w-px bg-slate-700" />
 
             <div className="flex items-center gap-2">
-              <span className="text-slate-400 text-sm">Game ID:</span>
-              <code className="px-2 py-1 bg-slate-800 text-purple-400 rounded text-sm">
+              <span className="text-sm text-slate-400">Game ID:</span>
+              <code className="rounded bg-slate-800 px-2 py-1 text-sm text-purple-400">
                 {gameId}
               </code>
               <Button
@@ -93,75 +113,65 @@ export function GameRoom({ gameId, playerName, onLeaveGame }: GameRoomProps) {
                 onClick={handleCopyGameId}
                 className="text-slate-400 hover:text-white"
               >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowScanner(!showScanner)}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
-            >
-              {showScanner ? 'Hide Scanner' : 'Scan Card'}
-            </Button>
-            
             <div className="flex items-center gap-2 text-slate-400">
-              <Users className="w-4 h-4" />
-              <span className="text-sm">{players.length} Players</span>
+              <Users className="h-4 w-4" />
+              <span className="text-sm">{players.length}/4 Players</span>
             </div>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-slate-400 hover:text-white"
-            >
-              <Settings className="w-4 h-4" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-slate-400 hover:text-white"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Game settings</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        <div className="h-full grid grid-cols-12 gap-4 p-4">
-          {/* Left Sidebar - Player Stats */}
-          <div className="col-span-12 lg:col-span-2 space-y-4 overflow-y-auto">
-            <TurnTracker 
+        <div className="flex h-full gap-4 p-4">
+          {/* Left Sidebar - Turn Tracker & Player List */}
+          <div className="w-64 flex-shrink-0 space-y-4 overflow-y-auto">
+            <TurnTracker players={players} onNextTurn={handleNextTurn} />
+            <PlayerList
               players={players}
-              onNextTurn={handleNextTurn}
+              isLobbyOwner={isLobbyOwner}
+              localPlayerName={playerName}
+              onRemovePlayer={handleRemovePlayer}
             />
-            {players.map(player => (
-              <PlayerStats
-                key={player.id}
-                player={player}
-                onLifeChange={(newLife) => handleLifeChange(player.id, newLife)}
-              />
-            ))}
           </div>
 
-          {/* Center - Game Board */}
-          <div className="col-span-12 lg:col-span-7 flex flex-col gap-4 overflow-hidden">
-            {showScanner && (
-              <CardScanner onClose={() => setShowScanner(false)} />
-            )}
-            <GameBoard />
-          </div>
-
-          {/* Right Sidebar - Video Panels */}
-          <div className="col-span-12 lg:col-span-3 space-y-4 overflow-y-auto">
-            {players.map(player => (
-              <VideoPanel
-                key={player.id}
-                playerName={player.name}
-                isLocal={player.name === playerName}
-              />
-            ))}
+          {/* Main Area - Video Stream Grid */}
+          <div className="flex-1 overflow-hidden">
+            <VideoStreamGrid
+              players={players}
+              localPlayerName={playerName}
+              onLifeChange={handleLifeChange}
+            />
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }
