@@ -1,8 +1,8 @@
+import { ErrorFallback } from '@/components/ErrorFallback'
+import { LandingPage } from '@/components/LandingPage'
+import { sessionStorage } from '@/lib/session-storage'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ErrorBoundary } from 'react-error-boundary'
-import { LandingPage } from '@/components/LandingPage'
-import { ErrorFallback } from '@/components/ErrorFallback'
-import { sessionStorage } from '@/lib/session-storage'
 
 export const Route = createFileRoute('/')({
   component: LandingPageRoute,

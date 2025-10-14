@@ -1,6 +1,5 @@
-import { config as baseConfig, restrictEnvAccess } from '@repo/eslint-config/base'
+import { config as baseConfig } from '@repo/eslint-config/base'
 import { config as reactConfig } from '@repo/eslint-config/react-internal'
-import { config as viteConfig } from '@repo/eslint-config/base'
 import pluginQuery from '@tanstack/eslint-plugin-query'
 import reactCompiler from 'eslint-plugin-react-compiler'
 
@@ -8,15 +7,19 @@ import reactCompiler from 'eslint-plugin-react-compiler'
 export default [
   ...baseConfig,
   ...reactConfig,
-  ...viteConfig,
-  ...restrictEnvAccess,
   ...pluginQuery.configs['flat/recommended'],
   { ignores: ['public/mockServiceWorker.js'] },
   {
-    ignores: ['dist/**', 'src/routeTree.gen.ts'],
+    files: ['**/*.ts', '**/*.tsx'],
+    ignores: [
+      'dist/**',
+      'src/routeTree.gen.ts',
+      'eslint.config.js',
+      'playwright.config.ts',
+    ],
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        project: './tsconfig.json',
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -26,6 +29,7 @@ export default [
     rules: {
       'react-compiler/react-compiler': 'error',
       '@tanstack/query/exhaustive-deps': 'off',
+      'react/prop-types': 'off', // TypeScript provides type checking
     },
   },
 ]

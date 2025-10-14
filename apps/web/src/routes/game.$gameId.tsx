@@ -1,8 +1,8 @@
+import { ErrorFallback } from '@/components/ErrorFallback'
+import { GameRoom } from '@/components/GameRoom'
+import { sessionStorage } from '@/lib/session-storage'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ErrorBoundary } from 'react-error-boundary'
-import { GameRoom } from '@/components/GameRoom'
-import { ErrorFallback } from '@/components/ErrorFallback'
-import { sessionStorage } from '@/lib/session-storage'
 
 export const Route = createFileRoute('/game/$gameId')({
   component: GameRoomRoute,
@@ -11,7 +11,7 @@ export const Route = createFileRoute('/game/$gameId')({
 function GameRoomRoute() {
   const { gameId } = Route.useParams()
   const navigate = useNavigate()
-  
+
   const state = sessionStorage.loadGameState()
   const playerName = state?.playerName ?? 'Guest'
 

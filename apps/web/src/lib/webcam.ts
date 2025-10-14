@@ -9,7 +9,7 @@ declare global {
     __resolveCvReady?: () => void
   }
   // OpenCV global injected by opencv.js
-  // eslint-disable-next-line no-var
+
   var cv: any
 }
 
@@ -18,21 +18,24 @@ function ensureOpenCVScript(): Promise<void> {
 
   window.__cvReadyPromise = new Promise<void>((resolve, reject) => {
     // OpenCV.js expects this global callback
-    (window as any).onOpenCvReady = () => {
+    ;(window as any).onOpenCvReady = () => {
       console.log('OpenCV.js is ready (via callback)')
       resolve()
     }
-    
+
     const script = document.createElement('script')
     script.async = true
     script.src = 'https://docs.opencv.org/4.x/opencv.js'
     script.onerror = () => reject(new Error('Failed to load OpenCV.js'))
-    
+
     // Fallback: poll for cv.Mat to be available if callback doesn't fire
     script.onload = () => {
       console.log('OpenCV.js script loaded, waiting for initialization...')
       const checkReady = () => {
-        if (typeof (window as any).cv !== 'undefined' && typeof (window as any).cv.Mat !== 'undefined') {
+        if (
+          typeof (window as any).cv !== 'undefined' &&
+          typeof (window as any).cv.Mat !== 'undefined'
+        ) {
           console.log('OpenCV.js is ready (via polling)')
           resolve()
         } else {
@@ -42,7 +45,7 @@ function ensureOpenCVScript(): Promise<void> {
       // Start polling after a short delay
       setTimeout(checkReady, 100)
     }
-    
+
     document.head.appendChild(script)
   })
 
@@ -72,7 +75,12 @@ function orderPoints(pts: Array<{ x: number; y: number }>) {
   return [leftMost[0], rightMost[0], rightMost[1], leftMost[1]]
 }
 
-function drawPolygon(ctx: CanvasRenderingContext2D, points: Array<{ x: number; y: number }>, color = 'lime', lineWidth = 3) {
+function drawPolygon(
+  ctx: CanvasRenderingContext2D,
+  points: Array<{ x: number; y: number }>,
+  color = 'lime',
+  lineWidth = 3,
+) {
   ctx.strokeStyle = color
   ctx.lineWidth = lineWidth
   ctx.beginPath()
@@ -95,12 +103,23 @@ function detectCards() {
   overlayCtx!.clearRect(0, 0, overlayEl.width, overlayEl.height)
   detectedCards = []
   overlayCtx!.drawImage(videoEl, 0, 0, overlayEl.width, overlayEl.height)
-  const imageData = overlayCtx!.getImageData(0, 0, overlayEl.width, overlayEl.height)
+  const imageData = overlayCtx!.getImageData(
+    0,
+    0,
+    overlayEl.width,
+    overlayEl.height,
+  )
   src.data.set(imageData.data)
   cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY)
   cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0)
   cv.Canny(blurred, edged, 75, 200)
-  cv.findContours(edged, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+  cv.findContours(
+    edged,
+    contours,
+    hierarchy,
+    cv.RETR_LIST,
+    cv.CHAIN_APPROX_SIMPLE,
+  )
   for (let i = 0; i < contours.size(); i++) {
     const contour = contours.get(i)
     const approx = new cv.Mat()
@@ -149,7 +168,13 @@ function cropCardAt(x: number, y: number) {
   if (videoEl.videoWidth && videoEl.videoHeight) {
     fullResCanvas.width = videoEl.videoWidth
     fullResCanvas.height = videoEl.videoHeight
-    fullResCtx!.drawImage(videoEl, 0, 0, fullResCanvas.width, fullResCanvas.height)
+    fullResCtx!.drawImage(
+      videoEl,
+      0,
+      0,
+      fullResCanvas.width,
+      fullResCanvas.height,
+    )
   }
   const scaleX = fullResCanvas.width / overlayEl.width
   const scaleY = fullResCanvas.height / overlayEl.height
@@ -175,7 +200,12 @@ function cropCardAt(x: number, y: number) {
     croppedCanvas.height,
   ])
   const M = cv.getPerspectiveTransform(srcTri, dstTri)
-  const frImage = fullResCtx!.getImageData(0, 0, fullResCanvas.width, fullResCanvas.height)
+  const frImage = fullResCtx!.getImageData(
+    0,
+    0,
+    fullResCanvas.width,
+    fullResCanvas.height,
+  )
   const frMat = cv.matFromImageData(frImage)
   const dst = new cv.Mat()
   cv.warpPerspective(
@@ -184,7 +214,11 @@ function cropCardAt(x: number, y: number) {
     M,
     new cv.Size(croppedCanvas.width, croppedCanvas.height),
   )
-  const imgData = new ImageData(new Uint8ClampedArray(dst.data), dst.cols, dst.rows)
+  const imgData = new ImageData(
+    new Uint8ClampedArray(dst.data),
+    dst.cols,
+    dst.rows,
+  )
   croppedCtx!.putImageData(imgData, 0, 0)
   srcTri.delete()
   dstTri.delete()
@@ -230,17 +264,26 @@ export async function setupWebcam(args: {
       const constraints: MediaStreamConstraints = {
         audio: false,
         video: deviceId
-          ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+          ? {
+              deviceId: { exact: deviceId },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+            }
           : { width: { ideal: 1920 }, height: { ideal: 1080 } },
       }
-      console.log('[webcam] Requesting camera access with constraints:', constraints)
+      console.log(
+        '[webcam] Requesting camera access with constraints:',
+        constraints,
+      )
       try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints)
         console.log('[webcam] Camera access granted, stream:', stream)
         currentStream = stream
         videoEl.srcObject = stream
         const track = stream.getVideoTracks()[0]
-        const settings = (track.getSettings ? track.getSettings() : {}) as MediaTrackSettings
+        const settings = (
+          track.getSettings ? track.getSettings() : {}
+        ) as MediaTrackSettings
         currentDeviceId = settings.deviceId || deviceId || null
         console.log('[webcam] Video track settings:', settings)
         return new Promise<void>((resolve) => {
@@ -277,7 +320,8 @@ export async function setupWebcam(args: {
         opt.text = cam.label || `Camera ${idx + 1}`
         selectEl.appendChild(opt)
       })
-      if (prev && Array.from(selectEl.options).some((o) => o.value === prev)) selectEl.value = prev
+      if (prev && Array.from(selectEl.options).some((o) => o.value === prev))
+        selectEl.value = prev
       else if (
         currentDeviceId &&
         Array.from(selectEl.options).some((o) => o.value === currentDeviceId)
