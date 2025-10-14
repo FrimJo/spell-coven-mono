@@ -75,15 +75,15 @@
 
 ### Implementation for User Story 2
 
-- [ ] T018 [US2] Run `cd apps/figma_export && pnpm check-types` and document all TypeScript errors
-- [ ] T019 [US2] Fix TypeScript errors in `apps/figma_export/src/` files (add missing types, fix any types, resolve import errors)
-- [ ] T020 [US2] Run `cd apps/figma_export && pnpm lint` and document all ESLint errors
-- [ ] T021 [US2] Fix ESLint errors in `apps/figma_export/src/` files (unused variables, missing dependencies, code style issues)
-- [ ] T022 [US2] Run `cd apps/figma_export && pnpm format` to verify Prettier formatting passes
-- [ ] T023 [US2] Fix any Prettier formatting issues in `apps/figma_export/src/` files
-- [ ] T024 [US2] Verify Tailwind configuration consistency by comparing `apps/figma_export/src/index.css` with `apps/web/src/globals.css` (ensure similar structure, no dark mode in figma_export)
-- [ ] T025 [US2] Run all tooling commands from repository root: `pnpm check-types`, `pnpm lint`, `pnpm format` to verify monorepo-wide consistency
-- [ ] T026 [US2] Verify figma_export follows same project structure patterns as apps/web (src/ directory, main.tsx entry, index.html structure)
+- [x] T018 [US2] Run `cd apps/figma_export && pnpm check-types` and document all TypeScript errors
+- [x] T019 [US2] Fix TypeScript errors in `apps/figma_export/src/` files (add missing types, fix any types, resolve import errors)
+- [x] T020 [US2] Run `cd apps/figma_export && pnpm lint` and document all ESLint errors
+- [x] T021 [US2] Fix ESLint errors in `apps/figma_export/src/` files (unused variables, missing dependencies, code style issues)
+- [x] T022 [US2] Run `cd apps/figma_export && pnpm format` to verify Prettier formatting passes
+- [x] T023 [US2] Fix any Prettier formatting issues in `apps/figma_export/src/` files
+- [x] T024 [US2] Verify Tailwind configuration consistency by comparing `apps/figma_export/src/index.css` with `apps/web/src/globals.css` (ensure similar structure, no dark mode in figma_export)
+- [x] T025 [US2] Run all tooling commands from repository root: `pnpm check-types`, `pnpm lint`, `pnpm format` to verify monorepo-wide consistency
+- [x] T026 [US2] Verify figma_export follows same project structure patterns as apps/web (src/ directory, main.tsx entry, index.html structure)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - app runs AND passes all quality checks
 
