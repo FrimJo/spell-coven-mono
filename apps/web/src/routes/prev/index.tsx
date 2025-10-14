@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   embedFromCanvas,
   loadEmbeddingsAndMetaFromPackage,
   loadModel,
   top1,
 } from '@/lib/search'
-import { setupWebcam } from '@/lib/webcam'
+import { useWebcam } from '@/hooks/useWebcam'
 import { createFileRoute } from '@tanstack/react-router'
 
 type Result = {
@@ -25,18 +25,24 @@ function ScannerPage() {
   const [spinnerText, setSpinnerText] = useState<string>('')
   const [spinnerVisible, setSpinnerVisible] = useState<boolean>(false)
   const [results, setResults] = useState<Result[]>([])
-  const [status, setStatus] = useState<string>('')
-  const [hasCroppedImage, setHasCroppedImage] = useState<boolean>(false)
 
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const overlayRef = useRef<HTMLCanvasElement | null>(null)
-  const croppedRef = useRef<HTMLCanvasElement | null>(null)
-  const fullResRef = useRef<HTMLCanvasElement | null>(null)
-  const cameraSelectRef = useRef<HTMLSelectElement | null>(null)
-
-  const webcamController = useRef<Awaited<
-    ReturnType<typeof setupWebcam>
-  > | null>(null)
+  const {
+    videoRef,
+    overlayRef,
+    croppedRef,
+    fullResRef,
+    cameraSelectRef,
+    startVideo,
+    getCroppedCanvas,
+    hasCroppedImage,
+    status,
+    isLoading,
+  } = useWebcam({
+    enableCardDetection: true,
+    onCrop: () => {
+      console.log('Card cropped!')
+    },
+  })
 
   function setSpinner(text: string, show = true) {
     setSpinnerText(text)
@@ -46,147 +52,67 @@ function ScannerPage() {
   useEffect(() => {
     let mounted = true
 
-    async function init() {
-      // Initialize webcam independently of model loading
-      const initWebcam = async () => {
-        if (
-          videoRef.current &&
-          overlayRef.current &&
-          croppedRef.current &&
-          fullResRef.current
-        ) {
-          try {
-            setSpinner('Loading OpenCV…', true)
-            webcamController.current = await setupWebcam({
-              video: videoRef.current,
-              overlay: overlayRef.current,
-              cropped: croppedRef.current,
-              fullRes: fullResRef.current,
-              onCrop: () => {
-                setHasCroppedImage(true)
-              },
-            })
-            console.log(
-              'Webcam controller initialized:',
-              webcamController.current,
-            )
-            setStatus('Webcam ready (model loading in background)')
-          } catch (err) {
-            console.error('Webcam initialization error:', err)
-            setStatus(
-              `Webcam error: ${err instanceof Error ? err.message : 'Unknown error'}`,
-            )
-          }
-        } else {
-          console.error('Missing refs:', {
-            video: !!videoRef.current,
-            overlay: !!overlayRef.current,
-            cropped: !!croppedRef.current,
-            fullRes: !!fullResRef.current,
-          })
-          setStatus('Error: Missing canvas/video elements')
-        }
+    async function initModel() {
+      try {
+        setSpinner('Loading embeddings…', true)
+        await loadEmbeddingsAndMetaFromPackage()
+        setSpinner('Downloading CLIP (vision) model…', true)
+        await loadModel({
+          onProgress: (msg) => mounted && setSpinner(msg, true),
+        })
+        setSpinner('', false)
+      } catch (err) {
+        console.error('Model initialization error:', err)
+        setSpinner('', false)
       }
-
-      // Initialize model in background
-      const initModel = async () => {
-        try {
-          setSpinner('Loading embeddings…', true)
-          await loadEmbeddingsAndMetaFromPackage()
-          setSpinner('Downloading CLIP (vision) model…', true)
-          await loadModel({
-            onProgress: (msg) => mounted && setSpinner(msg, true),
-          })
-          setStatus('Model and webcam ready')
-        } catch (err) {
-          console.error('Model initialization error:', err)
-          setStatus('Webcam ready (model failed to load)')
-        } finally {
-          setSpinner('', false)
-        }
-      }
-
-      // Run both initializations, but don't let model failure block webcam
-      await initWebcam()
-      await initModel()
     }
 
-    init()
+    initModel()
     return () => {
       mounted = false
     }
   }, [])
 
   const handleStartCam = async () => {
-    if (!webcamController.current) {
-      console.error('Webcam controller not initialized')
-      setStatus('Error: Webcam controller not ready')
-      return
-    }
-    try {
-      await webcamController.current.startVideo(
-        cameraSelectRef.current?.value || null,
-      )
-      await webcamController.current.populateCameraSelect(
-        cameraSelectRef.current,
-      )
-      setStatus('Webcam started')
-    } catch (err) {
-      console.error('Failed to start webcam:', err)
-      setStatus(
-        `Error: ${err instanceof Error ? err.message : 'Failed to start webcam'}`,
-      )
-    }
+    await startVideo(cameraSelectRef.current?.value || null)
   }
 
   const handleCameraChange: React.ChangeEventHandler<
     HTMLSelectElement
   > = async (e) => {
-    if (!webcamController.current) return
-    await webcamController.current.startVideo(e.target.value || null)
-    setStatus('Webcam started')
+    await startVideo(e.target.value || null)
   }
 
   const handleSearchCropped = async () => {
-    if (!croppedRef.current) {
+    const canvas = getCroppedCanvas()
+    if (!canvas) {
       console.error('Cropped canvas ref not available')
-      setStatus('Error: Cropped canvas not ready')
       return
     }
 
     // Check if the cropped canvas has actual image data
-    const ctx = croppedRef.current.getContext('2d')
+    const ctx = canvas.getContext('2d')
     if (!ctx) {
       console.error('Could not get 2d context from cropped canvas')
-      setStatus('Error: Canvas context not available')
       return
     }
 
-    const imageData = ctx.getImageData(
-      0,
-      0,
-      croppedRef.current.width,
-      croppedRef.current.height,
-    )
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
     const hasData = imageData.data.some((pixel) => pixel !== 0)
 
     if (!hasData) {
       console.warn('Cropped canvas is empty - please select a card first')
-      setStatus('Please select a card from the webcam stream first')
       return
     }
 
     try {
       setSpinner('Embedding cropped…', true)
-      const q = await embedFromCanvas(croppedRef.current)
+      const q = await embedFromCanvas(canvas)
       setSpinner('Searching…', true)
       const best = top1(q)
       setResults([best as Result])
-      setStatus('Search completed')
     } catch (err) {
       console.error('Embedding/search failed:', err)
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error'
-      setStatus(`Search failed: ${errorMsg}`)
       setSpinner('', false)
     } finally {
       setSpinner('', false)
@@ -250,12 +176,12 @@ function ScannerPage() {
       <p data-testid="page-description">
         Use your webcam to select a card. The model runs fully in your browser.
       </p>
-      {spinnerVisible ? (
+      {(spinnerVisible || isLoading) ? (
         <div
           data-testid="spinner"
           style={{ margin: '0.8rem 0', color: '#555' }}
         >
-          {spinnerText || 'Loading…'}
+          {spinnerText || status || 'Loading…'}
         </div>
       ) : null}
       <div data-testid="results-container">{resCards}</div>
