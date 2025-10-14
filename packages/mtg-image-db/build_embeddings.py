@@ -12,6 +12,8 @@ from typing import List, Dict, Optional
 import numpy as np
 from tqdm import tqdm
 import faiss
+from multiprocessing import Pool, cpu_count
+from functools import partial
 
 # Import helpers from build script
 import sys
@@ -26,12 +28,44 @@ from build_mtg_faiss import (
 from helpers import validate_image, validate_args, safe_percentage
 
 
+def _validate_cache_worker(args):
+    """Worker function for parallel cache validation."""
+    rec, cache_dir = args
+    cache_file = cache_dir / safe_filename(rec["image_url"])
+    
+    if not cache_file.exists() or cache_file.stat().st_size == 0:
+        return None, "missing", {
+            "file": cache_file.name,
+            "url": rec["image_url"],
+            "name": rec.get("name", "unknown"),
+            "scryfall_id": rec.get("scryfall_id", "unknown")
+        }
+    
+    is_valid, error = validate_image(cache_file)
+    if not is_valid:
+        return None, "invalid", {
+            "file": cache_file.name,
+            "reason": error,
+            "name": rec.get("name", "unknown")
+        }
+    
+    return cache_file, "valid", None
+
+
+def _load_image_worker(args):
+    """Worker function for parallel image loading."""
+    path, target_size = args
+    if path is None:
+        return None
+    return load_image_rgb(path, target_size=target_size)
+
+
 def build_embeddings_from_cache(
     kind: str,
     out_dir: Path,
     cache_dir: Path,
     limit: int = None,
-    batch_size: int = 64,
+    batch_size: int = 256,
     target_size: int = 384,
     validate_cache: bool = True,
     hnsw_m: int = 32,
@@ -84,42 +118,38 @@ def build_embeddings_from_cache(
     if len(records) == 0:
         raise SystemExit("ERROR: No records to embed. Cannot create FAISS index from zero vectors.")
     
-    # Check which images are cached and validate them
+    # Check which images are cached and validate them (parallel for M2 Max)
     paths: List[Optional[Path]] = []
     missing = 0
     missing_images = []
     validation_failed = 0
     validation_failures = []
     
-    desc = "Validating cached images" if validate_cache else "Checking image cache"
-    for rec in tqdm(records, desc=desc):
-        cache_file = cache_dir / safe_filename(rec["image_url"])
-        
-        if not cache_file.exists() or cache_file.stat().st_size == 0:
+    # Use multiprocessing for parallel validation
+    num_workers = min(cpu_count(), 8)  # Cap at 8 to avoid overwhelming I/O
+    desc = "Validating cached images (parallel)" if validate_cache else "Checking image cache (parallel)"
+    print(f"Using {num_workers} parallel workers for cache validation")
+    
+    with Pool(num_workers) as pool:
+        validation_args = [(rec, cache_dir) for rec in records]
+        results = list(tqdm(
+            pool.imap(_validate_cache_worker, validation_args),
+            total=len(records),
+            desc=desc
+        ))
+    
+    # Process results
+    for cache_file, status, error_info in results:
+        if status == "missing":
             paths.append(None)
             missing += 1
-            missing_images.append({
-                "file": cache_file.name,
-                "url": rec["image_url"],
-                "name": rec.get("name", "unknown"),
-                "scryfall_id": rec.get("scryfall_id", "unknown")
-            })
-            continue
-        
-        # Validate image if enabled
-        if validate_cache:
-            is_valid, error = validate_image(cache_file)
-            if not is_valid:
-                paths.append(None)
-                validation_failed += 1
-                validation_failures.append({
-                    "file": cache_file.name,
-                    "reason": error,
-                    "name": rec.get("name", "unknown")
-                })
-                continue
-        
-        paths.append(cache_file)
+            missing_images.append(error_info)
+        elif status == "invalid":
+            paths.append(None)
+            validation_failed += 1
+            validation_failures.append(error_info)
+        else:  # valid
+            paths.append(cache_file)
     
     if missing > 0:
         print(f"⚠️  Warning: {missing} images not found in cache")
@@ -143,28 +173,46 @@ def build_embeddings_from_cache(
     if valid_count == 0:
         raise SystemExit("ERROR: No valid images to embed. Cannot create FAISS index from zero vectors.")
     
-    # Load + embed
+    # Load + embed with parallel image loading (M2 Max optimization)
     print(f"Initializing CLIP model...")
     embedder = Embedder()
     vecs = np.zeros((len(records), 512), dtype="float32")
     good = np.zeros((len(records),), dtype=bool)
     
-    batch_imgs, batch_idx = [], []
-    for i, p in enumerate(tqdm(paths, desc="Embedding")):
-        if p is None:
-            continue
-        img = load_image_rgb(p, target_size=target_size)
-        batch_imgs.append(img)
-        batch_idx.append(i)
-        if len(batch_imgs) == batch_size:
-            Z = embedder.encode_images(batch_imgs)
-            for local, global_i in enumerate(batch_idx):
-                if batch_imgs[local] is not None and Z.shape[0] > local:
-                    vecs[global_i] = Z[local]
-                    good[global_i] = True
-            batch_imgs, batch_idx = [], []
+    # Use multiprocessing for parallel image loading
+    print(f"Using {num_workers} parallel workers for image loading")
     
-    # flush
+    batch_imgs, batch_idx = [], []
+    
+    # Process in chunks to enable parallel loading
+    chunk_size = batch_size * 4  # Load 4 batches ahead
+    for chunk_start in tqdm(range(0, len(paths), chunk_size), desc="Embedding", unit="chunk"):
+        chunk_end = min(chunk_start + chunk_size, len(paths))
+        chunk_paths = paths[chunk_start:chunk_end]
+        
+        # Parallel load images for this chunk
+        with Pool(num_workers) as pool:
+            load_args = [(p, target_size) for p in chunk_paths]
+            chunk_images = pool.map(_load_image_worker, load_args)
+        
+        # Process loaded images through CLIP
+        for i, img in enumerate(chunk_images):
+            global_idx = chunk_start + i
+            if img is None:
+                continue
+            
+            batch_imgs.append(img)
+            batch_idx.append(global_idx)
+            
+            if len(batch_imgs) == batch_size:
+                Z = embedder.encode_images(batch_imgs)
+                for local, global_i in enumerate(batch_idx):
+                    if batch_imgs[local] is not None and Z.shape[0] > local:
+                        vecs[global_i] = Z[local]
+                        good[global_i] = True
+                batch_imgs, batch_idx = [], []
+    
+    # flush remaining
     if batch_imgs:
         Z = embedder.encode_images(batch_imgs)
         for local, global_i in enumerate(batch_idx):
@@ -271,8 +319,8 @@ def main():
                     help="Directory with cached images.")
     ap.add_argument("--limit", type=int, default=None, 
                     help="Limit number of faces (for testing).")
-    ap.add_argument("--batch", type=int, default=64, 
-                    help="Embedding batch size.")
+    ap.add_argument("--batch", type=int, default=256, 
+                    help="Embedding batch size (default: 256, optimized for M2 Max).")
     ap.add_argument("--size", type=int, default=384, 
                     help="Square resize for images before CLIP preprocess.")
     ap.add_argument("--validate-cache", dest="validate_cache", action="store_true", default=True,
