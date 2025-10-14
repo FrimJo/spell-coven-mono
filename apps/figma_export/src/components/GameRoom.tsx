@@ -5,7 +5,7 @@ import { TurnTracker } from './TurnTracker';
 import { PlayerList } from './PlayerList';
 import { VideoStreamGrid } from './VideoStreamGrid';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Toaster } from './ui/sonner';
 
 interface GameRoomProps {

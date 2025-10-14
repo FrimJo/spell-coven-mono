@@ -35,13 +35,13 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 [P] Create `apps/figma_export/tsconfig.json` extending @repo/typescript-config with path mappings for @ and @repo/ui/* per configuration-contracts.md
-- [ ] T005 [P] Create `apps/figma_export/eslint.config.mjs` importing from @repo/eslint-config/react-internal.js per configuration-contracts.md
-- [ ] T006 [P] Create `apps/figma_export/.prettierrc` referencing @repo/prettier-config per configuration-contracts.md
-- [ ] T007 Update `apps/figma_export/vite.config.ts` to include viteTsConfigPaths, tailwindcss(), and viteReact() plugins with correct alias resolution per configuration-contracts.md
-- [ ] T008 Update `apps/figma_export/src/index.css` to use Tailwind v4 CSS-first configuration with @import "tailwindcss", @theme blocks, and remove all .dark variants per research.md
-- [ ] T009 Remove `next-themes` package from `apps/figma_export/package.json` dependencies (dark mode removal per clarifications)
-- [ ] T010 Update `apps/figma_export/src/main.tsx` to ensure it imports index.css and uses ReactDOM.createRoot with React.StrictMode per configuration-contracts.md
+- [x] T004 [P] Create `apps/figma_export/tsconfig.json` extending @repo/typescript-config with path mappings for @ and @repo/ui/* per configuration-contracts.md
+- [x] T005 [P] Create `apps/figma_export/eslint.config.mjs` importing from @repo/eslint-config/react-internal.js per configuration-contracts.md
+- [x] T006 [P] Create `apps/figma_export/.prettierrc` referencing @repo/prettier-config per configuration-contracts.md
+- [x] T007 Update `apps/figma_export/vite.config.ts` to include viteTsConfigPaths, tailwindcss(), and viteReact() plugins with correct alias resolution per configuration-contracts.md
+- [x] T008 Update `apps/figma_export/src/index.css` to use Tailwind v4 CSS-first configuration with @import "tailwindcss", @theme blocks, and remove all .dark variants per research.md
+- [x] T009 Remove `next-themes` package from `apps/figma_export/package.json` dependencies (dark mode removal per clarifications)
+- [x] T010 Update `apps/figma_export/src/main.tsx` to ensure it imports index.css and uses ReactDOM.createRoot with React.StrictMode per configuration-contracts.md
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
