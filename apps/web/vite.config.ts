@@ -1,13 +1,14 @@
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
-import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 
-const config = defineConfig({
+const config = defineConfig(({ mode }) => ({
+  base: mode === 'production' ? '/spell-coven-mono' : '/',
   plugins: [
-    TanStackRouterVite({
+    tanstackRouter({
       routesDirectory: './src/routes',
       generatedRouteTree: './src/routeTree.gen.ts',
     }),
@@ -24,6 +25,6 @@ const config = defineConfig({
       '@repo/ui': path.resolve(__dirname, '../../packages/ui/src'),
     },
   },
-})
+}))
 
 export default config
