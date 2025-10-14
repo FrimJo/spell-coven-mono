@@ -91,8 +91,8 @@ def build_embeddings_from_cache(
     validation_failed = 0
     validation_failures = []
     
-    print(f"Checking cache and validating images (validate={validate_cache})...")
-    for rec in records:
+    desc = "Validating cached images" if validate_cache else "Checking image cache"
+    for rec in tqdm(records, desc=desc):
         cache_file = cache_dir / safe_filename(rec["image_url"])
         
         if not cache_file.exists() or cache_file.stat().st_size == 0:
