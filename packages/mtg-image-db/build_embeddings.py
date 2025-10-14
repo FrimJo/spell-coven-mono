@@ -69,11 +69,9 @@ def build_embeddings_from_cache(
     target_size: int = 384,
     validate_cache: bool = True,
     hnsw_m: int = 32,
-    hnsw_ef_construction: int = 200,
-    checkpoint_frequency: int = 500,
-    resume: bool = True
+    hnsw_ef_construction: int = 200
 ):
-    """Build FAISS index from already-cached images with checkpointing support."""
+    """Build FAISS index from already-cached images."""
     out_dir.mkdir(parents=True, exist_ok=True)
     
     # Track build start time
@@ -331,12 +329,6 @@ def main():
                     help="HNSW M parameter (connectivity, default: 32). Higher = better recall, slower build.")
     ap.add_argument("--hnsw-ef-construction", type=int, default=200,
                     help="HNSW efConstruction parameter (build accuracy, default: 200). Higher = better quality, slower build.")
-    ap.add_argument("--checkpoint-frequency", type=int, default=500,
-                    help="Save checkpoint every N images (default: 500). Set to 0 to disable.")
-    ap.add_argument("--resume", dest="resume", action="store_true", default=True,
-                    help="Resume from checkpoint if available (default: enabled).")
-    ap.add_argument("--no-resume", dest="resume", action="store_false",
-                    help="Start fresh, ignoring any existing checkpoint.")
     args = ap.parse_args()
     
     # Validate CLI arguments
@@ -351,9 +343,7 @@ def main():
         target_size=args.size,
         validate_cache=args.validate_cache,
         hnsw_m=args.hnsw_m,
-        hnsw_ef_construction=args.hnsw_ef_construction,
-        checkpoint_frequency=args.checkpoint_frequency,
-        resume=args.resume
+        hnsw_ef_construction=args.hnsw_ef_construction
     )
 
 
