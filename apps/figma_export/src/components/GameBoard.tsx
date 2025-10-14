@@ -1,45 +1,51 @@
-import React, { useState } from 'react';
-import { Grid3x3, Layers, Trash2 } from 'lucide-react';
-import { Card } from './ui/card';
-import { Button } from './ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { useState } from 'react'
+import { Grid3x3, Layers, Trash2 } from 'lucide-react'
+
+import { Button } from './ui/button'
+import { Card } from './ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 
 export function GameBoard() {
-  const [zones, setZones] = useState({
+  const [zones] = useState({
     battlefield: [] as string[],
     graveyard: [] as string[],
     exile: [] as string[],
-  });
+  })
 
   return (
-    <Card className="bg-slate-900 border-slate-800 flex-1 overflow-hidden flex flex-col">
-      <Tabs defaultValue="battlefield" className="flex-1 flex flex-col">
+    <Card className="flex flex-1 flex-col overflow-hidden border-slate-800 bg-slate-900">
+      <Tabs defaultValue="battlefield" className="flex flex-1 flex-col">
         <div className="border-b border-slate-800 px-4 py-3">
           <TabsList className="bg-slate-950">
             <TabsTrigger value="battlefield" className="gap-2">
-              <Grid3x3 className="w-4 h-4" />
+              <Grid3x3 className="h-4 w-4" />
               Battlefield
             </TabsTrigger>
             <TabsTrigger value="graveyard" className="gap-2">
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="h-4 w-4" />
               Graveyard
             </TabsTrigger>
             <TabsTrigger value="exile" className="gap-2">
-              <Layers className="w-4 h-4" />
+              <Layers className="h-4 w-4" />
               Exile
             </TabsTrigger>
           </TabsList>
         </div>
 
-        <TabsContent value="battlefield" className="flex-1 p-4 overflow-auto m-0">
+        <TabsContent
+          value="battlefield"
+          className="m-0 flex-1 overflow-auto p-4"
+        >
           <div className="h-full">
             {zones.battlefield.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-500">
-                <Grid3x3 className="w-16 h-16 mb-4 opacity-20" />
+              <div className="flex h-full flex-col items-center justify-center text-slate-500">
+                <Grid3x3 className="mb-4 h-16 w-16 opacity-20" />
                 <p className="text-center">
                   Your battlefield is empty
                   <br />
-                  <span className="text-sm">Use the card scanner to add cards to play</span>
+                  <span className="text-sm">
+                    Use the card scanner to add cards to play
+                  </span>
                 </p>
               </div>
             ) : (
@@ -50,11 +56,11 @@ export function GameBoard() {
           </div>
         </TabsContent>
 
-        <TabsContent value="graveyard" className="flex-1 p-4 overflow-auto m-0">
+        <TabsContent value="graveyard" className="m-0 flex-1 overflow-auto p-4">
           <div className="h-full">
             {zones.graveyard.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-500">
-                <Trash2 className="w-16 h-16 mb-4 opacity-20" />
+              <div className="flex h-full flex-col items-center justify-center text-slate-500">
+                <Trash2 className="mb-4 h-16 w-16 opacity-20" />
                 <p>No cards in graveyard</p>
               </div>
             ) : (
@@ -65,11 +71,11 @@ export function GameBoard() {
           </div>
         </TabsContent>
 
-        <TabsContent value="exile" className="flex-1 p-4 overflow-auto m-0">
+        <TabsContent value="exile" className="m-0 flex-1 overflow-auto p-4">
           <div className="h-full">
             {zones.exile.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-500">
-                <Layers className="w-16 h-16 mb-4 opacity-20" />
+              <div className="flex h-full flex-col items-center justify-center text-slate-500">
+                <Layers className="mb-4 h-16 w-16 opacity-20" />
                 <p>No cards in exile</p>
               </div>
             ) : (
@@ -82,7 +88,7 @@ export function GameBoard() {
       </Tabs>
 
       {/* Quick Actions */}
-      <div className="border-t border-slate-800 px-4 py-3 bg-slate-950/50">
+      <div className="border-t border-slate-800 bg-slate-950/50 px-4 py-3">
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -108,5 +114,5 @@ export function GameBoard() {
         </div>
       </div>
     </Card>
-  );
+  )
 }

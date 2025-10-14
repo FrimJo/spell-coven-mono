@@ -1,8 +1,8 @@
-import { defineConfig } from 'vite';
-import viteReact from '@vitejs/plugin-react';
-import viteTsConfigPaths from 'vite-tsconfig-paths';
-import tailwindcss from '@tailwindcss/vite';
-import path from 'path';
+import path from 'path'
+import tailwindcss from '@tailwindcss/vite'
+import viteReact from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+import viteTsConfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
   plugins: [
@@ -21,4 +21,4 @@ export default defineConfig({
   server: {
     port: 3001,
   },
-});
+})

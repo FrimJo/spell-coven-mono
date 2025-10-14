@@ -1,3 +1,10 @@
-import baseConfig from '@repo/eslint-config/react-internal.js';
+import { config } from '@repo/eslint-config/react-internal'
 
-export default baseConfig;
+export default [
+  ...config,
+  {
+    rules: {
+      'react/prop-types': 'off', // Using TypeScript for prop validation
+    },
+  },
+]

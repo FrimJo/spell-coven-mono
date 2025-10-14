@@ -1,46 +1,47 @@
-import React, { useState } from 'react';
-import { Video, VideoOff, Mic, MicOff, Maximize2, Camera } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
+import { useState } from 'react'
+import { Camera, Maximize2, Mic, MicOff, Video, VideoOff } from 'lucide-react'
+
+import { Button } from './ui/button'
+import { Card } from './ui/card'
 
 interface VideoPanelProps {
-  playerName: string;
-  isLocal: boolean;
+  playerName: string
+  isLocal: boolean
 }
 
 export function VideoPanel({ playerName, isLocal }: VideoPanelProps) {
-  const [videoEnabled, setVideoEnabled] = useState(true);
-  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [videoEnabled, setVideoEnabled] = useState(true)
+  const [audioEnabled, setAudioEnabled] = useState(true)
 
   return (
-    <Card className="bg-slate-900 border-slate-800 overflow-hidden">
+    <Card className="overflow-hidden border-slate-800 bg-slate-900">
       <div className="relative aspect-video bg-slate-950">
         {/* Simulated Video Feed */}
         {videoEnabled ? (
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-            <div className="text-center space-y-2">
-              <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto">
-                <Camera className="w-8 h-8 text-purple-400" />
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+            <div className="space-y-2 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-purple-500/20">
+                <Camera className="h-8 w-8 text-purple-400" />
               </div>
-              <p className="text-slate-400 text-sm">
+              <p className="text-sm text-slate-400">
                 {isLocal ? 'Your Camera' : `${playerName}'s Camera`}
               </p>
             </div>
           </div>
         ) : (
-          <div className="absolute inset-0 bg-slate-950 flex items-center justify-center">
-            <div className="text-center space-y-2">
-              <VideoOff className="w-8 h-8 text-slate-600 mx-auto" />
-              <p className="text-slate-600 text-sm">Camera Off</p>
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-950">
+            <div className="space-y-2 text-center">
+              <VideoOff className="mx-auto h-8 w-8 text-slate-600" />
+              <p className="text-sm text-slate-600">Camera Off</p>
             </div>
           </div>
         )}
 
         {/* Player Name Badge */}
-        <div className="absolute top-2 left-2 px-2 py-1 bg-slate-950/80 backdrop-blur-sm rounded text-sm text-white flex items-center gap-2">
+        <div className="absolute left-2 top-2 flex items-center gap-2 rounded bg-slate-950/80 px-2 py-1 text-sm text-white backdrop-blur-sm">
           {playerName}
           {isLocal && (
-            <span className="px-1.5 py-0.5 bg-purple-500/30 rounded-sm text-xs text-purple-300">
+            <span className="rounded-sm bg-purple-500/30 px-1.5 py-0.5 text-xs text-purple-300">
               You
             </span>
           )}
@@ -48,42 +49,50 @@ export function VideoPanel({ playerName, isLocal }: VideoPanelProps) {
 
         {/* Audio Indicator */}
         {!audioEnabled && (
-          <div className="absolute top-2 right-2">
-            <div className="w-8 h-8 bg-red-500/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-              <MicOff className="w-4 h-4 text-red-400" />
+          <div className="absolute right-2 top-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/20 backdrop-blur-sm">
+              <MicOff className="h-4 w-4 text-red-400" />
             </div>
           </div>
         )}
 
         {/* Controls */}
         {isLocal && (
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
+          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-2">
             <Button
               size="sm"
-              variant={videoEnabled ? "default" : "destructive"}
+              variant={videoEnabled ? 'default' : 'destructive'}
               onClick={() => setVideoEnabled(!videoEnabled)}
-              className="w-9 h-9 p-0"
+              className="h-9 w-9 p-0"
             >
-              {videoEnabled ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+              {videoEnabled ? (
+                <Video className="h-4 w-4" />
+              ) : (
+                <VideoOff className="h-4 w-4" />
+              )}
             </Button>
             <Button
               size="sm"
-              variant={audioEnabled ? "default" : "destructive"}
+              variant={audioEnabled ? 'default' : 'destructive'}
               onClick={() => setAudioEnabled(!audioEnabled)}
-              className="w-9 h-9 p-0"
+              className="h-9 w-9 p-0"
             >
-              {audioEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+              {audioEnabled ? (
+                <Mic className="h-4 w-4" />
+              ) : (
+                <MicOff className="h-4 w-4" />
+              )}
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="w-9 h-9 p-0 border-slate-700"
+              className="h-9 w-9 border-slate-700 p-0"
             >
-              <Maximize2 className="w-4 h-4" />
+              <Maximize2 className="h-4 w-4" />
             </Button>
           </div>
         )}
       </div>
     </Card>
-  );
+  )
 }
