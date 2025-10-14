@@ -36,11 +36,6 @@
    - Display connection status in UI (connected/disconnecting/reconnecting)
    - Receive and parse Discord Gateway events
 
-4. **User Presence**
-   - Display user's Discord online status
-   - Show user's current Discord servers/guilds
-   - Handle presence updates in real-time
-
 **Technical Requirements**:
 - Create `@repo/discord-integration` package for Discord API client
 - Use `discord-api-types` for TypeScript types
