@@ -18,7 +18,7 @@ This app provides a browser-based visual search over pre-generated MTG card art 
 
 ## Prerequisites
 
-Ensure `@repo/mtg-image-db` has exported artifacts in its `index_out/` directory (run its build/export scripts). The web app imports these at runtime via Vite asset URLs, no copying required.
+**Embeddings Data**: Pre-computed MTG card embeddings are stored in `public/data/mtg-embeddings/v1.0/` and committed to the repo. No build step required!
 
 **CLIP Model**: The model downloads automatically to the browser's cache on first use (~150MB quantized). No manual setup required!
 
@@ -55,7 +55,7 @@ import {
   topK,
 } from './src/lib/search'
 
-await loadEmbeddingsAndMetaFromPackage() // resolves @repo/mtg-image-db/index_out/* via Vite `?url` imports
+await loadEmbeddingsAndMetaFromPackage() // loads from public/data/mtg-embeddings/v1.0/
 await loadModel({ onProgress: (m) => console.log(m) })
 
 const q = await embedFromCanvas(canvas) // or: await embedFromImageElement(img)
@@ -66,7 +66,7 @@ const results = topK(q, 5)
 Notes:
 
 - Embedding dimension is 512 and cosine similarity is used via dot product on L2-normalized vectors.
-- If you need to serve assets from a custom path, you can still use `loadEmbeddingsAndMeta(basePath)` instead of the package-based helper.
+- Embeddings are versioned in `public/data/mtg-embeddings/` - see that directory's README for update instructions.
 
 ## Testing & Linting
 
@@ -79,8 +79,11 @@ pnpm --filter @repo/web lint          # Lint
 
 ## Asset Paths
 
-- Default: assets are bundled from `@repo/mtg-image-db/index_out/*` using Vite `?url` imports.
-- Alternative: serve `index_out/embeddings.f16bin` and `index_out/meta.json` yourself and call `loadEmbeddingsAndMeta(basePath)`.
+Embeddings are served from `public/data/mtg-embeddings/v1.0/`:
+- `meta.json` - Card metadata and quantization info (~27 MB)
+- `embeddings.i8bin` - int8 quantized embeddings (~26 MB)
+
+These files are committed to the repo for reliable deployment. See `public/data/mtg-embeddings/README.md` for versioning details.
 
 ## Architecture
 

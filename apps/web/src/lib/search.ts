@@ -1,15 +1,17 @@
-// If available (bundled via Vite), these URLs resolve to files exported by @repo/mtg-image-db
-// The `?url` suffix tells Vite to treat them as static assets and return their public URL at runtime.
-// These imports are optional at runtime; they will be tree-shaken if unused.
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
+// Versioned MTG embeddings data
+// Files are stored in public/data/mtg-embeddings/v1.0/ and committed to the repo
+// This ensures consistent versioning and avoids rebuilding the entire database on every deploy
+// To update: run the build script in packages/mtg-image-db, then copy the output files here
 
 // Top-level import for transformers (no SSR)
 import { env, pipeline } from '@huggingface/transformers'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import EMB_URL from '@repo/mtg-image-db/embeddings.i8bin?url'
-import META_URL from '@repo/mtg-image-db/meta.json?url'
+
+// Version of the embeddings data - configured via environment variable
+const EMBEDDINGS_VERSION = import.meta.env.VITE_EMBEDDINGS_VERSION || 'v1.0'
+// Use import.meta.env.BASE_URL to handle GitHub Pages base path in production
+const BASE_PATH = import.meta.env.BASE_URL || '/'
+const EMB_URL = `${BASE_PATH}data/mtg-embeddings/${EMBEDDINGS_VERSION}/embeddings.i8bin`
+const META_URL = `${BASE_PATH}data/mtg-embeddings/${EMBEDDINGS_VERSION}/meta.json`
 
 // Embedding dimension from the prototype
 const D = 512

@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-10-14T06:53:09.193095Z",
+  "build_duration_seconds": 3810.37,
+  "parameters": {
+    "kind": "unique_artwork",
+    "batch_size": 64,
+    "target_size": 384,
+    "hnsw_m": 32,
+    "hnsw_ef_construction": 200,
+    "validate_cache": true
+  },
+  "statistics": {
+    "total_records": 52491,
+    "missing_from_cache": 0,
+    "validation_failures": 0,
+    "successfully_embedded": 52491,
+    "failed_or_missing": 0,
+    "success_rate_percent": 100.0
+  },
+  "outputs": {
+    "embeddings": "mtg_embeddings.npy",
+    "faiss_index": "mtg_cards.faiss",
+    "metadata": "mtg_meta.jsonl"
+  }
+}
