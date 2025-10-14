@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^3.7.5",
-    "@repo/mtg-image-db": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/react-router": "^1.132.0",

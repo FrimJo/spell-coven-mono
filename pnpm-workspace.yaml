@@ -1,6 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "!packages/mtg-image-db"
 
 catalog:
   eslint: ^9.20.0
