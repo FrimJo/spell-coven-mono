@@ -25,6 +25,8 @@ interface UseWebcamReturn {
   cameraSelectRef: React.RefObject<HTMLSelectElement>
   /** Start the webcam with optional device ID */
   startVideo: (deviceId?: string | null) => Promise<void>
+  /** Stop the webcam */
+  stopVideo: () => void
   /** Get list of available cameras */
   getCameras: () => Promise<MediaDeviceInfo[]>
   /** Get currently active device ID */
@@ -227,6 +229,16 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     }
   }
 
+  const stopVideo = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream
+      stream.getTracks().forEach(track => track.stop())
+      videoRef.current.srcObject = null
+      setIsVideoActive(false)
+      setStatus('Video stopped')
+    }
+  }
+
   const getCroppedCanvas = () => {
     if (webcamController.current) {
       return webcamController.current.getCroppedCanvas()
@@ -241,6 +253,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     fullResRef,
     cameraSelectRef,
     startVideo,
+    stopVideo,
     getCameras,
     getCurrentDeviceId,
     populateCameraSelect,

@@ -262,7 +262,7 @@ export async function setupWebcam(args: {
         currentStream = null
       }
       const constraints: MediaStreamConstraints = {
-        audio: false,
+        audio: true,
         video: deviceId
           ? {
               deviceId: { exact: deviceId },
