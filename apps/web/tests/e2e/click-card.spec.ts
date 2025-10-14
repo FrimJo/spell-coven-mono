@@ -11,7 +11,7 @@ async function waitForOpenCv(page: Page) {
   // Wait for OpenCV to be loaded by checking the global cv object
   await page.waitForFunction(
     () => {
-      return typeof (window as any).cv !== 'undefined'
+      return typeof (window as unknown as { cv?: unknown }).cv !== 'undefined'
     },
     { timeout: 180_000 }
   )
