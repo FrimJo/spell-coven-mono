@@ -26,14 +26,14 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-background text-foreground ">
       {!gameId ? (
-        <LandingPage 
+        <LandingPage
           onCreateGame={handleCreateGame}
           onJoinGame={handleJoinGame}
         />
       ) : (
-        <GameRoom 
+        <GameRoom
           gameId={gameId}
           playerName={playerName}
           isLobbyOwner={isLobbyOwner}
