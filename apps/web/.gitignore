@@ -11,8 +11,14 @@ count.txt
 .vinxi
 todos.json
 
-# Ignore heavy Python artifacts from index_out, but keep browser assets
-public/index_out/*
-!public/index_out/embeddings.f16bin
-!public/index_out/meta.json
+# Ignore old index_out directory (deprecated)
+public/index_out/
+
+# Keep versioned MTG embeddings data (committed to repo for deployment)
+# These files are large but necessary for the app to function
+# Update version when copying new embeddings from packages/mtg-image-db
+!public/data/
+!public/data/mtg-embeddings/
+!public/data/mtg-embeddings/**
+
 test-results/
