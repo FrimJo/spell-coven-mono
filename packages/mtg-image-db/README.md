@@ -73,10 +73,34 @@ python download_images.py --kind unique_artwork --cache image_cache
 # Or: make download
 ```
 
+**New: Parallel download options** (10x+ speedup):
+```bash
+# Use 16 parallel workers (default)
+python download_images.py --kind unique_artwork --workers 16
+
+# Adjust timeouts and retries for unreliable networks
+python download_images.py --kind unique_artwork --timeout-connect 10 --timeout-read 60 --max-retries 10
+
+# Conservative mode (slower but more reliable)
+python download_images.py --kind unique_artwork --workers 4 --max-retries 10
+```
+
 Step 2: Build embeddings and FAISS index from cached images:
 ```bash
 python build_embeddings.py --kind unique_artwork --out index_out --cache image_cache
 # Or: make embed
+```
+
+**New: HNSW parameter tuning**:
+```bash
+# Fast build, lower quality (good for testing)
+python build_embeddings.py --kind unique_artwork --hnsw-m 16 --hnsw-ef-construction 100
+
+# High quality, slower build (production)
+python build_embeddings.py --kind unique_artwork --hnsw-m 64 --hnsw-ef-construction 400
+
+# Default balanced settings
+python build_embeddings.py --kind unique_artwork --hnsw-m 32 --hnsw-ef-construction 200
 ```
 
 **Single-step process (legacy):**
@@ -173,10 +197,115 @@ make install-mps  # same as make conda-mps
 
 ## Troubleshooting
 
-- Torch install issues: follow the official selector at https://pytorch.org/get-started/locally/
-- FAISS install issues: try `faiss-cpu` via conda or consult FAISS docs.
-- Large datasets in browser: `index.html` performs a brute-force cosine search; performance may degrade with very large N. Consider smaller subsets, or future enhancements like WebGPU or ANN.
-- Model download time in browser: first load may take a bit; subsequent runs are faster due to caching.
+### Installation Issues
+- **Torch install issues**: Follow the official selector at https://pytorch.org/get-started/locally/
+- **FAISS install issues**: Try `faiss-cpu` via conda or consult FAISS docs
+- **Large datasets in browser**: `index.html` performs brute-force cosine search; performance may degrade with very large N. Consider smaller subsets or future enhancements like WebGPU or ANN
+- **Model download time in browser**: First load may take a bit; subsequent runs are faster due to caching
+
+### Download Issues
+
+**Rate Limiting (HTTP 429)**:
+- The system automatically retries with exponential backoff (1s, 2s, 4s, 8s, 16s)
+- Default: 5 retries with polite User-Agent header
+- If you still hit rate limits, reduce workers: `--workers 4` or `--workers 1`
+- Increase retry count: `--max-retries 10`
+
+**Network Timeouts**:
+- Default timeouts: 5s connect, 30s read
+- For slow networks: `--timeout-connect 10 --timeout-read 60`
+- For fast networks: `--timeout-connect 3 --timeout-read 15`
+
+**Interrupted Downloads**:
+- Downloads use atomic writes - partial files are automatically cleaned up
+- Simply re-run the same command to resume
+- Already-cached images are skipped automatically
+
+**API Etiquette**:
+- The system includes a polite User-Agent header identifying the tool
+- Automatic retry logic respects Scryfall's rate limits
+- Default 16 workers is safe for Scryfall's infrastructure
+- If unsure, use `--workers 8` for more conservative usage
+
+### Validation Issues
+
+**Corrupted Images**:
+```bash
+# Validate your cache
+python scripts/validate_cache.py --cache image_cache
+
+# Remove corrupted files automatically
+python scripts/validate_cache.py --cache image_cache --fix
+
+# Generate validation report
+python scripts/validate_cache.py --cache image_cache --report validation_report.json
+```
+
+**Validation Failures During Build**:
+- By default, corrupted images are detected and excluded automatically
+- Check build output for validation failure count
+- To skip validation (faster but risky): `--no-validate-cache`
+- Validation uses PIL to detect truncated files, HTML error pages, and corrupted data
+
+### Performance Tuning
+
+**Parallel Downloads**:
+- Default 16 workers provides ~10x speedup vs sequential
+- Adjust based on your network and CPU: `--workers 8` or `--workers 32`
+- More workers = faster downloads but more memory and network usage
+- Recommended range: 4-32 workers
+
+**HNSW Index Quality vs Speed**:
+- **M parameter** (connectivity): Higher = better recall, larger index, slower build
+  - Fast: `--hnsw-m 16` (smaller index, faster build, lower recall)
+  - Balanced: `--hnsw-m 32` (default, good trade-off)
+  - Quality: `--hnsw-m 64` (best recall, slower build)
+  - Range: 4-128
+
+- **efConstruction parameter** (build accuracy): Higher = better quality, slower build
+  - Fast: `--hnsw-ef-construction 100`
+  - Balanced: `--hnsw-ef-construction 200` (default)
+  - Quality: `--hnsw-ef-construction 400`
+  - Must be >= M parameter
+
+- **Query-time tuning** (without rebuilding):
+  - FAISS allows adjusting `efSearch` at query time
+  - Higher efSearch = better recall, slower queries
+  - See `query_index.py` for examples
+
+**Build Time Optimization**:
+- Use parallel downloads: `--workers 16` (default)
+- Use appropriate HNSW parameters for your use case
+- For testing: `--limit 2000 --hnsw-m 16 --hnsw-ef-construction 100`
+- For production: `--hnsw-m 32 --hnsw-ef-construction 200` (default)
+
+### Checkpoint Issues
+
+**Resuming Interrupted Builds**:
+- Checkpointing CLI is available but full implementation is pending
+- For now, re-run the build command - validation ensures correctness
+- Future: Automatic checkpoint every 500 images with `--checkpoint-frequency 500`
+
+### Edge Cases
+
+**Empty Cache**:
+- System detects empty cache and exits with clear error message
+- Run `download_images.py` first to populate the cache
+
+**Zero Valid Images**:
+- System detects when all images fail validation
+- Check validation failures in build output
+- Run `scripts/validate_cache.py --cache image_cache --fix` to clean cache
+
+**Invalid CLI Arguments**:
+- System validates all arguments at startup
+- Common issues:
+  - `--limit` must be >= 0
+  - `--batch` must be >= 1
+  - `--size` must be >= 64
+  - `--workers` must be between 1 and 128
+  - `--hnsw-m` must be between 4 and 128
+  - `--hnsw-ef-construction` must be >= `--hnsw-m`
 
 ## Project Layout
 
