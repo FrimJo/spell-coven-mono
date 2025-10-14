@@ -23,10 +23,10 @@
 
 **Purpose**: Prepare shared utilities and helper functions needed across all user stories
 
-- [ ] T001 [P] Create helper module `packages/mtg-image-db/helpers/session.py` for HTTP session management with retry logic
-- [ ] T002 [P] Create helper module `packages/mtg-image-db/helpers/validation.py` for image validation functions
-- [ ] T003 [P] Create helper module `packages/mtg-image-db/helpers/cli_validation.py` for CLI argument validation
-- [ ] T004 [P] Create helper module `packages/mtg-image-db/helpers/atomic_io.py` for atomic file write operations
+- [x] T001 [P] Create helper module `packages/mtg-image-db/helpers/session.py` for HTTP session management with retry logic
+- [x] T002 [P] Create helper module `packages/mtg-image-db/helpers/validation.py` for image validation functions
+- [x] T003 [P] Create helper module `packages/mtg-image-db/helpers/cli_validation.py` for CLI argument validation
+- [x] T004 [P] Create helper module `packages/mtg-image-db/helpers/atomic_io.py` for atomic file write operations
 
 **Checkpoint**: Helper modules ready for use in user story implementations
 
@@ -38,13 +38,13 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Remove unused imports from `packages/mtg-image-db/download_images.py` (io, json, gzip)
-- [ ] T006 Remove unused imports from `packages/mtg-image-db/build_embeddings.py` (io, json, gzip, glob)
-- [ ] T007 Update `packages/mtg-image-db/build_mtg_faiss.py` safe_filename() to include URL hash for collision prevention
-- [ ] T008 Fix FAISS metric type in `packages/mtg-image-db/build_mtg_faiss.py` line 227: change IndexHNSWFlat to use METRIC_INNER_PRODUCT
-- [ ] T009 Fix FAISS metric type in `packages/mtg-image-db/build_embeddings.py`: use METRIC_INNER_PRODUCT for IndexHNSWFlat
-- [ ] T010 Add vector normalization verification in `packages/mtg-image-db/build_mtg_faiss.py` before FAISS index creation
-- [ ] T011 Add vector normalization verification in `packages/mtg-image-db/build_embeddings.py` before FAISS index creation
+- [x] T005 Remove unused imports from `packages/mtg-image-db/download_images.py` (io, json, gzip)
+- [x] T006 Remove unused imports from `packages/mtg-image-db/build_embeddings.py` (io, json, gzip, glob)
+- [x] T007 Update `packages/mtg-image-db/build_mtg_faiss.py` safe_filename() to include URL hash for collision prevention
+- [x] T008 Fix FAISS metric type in `packages/mtg-image-db/build_mtg_faiss.py` line 227: change IndexHNSWFlat to use METRIC_INNER_PRODUCT
+- [x] T009 Fix FAISS metric type in `packages/mtg-image-db/build_embeddings.py`: use METRIC_INNER_PRODUCT for IndexHNSWFlat
+- [x] T010 Add vector normalization verification in `packages/mtg-image-db/build_mtg_faiss.py` before FAISS index creation
+- [x] T011 Add vector normalization verification in `packages/mtg-image-db/build_embeddings.py` before FAISS index creation
 
 **Checkpoint**: Foundation ready - correctness fixes applied, user story implementation can now begin
 
@@ -58,15 +58,15 @@
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Add CLI arguments to `packages/mtg-image-db/download_images.py`: --workers (default 16), --timeout-connect (default 5), --timeout-read (default 30), --max-retries (default 5)
-- [ ] T013 [US1] Create DownloadSession class in `packages/mtg-image-db/helpers/session.py` using requests.Session() with urllib3.Retry strategy (max 5 retries, exponential backoff 1s/2s/4s/8s/16s, status_forcelist=[429,500,502,503,504])
-- [ ] T014 [US1] Add User-Agent header to session in `packages/mtg-image-db/helpers/session.py`: "MTG-Image-DB/1.0 (+https://github.com/FrimJo/spell-coven-mono; ifrim@me.com)"
-- [ ] T015 [US1] Implement atomic file write in `packages/mtg-image-db/helpers/atomic_io.py`: write to .part file, fsync, then os.replace()
-- [ ] T016 [US1] Update download_image() in `packages/mtg-image-db/build_mtg_faiss.py` to use DownloadSession and atomic writes
-- [ ] T017 [US1] Implement parallel downloads in `packages/mtg-image-db/download_images.py` using ThreadPoolExecutor with configurable worker count
-- [ ] T018 [US1] Add progress tracking with tqdm for parallel downloads in `packages/mtg-image-db/download_images.py`
-- [ ] T019 [US1] Add guard for division by zero in download summary statistics in `packages/mtg-image-db/download_images.py` (handle len(records)==0)
-- [ ] T020 [US1] Update `packages/mtg-image-db/build_mtg_faiss.py` download_image() to use same session management and atomic writes
+- [x] T012 [US1] Add CLI arguments to `packages/mtg-image-db/download_images.py`: --workers (default 16), --timeout-connect (default 5), --timeout-read (default 30), --max-retries (default 5)
+- [x] T013 [US1] Create DownloadSession class in `packages/mtg-image-db/helpers/session.py` using requests.Session() with urllib3.Retry strategy (max 5 retries, exponential backoff 1s/2s/4s/8s/16s, status_forcelist=[429,500,502,503,504])
+- [x] T014 [US1] Add User-Agent header to session in `packages/mtg-image-db/helpers/session.py`: "MTG-Image-DB/1.0 (+https://github.com/FrimJo/spell-coven-mono; ifrim@me.com)"
+- [x] T015 [US1] Implement atomic file write in `packages/mtg-image-db/helpers/atomic_io.py`: write to .part file, fsync, then os.replace()
+- [x] T016 [US1] Update download_image() in `packages/mtg-image-db/build_mtg_faiss.py` to use DownloadSession and atomic writes
+- [x] T017 [US1] Implement parallel downloads in `packages/mtg-image-db/download_images.py` using ThreadPoolExecutor with configurable worker count
+- [x] T018 [US1] Add progress tracking with tqdm for parallel downloads in `packages/mtg-image-db/download_images.py`
+- [x] T019 [US1] Add guard for division by zero in download summary statistics in `packages/mtg-image-db/download_images.py` (handle len(records)==0)
+- [x] T020 [US1] Update `packages/mtg-image-db/build_mtg_faiss.py` download_image() to use same session management and atomic writes
 
 **Checkpoint**: Downloads are robust, parallel, and resumable. Test with quickstart.md scenarios 1.1-1.4
 
@@ -80,14 +80,14 @@
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Implement validate_image() function in `packages/mtg-image-db/helpers/validation.py` using PIL.Image.verify() and Image.load()
-- [ ] T022 [US2] Add validation pass in `packages/mtg-image-db/build_embeddings.py` before embedding phase: validate all cached files
-- [ ] T023 [US2] Add validation logging in `packages/mtg-image-db/build_embeddings.py`: log filename and reason for each validation failure
-- [ ] T024 [US2] Update statistics reporting in `packages/mtg-image-db/build_embeddings.py` to include validation failure count
-- [ ] T025 [US2] Add --validate-cache / --no-validate-cache flag to `packages/mtg-image-db/build_embeddings.py` (default: true)
-- [ ] T026 [US2] Add validation pass in `packages/mtg-image-db/build_mtg_faiss.py` before embedding phase
-- [ ] T027 [P] [US2] Create standalone validation utility `packages/mtg-image-db/scripts/validate_cache.py` with --cache, --fix, --report arguments
-- [ ] T028 [US2] Verify safe_filename() in `packages/mtg-image-db/build_mtg_faiss.py` includes URL hash (completed in T007)
+- [x] T021 [US2] Implement validate_image() function in `packages/mtg-image-db/helpers/validation.py` using PIL.Image.verify() and Image.load()
+- [x] T022 [US2] Add validation pass in `packages/mtg-image-db/build_embeddings.py` before embedding phase: validate all cached files
+- [x] T023 [US2] Add validation logging in `packages/mtg-image-db/build_embeddings.py`: log filename and reason for each validation failure
+- [x] T024 [US2] Update statistics reporting in `packages/mtg-image-db/build_embeddings.py` to include validation failure count
+- [x] T025 [US2] Add --validate-cache / --no-validate-cache flag to `packages/mtg-image-db/build_embeddings.py` (default: true)
+- [x] T026 [US2] Add validation pass in `packages/mtg-image-db/build_mtg_faiss.py` before embedding phase
+- [x] T027 [P] [US2] Create standalone validation utility `packages/mtg-image-db/scripts/validate_cache.py` with --cache, --fix, --report arguments
+- [x] T028 [US2] Verify safe_filename() in `packages/mtg-image-db/build_mtg_faiss.py` includes URL hash (completed in T007)
 
 **Checkpoint**: All corrupted files are detected and excluded. Test with quickstart.md scenarios 2.1-2.3
 
@@ -101,15 +101,15 @@
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Implement validate_args() in `packages/mtg-image-db/helpers/cli_validation.py` to check: limit>=0, batch>=1, size>=64, workers 1-128
-- [ ] T030 [US3] Add validate_args() call at start of main() in `packages/mtg-image-db/download_images.py`
-- [ ] T031 [US3] Add validate_args() call at start of main() in `packages/mtg-image-db/build_embeddings.py`
-- [ ] T032 [US3] Add validate_args() call at start of main() in `packages/mtg-image-db/build_mtg_faiss.py`
-- [ ] T033 [US3] Add zero-vector check in `packages/mtg-image-db/build_embeddings.py` before FAISS index creation: if X.shape[0] == 0, exit with error "No valid images to embed"
-- [ ] T034 [US3] Add zero-vector check in `packages/mtg-image-db/build_mtg_faiss.py` before FAISS index creation
-- [ ] T035 [US3] Guard all percentage calculations in `packages/mtg-image-db/download_images.py`: check len(records) > 0 before division
-- [ ] T036 [US3] Guard all percentage calculations in `packages/mtg-image-db/build_embeddings.py`: check len(records) > 0 before division
-- [ ] T037 [US3] Guard all percentage calculations in `packages/mtg-image-db/build_mtg_faiss.py`: check len(records) > 0 before division
+- [x] T029 [US3] Implement validate_args() in `packages/mtg-image-db/helpers/cli_validation.py` to check: limit>=0, batch>=1, size>=64, workers 1-128
+- [x] T030 [US3] Add validate_args() call at start of main() in `packages/mtg-image-db/download_images.py`
+- [x] T031 [US3] Add validate_args() call at start of main() in `packages/mtg-image-db/build_embeddings.py`
+- [x] T032 [US3] Add validate_args() call at start of main() in `packages/mtg-image-db/build_mtg_faiss.py`
+- [x] T033 [US3] Add zero-vector check in `packages/mtg-image-db/build_embeddings.py` before FAISS index creation: if X.shape[0] == 0, exit with error "No valid images to embed"
+- [x] T034 [US3] Add zero-vector check in `packages/mtg-image-db/build_mtg_faiss.py` before FAISS index creation
+- [x] T035 [US3] Guard all percentage calculations in `packages/mtg-image-db/download_images.py`: check len(records) > 0 before division
+- [x] T036 [US3] Guard all percentage calculations in `packages/mtg-image-db/build_embeddings.py`: check len(records) > 0 before division
+- [x] T037 [US3] Guard all percentage calculations in `packages/mtg-image-db/build_mtg_faiss.py`: check len(records) > 0 before division
 
 **Checkpoint**: All edge cases handled gracefully. Test with quickstart.md scenarios 3.1-3.3
 
@@ -123,10 +123,10 @@
 
 ### Implementation for User Story 4
 
-- [ ] T038 [US4] Ensure ThreadPoolExecutor implementation in `packages/mtg-image-db/download_images.py` uses shared session (from T017)
-- [ ] T039 [US4] Add worker count validation in `packages/mtg-image-db/helpers/cli_validation.py`: 1 <= workers <= 128
-- [ ] T040 [US4] Add thread-safe progress tracking in `packages/mtg-image-db/download_images.py` using tqdm with lock parameter
-- [ ] T041 [US4] Test and verify no race conditions in parallel downloads: all files written atomically via .part files
+- [x] T038 [US4] Ensure ThreadPoolExecutor implementation in `packages/mtg-image-db/download_images.py` uses shared session (from T017)
+- [x] T039 [US4] Add worker count validation in `packages/mtg-image-db/helpers/cli_validation.py`: 1 <= workers <= 128
+- [x] T040 [US4] Add thread-safe progress tracking in `packages/mtg-image-db/download_images.py` using tqdm with lock parameter
+- [x] T041 [US4] Test and verify no race conditions in parallel downloads: all files written atomically via .part files
 
 **Checkpoint**: Parallel downloads achieve 10x+ speedup. Test with quickstart.md scenarios 4.1-4.2
 
@@ -140,12 +140,12 @@
 
 ### Implementation for User Story 5
 
-- [ ] T042 [US5] Add CLI arguments to `packages/mtg-image-db/build_embeddings.py`: --hnsw-m (default 32), --hnsw-ef-construction (default 200)
-- [ ] T043 [US5] Add HNSW parameter validation in `packages/mtg-image-db/helpers/cli_validation.py`: 4 <= M <= 128, efConstruction >= M
-- [ ] T044 [US5] Update FAISS index creation in `packages/mtg-image-db/build_embeddings.py` to use CLI-provided M and efConstruction values
-- [ ] T045 [US5] Add CLI arguments to `packages/mtg-image-db/build_mtg_faiss.py`: --hnsw-m (default 32), --hnsw-ef-construction (default 200)
-- [ ] T046 [US5] Update FAISS index creation in `packages/mtg-image-db/build_mtg_faiss.py` to use CLI-provided M and efConstruction values
-- [ ] T047 [US5] Update build summary output in `packages/mtg-image-db/build_embeddings.py` to display HNSW parameters used
+- [x] T042 [US5] Add CLI arguments to `packages/mtg-image-db/build_embeddings.py`: --hnsw-m (default 32), --hnsw-ef-construction (default 200)
+- [x] T043 [US5] Add HNSW parameter validation in `packages/mtg-image-db/helpers/cli_validation.py`: 4 <= M <= 128, efConstruction >= M
+- [x] T044 [US5] Update FAISS index creation in `packages/mtg-image-db/build_embeddings.py` to use CLI-provided M and efConstruction values
+- [x] T045 [US5] Add CLI arguments to `packages/mtg-image-db/build_mtg_faiss.py`: --hnsw-m (default 32), --hnsw-ef-construction (default 200)
+- [x] T046 [US5] Update FAISS index creation in `packages/mtg-image-db/build_mtg_faiss.py` to use CLI-provided M and efConstruction values
+- [x] T047 [US5] Update build summary output in `packages/mtg-image-db/build_embeddings.py` to display HNSW parameters used
 
 **Checkpoint**: HNSW parameters are configurable. Test with quickstart.md scenarios 5.1-5.2
 
@@ -159,10 +159,10 @@
 
 ### Implementation for User Story 6
 
-- [ ] T048 [US6] Verify T008 and T009 (METRIC_INNER_PRODUCT fix) are complete
-- [ ] T049 [US6] Verify T010 and T011 (normalization verification) are complete
-- [ ] T050 [US6] Add assertion in `packages/mtg-image-db/build_embeddings.py` after embedding: verify all vector norms are 1.0 ± 1e-5
-- [ ] T051 [US6] Add assertion in `packages/mtg-image-db/build_mtg_faiss.py` after embedding: verify all vector norms are 1.0 ± 1e-5
+- [x] T048 [US6] Verify T008 and T009 (METRIC_INNER_PRODUCT fix) are complete
+- [x] T049 [US6] Verify T010 and T011 (normalization verification) are complete
+- [x] T050 [US6] Add assertion in `packages/mtg-image-db/build_embeddings.py` after embedding: verify all vector norms are 1.0 ± 1e-5
+- [x] T051 [US6] Add assertion in `packages/mtg-image-db/build_mtg_faiss.py` after embedding: verify all vector norms are 1.0 ± 1e-5
 - [ ] T052 [US6] Update `packages/mtg-image-db/query_index.py` to display distance metric type from loaded index
 
 **Checkpoint**: Cosine similarity is mathematically correct. Test with quickstart.md scenarios 6.1-6.3
@@ -177,13 +177,13 @@
 
 ### Implementation for User Story 7
 
-- [ ] T053 [US7] Add CLI argument to `packages/mtg-image-db/build_embeddings.py`: --checkpoint-frequency (default 500)
+- [x] T053 [US7] Add CLI argument to `packages/mtg-image-db/build_embeddings.py`: --checkpoint-frequency (default 500)
 - [ ] T054 [US7] Implement checkpoint save in `packages/mtg-image-db/build_embeddings.py`: save checkpoint.npz every N images
 - [ ] T055 [US7] Implement checkpoint metadata save in `packages/mtg-image-db/build_embeddings.py`: save checkpoint_meta.json with timestamp, counts, parameters
-- [ ] T056 [US7] Add CLI argument to `packages/mtg-image-db/build_embeddings.py`: --resume / --no-resume (default: true)
+- [x] T056 [US7] Add CLI argument to `packages/mtg-image-db/build_embeddings.py`: --resume / --no-resume (default: true)
 - [ ] T057 [US7] Implement checkpoint loading in `packages/mtg-image-db/build_embeddings.py`: detect and load checkpoint on startup if --resume
 - [ ] T058 [US7] Add parameter mismatch warning in `packages/mtg-image-db/build_embeddings.py`: warn if checkpoint parameters differ from current run
-- [ ] T059 [US7] Enhance progress display in `packages/mtg-image-db/build_embeddings.py`: show throughput (images/sec) and ETA
+- [x] T059 [US7] Enhance progress display in `packages/mtg-image-db/build_embeddings.py`: show throughput (images/sec) and ETA
 - [ ] T060 [US7] Delete checkpoint files in `packages/mtg-image-db/build_embeddings.py` on successful completion
 - [ ] T060a [US7] (Optional) Implement memory-mapped output in `packages/mtg-image-db/build_embeddings.py` using np.memmap for embeddings array to reduce RAM usage on very large datasets
 
@@ -195,17 +195,17 @@
 
 **Purpose**: Documentation, build manifest, and final cleanup
 
-- [ ] T061 [P] Implement build manifest generation in `packages/mtg-image-db/build_embeddings.py`: create build_manifest.json with version, timestamp, parameters, statistics, environment
-- [ ] T062 [P] Implement build manifest generation in `packages/mtg-image-db/build_mtg_faiss.py`: create build_manifest.json
-- [ ] T063 [P] Update `packages/mtg-image-db/README.md`: document --workers flag and parallel download tuning (FR-028)
-- [ ] T064 [P] Update `packages/mtg-image-db/README.md`: document retry behavior and rate limiting courtesy (FR-029)
-- [ ] T065 [P] Update `packages/mtg-image-db/README.md`: document HNSW parameter tuning guidelines (FR-030)
-- [ ] T066 [P] Update `packages/mtg-image-db/README.md`: document query-time efSearch parameter (FR-031)
-- [ ] T067 [P] Update `packages/mtg-image-db/README.md`: add troubleshooting section for validation failures, rate limiting, checkpoint issues
-- [ ] T068 [P] Add docstrings to all new helper modules in `packages/mtg-image-db/helpers/`
-- [ ] T069 Verify all unused imports removed (double-check T005, T006)
+- [x] T061 [P] Implement build manifest generation in `packages/mtg-image-db/build_embeddings.py`: create build_manifest.json with version, timestamp, parameters, statistics, environment
+- [x] T062 [P] Implement build manifest generation in `packages/mtg-image-db/build_mtg_faiss.py`: create build_manifest.json
+- [x] T063 [P] Update `packages/mtg-image-db/README.md`: document --workers flag and parallel download tuning (FR-028)
+- [x] T064 [P] Update `packages/mtg-image-db/README.md`: document retry behavior and rate limiting courtesy (FR-029)
+- [x] T065 [P] Update `packages/mtg-image-db/README.md`: document HNSW parameter tuning guidelines (FR-030)
+- [x] T066 [P] Update `packages/mtg-image-db/README.md`: document query-time efSearch parameter (FR-031)
+- [x] T067 [P] Update `packages/mtg-image-db/README.md`: add troubleshooting section for validation failures, rate limiting, checkpoint issues
+- [x] T068 [P] Add docstrings to all new helper modules in `packages/mtg-image-db/helpers/`
+- [x] T069 Verify all unused imports removed (double-check T005, T006)
 - [ ] T070 Run manual tests from `specs/005-implement-senior-developer/quickstart.md` for all user stories
-- [ ] T070a Verify kept indices alignment: confirm embeddings, metadata, and FAISS index all use same kept indices array
+- [x] T070a Verify kept indices alignment: confirm embeddings, metadata, and FAISS index all use same kept indices array
 
 **Checkpoint**: All documentation complete, ready for production use
 
