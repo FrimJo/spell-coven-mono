@@ -7,6 +7,7 @@ import { routeTree } from './routeTree.gen'
 export const getRouter = () => {
   return createRouter({
     routeTree,
+    basepath: import.meta.env.PROD ? '/spell-coven-mono' : '/',
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
   })
