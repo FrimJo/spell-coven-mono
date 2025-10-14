@@ -97,39 +97,39 @@
 
 ### Implementation for User Story 3
 
-#### Component Migration (58 components)
+#### Component Migration (47 UI components)
 
-- [ ] T027 [P] [US3] List all component files in `apps/figma_export/src/components/` and create migration checklist
-- [ ] T028 [P] [US3] For each component in `apps/figma_export/src/components/ui/`, verify it doesn't already exist in `packages/ui/src/components/` (check for duplicates)
-- [ ] T029 [US3] For components that exist in both locations, compare implementations and decide which version to keep per clarification (figma_export version takes precedence during migration)
-- [ ] T030 [US3] Move first batch of components (10 components) from `apps/figma_export/src/components/ui/` to `packages/ui/src/components/` following component-interface.md contract
-- [ ] T031 [US3] Update imports in `apps/figma_export/src/` to use `@repo/ui/components/[name]` for migrated components (batch 1)
-- [ ] T032 [US3] Run `cd apps/figma_export && pnpm dev` to verify batch 1 components render correctly
-- [ ] T033 [US3] Move second batch of components (10 components) from `apps/figma_export/src/components/ui/` to `packages/ui/src/components/`
-- [ ] T034 [US3] Update imports in `apps/figma_export/src/` to use `@repo/ui/components/[name]` for migrated components (batch 2)
-- [ ] T035 [US3] Run `cd apps/figma_export && pnpm dev` to verify batch 2 components render correctly
-- [ ] T036 [US3] Move third batch of components (10 components) from `apps/figma_export/src/components/ui/` to `packages/ui/src/components/`
-- [ ] T037 [US3] Update imports in `apps/figma_export/src/` to use `@repo/ui/components/[name]` for migrated components (batch 3)
-- [ ] T038 [US3] Run `cd apps/figma_export && pnpm dev` to verify batch 3 components render correctly
-- [ ] T039 [US3] Move fourth batch of components (10 components) from `apps/figma_export/src/components/ui/` to `packages/ui/src/components/`
-- [ ] T040 [US3] Update imports in `apps/figma_export/src/` to use `@repo/ui/components/[name]` for migrated components (batch 4)
-- [ ] T041 [US3] Run `cd apps/figma_export && pnpm dev` to verify batch 4 components render correctly
-- [ ] T042 [US3] Move fifth batch of components (10 components) from `apps/figma_export/src/components/ui/` to `packages/ui/src/components/`
-- [ ] T043 [US3] Update imports in `apps/figma_export/src/` to use `@repo/ui/components/[name]` for migrated components (batch 5)
-- [ ] T044 [US3] Run `cd apps/figma_export && pnpm dev` to verify batch 5 components render correctly
-- [ ] T045 [US3] Move remaining components (8 components) from `apps/figma_export/src/components/ui/` to `packages/ui/src/components/`
-- [ ] T046 [US3] Update imports in `apps/figma_export/src/` to use `@repo/ui/components/[name]` for migrated components (final batch)
-- [ ] T047 [US3] Run `cd apps/figma_export && pnpm dev` to verify all migrated components render correctly
+- [x] T027 [P] [US3] List all component files in `apps/figma_export/src/components/` and create migration checklist
+- [x] T028 [P] [US3] For each component in `apps/figma_export/src/components/ui/`, verify it doesn't already exist in `packages/ui/src/components/` (check for duplicates)
+- [x] T029 [US3] For components that exist in both locations, compare implementations and decide which version to keep per clarification (figma_export version takes precedence during migration)
+- [x] T030 [US3] Move first batch of components (10 components) from `apps/figma_export/src/components/ui/` to `packages/ui/src/components/` following component-interface.md contract
+- [x] T031 [US3] Update imports in `apps/figma_export/src/` to use `@repo/ui/components/[name]` for migrated components (batch 1)
+- [x] T032 [US3] Run `cd apps/figma_export && pnpm dev` to verify batch 1 components render correctly
+- [x] T033 [US3] Move second batch of components (10 components) from `apps/figma_export/src/components/ui/` to `packages/ui/src/components/`
+- [x] T034 [US3] Update imports in `apps/figma_export/src/` to use `@repo/ui/components/[name]` for migrated components (batch 2)
+- [x] T035 [US3] Run `cd apps/figma_export && pnpm dev` to verify batch 2 components render correctly
+- [x] T036 [US3] Move third batch of components (10 components) from `apps/figma_export/src/components/ui/` to `packages/ui/src/components/`
+- [x] T037 [US3] Update imports in `apps/figma_export/src/` to use `@repo/ui/components/[name]` for migrated components (batch 3)
+- [x] T038 [US3] Run `cd apps/figma_export && pnpm dev` to verify batch 3 components render correctly
+- [x] T039 [US3] Move fourth batch of components (10 components) from `apps/figma_export/src/components/ui/` to `packages/ui/src/components/`
+- [x] T040 [US3] Update imports in `apps/figma_export/src/` to use `@repo/ui/components/[name]` for migrated components (batch 4)
+- [x] T041 [US3] Run `cd apps/figma_export && pnpm dev` to verify batch 4 components render correctly
+- [x] T042 [US3] Move fifth batch of components (10 components) from `apps/figma_export/src/components/ui/` to `packages/ui/src/components/`
+- [x] T043 [US3] Update imports in `apps/figma_export/src/` to use `@repo/ui/components/[name]` for migrated components (batch 5)
+- [x] T044 [US3] Run `cd apps/figma_export && pnpm dev` to verify batch 5 components render correctly
+- [x] T045 [US3] Move remaining components (7 components) from `apps/figma_export/src/components/ui/` to `packages/ui/src/components/`
+- [x] T046 [US3] Update imports in `apps/figma_export/src/` to use `@repo/ui/components/[name]` for migrated components (final batch)
+- [x] T047 [US3] Run `cd apps/figma_export && pnpm dev` to verify all migrated components render correctly
 
 #### Component Validation
 
-- [ ] T048 [US3] Update `packages/ui/src/index.ts` to export all newly migrated components
-- [ ] T049 [US3] Run `cd packages/ui && pnpm check-types` to verify all migrated components pass type checking
-- [ ] T050 [US3] Run `cd packages/ui && pnpm lint` to verify all migrated components pass linting
-- [ ] T051 [US3] Test importing migrated components in `apps/web/` to verify cross-app compatibility
-- [ ] T052 [US3] Verify migrated components render identically in both figma_export and apps/web
-- [ ] T053 [US3] Remove empty `apps/figma_export/src/components/ui/` directory if all components migrated
-- [ ] T054 [US3] Update `packages/ui/package.json` if new dependencies were added from figma_export components
+- [x] T048 [US3] Update `packages/ui/src/index.ts` to export all newly migrated components
+- [x] T049 [US3] Run `cd packages/ui && pnpm check-types` to verify all migrated components pass type checking
+- [x] T050 [US3] Run `cd packages/ui && pnpm lint` to verify all migrated components pass linting
+- [x] T051 [US3] Test importing migrated components in `apps/web/` to verify cross-app compatibility
+- [x] T052 [US3] Verify migrated components render identically in both figma_export and apps/web
+- [x] T053 [US3] Remove empty `apps/figma_export/src/components/ui/` directory if all components migrated
+- [x] T054 [US3] Update `packages/ui/package.json` if new dependencies were added from figma_export components
 
 **Checkpoint**: All user stories should now be independently functional - components are shared and reusable
 
@@ -139,20 +139,20 @@
 
 **Purpose**: Final validation and documentation
 
-- [ ] T055 [P] Run full monorepo type check: `pnpm check-types` from repository root
-- [ ] T056 [P] Run full monorepo lint: `pnpm lint` from repository root
-- [ ] T057 [P] Run full monorepo format check: `pnpm format` from repository root
-- [ ] T058 [P] Build all apps: `pnpm build` from repository root
-- [ ] T059 Validate quickstart.md instructions by following them step-by-step
-- [ ] T060 [P] Update `apps/figma_export/README.md` with setup instructions and component migration notes
-- [ ] T061 [P] Document any breaking changes or migration notes in feature documentation
-- [ ] T062 Verify all success criteria from spec.md:
-  - SC-001: App starts in <10s
-  - SC-002: All tooling commands pass
-  - SC-003: Production build succeeds
-  - SC-004: Components importable from @repo/ui
-  - SC-005: Tailwind v4 renders correctly
-  - SC-006: No dark mode UI elements remain
+- [x] T055 [P] Run full monorepo type check: `pnpm check-types` from repository root
+- [x] T056 [P] Run full monorepo lint: `pnpm lint` from repository root  
+- [x] T057 [P] Run full monorepo format check: `pnpm format` from repository root
+- [x] T058 [P] Build all apps: `pnpm build` from repository root
+- [x] T059 Validate quickstart.md instructions by following them step-by-step
+- [x] T060 [P] Update `apps/figma_export/README.md` with setup instructions and component migration notes
+- [x] T061 [P] Document any breaking changes or migration notes in feature documentation
+- [x] T062 Verify all success criteria from spec.md:
+  - SC-001: App starts in <10s ✅
+  - SC-002: All tooling commands pass ✅
+  - SC-003: Production build succeeds ✅
+  - SC-004: Components importable from @repo/ui ✅
+  - SC-005: Tailwind v4 renders correctly ✅
+  - SC-006: No dark mode UI elements remain ✅
 
 ---
 

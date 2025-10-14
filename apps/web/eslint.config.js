@@ -1,6 +1,6 @@
-import baseConfig, { restrictEnvAccess } from '@repo/eslint-config/base'
-import reactConfig from '@repo/eslint-config/react'
-import viteConfig from '@repo/eslint-config/vite'
+import { config as baseConfig, restrictEnvAccess } from '@repo/eslint-config/base'
+import { config as reactConfig } from '@repo/eslint-config/react-internal'
+import { config as viteConfig } from '@repo/eslint-config/base'
 import pluginQuery from '@tanstack/eslint-plugin-query'
 import reactCompiler from 'eslint-plugin-react-compiler'
 
