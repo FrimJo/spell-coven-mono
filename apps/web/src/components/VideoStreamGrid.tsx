@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useMediaStream } from '@/hooks/useMediaStream'
 import { useWebcam } from '@/hooks/useWebcam'
 import {
   Camera,
-  Maximize2,
   Mic,
   MicOff,
   Minus,
@@ -49,81 +47,23 @@ export function VideoStreamGrid({
   players,
   localPlayerName,
   onLifeChange,
-  enableCardDetection = false,
+  enableCardDetection = true, // Always enabled by default
   onCardCrop,
 }: VideoStreamGridProps) {
-  // Initialize webcam with card detection if enabled
-  const webcamHook = useWebcam({
-    enableCardDetection,
-    onCrop: onCardCrop,
-    autoStart: false,
-  })
-
-  // Initialize media stream for local player (fallback when card detection is disabled)
-  const mediaStreamHook = useMediaStream({
-    autoStart: false,
-    audio: true,
-  })
-
-  // Track if webcam video has actually started
-  const [webcamVideoStarted, setWebcamVideoStarted] = useState(false)
-
-  // Trigger webcam initialization when refs are ready
-  useEffect(() => {
-    if (enableCardDetection && webcamHook.videoRef.current && webcamHook.overlayRef.current) {
-      // Refs are now attached, initialization will happen in useWebcam hook
-      console.log('VideoStreamGrid: Refs are ready for card detection')
-    }
-  }, [enableCardDetection, webcamHook.videoRef, webcamHook.overlayRef])
-
-  // Use webcam hook if card detection is enabled, otherwise use media stream hook
+  // Initialize webcam with card detection
   const {
     videoRef: localVideoRef,
     overlayRef,
     croppedRef,
     fullResRef,
-    toggleVideo: toggleLocalVideo,
-    toggleAudio: toggleLocalAudio,
-    isVideoEnabled: localVideoEnabled,
-    isAudioEnabled: localAudioEnabled,
-    isActive: localStreamActive,
-    startStream,
-    stopStream,
+    startVideo,
     getCameras,
-  } = enableCardDetection
-    ? {
-        videoRef: webcamHook.videoRef,
-        overlayRef: webcamHook.overlayRef,
-        croppedRef: webcamHook.croppedRef,
-        fullResRef: webcamHook.fullResRef,
-        toggleVideo: () => {}, // Not applicable for webcam hook
-        toggleAudio: () => {}, // Not applicable for webcam hook
-        isVideoEnabled: true, // Always show as enabled for card detection mode
-        isAudioEnabled: true, // Always show as enabled for card detection mode
-        isActive: webcamVideoStarted,
-        startStream: async (deviceId?: string) => {
-          await webcamHook.startVideo(deviceId || null)
-          setWebcamVideoStarted(true)
-        },
-        stopStream: () => {
-          setWebcamVideoStarted(false)
-        },
-        getCameras: webcamHook.getCameras,
-      }
-    : {
-        videoRef: mediaStreamHook.videoRef,
-        overlayRef: undefined,
-        croppedRef: undefined,
-        fullResRef: undefined,
-        toggleVideo: mediaStreamHook.toggleVideo,
-        toggleAudio: mediaStreamHook.toggleAudio,
-        isVideoEnabled: mediaStreamHook.isVideoEnabled,
-        isAudioEnabled: mediaStreamHook.isAudioEnabled,
-        isActive: mediaStreamHook.isActive,
-        startStream: mediaStreamHook.startStream,
-        stopStream: mediaStreamHook.stopStream,
-        getCameras: mediaStreamHook.getCameras,
-      }
+    isVideoActive,
+  } = useWebcam({
+    enableCardDetection,
+    onCrop: onCardCrop,
+    autoStart: false,
+  })
 
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>(
     [],
@@ -144,15 +84,15 @@ export function VideoStreamGrid({
     ),
   )
 
-  // Find local player
-  const localPlayer = players.find((p) => p.name === localPlayerName)
+  // Find local player (not currently used but may be needed for future features)
+  // const localPlayer = players.find((p) => p.name === localPlayerName)
 
   // Load available cameras when stream becomes active
   useEffect(() => {
-    if (localStreamActive) {
+    if (isVideoActive) {
       getCameras().then(setAvailableCameras)
     }
-  }, [localStreamActive, getCameras])
+  }, [isVideoActive, getCameras])
 
   const switchCamera = async () => {
     if (availableCameras.length <= 1) return
@@ -161,7 +101,7 @@ export function VideoStreamGrid({
     const nextCamera = availableCameras[nextIndex]
 
     if (nextCamera) {
-      await startStream(nextCamera.deviceId)
+      await startVideo(nextCamera.deviceId)
       setCurrentCameraIndex(nextIndex)
       setCurrentCameraId(nextCamera.deviceId)
     }
@@ -172,7 +112,7 @@ export function VideoStreamGrid({
       (cam) => cam.deviceId === deviceId,
     )
     if (cameraIndex !== -1) {
-      await startStream(deviceId)
+      await startVideo(deviceId)
       setCurrentCameraIndex(cameraIndex)
       setCurrentCameraId(deviceId)
       setCameraPopoverOpen(false)
@@ -180,12 +120,6 @@ export function VideoStreamGrid({
   }
 
   const toggleVideo = (playerId: string) => {
-    // If it's the local player, use the actual media stream controls
-    if (localPlayer && playerId === localPlayer.id) {
-      toggleLocalVideo()
-      return
-    }
-
     // For remote players, just update UI state
     setStreamStates((prev) => {
       const currentState = prev[playerId]
@@ -197,13 +131,10 @@ export function VideoStreamGrid({
     })
   }
 
-  const toggleAudio = (playerId: string) => {
-    // If it's the local player, use the actual media stream controls
-    if (localPlayer && playerId === localPlayer.id) {
-      toggleLocalAudio()
-      return
-    }
+  // Suppress unused warning - function is available for future use
+  void toggleVideo
 
+  const toggleAudio = (playerId: string) => {
     // For remote players, just update UI state
     setStreamStates((prev) => {
       const currentState = prev[playerId]
@@ -227,9 +158,10 @@ export function VideoStreamGrid({
         const isLocal = player.name === localPlayerName
         const state = streamStates[player.id] || { video: true, audio: true }
 
-        // For local player, use actual stream state
-        const videoEnabled = isLocal ? localVideoEnabled : state.video
-        const audioEnabled = isLocal ? localAudioEnabled : state.audio
+        // For local player, video is always enabled (card detection mode)
+        // For remote players, use UI state
+        const videoEnabled = isLocal ? true : state.video
+        const audioEnabled = isLocal ? true : state.audio
 
         return (
           <Card
@@ -253,8 +185,7 @@ export function VideoStreamGrid({
                       height: '100%',
                       objectFit: 'cover',
                       zIndex: 0,
-                      display:
-                        videoEnabled && localStreamActive ? 'block' : 'none',
+                      display: isVideoActive ? 'block' : 'none',
                     }}
                   />
                   {/* Overlay canvas for card detection - renders green borders */}
@@ -272,8 +203,7 @@ export function VideoStreamGrid({
                         objectFit: 'cover',
                         cursor: 'pointer',
                         zIndex: 1,
-                        display:
-                          videoEnabled && localStreamActive ? 'block' : 'none',
+                        display: isVideoActive ? 'block' : 'none',
                       }}
                     />
                   )}
@@ -300,7 +230,7 @@ export function VideoStreamGrid({
               {/* Placeholder UI */}
               {videoEnabled ? (
                 <>
-                  {!(isLocal && localStreamActive) && (
+                  {!(isLocal && isVideoActive) && (
                     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
                       <div className="space-y-3 text-center">
                         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-purple-500/20">
@@ -391,44 +321,42 @@ export function VideoStreamGrid({
                   <Button
                     data-testid="video-toggle-button"
                     size="sm"
-                    variant={videoEnabled ? 'outline' : 'destructive'}
+                    variant="outline"
                     onClick={async () => {
-                      if (!localStreamActive) {
-                        await startStream()
-                      } else {
-                        toggleVideo(player.id)
+                      if (!isVideoActive) {
+                        await startVideo()
                       }
                     }}
-                    className={`h-10 w-10 p-0 ${
-                      videoEnabled
-                        ? 'border-slate-700 text-white hover:bg-slate-800'
-                        : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
-                    }`}
+                    className="h-10 w-10 border-slate-700 p-0 text-white hover:bg-slate-800"
                   >
-                    {videoEnabled ? (
-                      <Video className="h-5 w-5" />
-                    ) : (
-                      <VideoOff className="h-5 w-5" />
-                    )}
+                    <Video className="h-5 w-5" />
                   </Button>
                   <Button
                     size="sm"
-                    variant={audioEnabled ? 'outline' : 'destructive'}
+                    variant="outline"
                     onClick={() => toggleAudio(player.id)}
-                    className={`h-10 w-10 p-0 ${
-                      audioEnabled
-                        ? 'border-slate-700 text-white hover:bg-slate-800'
-                        : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
-                    }`}
-                    disabled={!localStreamActive}
+                    className="h-10 w-10 border-slate-700 p-0 text-white hover:bg-slate-800"
+                    disabled={!isVideoActive}
                   >
-                    {audioEnabled ? (
-                      <Mic className="h-5 w-5" />
-                    ) : (
-                      <MicOff className="h-5 w-5" />
-                    )}
+                    <Mic className="h-5 w-5" />
                   </Button>
                   <div className="mx-1 h-6 w-px bg-slate-700" />
+                  {/* Quick camera switch button - cycles through cameras */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={switchCamera}
+                    className="h-10 w-10 border-white bg-white p-0 text-black hover:bg-gray-100"
+                    disabled={!isVideoActive || availableCameras.length <= 1}
+                    title={
+                      availableCameras.length > 1
+                        ? `Switch to next camera (${availableCameras.length} available)`
+                        : 'No other cameras available'
+                    }
+                  >
+                    <SwitchCamera className="h-5 w-5" />
+                  </Button>
+                  {/* Camera selection popover - choose specific camera */}
                   <Popover
                     open={cameraPopoverOpen}
                     onOpenChange={setCameraPopoverOpen}
@@ -437,17 +365,11 @@ export function VideoStreamGrid({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-10 w-10 border-white bg-white p-0 text-black hover:bg-gray-100"
-                        disabled={
-                          !localStreamActive || availableCameras.length <= 1
-                        }
-                        title={
-                          availableCameras.length > 1
-                            ? `Switch camera (${availableCameras.length} available)`
-                            : 'No other cameras available'
-                        }
+                        className="h-10 w-10 border-slate-700 p-0 text-white hover:bg-slate-800"
+                        disabled={!isVideoActive || availableCameras.length <= 1}
+                        title="Select camera from list"
                       >
-                        <SwitchCamera className="h-5 w-5" />
+                        <Camera className="h-5 w-5" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent

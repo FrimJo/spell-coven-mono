@@ -41,6 +41,8 @@ interface UseWebcamReturn {
   status: string
   /** Loading state */
   isLoading: boolean
+  /** Whether video stream is active */
+  isVideoActive: boolean
 }
 
 /**
@@ -84,6 +86,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
   const [hasCroppedImage, setHasCroppedImage] = useState(false)
   const [status, setStatus] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isVideoActive, setIsVideoActive] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -167,11 +170,13 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
           cameraSelectRef.current,
         )
         setStatus('Webcam started')
+        setIsVideoActive(true)
       } catch (err) {
         console.error('Failed to start webcam:', err)
         setStatus(
           `Error: ${err instanceof Error ? err.message : 'Failed to start webcam'}`,
         )
+        setIsVideoActive(false)
       }
     } else {
       // Simple video start without OpenCV
@@ -188,11 +193,13 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
         setStatus('Webcam started')
+        setIsVideoActive(true)
       } catch (err) {
         console.error('Failed to start webcam:', err)
         setStatus(
           `Error: ${err instanceof Error ? err.message : 'Failed to start webcam'}`,
         )
+        setIsVideoActive(false)
       }
     }
   }
@@ -242,5 +249,6 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     hasCroppedImage,
     status,
     isLoading,
+    isVideoActive,
   }
 }
