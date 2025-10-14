@@ -1,14 +1,13 @@
 import { StrictMode } from 'react'
-import { createRouter, RouterProvider } from '@tanstack/react-router'
+import { RouterProvider } from '@tanstack/react-router'
 import { createRoot } from 'react-dom/client'
-
-import { routeTree } from './routeTree.gen'
 
 import './globals.css'
 import './styles.css'
 
-const router = createRouter({ routeTree })
+import { getRouter } from './router'
 
+const router = getRouter()
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router
