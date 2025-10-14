@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMediaStream } from '@/hooks/useMediaStream'
+import { useWebcam } from '@/hooks/useWebcam'
 import {
   Camera,
   Maximize2,
@@ -33,6 +34,10 @@ interface VideoStreamGridProps {
   players: Player[]
   localPlayerName: string
   onLifeChange: (playerId: string, newLife: number) => void
+  /** Enable card detection with green borders and click-to-crop */
+  enableCardDetection?: boolean
+  /** Callback when a card is cropped */
+  onCardCrop?: () => void
 }
 
 interface StreamState {
@@ -44,10 +49,39 @@ export function VideoStreamGrid({
   players,
   localPlayerName,
   onLifeChange,
+  enableCardDetection = false,
+  onCardCrop,
 }: VideoStreamGridProps) {
-  // Initialize media stream for local player
+  // Initialize webcam with card detection if enabled
+  const webcamHook = useWebcam({
+    enableCardDetection,
+    onCrop: onCardCrop,
+    autoStart: false,
+  })
+
+  // Initialize media stream for local player (fallback when card detection is disabled)
+  const mediaStreamHook = useMediaStream({
+    autoStart: false,
+    audio: true,
+  })
+
+  // Track if webcam video has actually started
+  const [webcamVideoStarted, setWebcamVideoStarted] = useState(false)
+
+  // Trigger webcam initialization when refs are ready
+  useEffect(() => {
+    if (enableCardDetection && webcamHook.videoRef.current && webcamHook.overlayRef.current) {
+      // Refs are now attached, initialization will happen in useWebcam hook
+      console.log('VideoStreamGrid: Refs are ready for card detection')
+    }
+  }, [enableCardDetection, webcamHook.videoRef, webcamHook.overlayRef])
+
+  // Use webcam hook if card detection is enabled, otherwise use media stream hook
   const {
     videoRef: localVideoRef,
+    overlayRef,
+    croppedRef,
+    fullResRef,
     toggleVideo: toggleLocalVideo,
     toggleAudio: toggleLocalAudio,
     isVideoEnabled: localVideoEnabled,
@@ -56,10 +90,40 @@ export function VideoStreamGrid({
     startStream,
     stopStream,
     getCameras,
-  } = useMediaStream({
-    autoStart: false,
-    audio: true,
-  })
+  } = enableCardDetection
+    ? {
+        videoRef: webcamHook.videoRef,
+        overlayRef: webcamHook.overlayRef,
+        croppedRef: webcamHook.croppedRef,
+        fullResRef: webcamHook.fullResRef,
+        toggleVideo: () => {}, // Not applicable for webcam hook
+        toggleAudio: () => {}, // Not applicable for webcam hook
+        isVideoEnabled: true, // Always show as enabled for card detection mode
+        isAudioEnabled: true, // Always show as enabled for card detection mode
+        isActive: webcamVideoStarted,
+        startStream: async (deviceId?: string) => {
+          await webcamHook.startVideo(deviceId || null)
+          setWebcamVideoStarted(true)
+        },
+        stopStream: () => {
+          setWebcamVideoStarted(false)
+        },
+        getCameras: webcamHook.getCameras,
+      }
+    : {
+        videoRef: mediaStreamHook.videoRef,
+        overlayRef: undefined,
+        croppedRef: undefined,
+        fullResRef: undefined,
+        toggleVideo: mediaStreamHook.toggleVideo,
+        toggleAudio: mediaStreamHook.toggleAudio,
+        isVideoEnabled: mediaStreamHook.isVideoEnabled,
+        isAudioEnabled: mediaStreamHook.isAudioEnabled,
+        isActive: mediaStreamHook.isActive,
+        startStream: mediaStreamHook.startStream,
+        stopStream: mediaStreamHook.stopStream,
+        getCameras: mediaStreamHook.getCameras,
+      }
 
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>(
     [],
@@ -175,23 +239,62 @@ export function VideoStreamGrid({
             <div className="relative flex-1 bg-slate-950">
               {/* Video Stream Area - Always render video element for local player */}
               {isLocal && (
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    zIndex: 0,
-                    display:
-                      videoEnabled && localStreamActive ? 'block' : 'none',
-                  }}
-                />
+                <>
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      zIndex: 0,
+                      display:
+                        videoEnabled && localStreamActive ? 'block' : 'none',
+                    }}
+                  />
+                  {/* Overlay canvas for card detection - renders green borders */}
+                  {enableCardDetection && overlayRef && (
+                    <canvas
+                      ref={overlayRef}
+                      width={640}
+                      height={480}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        cursor: 'pointer',
+                        zIndex: 1,
+                        display:
+                          videoEnabled && localStreamActive ? 'block' : 'none',
+                      }}
+                    />
+                  )}
+                  {/* Hidden canvases for card detection processing */}
+                  {enableCardDetection && croppedRef && (
+                    <canvas
+                      ref={croppedRef}
+                      width={446}
+                      height={620}
+                      style={{ display: 'none' }}
+                    />
+                  )}
+                  {enableCardDetection && fullResRef && (
+                    <canvas
+                      ref={fullResRef}
+                      width={640}
+                      height={480}
+                      style={{ display: 'none' }}
+                    />
+                  )}
+                </>
               )}
 
               {/* Placeholder UI */}
@@ -286,6 +389,7 @@ export function VideoStreamGrid({
               {isLocal && (
                 <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/90 px-3 py-2 backdrop-blur-sm">
                   <Button
+                    data-testid="video-toggle-button"
                     size="sm"
                     variant={videoEnabled ? 'outline' : 'destructive'}
                     onClick={async () => {

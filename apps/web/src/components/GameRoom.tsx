@@ -166,6 +166,10 @@ export function GameRoom({
               players={players}
               localPlayerName={playerName}
               onLifeChange={handleLifeChange}
+              enableCardDetection={true}
+              onCardCrop={() => {
+                console.log('Card detected and cropped!')
+              }}
             />
           </div>
         </div>

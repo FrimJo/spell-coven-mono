@@ -96,49 +96,53 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
         return
       }
 
-      // Initialize webcam with OpenCV card detection
+      // Wait for refs to be available
       if (
-        videoRef.current &&
-        overlayRef.current &&
-        croppedRef.current &&
-        fullResRef.current
+        !videoRef.current ||
+        !overlayRef.current ||
+        !croppedRef.current ||
+        !fullResRef.current
       ) {
-        try {
-          setIsLoading(true)
-          setStatus('Loading OpenCV…')
-          
-          webcamController.current = await setupWebcam({
-            video: videoRef.current,
-            overlay: overlayRef.current,
-            cropped: croppedRef.current,
-            fullRes: fullResRef.current,
-            onCrop: () => {
-              setHasCroppedImage(true)
-              onCrop?.()
-            },
-          })
+        console.log('useWebcam: Waiting for refs to be attached...')
+        return
+      }
 
-          if (mounted) {
-            setIsReady(true)
-            setStatus('Webcam ready')
-            setIsLoading(false)
+      // Initialize webcam with OpenCV card detection
+      try {
+        setIsLoading(true)
+        setStatus('Loading OpenCV…')
+        
+        webcamController.current = await setupWebcam({
+          video: videoRef.current,
+          overlay: overlayRef.current,
+          cropped: croppedRef.current,
+          fullRes: fullResRef.current,
+          onCrop: () => {
+            setHasCroppedImage(true)
+            onCrop?.()
+          },
+        })
 
-            // Auto-start if requested
-            if (autoStart) {
-              await webcamController.current.startVideo(deviceId)
-              await webcamController.current.populateCameraSelect(
-                cameraSelectRef.current,
-              )
-            }
-          }
-        } catch (err) {
-          console.error('Webcam initialization error:', err)
-          if (mounted) {
-            setStatus(
-              `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        if (mounted) {
+          setIsReady(true)
+          setStatus('Webcam ready')
+          setIsLoading(false)
+
+          // Auto-start if requested
+          if (autoStart) {
+            await webcamController.current.startVideo(deviceId)
+            await webcamController.current.populateCameraSelect(
+              cameraSelectRef.current,
             )
-            setIsLoading(false)
           }
+        }
+      } catch (err) {
+        console.error('Webcam initialization error:', err)
+        if (mounted) {
+          setStatus(
+            `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
+          )
+          setIsLoading(false)
         }
       }
     }
@@ -148,7 +152,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     return () => {
       mounted = false
     }
-  }, [enableCardDetection, autoStart, deviceId, onCrop])
+  }, [enableCardDetection, autoStart, deviceId, onCrop, videoRef, overlayRef, croppedRef, fullResRef])
 
   const startVideo = async (deviceId?: string | null) => {
     if (enableCardDetection) {
