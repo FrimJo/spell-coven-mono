@@ -57,6 +57,7 @@ export function VideoStreamGrid({
     croppedRef,
     fullResRef,
     startVideo,
+    stopVideo,
     getCameras,
     isVideoActive,
   } = useWebcam({
@@ -73,6 +74,8 @@ export function VideoStreamGrid({
     undefined,
   )
   const [cameraPopoverOpen, setCameraPopoverOpen] = useState(false)
+  const [isAudioMuted, setIsAudioMuted] = useState(false)
+  const [hasStartedVideo, setHasStartedVideo] = useState(false)
 
   const [streamStates, setStreamStates] = useState<Record<string, StreamState>>(
     players.reduce(
@@ -93,19 +96,6 @@ export function VideoStreamGrid({
       getCameras().then(setAvailableCameras)
     }
   }, [isVideoActive, getCameras])
-
-  const switchCamera = async () => {
-    if (availableCameras.length <= 1) return
-
-    const nextIndex = (currentCameraIndex + 1) % availableCameras.length
-    const nextCamera = availableCameras[nextIndex]
-
-    if (nextCamera) {
-      await startVideo(nextCamera.deviceId)
-      setCurrentCameraIndex(nextIndex)
-      setCurrentCameraId(nextCamera.deviceId)
-    }
-  }
 
   const selectCamera = async (deviceId: string) => {
     const cameraIndex = availableCameras.findIndex(
@@ -133,6 +123,17 @@ export function VideoStreamGrid({
 
   // Suppress unused warning - function is available for future use
   void toggleVideo
+
+  const toggleLocalAudio = () => {
+    if (localVideoRef.current && localVideoRef.current.srcObject) {
+      const stream = localVideoRef.current.srcObject as MediaStream
+      const audioTracks = stream.getAudioTracks()
+      audioTracks.forEach(track => {
+        track.enabled = !track.enabled
+      })
+      setIsAudioMuted(!isAudioMuted)
+    }
+  }
 
   const toggleAudio = (playerId: string) => {
     // For remote players, just update UI state
@@ -280,7 +281,7 @@ export function VideoStreamGrid({
 
               {/* Audio/Video Status Indicators */}
               <div className="absolute right-3 top-3 z-10 flex gap-2">
-                {!audioEnabled && (
+                {((isLocal && isAudioMuted) || (!isLocal && !audioEnabled)) && (
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/20 backdrop-blur-sm">
                     <MicOff className="h-4 w-4 text-red-400" />
                   </div>
@@ -321,42 +322,46 @@ export function VideoStreamGrid({
                   <Button
                     data-testid="video-toggle-button"
                     size="sm"
-                    variant="outline"
+                    variant={isVideoActive || !hasStartedVideo ? 'outline' : 'destructive'}
                     onClick={async () => {
                       if (!isVideoActive) {
                         await startVideo()
+                        setHasStartedVideo(true)
+                      } else {
+                        stopVideo()
                       }
                     }}
-                    className="h-10 w-10 border-slate-700 p-0 text-white hover:bg-slate-800"
+                    className={`h-10 w-10 p-0 ${
+                      isVideoActive || !hasStartedVideo
+                        ? 'border-slate-700 text-white hover:bg-slate-800'
+                        : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
+                    }`}
                   >
-                    <Video className="h-5 w-5" />
+                    {isVideoActive ? (
+                      <Video className="h-5 w-5" />
+                    ) : (
+                      <VideoOff className="h-5 w-5" />
+                    )}
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
-                    onClick={() => toggleAudio(player.id)}
-                    className="h-10 w-10 border-slate-700 p-0 text-white hover:bg-slate-800"
+                    variant={!isAudioMuted ? 'outline' : 'destructive'}
+                    onClick={toggleLocalAudio}
+                    className={`h-10 w-10 p-0 ${
+                      !isAudioMuted
+                        ? 'border-slate-700 text-white hover:bg-slate-800'
+                        : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
+                    }`}
                     disabled={!isVideoActive}
                   >
-                    <Mic className="h-5 w-5" />
+                    {!isAudioMuted ? (
+                      <Mic className="h-5 w-5" />
+                    ) : (
+                      <MicOff className="h-5 w-5" />
+                    )}
                   </Button>
                   <div className="mx-1 h-6 w-px bg-slate-700" />
-                  {/* Quick camera switch button - cycles through cameras */}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={switchCamera}
-                    className="h-10 w-10 border-white bg-white p-0 text-black hover:bg-gray-100"
-                    disabled={!isVideoActive || availableCameras.length <= 1}
-                    title={
-                      availableCameras.length > 1
-                        ? `Switch to next camera (${availableCameras.length} available)`
-                        : 'No other cameras available'
-                    }
-                  >
-                    <SwitchCamera className="h-5 w-5" />
-                  </Button>
-                  {/* Camera selection popover - choose specific camera */}
+                  {/* Camera selection popover */}
                   <Popover
                     open={cameraPopoverOpen}
                     onOpenChange={setCameraPopoverOpen}
@@ -365,11 +370,15 @@ export function VideoStreamGrid({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-10 w-10 border-slate-700 p-0 text-white hover:bg-slate-800"
+                        className="h-10 w-10 border-white bg-white p-0 text-black hover:bg-gray-100"
                         disabled={!isVideoActive || availableCameras.length <= 1}
-                        title="Select camera from list"
+                        title={
+                          availableCameras.length > 1
+                            ? `Switch camera (${availableCameras.length} available)`
+                            : 'No other cameras available'
+                        }
                       >
-                        <Camera className="h-5 w-5" />
+                        <SwitchCamera className="h-5 w-5" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
