@@ -5,12 +5,10 @@ import viteReact from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 
-export default defineConfig(({ mode }) => {
-  const isProd = mode === 'production'
-
+export default defineConfig(() => {
   return {
     // 🔴 important: include the trailing slash
-    base: isProd ? '/spell-coven-mono/' : '/',
+    base: '/',
     plugins: [
       tanstackRouter({
         routesDirectory: './src/routes',
