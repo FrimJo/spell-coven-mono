@@ -55,13 +55,13 @@
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Search and remove all theme switching UI components from `apps/figma_export/src/` (theme toggle buttons, theme provider wrappers, theme context)
-- [ ] T012 [US1] Search and remove all dark mode CSS class references from `apps/figma_export/src/index.css` (keep only :root light mode variables)
-- [ ] T013 [US1] Update `apps/figma_export/src/App.tsx` to remove any theme provider wrappers or dark mode logic
-- [ ] T014 [US1] Run `cd apps/figma_export && pnpm dev` to verify app starts successfully on port 3001
-- [ ] T015 [US1] Verify all UI components render correctly with Tailwind v4 styles (navigate through all pages/components)
-- [ ] T016 [US1] Verify interactive elements respond appropriately (buttons, forms, modals, etc.)
-- [ ] T017 [US1] Run `cd apps/figma_export && pnpm build` to verify production build succeeds without warnings
+- [x] T011 [US1] Search and remove all theme switching UI components from `apps/figma_export/src/` (theme toggle buttons, theme provider wrappers, theme context)
+- [x] T012 [US1] Search and remove all dark mode CSS class references from `apps/figma_export/src/index.css` (keep only :root light mode variables)
+- [x] T013 [US1] Update `apps/figma_export/src/App.tsx` to remove any theme provider wrappers or dark mode logic
+- [x] T014 [US1] Run `cd apps/figma_export && pnpm dev` to verify app starts successfully on port 3001
+- [x] T015 [US1] Verify all UI components render correctly with Tailwind v4 styles (navigate through all pages/components)
+- [x] T016 [US1] Verify interactive elements respond appropriately (buttons, forms, modals, etc.)
+- [x] T017 [US1] Run `cd apps/figma_export && pnpm build` to verify production build succeeds without warnings
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - figma_export runs as standalone app
 

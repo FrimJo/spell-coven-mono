@@ -3,8 +3,8 @@
 /* Custom theme variables */
 :root {
   --font-size: 16px;
-  --background: #ffffff;
-  --foreground: oklch(0.145 0 0);
+  --background: #020617;
+  --foreground: oklch(0.985 0 0);
   --card: #ffffff;
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
