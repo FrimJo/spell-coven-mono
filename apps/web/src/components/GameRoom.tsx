@@ -20,7 +20,6 @@ import {
 } from '@repo/ui/components/tooltip'
 
 import { CardPreview } from './CardPreview'
-import { CardResultDisplay } from './CardResultDisplay'
 import { PlayerList } from './PlayerList'
 import { TurnTracker } from './TurnTracker'
 import { VideoStreamGrid } from './VideoStreamGrid'
@@ -241,7 +240,6 @@ function GameRoomContent({
               onRemovePlayer={handleRemovePlayer}
             />
             <CardPreview playerName={playerName} onClose={() => {}} />
-            <CardResultDisplay />
           </div>
 
           {/* Main Area - Video Stream Grid */}
@@ -253,7 +251,10 @@ function GameRoomContent({
               enableCardDetection={true}
               detectorType={detectorType}
               onCardCrop={(canvas: HTMLCanvasElement) => {
+                console.log('[GameRoom] onCardCrop called with canvas:', canvas)
+                console.log('[GameRoom] Calling query function...')
                 query(canvas)
+                console.log('[GameRoom] Query function called')
               }}
             />
           </div>
