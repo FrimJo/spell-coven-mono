@@ -25,7 +25,6 @@ declare global {
 
 let detector: any = null
 let detectionInterval: number | null = null
-let loadingStatus: string = ''
 let statusCallback: ((msg: string) => void) | null = null
 let detectedCards: DetectedCard[] = []
 
@@ -63,7 +62,6 @@ let clickHandler: ((evt: MouseEvent) => void) | null = null
  * Set loading status message
  */
 function setStatus(msg: string) {
-  loadingStatus = msg
   console.log(`[DETR] ${msg}`)
   statusCallback?.(msg)
 }
@@ -99,15 +97,6 @@ async function loadDetector(onProgress?: (msg: string) => void): Promise<any> {
     setStatus(`Failed to load detection model: ${errorMsg}`)
     throw err
   }
-}
-
-function orderPoints(pts: Array<{ x: number; y: number }>) {
-  pts.sort((a, b) => a.x - b.x)
-  const leftMost = pts.slice(0, 2)
-  const rightMost = pts.slice(2, 4)
-  leftMost.sort((a, b) => a.y - b.y)
-  rightMost.sort((a, b) => a.y - b.y)
-  return [leftMost[0], rightMost[0], rightMost[1], leftMost[1]]
 }
 
 function drawPolygon(
@@ -276,17 +265,18 @@ function cropCardAt(x: number, y: number) {
       fullResCanvas.height,
     )
   }
+  // Scale polygon points to full resolution
   const scaleX = fullResCanvas.width / overlayEl.width
   const scaleY = fullResCanvas.height / overlayEl.height
   const coords = [
-    card[0].x * scaleX,
-    card[0].y * scaleY,
-    card[1].x * scaleX,
-    card[1].y * scaleY,
-    card[2].x * scaleX,
-    card[2].y * scaleY,
-    card[3].x * scaleX,
-    card[3].y * scaleY,
+    poly[0].x * scaleX,
+    poly[0].y * scaleY,
+    poly[1].x * scaleX,
+    poly[1].y * scaleY,
+    poly[2].x * scaleX,
+    poly[2].y * scaleY,
+    poly[3].x * scaleX,
+    poly[3].y * scaleY,
   ]
   const srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, coords)
   const dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
@@ -347,22 +337,28 @@ export async function setupWebcam(args: {
   cropped: HTMLCanvasElement
   fullRes: HTMLCanvasElement
   onCrop?: () => void
+  onProgress?: (msg: string) => void
 }) {
-  await ensureOpenCVScript()
   videoEl = args.video
   overlayEl = args.overlay
   croppedCanvas = args.cropped
   fullResCanvas = args.fullRes
-  
+
   // Set cropped canvas to MTG card aspect ratio (63:88)
-  // Using 5x scale: 315x440 pixels
-  croppedCanvas.width = 315
-  croppedCanvas.height = 440
+  croppedCanvas.width = CROPPED_CARD_WIDTH
+  croppedCanvas.height = CROPPED_CARD_HEIGHT
+
   overlayCtx = overlayEl.getContext('2d', { willReadFrequently: true })
   fullResCtx = fullResCanvas.getContext('2d', { willReadFrequently: true })
   croppedCtx = croppedCanvas.getContext('2d')
 
-  if (!src) initOpenCVMats()
+  // Load DETR detector
+  try {
+    await loadDetector(args.onProgress)
+  } catch (err) {
+    console.error('[DETR] Failed to load detector:', err)
+    throw err
+  }
 
   // Remove any existing click handler to prevent multiple listeners
   if (clickHandler) {
@@ -425,7 +421,7 @@ export async function setupWebcam(args: {
             void videoEl.play()
             if (!animationStarted) {
               animationStarted = true
-              requestAnimationFrame(detectCards)
+              startDetection()
             }
             resolve()
           }
@@ -463,6 +459,9 @@ export async function setupWebcam(args: {
     },
     getCroppedCanvas() {
       return croppedCanvas
+    },
+    stopDetection() {
+      stopDetection()
     },
   }
 }
