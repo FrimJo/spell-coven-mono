@@ -47,9 +47,6 @@ export interface CardQueryState {
 
   /** Error message (present when status is 'error') */
   error: string | null
-
-  /** Base64 data URL of cropped canvas for debugging */
-  croppedImageBase64: string | null
 }
 
 /**
@@ -235,11 +232,4 @@ export function validateCanvas(
  */
 export function isLowConfidence(score: number): boolean {
   return score < CARD_QUERY_CONSTANTS.LOW_CONFIDENCE_THRESHOLD
-}
-
-/**
- * Converts canvas to base64 data URL for debugging
- */
-export function canvasToBase64(canvas: HTMLCanvasElement): string {
-  return canvas.toDataURL('image/png')
 }
