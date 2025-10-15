@@ -6,6 +6,8 @@ description: Intelligently commit changes in coherent chunks following Conventio
 
 This workflow analyzes your git changes and creates logical, atomic commits that group related changes together. Each commit follows Conventional Commits format and aims to keep the codebase in a working state.
 
+**Priority: SPEED over perfection.** Make quick, reasonable decisions about grouping. Don't overthink it.
+
 ## Execution Steps
 
 ### 1. Check for Changes
@@ -14,25 +16,28 @@ Run `git status --porcelain` to get a machine-readable list of all changed and u
 
 If no changes exist, report "No changes to commit" and exit.
 
-### 2. Analyze Changes
+### 2. Analyze Changes (Quick Pass)
 
-For each modified file, run `git diff <file>` to understand what changed.
+**Speed optimization**: Scan file paths and git diff summaries first. Only read full diffs if grouping is unclear.
 
-For untracked files, read the file to understand its purpose.
+For modified files: Quick `git diff --stat <file>` to see what changed.
+For untracked files: Infer purpose from filename and path (only read if ambiguous).
 
-### 3. Group Related Changes
+### 3. Group Related Changes (Fast Heuristics)
 
-Group changes into logical commits based on these heuristics:
+**Speed first**: Use file paths and simple patterns. When in doubt, group together rather than splitting.
 
-**Grouping Rules:**
-- **New feature files together**: If multiple new files implement the same feature (e.g., component + types + constants), group them
-- **Related modifications**: Changes in multiple files that serve the same purpose (e.g., adding a new prop to a component and updating its usage)
-- **Type definitions with implementations**: Type changes should be committed with the code that uses them
-- **Test files with implementation**: Tests for a feature should be committed with that feature
-- **Documentation with code**: README, spec, or doc changes related to code changes should be grouped
-- **Configuration changes separately**: Package.json, config files, etc. should be separate unless directly related to a feature
-- **Refactoring separately**: Pure refactoring (no behavior change) should be separate from feature work
-- **Bug fixes separately**: Bug fixes should be isolated commits
+**Quick Grouping Rules:**
+- Same directory + related names → same commit
+- New files in same feature → same commit  
+- Modified files with obvious relationship → same commit
+- Docs/specs with matching feature name → same commit
+- Config files → separate commit (unless tiny change with feature)
+- Tests + implementation → same commit (faster)
+
+**When to split:**
+- Only split if changes are clearly unrelated (different features/bugs)
+- Don't overthink dependencies or "perfect" atomicity
 
 **Commit Type Detection:**
 - `feat:` - New features, components, or capabilities
@@ -46,13 +51,14 @@ Group changes into logical commits based on these heuristics:
 - `wip:` - Work in progress (incomplete feature)
 - `revert:` - Reverting previous changes
 
-### 4. Determine Commit Scope
+### 4. Determine Commit Scope (Optional)
 
-For each group, determine the scope (optional but recommended):
-- Component name (e.g., `feat(CardPreview):`)
-- Module name (e.g., `feat(webcam):`)
-- Package name in monorepo (e.g., `feat(web):`)
-- Feature area (e.g., `feat(detection):`)
+**Speed tip**: Scope is optional. Skip if not immediately obvious from file path.
+
+Quick scope detection:
+- Component file → use component name
+- Single module → use module name
+- Multiple files → use feature area or skip scope
 
 ### 5. Create Commits
 
@@ -71,22 +77,17 @@ For each logical group:
    ```
 3. **Execute commit**: Run `git commit -m "<message>"`
 
-**Message Guidelines:**
-- First line: max 72 characters, imperative mood ("add" not "added")
-- Body: explain WHAT and WHY, not HOW
-- Include breaking changes in footer if applicable
-- Reference issue numbers if relevant
+**Message Guidelines (Keep it brief):**
+- First line: max 72 characters, imperative mood
+- Body: 2-5 bullet points max (what changed, why it matters)
+- Skip body if commit is self-explanatory
+- Don't write essays - be concise
 
 ### 6. Handle Partial File Commits
 
-If a file has multiple unrelated changes that should be in different commits:
+**Speed approach**: Skip partial file commits unless explicitly requested by user.
 
-1. Use `git add -p <file>` for interactive staging
-2. Stage only the hunks related to the current commit
-3. Commit that subset
-4. Repeat for remaining changes
-
-**Note**: This requires user interaction, so ask for confirmation before using interactive mode.
+Default: Commit entire file with the most relevant group. Partial commits slow things down.
 
 ### 7. Validation
 
@@ -94,41 +95,31 @@ After creating commits:
 - Run `git log --oneline -n <count>` to show what was committed
 - Report summary of commits created
 
-### 8. Smart Heuristics
+### 8. Smart Heuristics (Simplified)
 
-**Working State Detection:**
-- If changes include both type definitions and implementations, commit types first
-- If changes include both tests and implementation, prefer committing together
-- If changes span multiple layers (UI + logic + types), commit bottom-up (types → logic → UI)
+**Default patterns (fast decisions):**
+- Related files → 1 commit (don't overthink order)
+- Unrelated features → separate commits
+- Everything else → use best judgment, move fast
 
-**Common Patterns:**
-- New component + its usage → 2 commits (component first, integration second)
-- Refactoring + new feature → 2 commits (refactor first, feature second)
-- Bug fix + test → 1 commit (together)
-- Multiple independent features → separate commits
-- WIP incomplete work → single `wip:` commit with clear description
+**Don't worry about:**
+- Perfect working state per commit
+- Exact dependency order
+- Splitting every tiny change
 
-### 9. User Interaction
+### 9. User Interaction (Streamlined)
 
-Before committing, show the user:
+**Speed mode**: Show brief summary and commit immediately unless user says "wait" or "show me first".
+
+Brief format:
 ```
-Found X groups of changes:
-
-1. feat(detection): Add DETR model integration
-   - apps/web/src/lib/detection-constants.ts (new)
-   - apps/web/src/types/card-query.ts (modified)
-   
-2. feat(CardPreview): Add new card preview component
-   - apps/web/src/components/CardPreview.tsx (new)
-   - apps/web/src/components/GameRoom.tsx (modified)
-
-3. docs(spec): Update feature specification
-   - specs/008-replace-opencv-card/spec.md (modified)
-
-Proceed with these commits? (yes/no/edit)
+Committing 3 groups:
+1. feat(detection): Add DETR model integration (2 files)
+2. feat(CardPreview): Add card preview component (2 files)  
+3. docs(spec): Update specification (1 file)
 ```
 
-If user says "edit", ask which commits to modify or skip.
+Then execute commits without waiting for confirmation (user can always undo with git reset).
 
 ### 10. Error Handling
 
@@ -150,8 +141,11 @@ The workflow will:
 
 ## Notes
 
-- This workflow does NOT run validation, tests, or linting
-- It uses common sense to group changes, not strict rules
-- Some commits may be in a broken state (that's acceptable)
-- Focus on logical coherence over perfect working state
-- Prefer smaller, focused commits over large monolithic ones
+**Speed-focused approach:**
+- NO validation, tests, or linting (too slow)
+- Quick pattern matching over deep analysis
+- Commits may be in broken state (that's fine)
+- Good enough > perfect
+- Fast iteration > careful planning
+- 2-3 commits better than 10 tiny ones
+- When in doubt, commit it and move on
