@@ -32,4 +32,7 @@ yarn-error.log*
 .DS_Store
 *.pem
 
-.windsurf/
+# Windsurf - Keep workflows and rules in version control for team sharing
+# Only ignore user-specific cache/state files
+.windsurf/cascade/
+.windsurf/.windsurfstate
