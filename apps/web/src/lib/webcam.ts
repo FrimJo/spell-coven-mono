@@ -3,16 +3,21 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { pipeline } from '@huggingface/transformers'
+import { pipeline, env } from '@huggingface/transformers'
 import type { DetectedCard, DetectionResult, Point } from '@/types/card-query'
 import {
   CONFIDENCE_THRESHOLD,
   DETECTION_INTERVAL_MS,
   DETR_MODEL_ID,
-  isValidCardAspectRatio,
   CROPPED_CARD_WIDTH,
   CROPPED_CARD_HEIGHT,
 } from './detection-constants'
+
+// Suppress ONNX Runtime warnings about node assignments
+// These are expected and don't affect performance
+if (typeof env !== 'undefined' && (env as any).wasm) {
+  (env as any).wasm.numThreads = 1 // Use single thread to reduce warnings
+}
 
 declare global {
   // OpenCV global (legacy - only used for perspective transform)
@@ -27,6 +32,7 @@ let detector: any = null
 let detectionInterval: number | null = null
 let statusCallback: ((msg: string) => void) | null = null
 let detectedCards: DetectedCard[] = []
+let isDetecting = false // Prevent overlapping detections
 
 // ============================================================================
 // Canvas and Video Elements
@@ -67,35 +73,91 @@ function setStatus(msg: string) {
 }
 
 /**
- * Load DETR detection model
+ * Check GPU availability
+ */
+async function checkGPUSupport(): Promise<string> {
+  // Check WebGPU support
+  if ('gpu' in navigator) {
+    try {
+      const adapter = await (navigator as any).gpu.requestAdapter()
+      if (adapter) {
+        return 'webgpu'
+      }
+    } catch {
+      // WebGPU not available
+    }
+  }
+
+  // Check WebGL support
+  const canvas = document.createElement('canvas')
+  const gl = canvas.getContext('webgl2') || canvas.getContext('webgl')
+  if (gl) {
+    return 'webgl'
+  }
+
+  return 'cpu'
+}
+
+// Track if we're currently loading to prevent duplicate loads
+let isLoadingDetector = false
+
+/**
+ * Load DETR detection model with GPU acceleration
  * @param onProgress Optional callback for progress updates
  * @returns Promise resolving to detector pipeline
  */
 async function loadDetector(onProgress?: (msg: string) => void): Promise<any> {
-  if (detector) return detector
+  // Return existing detector if already loaded
+  if (detector) {
+    console.log('[DETR] Model already loaded, skipping')
+    return detector
+  }
 
+  // Prevent concurrent loading attempts
+  if (isLoadingDetector) {
+    console.log('[DETR] Model loading in progress, waiting...')
+    // Wait for the current load to complete
+    while (isLoadingDetector) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    return detector
+  }
+
+  isLoadingDetector = true
   statusCallback = onProgress || null
-  setStatus('Loading detection model...')
-
+  
   try {
+    // Check GPU support
+    const gpuSupport = await checkGPUSupport()
+    console.log(`[DETR] GPU support detected: ${gpuSupport.toUpperCase()}`)
+    
+    setStatus('Loading detection model...')
+
+    // Try to use GPU acceleration (WebGPU > WebGL > WASM)
+    // Transformers.js will automatically fall back if GPU is unavailable
     detector = await pipeline('object-detection', DETR_MODEL_ID, {
       progress_callback: (progress: any) => {
+        // Only log downloading progress, not every "done" event
         if (progress.status === 'downloading') {
           const percent = Math.round(progress.progress || 0)
           setStatus(`Downloading: ${progress.file} - ${percent}%`)
-        } else if (progress.status === 'done') {
-          setStatus(`Loaded: ${progress.file}`)
         }
       },
+      // Enable GPU acceleration
+      device: 'auto', // Auto-detect best available device (webgpu > wasm)
+      dtype: 'fp32', // Use float32 for better GPU performance
     })
 
     setStatus('Detection ready')
+    console.log('[DETR] Model loaded successfully')
     return detector
   } catch (err) {
     const errorMsg =
       err instanceof Error ? err.message : 'Unknown error loading detector'
     setStatus(`Failed to load detection model: ${errorMsg}`)
     throw err
+  } finally {
+    isLoadingDetector = false
   }
 }
 
@@ -148,13 +210,45 @@ function filterCardDetections(detections: DetectionResult[]): DetectedCard[] {
       // Filter by confidence threshold
       if (det.score < CONFIDENCE_THRESHOLD) return false
 
-      // Calculate aspect ratio
+      // REJECT known non-card objects by label
+      // Note: "book" is accepted as it's what DETR often detects cards as
+      const rejectLabels = ['person', 'face', 'head', 'hand', 'laptop', 'tv', 'monitor', 'keyboard', 'mouse']
+      if (rejectLabels.includes(det.label.toLowerCase())) {
+        return false
+      }
+      
+      // Special handling for cell phone - only accept if portrait orientation
+      if (det.label.toLowerCase() === 'cell phone') {
+        const width = det.box.xmax - det.box.xmin
+        const height = det.box.ymax - det.box.ymin
+        const aspectRatio = width / height
+        // Cell phones held vertically (portrait) might be cards
+        if (aspectRatio > 0.6) {
+          return false
+        }
+      }
+
+      // Calculate dimensions
       const width = det.box.xmax - det.box.xmin
       const height = det.box.ymax - det.box.ymin
       const aspectRatio = width / height
+      const area = width * height
 
-      // Filter by aspect ratio
-      return isValidCardAspectRatio(aspectRatio)
+      // Accept portrait aspect ratios (cards are taller than wide)
+      // MTG cards: 0.716 ±25% = 0.537 to 0.895 (relaxed for perspective)
+      // Lowered to 0.25 to handle cards at extreme angles or far from camera
+      const minAR = 0.25
+      const maxAR = 0.90
+      if (aspectRatio < minAR || aspectRatio > maxAR) {
+        return false
+      }
+
+      // Filter by size - cards should be 2-30% of frame
+      if (area < 0.02 || area > 0.30) {
+        return false
+      }
+
+      return true
     })
     .map((det) => ({
       box: det.box,
@@ -177,15 +271,22 @@ function renderDetections(cards: DetectedCard[]) {
  * Run DETR detection on current video frame
  */
 async function detectCards() {
-  if (!detector) return
+  // Skip if already detecting or detector not ready
+  if (!detector || isDetecting) return
 
-  // Clear overlay and draw current frame
-  overlayCtx!.clearRect(0, 0, overlayEl.width, overlayEl.height)
-  overlayCtx!.drawImage(videoEl, 0, 0, overlayEl.width, overlayEl.height)
+  isDetecting = true
+  const startTime = performance.now()
 
   try {
-    // Run DETR inference
-    const detections: DetectionResult[] = await detector(overlayEl, {
+    // Create a temporary canvas for detection (don't touch the overlay yet)
+    const tempCanvas = document.createElement('canvas')
+    tempCanvas.width = overlayEl.width
+    tempCanvas.height = overlayEl.height
+    const tempCtx = tempCanvas.getContext('2d')!
+    tempCtx.drawImage(videoEl, 0, 0, tempCanvas.width, tempCanvas.height)
+
+    // Run detection on temporary canvas (off main thread rendering)
+    const detections: DetectionResult[] = await detector(tempCanvas, {
       threshold: CONFIDENCE_THRESHOLD,
       percentage: true,
     })
@@ -193,10 +294,21 @@ async function detectCards() {
     // Filter and convert to DetectedCard format
     detectedCards = filterCardDetections(detections)
 
-    // Render bounding boxes
-    renderDetections(detectedCards)
+    // Only update overlay if we have detections (minimize canvas operations)
+    overlayCtx!.clearRect(0, 0, overlayEl.width, overlayEl.height)
+    if (detectedCards.length > 0) {
+      renderDetections(detectedCards)
+    }
+
+    // Log total time (less verbose)
+    const totalTime = performance.now() - startTime
+    if (detectedCards.length > 0) {
+      console.log(`[DETR] ${totalTime.toFixed(0)}ms | ${detectedCards.length} card(s)`)
+    }
   } catch (err) {
     console.error('[DETR] Detection error:', err)
+  } finally {
+    isDetecting = false
   }
 }
 
@@ -216,6 +328,12 @@ function stopDetection() {
     clearInterval(detectionInterval)
     detectionInterval = null
   }
+  // Clear overlay when stopping
+  if (overlayCtx && overlayEl) {
+    overlayCtx.clearRect(0, 0, overlayEl.width, overlayEl.height)
+  }
+  detectedCards = []
+  isDetecting = false
 }
 
 /**
