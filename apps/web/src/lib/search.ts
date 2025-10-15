@@ -4,7 +4,11 @@
 // To update: run the build script in packages/mtg-image-db, then copy the output files here
 
 // Top-level import for transformers (no SSR)
-import { env, pipeline } from '@huggingface/transformers'
+import {
+  env,
+  pipeline,
+  ProgressInfo,
+} from '@huggingface/transformers'
 
 // Version of the embeddings data - configured via environment variable
 const EMBEDDINGS_VERSION = import.meta.env.VITE_EMBEDDINGS_VERSION || 'v1.0'
@@ -38,7 +42,10 @@ export type MetaWithQuantization = {
 
 let meta: CardMeta[] | null = null
 let db: Float32Array | null = null
-let extractor: unknown = null
+// Use any because ImageFeatureExtractionPipeline creates "union type too complex" error
+// Runtime type is ImageFeatureExtractionPipeline from @huggingface/transformers
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let extractor: any = null
 let loadTask: Promise<void> | null = null
 
 function int8ToFloat32(int8Array: Int8Array, scaleFactor = 127) {
@@ -191,12 +198,13 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
     console.log(
       '[model] Loading pipeline from Hugging Face CDN: Xenova/clip-vit-base-patch32',
     )
+    let lastLogTime = 0
     extractor = await pipeline(
       'image-feature-extraction',
       'Xenova/clip-vit-base-patch32',
       {
         dtype: 'fp32', // CLIP requires full precision for accurate embeddings
-        progress_callback: (progress) => {
+        progress_callback: (progress: ProgressInfo) => {
           // Handle different progress types
           let msg = progress.status
           if ('file' in progress) {
@@ -205,7 +213,14 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
           if ('progress' in progress && progress.progress !== undefined) {
             msg += ` ${progress.progress}%`
           }
-          console.log('[model] Progress:', progress)
+
+          // Only log every second
+          const now = Date.now()
+          if (now - lastLogTime >= 1000) {
+            console.log('[model] Progress:', progress)
+            lastLogTime = now
+          }
+
           opts?.onProgress?.(msg.trim())
         },
       },
