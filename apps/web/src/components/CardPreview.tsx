@@ -133,7 +133,7 @@ export function CardPreview({ playerName, onClose }: CardPreviewProps) {
           <div className="flex items-center justify-between px-3 pb-3">
             <p className="text-xs text-slate-400">Selected from table view</p>
             <a
-              href={state.result.card_url}
+              href={state.result.scryfall_uri}
               target="_blank"
               rel="noopener noreferrer"
               className="hover:bg-slate-750 inline-flex items-center gap-1 rounded border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300 transition-colors hover:text-white"
