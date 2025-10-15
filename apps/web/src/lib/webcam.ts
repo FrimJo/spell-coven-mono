@@ -1,56 +1,37 @@
-// Port of prototype webcam + OpenCV logic to TypeScript for React/Vite
-// The OpenCV.js library is loaded dynamically from the official CDN.
+// DETR-based card detection for MTG webcam recognition
+// Uses Transformers.js for browser-native object detection
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-declare global {
-  interface Window {
-    __cvReadyPromise?: Promise<void>
-    __resolveCvReady?: () => void
-  }
-  // OpenCV global injected by opencv.js
+import { pipeline } from '@huggingface/transformers'
+import type { DetectedCard, DetectionResult, Point } from '@/types/card-query'
+import {
+  CONFIDENCE_THRESHOLD,
+  DETECTION_INTERVAL_MS,
+  DETR_MODEL_ID,
+  isValidCardAspectRatio,
+  CROPPED_CARD_WIDTH,
+  CROPPED_CARD_HEIGHT,
+} from './detection-constants'
 
+declare global {
+  // OpenCV global (legacy - only used for perspective transform)
   var cv: any
 }
 
-function ensureOpenCVScript(): Promise<void> {
-  if (window.__cvReadyPromise) return window.__cvReadyPromise
+// ============================================================================
+// DETR Detection State
+// ============================================================================
 
-  window.__cvReadyPromise = new Promise<void>((resolve, reject) => {
-    // OpenCV.js expects this global callback
-    ;(window as any).onOpenCvReady = () => {
-      console.log('OpenCV.js is ready (via callback)')
-      resolve()
-    }
+let detector: any = null
+let detectionInterval: number | null = null
+let loadingStatus: string = ''
+let statusCallback: ((msg: string) => void) | null = null
+let detectedCards: DetectedCard[] = []
 
-    const script = document.createElement('script')
-    script.async = true
-    script.src = 'https://docs.opencv.org/4.x/opencv.js'
-    script.onerror = () => reject(new Error('Failed to load OpenCV.js'))
-
-    // Fallback: poll for cv.Mat to be available if callback doesn't fire
-    script.onload = () => {
-      console.log('OpenCV.js script loaded, waiting for initialization...')
-      const checkReady = () => {
-        if (
-          typeof (window as any).cv !== 'undefined' &&
-          typeof (window as any).cv.Mat !== 'undefined'
-        ) {
-          console.log('OpenCV.js is ready (via polling)')
-          resolve()
-        } else {
-          setTimeout(checkReady, 100)
-        }
-      }
-      // Start polling after a short delay
-      setTimeout(checkReady, 100)
-    }
-
-    document.head.appendChild(script)
-  })
-
-  return window.__cvReadyPromise
-}
+// ============================================================================
+// Canvas and Video Elements
+// ============================================================================
 
 let overlayCtx: CanvasRenderingContext2D | null = null
 let fullResCtx: CanvasRenderingContext2D | null = null
@@ -59,16 +40,66 @@ let videoEl: HTMLVideoElement
 let overlayEl: HTMLCanvasElement
 let fullResCanvas: HTMLCanvasElement
 let croppedCanvas: HTMLCanvasElement
-let detectedCards: Array<Array<{ x: number; y: number }>> = []
-const MIN_CARD_AREA = 4000
-// MTG card dimensions: 63mm x 88mm (2.5" x 3.5")
-const MTG_CARD_ASPECT_RATIO = 63 / 88 // ~0.716 (width/height)
-const ASPECT_RATIO_TOLERANCE = 0.20 // Allow 20% deviation to account for perspective
-let src: any, gray: any, blurred: any, edged: any, contours: any, hierarchy: any
+
+// ============================================================================
+// Legacy OpenCV State (only for perspective transform)
+// ============================================================================
+
 let animationStarted = false
+
+// ============================================================================
+// Media Stream State
+// ============================================================================
+
 let currentStream: MediaStream | null = null
 let currentDeviceId: string | null = null
 let clickHandler: ((evt: MouseEvent) => void) | null = null
+
+// ============================================================================
+// DETR Pipeline Initialization
+// ============================================================================
+
+/**
+ * Set loading status message
+ */
+function setStatus(msg: string) {
+  loadingStatus = msg
+  console.log(`[DETR] ${msg}`)
+  statusCallback?.(msg)
+}
+
+/**
+ * Load DETR detection model
+ * @param onProgress Optional callback for progress updates
+ * @returns Promise resolving to detector pipeline
+ */
+async function loadDetector(onProgress?: (msg: string) => void): Promise<any> {
+  if (detector) return detector
+
+  statusCallback = onProgress || null
+  setStatus('Loading detection model...')
+
+  try {
+    detector = await pipeline('object-detection', DETR_MODEL_ID, {
+      progress_callback: (progress: any) => {
+        if (progress.status === 'downloading') {
+          const percent = Math.round(progress.progress || 0)
+          setStatus(`Downloading: ${progress.file} - ${percent}%`)
+        } else if (progress.status === 'done') {
+          setStatus(`Loaded: ${progress.file}`)
+        }
+      },
+    })
+
+    setStatus('Detection ready')
+    return detector
+  } catch (err) {
+    const errorMsg =
+      err instanceof Error ? err.message : 'Unknown error loading detector'
+    setStatus(`Failed to load detection model: ${errorMsg}`)
+    throw err
+  }
+}
 
 function orderPoints(pts: Array<{ x: number; y: number }>) {
   pts.sort((a, b) => a.x - b.x)
