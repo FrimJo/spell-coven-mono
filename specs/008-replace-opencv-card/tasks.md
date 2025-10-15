@@ -137,16 +137,17 @@
 - [ ] T053 [P] Add comprehensive error handling in apps/web/src/lib/webcam.ts (network errors, WebGL not supported, inference failures)
 - [ ] T054 [P] Add JSDoc comments to public functions in apps/web/src/lib/webcam.ts
 - [ ] T055 [P] Update existing E2E tests in apps/web/tests/e2e/card-identification.spec.ts (verify DETR detection works)
-- [ ] T056 Code cleanup: Remove all OpenCV-related comments and dead code from apps/web/src/lib/webcam.ts
-- [ ] T057 Code cleanup: Remove detector factory abstraction (apps/web/src/lib/detectors/*) - keeping DETR only
-- [ ] T058 Code cleanup: Ensure consistent naming conventions in apps/web/src/lib/webcam.ts
-- [ ] T059 Final type check: Run pnpm check-types from apps/web (must pass)
-- [ ] T060 Final lint: Run pnpm lint from apps/web (must pass)
-- [ ] T061 Final format: Run pnpm format from apps/web (must pass)
-- [ ] T062 Verify all acceptance scenarios from spec.md are met
-- [ ] T063 Measure and document success criteria: 30% accuracy improvement, 50% false positive reduction
-- [ ] T064 Update quickstart.md with any implementation learnings in specs/008-replace-opencv-card/quickstart.md
-- [ ] T065 Update spec.md with final decision log and lessons learned
+- [ ] T056 Code cleanup: Remove all OpenCV-related comments and dead code from apps/web/src/lib/webcam.ts (if any remains)
+- [x] T057 Code cleanup: Ensure DETR is default detector in routes (verified detector='detr' in game.$gameId.tsx)
+- [ ] T058 Code cleanup: Ensure consistent naming conventions across detector implementations
+- [ ] T059 Documentation: Add README to detectors/ explaining adapter pattern and how to add new detectors
+- [ ] T060 Final type check: Run pnpm check-types from apps/web (must pass)
+- [ ] T061 Final lint: Run pnpm lint from apps/web (must pass)
+- [ ] T062 Final format: Run pnpm format from apps/web (must pass)
+- [ ] T063 Verify all acceptance scenarios from spec.md are met
+- [ ] T064 Measure and document success criteria: 30% accuracy improvement, 50% false positive reduction
+- [ ] T065 Update quickstart.md with any implementation learnings in specs/008-replace-opencv-card/quickstart.md
+- [ ] T066 Update spec.md with final decision log and lessons learned
 
 ---
 
@@ -234,13 +235,13 @@ With multiple developers:
 
 ## Task Summary
 
-**Total Tasks**: 65
+**Total Tasks**: 66
 - **Phase 1 (Setup)**: 4 tasks ✅ COMPLETE
 - **Phase 2 (Foundational)**: 4 tasks ✅ COMPLETE (BLOCKING)
 - **Phase 3 (US1 - P1)**: 18 tasks ✅ COMPLETE (MVP) ⭐
 - **Phase 4 (US2 - P2)**: 12 tasks ✅ COMPLETE
 - **Phase 5 (US3 - P3)**: 13 tasks ✅ COMPLETE
-- **Phase 6 (Polish)**: 14 tasks 🔄 IN PROGRESS
+- **Phase 6 (Polish)**: 15 tasks 🔄 IN PROGRESS
 
 **Parallel Opportunities**: 15 tasks marked [P] can run in parallel with others
 
