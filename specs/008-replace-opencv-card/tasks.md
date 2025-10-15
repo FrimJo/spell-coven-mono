@@ -131,18 +131,22 @@
 
 **Purpose**: Improvements that affect multiple user stories and final validation
 
+**Status**: ACTIVE - DETR confirmed as final solution (2025-10-16)
+
 - [ ] T052 [P] Add performance monitoring in apps/web/src/lib/webcam.ts (track inference time, log slow detections >1000ms)
 - [ ] T053 [P] Add comprehensive error handling in apps/web/src/lib/webcam.ts (network errors, WebGL not supported, inference failures)
 - [ ] T054 [P] Add JSDoc comments to public functions in apps/web/src/lib/webcam.ts
 - [ ] T055 [P] Update existing E2E tests in apps/web/tests/e2e/card-identification.spec.ts (verify DETR detection works)
 - [ ] T056 Code cleanup: Remove all OpenCV-related comments and dead code from apps/web/src/lib/webcam.ts
-- [ ] T057 Code cleanup: Ensure consistent naming conventions in apps/web/src/lib/webcam.ts
-- [ ] T058 Final type check: Run pnpm check-types from apps/web (must pass)
-- [ ] T059 Final lint: Run pnpm lint from apps/web (must pass)
-- [ ] T060 Final format: Run pnpm format from apps/web (must pass)
-- [ ] T061 Verify all acceptance scenarios from spec.md are met
-- [ ] T062 Measure and document success criteria: 30% accuracy improvement, 50% false positive reduction
-- [ ] T063 Update quickstart.md with any implementation learnings in specs/008-replace-opencv-card/quickstart.md
+- [ ] T057 Code cleanup: Remove detector factory abstraction (apps/web/src/lib/detectors/*) - keeping DETR only
+- [ ] T058 Code cleanup: Ensure consistent naming conventions in apps/web/src/lib/webcam.ts
+- [ ] T059 Final type check: Run pnpm check-types from apps/web (must pass)
+- [ ] T060 Final lint: Run pnpm lint from apps/web (must pass)
+- [ ] T061 Final format: Run pnpm format from apps/web (must pass)
+- [ ] T062 Verify all acceptance scenarios from spec.md are met
+- [ ] T063 Measure and document success criteria: 30% accuracy improvement, 50% false positive reduction
+- [ ] T064 Update quickstart.md with any implementation learnings in specs/008-replace-opencv-card/quickstart.md
+- [ ] T065 Update spec.md with final decision log and lessons learned
 
 ---
 
@@ -230,13 +234,13 @@ With multiple developers:
 
 ## Task Summary
 
-**Total Tasks**: 63
-- **Phase 1 (Setup)**: 4 tasks
-- **Phase 2 (Foundational)**: 4 tasks (BLOCKING)
-- **Phase 3 (US1 - P1)**: 18 tasks (MVP) ⭐
-- **Phase 4 (US2 - P2)**: 12 tasks
-- **Phase 5 (US3 - P3)**: 13 tasks
-- **Phase 6 (Polish)**: 12 tasks
+**Total Tasks**: 65
+- **Phase 1 (Setup)**: 4 tasks ✅ COMPLETE
+- **Phase 2 (Foundational)**: 4 tasks ✅ COMPLETE (BLOCKING)
+- **Phase 3 (US1 - P1)**: 18 tasks ✅ COMPLETE (MVP) ⭐
+- **Phase 4 (US2 - P2)**: 12 tasks ✅ COMPLETE
+- **Phase 5 (US3 - P3)**: 13 tasks ✅ COMPLETE
+- **Phase 6 (Polish)**: 14 tasks 🔄 IN PROGRESS
 
 **Parallel Opportunities**: 15 tasks marked [P] can run in parallel with others
 

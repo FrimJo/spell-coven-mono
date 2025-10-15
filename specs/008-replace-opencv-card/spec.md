@@ -2,8 +2,17 @@
 
 **Feature Branch**: `008-replace-opencv-card`  
 **Created**: 2025-10-15  
-**Status**: Draft  
+**Updated**: 2025-10-16  
+**Status**: In Progress - DETR Implementation  
 **Input**: User description: "Replace OpenCV card detection with DETR object detection model from Transformers.js"
+
+## Decision Log
+
+### 2025-10-16: DETR Selected as Final Solution
+- **Evaluated**: DETR, OpenCV (legacy), OWL-ViT
+- **Decision**: Continue with DETR
+- **Rationale**: DETR works "good enough" for current needs. Provides reliable card detection with acceptable performance.
+- **Next Steps**: Complete remaining DETR implementation phases (Phase 6: Polish & validation)
 
 ## Clarifications
 
