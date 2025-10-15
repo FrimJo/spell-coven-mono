@@ -1,9 +1,9 @@
 /**
  * Detection constants for DETR-based card detection
- * 
+ *
  * These constants configure the DETR object detection system for
  * MTG card recognition in webcam streams.
- * 
+ *
  * @module detection-constants
  */
 
@@ -44,18 +44,19 @@ export const DETECTION_INTERVAL_MS = 500
 export const MIN_CARD_AREA = 0.01 // 1% of frame
 
 /**
- * Cropped card dimensions (pixels)
- * Output size for perspective-corrected card images
- * These dimensions maintain MTG card aspect ratio for CLIP identification
+ * Cropped card dimensions (pixels) - Must match CLIP model expectations
+ * These dimensions are required by the card identification pipeline
  */
-export const CROPPED_CARD_WIDTH = 315
-export const CROPPED_CARD_HEIGHT = 440
+export const CROPPED_CARD_WIDTH = 446
+export const CROPPED_CARD_HEIGHT = 620
 
 /**
  * Computed aspect ratio range for validation
  */
-export const MIN_ASPECT_RATIO = MTG_CARD_ASPECT_RATIO * (1 - ASPECT_RATIO_TOLERANCE) // 0.573
-export const MAX_ASPECT_RATIO = MTG_CARD_ASPECT_RATIO * (1 + ASPECT_RATIO_TOLERANCE) // 0.859
+export const MIN_ASPECT_RATIO =
+  MTG_CARD_ASPECT_RATIO * (1 - ASPECT_RATIO_TOLERANCE) // 0.573
+export const MAX_ASPECT_RATIO =
+  MTG_CARD_ASPECT_RATIO * (1 + ASPECT_RATIO_TOLERANCE) // 0.859
 
 /**
  * Validates if an aspect ratio matches MTG card proportions
