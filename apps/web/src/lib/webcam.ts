@@ -125,97 +125,146 @@ function drawPolygon(
   ctx.stroke()
 }
 
-function initOpenCVMats() {
-  src = new cv.Mat(overlayEl.height, overlayEl.width, cv.CV_8UC4)
-  gray = new cv.Mat()
-  blurred = new cv.Mat()
-  edged = new cv.Mat()
-  contours = new cv.MatVector()
-  hierarchy = new cv.Mat()
+// ============================================================================
+// DETR Detection Functions
+// ============================================================================
+
+/**
+ * Convert bounding box to 4-point polygon for rendering
+ */
+function boundingBoxToPolygon(
+  box: { xmin: number; ymin: number; xmax: number; ymax: number },
+  canvasWidth: number,
+  canvasHeight: number,
+): Point[] {
+  const xmin = box.xmin * canvasWidth
+  const ymin = box.ymin * canvasHeight
+  const xmax = box.xmax * canvasWidth
+  const ymax = box.ymax * canvasHeight
+
+  return [
+    { x: xmin, y: ymin }, // Top-left
+    { x: xmax, y: ymin }, // Top-right
+    { x: xmax, y: ymax }, // Bottom-right
+    { x: xmin, y: ymax }, // Bottom-left
+  ]
 }
 
-function detectCards() {
+/**
+ * Filter DETR detections by confidence and aspect ratio
+ */
+function filterCardDetections(detections: DetectionResult[]): DetectedCard[] {
+  return detections
+    .filter((det) => {
+      // Filter by confidence threshold
+      if (det.score < CONFIDENCE_THRESHOLD) return false
+
+      // Calculate aspect ratio
+      const width = det.box.xmax - det.box.xmin
+      const height = det.box.ymax - det.box.ymin
+      const aspectRatio = width / height
+
+      // Filter by aspect ratio
+      return isValidCardAspectRatio(aspectRatio)
+    })
+    .map((det) => ({
+      box: det.box,
+      score: det.score,
+      aspectRatio: (det.box.xmax - det.box.xmin) / (det.box.ymax - det.box.ymin),
+      polygon: boundingBoxToPolygon(det.box, overlayEl.width, overlayEl.height),
+    }))
+}
+
+/**
+ * Render detected cards on overlay canvas
+ */
+function renderDetections(cards: DetectedCard[]) {
+  cards.forEach((card) => {
+    drawPolygon(overlayCtx!, card.polygon)
+  })
+}
+
+/**
+ * Run DETR detection on current video frame
+ */
+async function detectCards() {
+  if (!detector) return
+
+  // Clear overlay and draw current frame
   overlayCtx!.clearRect(0, 0, overlayEl.width, overlayEl.height)
-  detectedCards = []
   overlayCtx!.drawImage(videoEl, 0, 0, overlayEl.width, overlayEl.height)
-  const imageData = overlayCtx!.getImageData(
-    0,
-    0,
-    overlayEl.width,
-    overlayEl.height,
-  )
-  src.data.set(imageData.data)
-  cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY)
-  cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0)
-  cv.Canny(blurred, edged, 75, 200)
-  cv.findContours(
-    edged,
-    contours,
-    hierarchy,
-    cv.RETR_LIST,
-    cv.CHAIN_APPROX_SIMPLE,
-  )
-  for (let i = 0; i < contours.size(); i++) {
-    const contour = contours.get(i)
-    const approx = new cv.Mat()
-    cv.approxPolyDP(contour, approx, 0.02 * cv.arcLength(contour, true), true)
-    if (approx.rows === 4) {
-      const area = cv.contourArea(approx)
-      if (area > MIN_CARD_AREA) {
-        const pts: Array<{ x: number; y: number }> = []
-        for (let j = 0; j < 4; j++) {
-          const p = approx.intPtr(j)
-          pts.push({ x: p[0], y: p[1] })
-        }
-        const ordered = orderPoints(pts)
-        
-        // Validate aspect ratio to filter out non-card shapes
-        const width = Math.hypot(
-          ordered[1].x - ordered[0].x,
-          ordered[1].y - ordered[0].y,
-        )
-        const height = Math.hypot(
-          ordered[3].x - ordered[0].x,
-          ordered[3].y - ordered[0].y,
-        )
-        const aspectRatio = width / height
-        const aspectDiff = Math.abs(aspectRatio - MTG_CARD_ASPECT_RATIO)
-        const isValidAspect = aspectDiff / MTG_CARD_ASPECT_RATIO < ASPECT_RATIO_TOLERANCE
-        
-        if (isValidAspect) {
-          detectedCards.push(ordered)
-          drawPolygon(overlayCtx!, ordered)
-        }
-      }
-    }
-    approx.delete()
-    contour.delete()
+
+  try {
+    // Run DETR inference
+    const detections: DetectionResult[] = await detector(overlayEl, {
+      threshold: CONFIDENCE_THRESHOLD,
+      percentage: true,
+    })
+
+    // Filter and convert to DetectedCard format
+    detectedCards = filterCardDetections(detections)
+
+    // Render bounding boxes
+    renderDetections(detectedCards)
+  } catch (err) {
+    console.error('[DETR] Detection error:', err)
   }
-  requestAnimationFrame(detectCards)
 }
 
+/**
+ * Start detection loop
+ */
+function startDetection() {
+  if (detectionInterval) return
+  detectionInterval = window.setInterval(detectCards, DETECTION_INTERVAL_MS)
+}
+
+/**
+ * Stop detection loop
+ */
+function stopDetection() {
+  if (detectionInterval) {
+    clearInterval(detectionInterval)
+    detectionInterval = null
+  }
+}
+
+/**
+ * Crop card at click position
+ * Finds closest detected card and applies perspective transform
+ */
 function cropCardAt(x: number, y: number) {
   if (!detectedCards.length) return false
-  let closestIndex = -1,
-    minDist = Infinity
+
+  // Find closest card to click position
+  let closestIndex = -1
+  let minDist = Infinity
+
   for (let i = 0; i < detectedCards.length; i++) {
-    const poly = detectedCards[i]
-    let cx = 0,
-      cy = 0
+    const card = detectedCards[i]
+    const poly = card.polygon
+
+    // Calculate center of polygon
+    let cx = 0
+    let cy = 0
     for (const p of poly) {
       cx += p.x
       cy += p.y
     }
     cx /= poly.length
     cy /= poly.length
+
     const d = Math.hypot(cx - x, cy - y)
     if (d < minDist) {
       minDist = d
       closestIndex = i
     }
   }
+
   if (closestIndex === -1) return false
+
   const card = detectedCards[closestIndex]
+  const poly = card.polygon
   if (videoEl.videoWidth && videoEl.videoHeight) {
     fullResCanvas.width = videoEl.videoWidth
     fullResCanvas.height = videoEl.videoHeight
