@@ -1,14 +1,13 @@
 import type { CardQueryState, UseCardQueryReturn } from '@/types/card-query'
 import { useCallback, useRef, useState } from 'react'
 import { embedFromCanvas, top1 } from '@/lib/search'
-import { canvasToBase64, validateCanvas } from '@/types/card-query'
+import { validateCanvas } from '@/types/card-query'
 
 export function useCardQuery(): UseCardQueryReturn {
   const [state, setState] = useState<CardQueryState>({
     status: 'idle',
     result: null,
     error: null,
-    croppedImageBase64: null,
   })
 
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -36,21 +35,25 @@ export function useCardQuery(): UseCardQueryReturn {
           status: 'error',
           result: null,
           error: validation.error || 'Invalid canvas',
-          croppedImageBase64: null,
         })
         return
       }
 
-      // Convert canvas to base64 for debugging
-      const base64 = canvasToBase64(canvas)
-      console.log('Cropped card image:', base64)
+      // Optional: Convert canvas to blob URL for debugging
+      if (import.meta.env.DEV) {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const blobUrl = URL.createObjectURL(blob)
+            console.log('Cropped card image:', blobUrl)
+          }
+        })
+      }
 
       // Set querying state
       setState({
         status: 'querying',
         result: null,
         error: null,
-        croppedImageBase64: base64,
       })
 
       try {
@@ -80,7 +83,6 @@ export function useCardQuery(): UseCardQueryReturn {
           status: 'success',
           result,
           error: null,
-          croppedImageBase64: base64,
         })
       } catch (err) {
         // Only update state if not aborted
@@ -92,7 +94,6 @@ export function useCardQuery(): UseCardQueryReturn {
             status: 'error',
             result: null,
             error: errorMessage,
-            croppedImageBase64: base64,
           })
         }
       } finally {
