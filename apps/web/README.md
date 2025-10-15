@@ -80,6 +80,7 @@ pnpm --filter @repo/web lint          # Lint
 ## Asset Paths
 
 Embeddings are served from `public/data/mtg-embeddings/v1.0/`:
+
 - `meta.json` - Card metadata and quantization info (~27 MB)
 - `embeddings.i8bin` - int8 quantized embeddings (~26 MB)
 

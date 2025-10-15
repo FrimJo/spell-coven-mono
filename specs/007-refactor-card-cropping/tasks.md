@@ -25,7 +25,7 @@ description: "Implementation tasks for card cropping and image database query in
 **Purpose**: Prepare type contracts and shared utilities
 
 - [x] T001 Copy type contracts from specs to source in apps/web/src/types/card-query.ts
-- [ ] T002 [P] Export card-query types from packages/ui for component props
+- [x] T002 [P] Export card-query types from packages/ui for component props
 
 ---
 
@@ -35,12 +35,12 @@ description: "Implementation tasks for card cropping and image database query in
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 [P] Create loading-overlay component in packages/ui/src/components/loading-overlay.tsx using shadcn patterns
-- [ ] T004 [P] Create inline-message component in packages/ui/src/components/inline-message.tsx with variants (error, warning, info)
-- [ ] T005 [P] Create card-result component in packages/ui/src/components/card-result.tsx for displaying query results
-- [ ] T006 Add model initialization logic to GameRoom.tsx with ModelLoadingState management
-- [ ] T007 Integrate loading-overlay in GameRoom.tsx to block interaction during model load
-- [ ] T008 Initialize embeddings and CLIP model in GameRoom useEffect with progress callbacks
+- [x] T003 [P] Create loading-overlay component in packages/ui/src/components/loading-overlay.tsx using shadcn patterns
+- [x] T004 [P] Create inline-message component in packages/ui/src/components/inline-message.tsx with variants (error, warning, info)
+- [x] T005 [P] Create card-result component in packages/ui/src/components/card-result.tsx for displaying query results
+- [x] T006 Add model initialization logic to GameRoom.tsx with ModelLoadingState management
+- [x] T007 Integrate loading-overlay in GameRoom.tsx to block interaction during model load
+- [x] T008 Initialize embeddings and CLIP model in GameRoom useEffect with progress callbacks
 
 **Checkpoint**: Foundation ready - model loads on mount, loading overlay shows progress, UI components available
 
@@ -54,18 +54,18 @@ description: "Implementation tasks for card cropping and image database query in
 
 ### Implementation for User Story 1
 
-- [ ] T009 [P] [US1] Create useCardQuery hook in apps/web/src/hooks/useCardQuery.ts with AbortController for cancellation
-- [ ] T010 [P] [US1] Create CardResultDisplay container component in apps/web/src/components/CardResultDisplay.tsx
-- [ ] T011 [US1] Implement canvas validation logic in useCardQuery (dimensions, non-empty data)
-- [ ] T012 [US1] Implement query function in useCardQuery calling embedFromCanvas and top1 from @/lib/search
-- [ ] T013 [US1] Add query cancellation logic in useCardQuery to handle rapid clicks (FR-011)
-- [ ] T014 [US1] Integrate CardResultDisplay into GameRoom.tsx below PlayerList component
-- [ ] T015 [US1] Modify VideoStreamGrid.tsx onCardCrop callback to pass HTMLCanvasElement to parent
-- [ ] T016 [US1] Wire VideoStreamGrid canvas output to CardResultDisplay query trigger
-- [ ] T017 [US1] Implement success state rendering in CardResultDisplay using card-result component
-- [ ] T018 [US1] Implement error state rendering in CardResultDisplay using inline-message component
-- [ ] T019 [US1] Add inline error message for empty/invalid crops (FR-007)
-- [ ] T020 [US1] Display query results with card name, set, score (3 decimals), image, and Scryfall link (FR-005)
+- [x] T009 [P] [US1] Create useCardQuery hook in apps/web/src/hooks/useCardQuery.ts with AbortController for cancellation
+- [x] T010 [P] [US1] Create CardResultDisplay container component in apps/web/src/components/CardResultDisplay.tsx
+- [x] T011 [US1] Implement canvas validation logic in useCardQuery (dimensions, non-empty data)
+- [x] T012 [US1] Implement query function in useCardQuery calling embedFromCanvas and top1 from @/lib/search
+- [x] T013 [US1] Add query cancellation logic in useCardQuery to handle rapid clicks (FR-011)
+- [x] T014 [US1] Integrate CardResultDisplay into GameRoom.tsx below PlayerList component
+- [x] T015 [US1] Modify VideoStreamGrid.tsx onCardCrop callback to pass HTMLCanvasElement to parent
+- [x] T016 [US1] Wire VideoStreamGrid canvas output to CardResultDisplay query trigger
+- [x] T017 [US1] Implement success state rendering in CardResultDisplay using card-result component
+- [x] T018 [US1] Implement error state rendering in CardResultDisplay using inline-message component
+- [x] T019 [US1] Add inline error message for empty/invalid crops (FR-007)
+- [x] T020 [US1] Display query results with card name, set, score (3 decimals), image, and Scryfall link (FR-005)
 
 **Checkpoint**: User Story 1 complete - players can click cards and see identification results, rapid clicks cancel previous queries
 
@@ -79,9 +79,9 @@ description: "Implementation tasks for card cropping and image database query in
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Add canvas-to-base64 conversion in useCardQuery using canvasToBase64 utility
-- [ ] T022 [US2] Log base64 data URL to console with descriptive label during query execution (FR-006)
-- [ ] T023 [US2] Persist cropped image base64 in CardQueryState for debugging across state transitions
+- [x] T021 [US2] Add canvas-to-base64 conversion in useCardQuery using canvasToBase64 utility
+- [x] T022 [US2] Log base64 data URL to console with descriptive label during query execution (FR-006)
+- [x] T023 [US2] Persist cropped image base64 in CardQueryState for debugging across state transitions
 
 **Checkpoint**: User Story 2 complete - cropped images logged to console, developers can inspect crop quality
 
@@ -95,11 +95,11 @@ description: "Implementation tasks for card cropping and image database query in
 
 ### Implementation for User Story 3
 
-- [ ] T024 [US3] Implement low confidence detection in CardResultDisplay using isLowConfidence utility (threshold 0.70)
-- [ ] T025 [US3] Add low confidence warning to card-result component when score < 0.70
-- [ ] T026 [US3] Display inline warning message suggesting clearer view for low confidence results
-- [ ] T027 [US3] Handle model not ready state with inline message (prevented by loading overlay but defensive)
-- [ ] T028 [US3] Add inline error messages for all edge cases (webcam loss, embedding failure, etc.)
+- [x] T024 [US3] Implement low confidence detection in CardResultDisplay using isLowConfidence utility (threshold 0.70)
+- [x] T025 [US3] Add low confidence warning to card-result component when score < 0.70
+- [x] T026 [US3] Display inline warning message suggesting clearer view for low confidence results
+- [x] T027 [US3] Handle model not ready state with inline message (prevented by loading overlay but defensive)
+- [x] T028 [US3] Add inline error messages for all edge cases (webcam loss, embedding failure, etc.)
 
 **Checkpoint**: All user stories complete - full error handling and user feedback implemented
 
@@ -109,16 +109,16 @@ description: "Implementation tasks for card cropping and image database query in
 
 **Purpose**: Final refinements and consistency checks
 
-- [ ] T029 [P] Verify all components follow existing design system (colors, typography, spacing)
-- [ ] T030 [P] Ensure shadcn component styling matches game room interface
-- [ ] T031 [P] Add TypeScript strict mode compliance checks for all new files
-- [ ] T032 [P] Verify all error messages are user-friendly and actionable
-- [ ] T033 Run type checking with pnpm check-types
-- [ ] T034 Run linting with pnpm lint and fix any issues
-- [ ] T035 Run formatting with pnpm format
-- [ ] T036 Manual testing: Complete all acceptance scenarios from spec.md
-- [ ] T037 Verify quickstart.md instructions are accurate
-- [ ] T038 Update any outdated documentation or comments
+- [x] T029 [P] Verify all components follow existing design system (colors, typography, spacing)
+- [x] T030 [P] Ensure shadcn component styling matches game room interface
+- [x] T031 [P] Add TypeScript strict mode compliance checks for all new files
+- [x] T032 [P] Verify all error messages are user-friendly and actionable
+- [x] T033 Run type checking with pnpm check-types
+- [x] T034 Run linting with pnpm lint and fix any issues
+- [x] T035 Run formatting with pnpm format
+- [x] T036 Manual testing: Complete all acceptance scenarios from spec.md
+- [x] T037 Verify quickstart.md instructions are accurate
+- [x] T038 Update any outdated documentation or comments
 
 ---
 

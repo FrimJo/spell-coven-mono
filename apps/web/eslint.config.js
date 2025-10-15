@@ -1,7 +1,8 @@
-import { config as baseConfig } from '@repo/eslint-config/base'
-import { config as reactConfig } from '@repo/eslint-config/react-internal'
 import pluginQuery from '@tanstack/eslint-plugin-query'
 import reactCompiler from 'eslint-plugin-react-compiler'
+
+import { config as baseConfig } from '@repo/eslint-config/base'
+import { config as reactConfig } from '@repo/eslint-config/react-internal'
 
 /** @type {import('typescript-eslint').Config} */
 export default [
