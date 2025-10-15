@@ -10,6 +10,7 @@
 ### Session 2025-10-15
 
 - Q: What minimum confidence score should the system use to filter DETR detections before applying aspect ratio validation? → A: 0.5 (50%) confidence threshold
+- Q: How frequently should the system run DETR inference on video frames? → A: Every 500ms (2 FPS detection rate)
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -84,7 +85,7 @@ As a user, I want the system to only detect objects that match MTG card proporti
 - **FR-007**: System MUST load the detection model on application initialization with progress feedback
 - **FR-008**: System MUST cache the detection model in browser storage to avoid re-downloading on subsequent visits
 - **FR-009**: System MUST handle model loading failures gracefully with user-friendly error messages
-- **FR-010**: System MUST process video frames continuously for detection without blocking the UI
+- **FR-010**: System MUST process video frames for detection at 500ms intervals (2 FPS) without blocking the UI, while maintaining smooth video overlay rendering
 - **FR-011**: System MUST provide visual feedback when detection is active (e.g., bounding boxes, status indicators)
 - **FR-012**: System MUST work with the existing CLIP-based card identification pipeline without modifications
 
