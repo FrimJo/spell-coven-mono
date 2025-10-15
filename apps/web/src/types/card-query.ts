@@ -233,3 +233,56 @@ export function validateCanvas(
 export function isLowConfidence(score: number): boolean {
   return score < CARD_QUERY_CONSTANTS.LOW_CONFIDENCE_THRESHOLD
 }
+
+// ============================================================================
+// DETR Object Detection Types
+// ============================================================================
+
+/**
+ * Bounding box in normalized coordinates [0.0, 1.0]
+ * Origin: top-left (0, 0)
+ */
+export interface BoundingBox {
+  /** Left edge as percentage of frame width */
+  xmin: number
+  /** Top edge as percentage of frame height */
+  ymin: number
+  /** Right edge as percentage of frame width */
+  xmax: number
+  /** Bottom edge as percentage of frame height */
+  ymax: number
+}
+
+/**
+ * Raw detection result from DETR model
+ */
+export interface DetectionResult {
+  /** Object class label (e.g., "book", "remote", "card") */
+  label: string
+  /** Confidence score [0.0, 1.0] */
+  score: number
+  /** Location in normalized coordinates */
+  box: BoundingBox
+}
+
+/**
+ * 2D point in pixel coordinates
+ */
+export interface Point {
+  x: number
+  y: number
+}
+
+/**
+ * Validated card detection ready for user interaction
+ */
+export interface DetectedCard {
+  /** Bounding box in normalized coordinates */
+  box: BoundingBox
+  /** Confidence score [0.5, 1.0] */
+  score: number
+  /** Computed aspect ratio (width/height) */
+  aspectRatio: number
+  /** 4-point polygon for rendering (TL, TR, BR, BL) */
+  polygon: Point[]
+}
