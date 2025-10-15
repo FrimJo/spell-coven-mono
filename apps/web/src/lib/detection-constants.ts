@@ -25,14 +25,15 @@ export const CONFIDENCE_THRESHOLD = 0.5
 export const MTG_CARD_ASPECT_RATIO = 63 / 88 // ≈ 0.716
 
 /**
- * Tolerance for aspect ratio matching (±20%)
+ * Tolerance for aspect ratio matching (±15%)
  * Allows for perspective distortion when cards are at angles
+ * Tighter tolerance to exclude faces (AR ~0.82)
  */
-export const ASPECT_RATIO_TOLERANCE = 0.2
+export const ASPECT_RATIO_TOLERANCE = 0.15
 
 /**
  * Detection inference interval (milliseconds)
- * DETR runs at 2 FPS (every 500ms) to balance responsiveness and performance
+ * Set to 500ms (2 FPS detection) - video stream runs independently at 30 FPS
  */
 export const DETECTION_INTERVAL_MS = 500
 
