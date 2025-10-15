@@ -18,6 +18,7 @@ import {
   TooltipTrigger,
 } from '@repo/ui/components/tooltip'
 
+import { CardPreview } from './CardPreview'
 import { CardResultDisplay } from './CardResultDisplay'
 import { PlayerList } from './PlayerList'
 import { TurnTracker } from './TurnTracker'
@@ -236,6 +237,7 @@ function GameRoomContent({
               localPlayerName={playerName}
               onRemovePlayer={handleRemovePlayer}
             />
+            <CardPreview playerName={playerName} onClose={() => {}} />
             <CardResultDisplay />
           </div>
 
