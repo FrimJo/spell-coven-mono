@@ -3,20 +3,21 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { pipeline, env } from '@huggingface/transformers'
 import type { DetectedCard, DetectionResult, Point } from '@/types/card-query'
+import { env, pipeline } from '@huggingface/transformers'
+
 import {
   CONFIDENCE_THRESHOLD,
+  CROPPED_CARD_HEIGHT,
+  CROPPED_CARD_WIDTH,
   DETECTION_INTERVAL_MS,
   DETR_MODEL_ID,
-  CROPPED_CARD_WIDTH,
-  CROPPED_CARD_HEIGHT,
 } from './detection-constants'
 
 // Suppress ONNX Runtime warnings about node assignments
 // These are expected and don't affect performance
 if (typeof env !== 'undefined' && (env as any).wasm) {
-  (env as any).wasm.numThreads = 1 // Use single thread to reduce warnings
+  ;(env as any).wasm.numThreads = 1 // Use single thread to reduce warnings
 }
 
 declare global {
@@ -118,19 +119,19 @@ async function loadDetector(onProgress?: (msg: string) => void): Promise<any> {
     console.log('[DETR] Model loading in progress, waiting...')
     // Wait for the current load to complete
     while (isLoadingDetector) {
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise((resolve) => setTimeout(resolve, 100))
     }
     return detector
   }
 
   isLoadingDetector = true
   statusCallback = onProgress || null
-  
+
   try {
     // Check GPU support
     const gpuSupport = await checkGPUSupport()
     console.log(`[DETR] GPU support detected: ${gpuSupport.toUpperCase()}`)
-    
+
     setStatus('Loading detection model...')
 
     // Try to use GPU acceleration (WebGPU > WebGL > WASM)
@@ -212,48 +213,47 @@ function filterCardDetections(detections: DetectionResult[]): DetectedCard[] {
 
       // REJECT known non-card objects by label
       // Note: "book" is accepted as it's what DETR often detects cards as
-      const rejectLabels = ['person', 'face', 'head', 'hand', 'laptop', 'tv', 'monitor', 'keyboard', 'mouse']
+      const rejectLabels = [
+        'person',
+        'face',
+        'head',
+        'hand',
+        'laptop',
+        'tv',
+        'monitor',
+        'keyboard',
+        'mouse',
+      ]
       if (rejectLabels.includes(det.label.toLowerCase())) {
         return false
       }
-      
+
       // Special handling for cell phone - only accept if portrait orientation
       if (det.label.toLowerCase() === 'cell phone') {
-        const width = det.box.xmax - det.box.xmin
-        const height = det.box.ymax - det.box.ymin
-        const aspectRatio = width / height
-        // Cell phones held vertically (portrait) might be cards
-        if (aspectRatio > 0.6) {
-          return false
-        }
+        // const width = det.box.xmax - det.box.xmin
+        // const height = det.box.ymax - det.box.ymin
+        // const aspectRatio = width / height
+        // // Cell phones held vertically (portrait) might be cards
+        // if (width / height > 0.6 || height / width > 0.6) {
+        //   return false
+        // }
+
+        return true
       }
 
-      // Calculate dimensions
-      const width = det.box.xmax - det.box.xmin
-      const height = det.box.ymax - det.box.ymin
-      const aspectRatio = width / height
-      const area = width * height
+      // // Calculate dimensions
+      // const width = det.box.xmax - det.box.xmin
+      // const height = det.box.ymax - det.box.ymin
+      // const aspectRatio = width / height
+      // const area = width * height
 
-      // Accept portrait aspect ratios (cards are taller than wide)
-      // MTG cards: 0.716 ±25% = 0.537 to 0.895 (relaxed for perspective)
-      // Lowered to 0.25 to handle cards at extreme angles or far from camera
-      const minAR = 0.25
-      const maxAR = 0.90
-      if (aspectRatio < minAR || aspectRatio > maxAR) {
-        return false
-      }
-
-      // Filter by size - cards should be 2-30% of frame
-      if (area < 0.02 || area > 0.30) {
-        return false
-      }
-
-      return true
+      return false
     })
     .map((det) => ({
       box: det.box,
       score: det.score,
-      aspectRatio: (det.box.xmax - det.box.xmin) / (det.box.ymax - det.box.ymin),
+      aspectRatio:
+        (det.box.xmax - det.box.xmin) / (det.box.ymax - det.box.ymin),
       polygon: boundingBoxToPolygon(det.box, overlayEl.width, overlayEl.height),
     }))
 }
@@ -303,7 +303,9 @@ async function detectCards() {
     // Log total time (less verbose)
     const totalTime = performance.now() - startTime
     if (detectedCards.length > 0) {
-      console.log(`[DETR] ${totalTime.toFixed(0)}ms | ${detectedCards.length} card(s)`)
+      console.log(
+        `[DETR] ${totalTime.toFixed(0)}ms | ${detectedCards.length} card(s)`,
+      )
     }
   } catch (err) {
     console.error('[DETR] Detection error:', err)
@@ -422,7 +424,7 @@ function cropCardAt(x: number, y: number) {
     M,
     new cv.Size(croppedCanvas.width, croppedCanvas.height),
   )
-  
+
   // Ensure the output is in RGBA format for ImageData
   const rgba = new cv.Mat()
   if (dst.channels() === 3) {
@@ -433,7 +435,7 @@ function cropCardAt(x: number, y: number) {
     // Fallback for unexpected channel count
     cv.cvtColor(dst, rgba, cv.COLOR_GRAY2RGBA)
   }
-  
+
   const imgData = new ImageData(
     new Uint8ClampedArray(rgba.data),
     rgba.cols,
@@ -488,7 +490,7 @@ export async function setupWebcam(args: {
     const rect = overlayEl.getBoundingClientRect()
     const x = evt.clientX - rect.left
     const y = evt.clientY - rect.top
-    
+
     // Use requestAnimationFrame to make this async and prevent blocking Playwright
     // This ensures the click event completes before we process the crop
     requestAnimationFrame(() => {
