@@ -12,6 +12,7 @@ This directory contains versioned MTG card embeddings data used by the image sea
 ## Files
 
 Each version directory contains:
+
 - `meta.json` - Card metadata (names, sets, URLs) and quantization info (~27 MB)
 - `embeddings.i8bin` - Quantized embeddings in int8 format (~26 MB)
 - `build_manifest.json` - Build metadata and statistics
@@ -21,17 +22,20 @@ Each version directory contains:
 When the MTG card database is updated:
 
 1. **Build new embeddings** in `packages/mtg-image-db`:
+
    ```bash
    cd packages/mtg-image-db
    pnpm build  # or: python3 build_mtg_faiss.py --out index_out --cache image_cache
    ```
 
 2. **Create new version directory**:
+
    ```bash
    mkdir -p apps/web/public/data/mtg-embeddings/v1.1
    ```
 
 3. **Copy the required files**:
+
    ```bash
    cp packages/mtg-image-db/index_out/meta.json \
       packages/mtg-image-db/index_out/embeddings.i8bin \
@@ -40,6 +44,7 @@ When the MTG card database is updated:
    ```
 
 4. **Update the version in environment files**:
+
    ```bash
    # Update both .env.development and .env.production
    echo "VITE_EMBEDDINGS_VERSION=v1.1" > apps/web/.env.development
@@ -62,6 +67,7 @@ When the MTG card database is updated:
 ## File Sizes
 
 The files are large (~55 MB total per version) but necessary for the app to function. They are:
+
 - Compressed in git (delta compression)
 - Served as static assets (can be cached by CDN/browser)
 - Only downloaded when users access the search feature
@@ -69,6 +75,7 @@ The files are large (~55 MB total per version) but necessary for the app to func
 ## Old Versions
 
 Keep at least one previous version for rollback capability. Remove older versions when:
+
 - Disk space is a concern
 - The version is >6 months old
 - No production deployments reference it

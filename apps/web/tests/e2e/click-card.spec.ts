@@ -13,7 +13,7 @@ async function waitForOpenCv(page: Page) {
     () => {
       return typeof (window as unknown as { cv?: unknown }).cv !== 'undefined'
     },
-    { timeout: 180_000 }
+    { timeout: 180_000 },
   )
 }
 
@@ -70,10 +70,10 @@ test.describe('Webcam click-and-search (mocked getUserMedia)', () => {
     await mockGetUserMedia(page, videoUrl)
 
     await page.goto(`${baseURL}/game/game-123`)
-    
+
     // Wait for page to load
     await page.waitForTimeout(1000)
-    
+
     await waitForOpenCv(page)
 
     // Click the camera button to start the stream
@@ -85,7 +85,9 @@ test.describe('Webcam click-and-search (mocked getUserMedia)', () => {
     await page.waitForTimeout(3000)
 
     // Get the overlay canvas
-    const overlayCanvas = page.locator('canvas[width="640"][height="480"]').first()
+    const overlayCanvas = page
+      .locator('canvas[width="640"][height="480"]')
+      .first()
     await expect(overlayCanvas).toBeVisible()
 
     // Click on the overlay canvas (should trigger card crop)
