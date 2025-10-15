@@ -61,10 +61,14 @@ let fullResCanvas: HTMLCanvasElement
 let croppedCanvas: HTMLCanvasElement
 let detectedCards: Array<Array<{ x: number; y: number }>> = []
 const MIN_CARD_AREA = 4000
+// MTG card dimensions: 63mm x 88mm (2.5" x 3.5")
+const MTG_CARD_ASPECT_RATIO = 63 / 88 // ~0.716 (width/height)
+const ASPECT_RATIO_TOLERANCE = 0.20 // Allow 20% deviation to account for perspective
 let src: any, gray: any, blurred: any, edged: any, contours: any, hierarchy: any
 let animationStarted = false
 let currentStream: MediaStream | null = null
 let currentDeviceId: string | null = null
+let clickHandler: ((evt: MouseEvent) => void) | null = null
 
 function orderPoints(pts: Array<{ x: number; y: number }>) {
   pts.sort((a, b) => a.x - b.x)
@@ -133,8 +137,24 @@ function detectCards() {
           pts.push({ x: p[0], y: p[1] })
         }
         const ordered = orderPoints(pts)
-        detectedCards.push(ordered)
-        drawPolygon(overlayCtx!, ordered)
+        
+        // Validate aspect ratio to filter out non-card shapes
+        const width = Math.hypot(
+          ordered[1].x - ordered[0].x,
+          ordered[1].y - ordered[0].y,
+        )
+        const height = Math.hypot(
+          ordered[3].x - ordered[0].x,
+          ordered[3].y - ordered[0].y,
+        )
+        const aspectRatio = width / height
+        const aspectDiff = Math.abs(aspectRatio - MTG_CARD_ASPECT_RATIO)
+        const isValidAspect = aspectDiff / MTG_CARD_ASPECT_RATIO < ASPECT_RATIO_TOLERANCE
+        
+        if (isValidAspect) {
+          detectedCards.push(ordered)
+          drawPolygon(overlayCtx!, ordered)
+        }
       }
     }
     approx.delete()
@@ -214,12 +234,25 @@ function cropCardAt(x: number, y: number) {
     M,
     new cv.Size(croppedCanvas.width, croppedCanvas.height),
   )
+  
+  // Ensure the output is in RGBA format for ImageData
+  const rgba = new cv.Mat()
+  if (dst.channels() === 3) {
+    cv.cvtColor(dst, rgba, cv.COLOR_RGB2RGBA)
+  } else if (dst.channels() === 4) {
+    dst.copyTo(rgba)
+  } else {
+    // Fallback for unexpected channel count
+    cv.cvtColor(dst, rgba, cv.COLOR_GRAY2RGBA)
+  }
+  
   const imgData = new ImageData(
-    new Uint8ClampedArray(dst.data),
-    dst.cols,
-    dst.rows,
+    new Uint8ClampedArray(rgba.data),
+    rgba.cols,
+    rgba.rows,
   )
   croppedCtx!.putImageData(imgData, 0, 0)
+  rgba.delete()
   srcTri.delete()
   dstTri.delete()
   M.delete()
@@ -240,19 +273,39 @@ export async function setupWebcam(args: {
   overlayEl = args.overlay
   croppedCanvas = args.cropped
   fullResCanvas = args.fullRes
+  
+  // Set cropped canvas to MTG card aspect ratio (63:88)
+  // Using 5x scale: 315x440 pixels
+  croppedCanvas.width = 315
+  croppedCanvas.height = 440
   overlayCtx = overlayEl.getContext('2d', { willReadFrequently: true })
   fullResCtx = fullResCanvas.getContext('2d', { willReadFrequently: true })
   croppedCtx = croppedCanvas.getContext('2d')
 
   if (!src) initOpenCVMats()
 
-  overlayEl.addEventListener('click', (evt) => {
+  // Remove any existing click handler to prevent multiple listeners
+  if (clickHandler) {
+    overlayEl.removeEventListener('click', clickHandler)
+  }
+
+  // Create new click handler
+  clickHandler = (evt: MouseEvent) => {
     const rect = overlayEl.getBoundingClientRect()
     const x = evt.clientX - rect.left
     const y = evt.clientY - rect.top
-    const ok = cropCardAt(x, y)
-    if (ok && typeof args.onCrop === 'function') args.onCrop()
-  })
+    
+    // Use requestAnimationFrame to make this async and prevent blocking Playwright
+    // This ensures the click event completes before we process the crop
+    requestAnimationFrame(() => {
+      const ok = cropCardAt(x, y)
+      if (ok && typeof args.onCrop === 'function') {
+        args.onCrop()
+      }
+    })
+  }
+
+  overlayEl.addEventListener('click', clickHandler)
 
   return {
     async startVideo(deviceId: string | null = null) {
