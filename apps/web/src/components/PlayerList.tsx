@@ -1,3 +1,5 @@
+import { Crown, Heart, UserX } from 'lucide-react'
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,7 +13,6 @@ import {
 } from '@repo/ui/components/alert-dialog'
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
-import { Crown, Heart, UserX } from 'lucide-react'
 
 interface Player {
   id: string

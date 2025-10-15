@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Camera, Play, Plus, Sparkles, Users, Video, Wand2 } from 'lucide-react'
+
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
 import {
@@ -10,7 +12,6 @@ import {
 } from '@repo/ui/components/dialog'
 import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
-import { Camera, Play, Plus, Sparkles, Users, Video, Wand2 } from 'lucide-react'
 
 interface LandingPageProps {
   onCreateGame: (playerName: string) => void

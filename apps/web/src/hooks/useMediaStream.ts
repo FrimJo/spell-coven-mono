@@ -89,12 +89,15 @@ export function useMediaStream(
 
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
       console.log('[useMediaStream] Got media stream:', mediaStream)
-      console.log('[useMediaStream] Video tracks:', mediaStream.getVideoTracks())
+      console.log(
+        '[useMediaStream] Video tracks:',
+        mediaStream.getVideoTracks(),
+      )
 
       if (videoRef.current) {
         console.log('[useMediaStream] Setting srcObject on video element')
         videoRef.current.srcObject = mediaStream
-        
+
         // Wait for metadata to load before playing
         await new Promise<void>((resolve) => {
           if (videoRef.current) {
@@ -104,7 +107,7 @@ export function useMediaStream(
             }
           }
         })
-        
+
         console.log('[useMediaStream] Playing video')
         await videoRef.current.play()
         console.log('[useMediaStream] Video playing')

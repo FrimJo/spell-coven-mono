@@ -1,6 +1,7 @@
+import { Play, RotateCw } from 'lucide-react'
+
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
-import { Play, RotateCw } from 'lucide-react'
 
 interface Player {
   id: string
