@@ -1,3 +1,4 @@
+import type { DetectorType } from '@/lib/detectors'
 import type { ModelLoadingState } from '@/types/card-query'
 import { useEffect, useState } from 'react'
 import {
@@ -29,6 +30,7 @@ interface GameRoomProps {
   playerName: string
   onLeaveGame: () => void
   isLobbyOwner?: boolean
+  detectorType?: DetectorType
 }
 
 interface Player {
@@ -43,6 +45,7 @@ function GameRoomContent({
   playerName,
   onLeaveGame,
   isLobbyOwner = true,
+  detectorType,
 }: GameRoomProps) {
   const { query } = useCardQueryContext()
   const [copied, setCopied] = useState(false)
@@ -248,6 +251,7 @@ function GameRoomContent({
               localPlayerName={playerName}
               onLifeChange={handleLifeChange}
               enableCardDetection={true}
+              detectorType={detectorType}
               onCardCrop={(canvas: HTMLCanvasElement) => {
                 query(canvas)
               }}

@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { DetectorType } from '@/lib/detectors'
 import { setupWebcam } from '@/lib/webcam'
 
 interface UseWebcamOptions {
-  /** Enable OpenCV-based card detection */
+  /** Enable card detection */
   enableCardDetection?: boolean
+  /** Detector type to use (opencv, detr, owl-vit) */
+  detectorType?: DetectorType
   /** Callback when a card is cropped */
   onCrop?: (canvas: HTMLCanvasElement) => void
   /** Auto-start video on mount */
@@ -69,10 +72,19 @@ interface UseWebcamReturn {
 export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
   const {
     enableCardDetection = false,
-    onCrop,
+    detectorType,
+    onCrop: onCropProp,
     autoStart = false,
     deviceId = null,
   } = options
+
+  // Stable callback reference
+  const onCrop = useCallback(
+    (canvas: HTMLCanvasElement) => {
+      onCropProp?.(canvas)
+    },
+    [onCropProp]
+  )
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const overlayRef = useRef<HTMLCanvasElement>(null)
@@ -83,6 +95,13 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
   const webcamController = useRef<Awaited<
     ReturnType<typeof setupWebcam>
   > | null>(null)
+  const isInitialized = useRef(false)
+  const autoStartRef = useRef(autoStart)
+  const deviceIdRef = useRef(deviceId)
+
+  // Update refs when props change
+  autoStartRef.current = autoStart
+  deviceIdRef.current = deviceId
 
   const [isReady, setIsReady] = useState(false)
   const [hasCroppedImage, setHasCroppedImage] = useState(false)
@@ -112,16 +131,24 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
         return
       }
 
-      // Initialize webcam with OpenCV card detection
+      // Skip if already initialized (prevents re-initialization loop)
+      if (isInitialized.current) {
+        console.log('useWebcam: Already initialized, skipping')
+        return
+      }
+      isInitialized.current = true
+
+      // Initialize webcam with card detection
       try {
         setIsLoading(true)
-        setStatus('Loading OpenCV…')
+        setStatus('Loading detector…')
 
         webcamController.current = await setupWebcam({
           video: videoRef.current,
           overlay: overlayRef.current,
           cropped: croppedRef.current,
           fullRes: fullResRef.current,
+          detectorType,
           onCrop: () => {
             setHasCroppedImage(true)
             if (onCrop && croppedRef.current) {
@@ -136,8 +163,8 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
           setIsLoading(false)
 
           // Auto-start if requested
-          if (autoStart) {
-            await webcamController.current.startVideo(deviceId)
+          if (autoStartRef.current) {
+            await webcamController.current.startVideo(deviceIdRef.current)
             await webcamController.current.populateCameraSelect(
               cameraSelectRef.current,
             )
@@ -145,6 +172,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
         }
       } catch (err) {
         console.error('Webcam initialization error:', err)
+        isInitialized.current = false
         if (mounted) {
           setStatus(
             `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
@@ -159,16 +187,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     return () => {
       mounted = false
     }
-  }, [
-    enableCardDetection,
-    autoStart,
-    deviceId,
-    onCrop,
-    videoRef,
-    overlayRef,
-    croppedRef,
-    fullResRef,
-  ])
+  }, [enableCardDetection, detectorType, onCrop])
 
   const startVideo = async (deviceId?: string | null) => {
     if (enableCardDetection) {
