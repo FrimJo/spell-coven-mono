@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useWebcam } from '@/hooks/useWebcam'
 import {
   embedFromCanvas,
   loadEmbeddingsAndMetaFromPackage,
   loadModel,
   top1,
 } from '@/lib/search'
-import { useWebcam } from '@/hooks/useWebcam'
 import { createFileRoute } from '@tanstack/react-router'
 
 type Result = {
@@ -176,7 +176,7 @@ function ScannerPage() {
       <p data-testid="page-description">
         Use your webcam to select a card. The model runs fully in your browser.
       </p>
-      {(spinnerVisible || isLoading) ? (
+      {spinnerVisible || isLoading ? (
         <div
           data-testid="spinner"
           style={{ margin: '0.8rem 0', color: '#555' }}

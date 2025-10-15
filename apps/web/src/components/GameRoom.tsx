@@ -1,5 +1,15 @@
-import { useState } from 'react'
+import type { ModelLoadingState } from '@/types/card-query'
+import { useEffect, useState } from 'react'
+import {
+  CardQueryProvider,
+  useCardQueryContext,
+} from '@/contexts/CardQueryContext'
+import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/search'
+import { ArrowLeft, Check, Copy, Settings, Users } from 'lucide-react'
+import { toast } from 'sonner'
+
 import { Button } from '@repo/ui/components/button'
+import { LoadingOverlay } from '@repo/ui/components/loading-overlay'
 import { Toaster } from '@repo/ui/components/sonner'
 import {
   Tooltip,
@@ -7,9 +17,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@repo/ui/components/tooltip'
-import { ArrowLeft, Check, Copy, Settings, Users } from 'lucide-react'
-import { toast } from 'sonner'
 
+import { CardResultDisplay } from './CardResultDisplay'
 import { PlayerList } from './PlayerList'
 import { TurnTracker } from './TurnTracker'
 import { VideoStreamGrid } from './VideoStreamGrid'
@@ -28,12 +37,13 @@ interface Player {
   isActive: boolean
 }
 
-export function GameRoom({
+function GameRoomContent({
   gameId,
   playerName,
   onLeaveGame,
   isLobbyOwner = true,
 }: GameRoomProps) {
+  const { query } = useCardQueryContext()
   const [copied, setCopied] = useState(false)
   const [players, setPlayers] = useState<Player[]>([
     { id: '1', name: playerName, life: 20, isActive: true },
@@ -41,6 +51,70 @@ export function GameRoom({
     { id: '3', name: 'Jordan', life: 20, isActive: false },
     { id: '4', name: 'Sam', life: 20, isActive: false },
   ])
+  const [modelLoading, setModelLoading] = useState<ModelLoadingState>({
+    isLoading: true,
+    progress: '',
+    isReady: false,
+  })
+
+  // Initialize CLIP model and embeddings on mount
+  useEffect(() => {
+    let mounted = true
+
+    async function initModel() {
+      try {
+        if (!mounted) return
+
+        setModelLoading({
+          isLoading: true,
+          progress: 'Loading embeddings...',
+          isReady: false,
+        })
+
+        await loadEmbeddingsAndMetaFromPackage()
+
+        if (!mounted) return
+
+        setModelLoading({
+          isLoading: true,
+          progress: 'Downloading CLIP model...',
+          isReady: false,
+        })
+
+        await loadModel({
+          onProgress: (msg) => {
+            if (mounted) {
+              setModelLoading((prev) => ({ ...prev, progress: msg }))
+            }
+          },
+        })
+
+        if (!mounted) return
+
+        setModelLoading({
+          isLoading: false,
+          progress: '',
+          isReady: true,
+        })
+      } catch (err) {
+        console.error('Model initialization error:', err)
+        if (mounted) {
+          setModelLoading({
+            isLoading: false,
+            progress: '',
+            isReady: false,
+          })
+          toast.error('Failed to load card recognition model')
+        }
+      }
+    }
+
+    initModel()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const handleCopyGameId = () => {
     navigator.clipboard.writeText(gameId)
@@ -74,6 +148,10 @@ export function GameRoom({
   return (
     <div className="flex h-screen flex-col bg-slate-950">
       <Toaster />
+      <LoadingOverlay
+        isVisible={modelLoading.isLoading}
+        message={modelLoading.progress}
+      />
 
       {/* Header */}
       <header className="flex-shrink-0 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
@@ -158,6 +236,7 @@ export function GameRoom({
               localPlayerName={playerName}
               onRemovePlayer={handleRemovePlayer}
             />
+            <CardResultDisplay />
           </div>
 
           {/* Main Area - Video Stream Grid */}
@@ -167,13 +246,21 @@ export function GameRoom({
               localPlayerName={playerName}
               onLifeChange={handleLifeChange}
               enableCardDetection={true}
-              onCardCrop={() => {
-                console.log('Card detected and cropped!')
+              onCardCrop={(canvas: HTMLCanvasElement) => {
+                query(canvas)
               }}
             />
           </div>
         </div>
       </div>
     </div>
+  )
+}
+
+export function GameRoom(props: GameRoomProps) {
+  return (
+    <CardQueryProvider>
+      <GameRoomContent {...props} />
+    </CardQueryProvider>
   )
 }

@@ -1,6 +1,7 @@
+import { Heart, Minus, Plus } from 'lucide-react'
+
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
-import { Heart, Minus, Plus } from 'lucide-react'
 
 interface Player {
   id: string

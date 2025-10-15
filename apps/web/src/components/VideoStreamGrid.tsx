@@ -35,7 +35,7 @@ interface VideoStreamGridProps {
   /** Enable card detection with green borders and click-to-crop */
   enableCardDetection?: boolean
   /** Callback when a card is cropped */
-  onCardCrop?: () => void
+  onCardCrop?: (canvas: HTMLCanvasElement) => void
 }
 
 interface StreamState {
@@ -128,7 +128,7 @@ export function VideoStreamGrid({
     if (localVideoRef.current && localVideoRef.current.srcObject) {
       const stream = localVideoRef.current.srcObject as MediaStream
       const audioTracks = stream.getAudioTracks()
-      audioTracks.forEach(track => {
+      audioTracks.forEach((track) => {
         track.enabled = !track.enabled
       })
       setIsAudioMuted(!isAudioMuted)
@@ -322,7 +322,11 @@ export function VideoStreamGrid({
                   <Button
                     data-testid="video-toggle-button"
                     size="sm"
-                    variant={isVideoActive || !hasStartedVideo ? 'outline' : 'destructive'}
+                    variant={
+                      isVideoActive || !hasStartedVideo
+                        ? 'outline'
+                        : 'destructive'
+                    }
                     onClick={async () => {
                       if (!isVideoActive) {
                         await startVideo()
@@ -371,7 +375,9 @@ export function VideoStreamGrid({
                         size="sm"
                         variant="outline"
                         className="h-10 w-10 border-white bg-white p-0 text-black hover:bg-gray-100"
-                        disabled={!isVideoActive || availableCameras.length <= 1}
+                        disabled={
+                          !isVideoActive || availableCameras.length <= 1
+                        }
                         title={
                           availableCameras.length > 1
                             ? `Switch camera (${availableCameras.length} available)`

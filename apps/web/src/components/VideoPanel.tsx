@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { Camera, Maximize2, Mic, MicOff, Video, VideoOff } from 'lucide-react'
+
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
-import { Camera, Maximize2, Mic, MicOff, Video, VideoOff } from 'lucide-react'
 
 interface VideoPanelProps {
   playerName: string

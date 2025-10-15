@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { AlertCircle, Camera, CheckCircle2, Scan, X } from 'lucide-react'
+
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
-import { AlertCircle, Camera, CheckCircle2, Scan, X } from 'lucide-react'
 
 interface CardScannerProps {
   onClose: () => void

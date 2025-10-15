@@ -5,7 +5,7 @@ interface UseWebcamOptions {
   /** Enable OpenCV-based card detection */
   enableCardDetection?: boolean
   /** Callback when a card is cropped */
-  onCrop?: () => void
+  onCrop?: (canvas: HTMLCanvasElement) => void
   /** Auto-start video on mount */
   autoStart?: boolean
   /** Preferred camera device ID */
@@ -49,7 +49,7 @@ interface UseWebcamReturn {
 
 /**
  * Hook for managing webcam with optional OpenCV card detection
- * 
+ *
  * @example
  * ```tsx
  * const { videoRef, overlayRef, startVideo, isReady } = useWebcam({
@@ -57,7 +57,7 @@ interface UseWebcamReturn {
  *   autoStart: true,
  *   onCrop: () => console.log('Card cropped!')
  * })
- * 
+ *
  * return (
  *   <div>
  *     <video ref={videoRef} />
@@ -116,7 +116,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
       try {
         setIsLoading(true)
         setStatus('Loading OpenCV…')
-        
+
         webcamController.current = await setupWebcam({
           video: videoRef.current,
           overlay: overlayRef.current,
@@ -124,7 +124,9 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
           fullRes: fullResRef.current,
           onCrop: () => {
             setHasCroppedImage(true)
-            onCrop?.()
+            if (onCrop && croppedRef.current) {
+              onCrop(croppedRef.current)
+            }
           },
         })
 
@@ -157,7 +159,16 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     return () => {
       mounted = false
     }
-  }, [enableCardDetection, autoStart, deviceId, onCrop, videoRef, overlayRef, croppedRef, fullResRef])
+  }, [
+    enableCardDetection,
+    autoStart,
+    deviceId,
+    onCrop,
+    videoRef,
+    overlayRef,
+    croppedRef,
+    fullResRef,
+  ])
 
   const startVideo = async (deviceId?: string | null) => {
     if (enableCardDetection) {
@@ -183,7 +194,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     } else {
       // Simple video start without OpenCV
       if (!videoRef.current) return
-      
+
       try {
         const constraints: MediaStreamConstraints = {
           audio: false,
@@ -221,9 +232,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     return null
   }
 
-  const populateCameraSelect = async (
-    selectEl: HTMLSelectElement | null,
-  ) => {
+  const populateCameraSelect = async (selectEl: HTMLSelectElement | null) => {
     if (webcamController.current) {
       await webcamController.current.populateCameraSelect(selectEl)
     }
@@ -232,7 +241,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
   const stopVideo = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream
-      stream.getTracks().forEach(track => track.stop())
+      stream.getTracks().forEach((track) => track.stop())
       videoRef.current.srcObject = null
       setIsVideoActive(false)
       setStatus('Video stopped')
