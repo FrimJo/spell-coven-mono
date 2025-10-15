@@ -53,6 +53,9 @@ importers:
       '@tanstack/router-plugin':
         specifier: ^1.132.0
         version: 1.132.17(@tanstack/react-router@1.132.17(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(vite@7.1.7(@types/node@22.18.6)(jiti@2.6.0)(lightningcss@1.30.1)(tsx@4.20.6))
+      '@tanstack/zod-adapter':
+        specifier: ^1.133.3
+        version: 1.133.3(@tanstack/react-router@1.132.17(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(zod@4.1.12)
       lucide-react:
         specifier: ^0.487.0
         version: 0.487.0(react@19.1.1)
@@ -74,6 +77,9 @@ importers:
       vite-tsconfig-paths:
         specifier: ^5.1.4
         version: 5.1.4(typescript@5.7.3)(vite@7.1.7(@types/node@22.18.6)(jiti@2.6.0)(lightningcss@1.30.1)(tsx@4.20.6))
+      zod:
+        specifier: ^4.1.12
+        version: 4.1.12
     devDependencies:
       '@ianvs/prettier-plugin-sort-imports':
         specifier: ^4.4.1
@@ -1985,6 +1991,13 @@ packages:
   '@tanstack/virtual-file-routes@1.132.0':
     resolution: {integrity: sha512-d3do4ih9IdLPBVY4Gb8x7Ho7z0oFDLpxoao7uNVkfWtYU7nc3B+rnnVejXIgprmI5gt1hNzyNDJFr8G/W926GA==}
     engines: {node: '>=12'}
+
+  '@tanstack/zod-adapter@1.133.3':
+    resolution: {integrity: sha512-NxR4PGpqfVC22hBLphFQsAIicriVu6zRH+X0VeVmcIvlcL2Bbi+DUC0M8TpRZkF4K0I4mg9xngO5vo8W3W2pJw==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      '@tanstack/react-router': '>=1.43.2'
+      zod: ^3.23.8
 
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
@@ -5014,6 +5027,9 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
+  zod@4.1.12:
+    resolution: {integrity: sha512-JInaHOamG8pt5+Ey8kGmdcAcg3OL9reK8ltczgHTAwNhMys/6ThXHityHxVV2p3fkw/c+MAvBHFVYHFZDmjMCQ==}
+
 snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
@@ -6583,6 +6599,11 @@ snapshots:
   '@tanstack/store@0.7.7': {}
 
   '@tanstack/virtual-file-routes@1.132.0': {}
+
+  '@tanstack/zod-adapter@1.133.3(@tanstack/react-router@1.132.17(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(zod@4.1.12)':
+    dependencies:
+      '@tanstack/react-router': 1.132.17(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      zod: 4.1.12
 
   '@testing-library/dom@10.4.1':
     dependencies:
@@ -9987,3 +10008,5 @@ snapshots:
       zod: 3.25.76
 
   zod@3.25.76: {}
+
+  zod@4.1.12: {}
