@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
 import type { DetectorType } from '@/lib/detectors'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { setupWebcam } from '@/lib/webcam'
 
 interface UseWebcamOptions {
@@ -83,7 +83,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     (canvas: HTMLCanvasElement) => {
       onCropProp?.(canvas)
     },
-    [onCropProp]
+    [onCropProp],
   )
 
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -149,10 +149,12 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
           cropped: croppedRef.current,
           fullRes: fullResRef.current,
           detectorType,
-          onCrop: () => {
+          onCrop: (canvas: HTMLCanvasElement) => {
+            console.log('[useWebcam] onCrop called with canvas:', canvas)
             setHasCroppedImage(true)
-            if (onCrop && croppedRef.current) {
-              onCrop(croppedRef.current)
+            if (onCrop) {
+              console.log('[useWebcam] Forwarding canvas to parent onCrop')
+              onCrop(canvas)
             }
           },
         })
