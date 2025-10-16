@@ -20,6 +20,7 @@ import {
 } from '@repo/ui/components/tooltip'
 
 import { CardPreview } from './CardPreview'
+import { GameRoomLoader } from './GameRoomLoader'
 import { PlayerList } from './PlayerList'
 import { TurnTracker } from './TurnTracker'
 import { VideoStreamGrid } from './VideoStreamGrid'
@@ -59,6 +60,12 @@ function GameRoomContent({
     progress: '',
     isReady: false,
   })
+
+  const [isLoading, setIsLoading] = useState(true)
+
+  const handleLoadingComplete = () => {
+    setIsLoading(false)
+  }
 
   // Initialize CLIP model and embeddings on mount
   useEffect(() => {
@@ -257,6 +264,11 @@ function GameRoomContent({
           </div>
         </div>
       </div>
+
+      {/* Loading Overlay */}
+      {isLoading && (
+        <GameRoomLoader onLoadingComplete={handleLoadingComplete} />
+      )}
     </div>
   )
 }
