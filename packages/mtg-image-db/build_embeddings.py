@@ -66,7 +66,7 @@ def build_embeddings_from_cache(
     cache_dir: Path,
     limit: int = None,
     batch_size: int = 256,
-    target_size: int = 384,
+    target_size: int = 336,
     validate_cache: bool = True,
     hnsw_m: int = 32,
     hnsw_ef_construction: int = 200
@@ -174,7 +174,7 @@ def build_embeddings_from_cache(
     # Load + embed with parallel image loading (M2 Max optimization)
     print(f"Initializing CLIP model...")
     embedder = Embedder()
-    vecs = np.zeros((len(records), 512), dtype="float32")
+    vecs = np.zeros((len(records), 768), dtype="float32")
     good = np.zeros((len(records),), dtype=bool)
     
     # Use multiprocessing for parallel image loading
@@ -319,8 +319,8 @@ def main():
                     help="Limit number of faces (for testing).")
     ap.add_argument("--batch", type=int, default=256, 
                     help="Embedding batch size (default: 256, optimized for M2 Max).")
-    ap.add_argument("--size", type=int, default=384, 
-                    help="Square resize for images before CLIP preprocess.")
+    ap.add_argument("--size", type=int, default=336, 
+                    help="Square resize for images before CLIP preprocess (336px for ViT-L/14@336px).")
     ap.add_argument("--validate-cache", dest="validate_cache", action="store_true", default=True,
                     help="Validate cached images before embedding (default: enabled).")
     ap.add_argument("--no-validate-cache", dest="validate_cache", action="store_false",

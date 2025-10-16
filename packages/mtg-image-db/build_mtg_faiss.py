@@ -43,8 +43,9 @@ def load_bulk(kind: str) -> List[dict]:
 def face_image_urls(card: dict):
     out = []
     def pick_card_image(uris):
-        # PNG > large > normal for best quality and accuracy with blurry inputs
-        return uris.get("png") or uris.get("large") or uris.get("normal") or uris.get("border_crop")
+        # Small (488×680 JPG) is optimal for ViT-L/14@336px - saves ~40GB vs PNG
+        # Falls back to larger sizes if small unavailable
+        return uris.get("small") or uris.get("normal") or uris.get("large") or uris.get("png") or uris.get("border_crop")
 
     if "image_uris" in card:
         card_url = pick_card_image(card["image_uris"])
@@ -119,18 +120,24 @@ def download_image(url: str, cache_dir: Path, retries: int = 3, timeout: int = 2
             time.sleep(0.8 * attempt)
     return None
 
-def load_image_rgb(path: Path, target_size: int = 384) -> Optional[Image.Image]:
+def load_image_rgb(path: Path, target_size: int = 336) -> Optional[Image.Image]:
     try:
         img = Image.open(path).convert("RGB")
-        # Simple square center-crop to be robust to non-uniform borders
+        # Pad to square with black borders to preserve all card information
+        # (card name, mana cost, text box, P/T are important for detection)
         w, h = img.size
-        s = min(w, h)
-        left = (w - s) // 2
-        top = (h - s) // 2
-        img = img.crop((left, top, left + s, top + s))
-        if max(img.size) != target_size:
-            img = img.resize((target_size, target_size), Image.BICUBIC)
-        return img
+        s = max(w, h)
+        
+        # Create black canvas and center the card
+        padded = Image.new("RGB", (s, s), (0, 0, 0))
+        paste_x = (s - w) // 2
+        paste_y = (s - h) // 2
+        padded.paste(img, (paste_x, paste_y))
+        
+        # Resize to target size
+        if s != target_size:
+            padded = padded.resize((target_size, target_size), Image.BICUBIC)
+        return padded
     except (UnidentifiedImageError, OSError):
         return None
 
@@ -144,7 +151,7 @@ class Embedder:
           self.device = "cuda"
         else:
           self.device = "cpu"
-        self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)  # 512-dim
+        self.model, self.preprocess = clip.load("ViT-L/14@336px", device=self.device)  # 768-dim, 336px input
         self.lock = threading.Lock()  # CLIP is thread-safe with a lock for transform
 
     def encode_images(self, pil_images: List[Image.Image]) -> np.ndarray:
@@ -159,13 +166,13 @@ class Embedder:
                     tensors.append(t)
             batch = [t for t in tensors if t is not None]
             if not batch:
-                return np.zeros((0, 512), dtype="float32")
+                return np.zeros((0, 768), dtype="float32")
             x = torch.cat(batch, dim=0).to(self.device)
             z = self.model.encode_image(x)
             z = z / z.norm(dim=-1, keepdim=True)
             arr = z.detach().cpu().numpy().astype("float32")
         # Reinsert blanks for failed images
-        out = np.zeros((len(pil_images), 512), dtype="float32")
+        out = np.zeros((len(pil_images), 768), dtype="float32")
         j = 0
         for i, t in enumerate(tensors):
             if t is None:
@@ -262,7 +269,7 @@ def build_index(
 
     # Load + embed
     embedder = Embedder()
-    vecs = np.zeros((len(records), 512), dtype="float32")
+    vecs = np.zeros((len(records), 768), dtype="float32")
     good = np.zeros((len(records),), dtype=bool)
 
     batch_imgs, batch_idx = [], []
