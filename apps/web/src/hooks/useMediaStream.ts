@@ -75,56 +75,60 @@ export function useMediaStream(
   const [isActive, setIsActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const startStream = useCallback(async (requestedDeviceId?: string | null) => {
-    try {
-      setError(null)
+  const startStream = useCallback(
+    async (requestedDeviceId?: string | null) => {
+      try {
+        setError(null)
 
-      const finalDeviceId = requestedDeviceId ?? deviceId
-      const constraints: MediaStreamConstraints = {
-        audio,
-        video: finalDeviceId
-          ? { ...videoConstraints, deviceId: { exact: finalDeviceId } }
-          : videoConstraints,
-      }
+        const finalDeviceId = requestedDeviceId ?? deviceId
+        const constraints: MediaStreamConstraints = {
+          audio,
+          video: finalDeviceId
+            ? { ...videoConstraints, deviceId: { exact: finalDeviceId } }
+            : videoConstraints,
+        }
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
+        const mediaStream =
+          await navigator.mediaDevices.getUserMedia(constraints)
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream
 
-        // Wait for metadata to load before playing
-        await new Promise<void>((resolve) => {
-          if (videoRef.current) {
-            videoRef.current.onloadedmetadata = () => {
-              resolve()
+          // Wait for metadata to load before playing
+          await new Promise<void>((resolve) => {
+            if (videoRef.current) {
+              videoRef.current.onloadedmetadata = () => {
+                resolve()
+              }
             }
-          }
-        })
+          })
 
-        await videoRef.current.play()
+          await videoRef.current.play()
+        }
+
+        setStream(mediaStream)
+        setIsActive(true)
+
+        // Set initial track states
+        const videoTrack = mediaStream.getVideoTracks()[0]
+        const audioTrack = mediaStream.getAudioTracks()[0]
+
+        if (videoTrack) {
+          setIsVideoEnabled(videoTrack.enabled)
+        }
+        if (audioTrack) {
+          setIsAudioEnabled(audioTrack.enabled)
+        }
+      } catch (err) {
+        console.error('Failed to start media stream:', err)
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to start media stream'
+        setError(errorMessage)
+        setIsActive(false)
       }
-
-      setStream(mediaStream)
-      setIsActive(true)
-
-      // Set initial track states
-      const videoTrack = mediaStream.getVideoTracks()[0]
-      const audioTrack = mediaStream.getAudioTracks()[0]
-
-      if (videoTrack) {
-        setIsVideoEnabled(videoTrack.enabled)
-      }
-      if (audioTrack) {
-        setIsAudioEnabled(audioTrack.enabled)
-      }
-    } catch (err) {
-      console.error('Failed to start media stream:', err)
-      const errorMessage =
-        err instanceof Error ? err.message : 'Failed to start media stream'
-      setError(errorMessage)
-      setIsActive(false)
-    }
-  }, [deviceId, audio, videoConstraints])
+    },
+    [deviceId, audio, videoConstraints],
+  )
 
   const stopStream = useCallback(() => {
     if (stream) {

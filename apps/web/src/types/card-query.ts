@@ -282,7 +282,9 @@ export interface DetectedCard {
   /** Confidence score [0.5, 1.0] */
   score: number
   /** Computed aspect ratio (width/height) */
-  aspectRatio: number
+  aspectRatio?: number
   /** 4-point polygon for rendering (TL, TR, BR, BL) */
   polygon: Point[]
+  /** Warped 384×384 canvas (if perspective correction applied) */
+  warpedCanvas?: HTMLCanvasElement
 }

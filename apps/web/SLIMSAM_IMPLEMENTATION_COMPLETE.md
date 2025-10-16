@@ -7,20 +7,24 @@ Successfully fixed and implemented the SlimSAM detector for MTG card detection u
 ## What Was Fixed
 
 ### 1. **Correct Model ID**
+
 - ❌ Was: `'Xenova/slimsam'` (doesn't exist, 401 errors)
 - ✅ Now: `'Xenova/slimsam-77-uniform'` (public model)
 
 ### 2. **Correct API Usage**
+
 - ❌ Was: `pipeline('image-segmentation', ...)` (unsupported for SAM)
 - ✅ Now: Direct model loading with `SamModel.from_pretrained()` + `AutoProcessor.from_pretrained()`
 
 ### 3. **Removed Fallbacks**
+
 - ✅ No retry logic - fail fast
 - ✅ No fallback models
 - ✅ No automatic switching to DETR
 - ✅ Crash hard if model doesn't work
 
 ### 4. **Implemented Mask-to-Polygon Conversion (T030-T032)**
+
 - ✅ Select best mask by IoU score
 - ✅ Convert binary mask to bounding box
 - ✅ Create polygon from bounding box corners
@@ -29,6 +33,7 @@ Successfully fixed and implemented the SlimSAM detector for MTG card detection u
 ## Implementation Details
 
 ### Model Loading
+
 ```typescript
 this.model = await SamModel.from_pretrained('Xenova/slimsam-77-uniform', {
   progress_callback: progressCallback,
@@ -36,12 +41,16 @@ this.model = await SamModel.from_pretrained('Xenova/slimsam-77-uniform', {
   dtype: 'fp16',
 })
 
-this.processor = await AutoProcessor.from_pretrained('Xenova/slimsam-77-uniform', {
-  progress_callback: progressCallback,
-})
+this.processor = await AutoProcessor.from_pretrained(
+  'Xenova/slimsam-77-uniform',
+  {
+    progress_callback: progressCallback,
+  },
+)
 ```
 
 ### Detection Pipeline
+
 ```typescript
 // 1. Convert canvas to RawImage
 const image = await RawImage.fromCanvas(canvas)
@@ -59,7 +68,7 @@ const outputs = await this.model(inputs)
 const masks = await this.processor.post_process_masks(
   outputs.pred_masks,
   inputs.original_sizes,
-  inputs.reshaped_input_sizes
+  inputs.reshaped_input_sizes,
 )
 
 // 5. Get IoU scores
@@ -67,6 +76,7 @@ const iouScores = outputs.iou_scores
 ```
 
 ### Mask-to-Polygon Conversion
+
 ```typescript
 // Select best mask by IoU score
 let bestMaskIdx = 0
@@ -93,17 +103,20 @@ const polygon: Point[] = [
 ## Current Performance
 
 ### Initialization
+
 - ✅ Model loads successfully
 - ✅ No 401 errors
 - ✅ No "Unsupported model type" errors
 
 ### Detection
+
 - ✅ Generates 3 masks per point (SAM default)
 - ✅ High IoU scores (0.97-0.99)
 - ✅ Mask dimensions: [1, 3, 720, 1280]
 - ⚠️ Inference time: ~1200-3600ms (slow but functional)
 
 ### Output
+
 - ✅ Returns DetectedCard[] with bounding boxes and polygons
 - ✅ Filters by quality (IoU > 0.5)
 - ✅ Selects best mask automatically
@@ -132,6 +145,7 @@ const polygon: Point[] = [
 ## Testing
 
 Verified on `http://localhost:3000/game/game-elymc5m1q`:
+
 - ✅ Model initializes successfully
 - ✅ No console errors (only ONNX warnings which are normal)
 - ✅ Generates masks with high quality scores

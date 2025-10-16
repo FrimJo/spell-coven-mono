@@ -10,6 +10,8 @@ import {
   DETECTION_INTERVAL_MS,
 } from './detection-constants'
 import { createDefaultDetector, createDetector } from './detectors'
+import { calculateSharpness } from './detectors/geometry/sharpness'
+import { FrameBuffer } from './frame-buffer'
 
 // OpenCV removed - using DETR bounding boxes for cropping
 
@@ -22,6 +24,12 @@ let currentDetectorType: DetectorType | undefined = undefined
 let detectionInterval: number | null = null
 let detectedCards: DetectedCard[] = []
 let isDetecting = false // Prevent overlapping detections
+
+// T031: Frame buffer for temporal optimization
+let frameBuffer: FrameBuffer | null = null
+
+// Feature flags
+let enablePerspectiveWarp = true
 
 // ============================================================================
 // Performance Monitoring
@@ -48,11 +56,12 @@ function logPerformanceMetrics() {
   if (performanceMetrics.inferenceTimeMs.length === 0) return
 
   // Performance metrics calculation (for future use)
-  void (performanceMetrics.inferenceTimeMs.reduce((a, b) => a + b, 0) /
-    performanceMetrics.inferenceTimeMs.length)
+  void (
+    performanceMetrics.inferenceTimeMs.reduce((a, b) => a + b, 0) /
+    performanceMetrics.inferenceTimeMs.length
+  )
   void Math.max(...performanceMetrics.inferenceTimeMs)
   void Math.min(...performanceMetrics.inferenceTimeMs)
-
 
   // Reset metrics
   performanceMetrics = {
@@ -238,6 +247,13 @@ async function detectCards() {
     const tempCtx = tempCanvas.getContext('2d')!
     tempCtx.drawImage(videoEl, 0, 0, tempCanvas.width, tempCanvas.height)
 
+    // T032: Calculate sharpness and add to frame buffer
+    if (frameBuffer) {
+      const timestamp = performance.now()
+      const sharpness = await calculateSharpness(tempCanvas)
+      frameBuffer.add(tempCanvas, timestamp, sharpness)
+    }
+
     // Run detection using pluggable detector
     const result = await detector.detect(
       tempCanvas,
@@ -301,6 +317,10 @@ function stopDetection() {
   if (overlayCtx && overlayEl) {
     overlayCtx.clearRect(0, 0, overlayEl.width, overlayEl.height)
   }
+  // T037: Clear frame buffer
+  if (frameBuffer) {
+    frameBuffer.clear()
+  }
   detectedCards = []
   isDetecting = false
 }
@@ -336,13 +356,11 @@ function cropCardFromBoundingBox(box: {
   const cardWidth = (box.xmax - box.xmin) * fullResCanvas.width
   const cardHeight = (box.ymax - box.ymin) * fullResCanvas.height
 
-
   // CRITICAL FIX: Apply square center-crop to match Python preprocessing
   // Python does: s = min(w, h); crop to square; resize to 384×384
   const minDim = Math.min(cardWidth, cardHeight)
   const cropX = x + (cardWidth - minDim) / 2
   const cropY = y + (cardHeight - minDim) / 2
-
 
   // Extract square region from center of card
   const cardImageData = fullResCtx!.getImageData(cropX, cropY, minDim, minDim)
@@ -378,7 +396,7 @@ function cropCardFromBoundingBox(box: {
       console.log('[Webcam] Square extracted region (before resize):', {
         url,
         dimensions: `${minDim}x${minDim}`,
-        blob
+        blob,
       })
     }
   }, 'image/png')
@@ -390,7 +408,7 @@ function cropCardFromBoundingBox(box: {
       console.log('[Webcam] Query image for database (384x384):', {
         url,
         dimensions: `${CROPPED_CARD_WIDTH}x${CROPPED_CARD_HEIGHT}`,
-        blob
+        blob,
       })
     }
   }, 'image/png')
@@ -444,7 +462,66 @@ function cropCardAt(x: number, y: number): boolean {
 
   const card = detectedCards[closestIndex]
 
-  // Use the DETR bounding box to crop
+  // T035: Try to use sharpest frame from buffer if available
+  let sourceCanvas: HTMLCanvasElement | null = null
+  if (frameBuffer && !frameBuffer.isEmpty()) {
+    const clickTime = performance.now()
+    const sharpestFrame = frameBuffer.getSharpest(clickTime)
+
+    if (sharpestFrame) {
+      console.log('[Webcam] Using sharpest frame from buffer:', {
+        sharpness: sharpestFrame.sharpness.toFixed(2),
+        timeDelta: `${sharpestFrame.timestamp - clickTime}ms`,
+      })
+      sourceCanvas = sharpestFrame.canvas
+    }
+  }
+
+  // Fallback to current video frame if no buffer available
+  if (!sourceCanvas) {
+    sourceCanvas = document.createElement('canvas')
+    sourceCanvas.width = fullResCanvas.width
+    sourceCanvas.height = fullResCanvas.height
+    const ctx = sourceCanvas.getContext('2d')!
+    ctx.drawImage(videoEl, 0, 0, sourceCanvas.width, sourceCanvas.height)
+  }
+
+  // T022: Use warped canvas if available (from perspective correction) and enabled
+  if (enablePerspectiveWarp && card.warpedCanvas) {
+    console.log('[Webcam] Using perspective-corrected 384×384 canvas')
+
+    // Copy warped canvas to cropped canvas
+    croppedCanvas.width = CROPPED_CARD_WIDTH
+    croppedCanvas.height = CROPPED_CARD_HEIGHT
+    croppedCtx!.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height)
+    croppedCtx!.drawImage(
+      card.warpedCanvas,
+      0,
+      0,
+      card.warpedCanvas.width,
+      card.warpedCanvas.height,
+      0,
+      0,
+      CROPPED_CARD_WIDTH,
+      CROPPED_CARD_HEIGHT,
+    )
+
+    // Log the warped image
+    croppedCanvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        console.log('[Webcam] Perspective-corrected query image (384×384):', {
+          url,
+          dimensions: `${CROPPED_CARD_WIDTH}×${CROPPED_CARD_HEIGHT}`,
+          blob,
+        })
+      }
+    }, 'image/png')
+
+    return true
+  }
+
+  // Fallback: Use the DETR bounding box to crop from source canvas
   return cropCardFromBoundingBox(card.box)
 }
 
@@ -467,6 +544,8 @@ export async function setupWebcam(args: {
   cropped: HTMLCanvasElement
   fullRes: HTMLCanvasElement
   detectorType?: DetectorType
+  useFrameBuffer?: boolean
+  usePerspectiveWarp?: boolean
   onCrop?: (canvas: HTMLCanvasElement) => void
   onProgress?: (msg: string) => void
 }) {
@@ -482,6 +561,22 @@ export async function setupWebcam(args: {
   overlayCtx = overlayEl.getContext('2d', { willReadFrequently: true })
   fullResCtx = fullResCanvas.getContext('2d', { willReadFrequently: true })
   croppedCtx = croppedCanvas.getContext('2d')
+
+  // T031: Initialize frame buffer for temporal optimization (if enabled)
+  if (args.useFrameBuffer !== false) {
+    frameBuffer = new FrameBuffer({
+      maxFrames: 6,
+      timeWindowMs: 150,
+    })
+    console.log('[Webcam] Frame buffer enabled (6 frames, ±150ms window)')
+  } else {
+    frameBuffer = null
+    console.log('[Webcam] Frame buffer disabled')
+  }
+
+  // Set perspective warp flag
+  enablePerspectiveWarp = args.usePerspectiveWarp !== false
+  console.log(`[Webcam] Perspective warp ${enablePerspectiveWarp ? 'enabled' : 'disabled'}`)
 
   // Initialize detector
   try {
@@ -516,7 +611,6 @@ export async function setupWebcam(args: {
 
   return {
     async startVideo(deviceId: string | null = null) {
-
       if (currentStream) {
         currentStream.getTracks().forEach((t) => t.stop())
         currentStream = null

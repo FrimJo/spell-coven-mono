@@ -3,11 +3,13 @@
 ## Issues Found
 
 ### 1. **Incorrect Model ID** (Primary Issue)
+
 - **Problem**: Using `Xenova/slimsam` which returned 401 Unauthorized errors
 - **Root Cause**: The model ID was incorrect - it doesn't exist or requires authentication
 - **Solution**: Changed to `Xenova/slimsam-77-uniform` which is the correct public model
 
 ### 2. **Wrong API Usage** (Critical Issue)
+
 - **Problem**: Using `pipeline('image-segmentation', ...)` which threw "Unsupported model type: sam"
 - **Root Cause**: SAM models in transformers.js v3.7.5 don't work with the pipeline API
 - **Solution**: Changed to direct model loading using `SamModel.from_pretrained()` and `AutoProcessor.from_pretrained()`
@@ -15,6 +17,7 @@
 ## Changes Made
 
 ### File: `apps/web/src/lib/detectors/factory.ts`
+
 ```typescript
 // Changed from:
 modelId: 'Xenova/slimsam'
@@ -26,15 +29,22 @@ modelId: 'Xenova/slimsam-77-uniform'
 ### File: `apps/web/src/lib/detectors/slimsam-detector.ts`
 
 #### 1. Updated Imports
+
 ```typescript
 // Changed from:
-import { env, pipeline } from '@huggingface/transformers'
-
 // To:
-import { env, SamModel, AutoProcessor, RawImage } from '@huggingface/transformers'
+import {
+  AutoProcessor,
+  env,
+  env,
+  pipeline,
+  RawImage,
+  SamModel,
+} from '@huggingface/transformers'
 ```
 
 #### 2. Changed Model Loading
+
 ```typescript
 // OLD (pipeline API):
 this.segmenter = await pipeline('image-segmentation', modelId, {...})
@@ -45,11 +55,12 @@ this.processor = await AutoProcessor.from_pretrained(modelId, {...})
 ```
 
 #### 3. Updated Detection Method
+
 ```typescript
 // OLD:
 const result = await this.segmenter(canvas, {
   points: [[point.x, point.y]],
-  labels: [1]
+  labels: [1],
 })
 
 // NEW:
@@ -62,6 +73,7 @@ const outputs = await this.model(inputs)
 ```
 
 #### 4. Added Fallback Models
+
 ```typescript
 const FALLBACK_MODELS = [
   'Xenova/slimsam-77-uniform',
@@ -70,15 +82,18 @@ const FALLBACK_MODELS = [
 ```
 
 ### File: `apps/web/src/lib/webcam.ts`
+
 - Added automatic fallback to DETR detector if SlimSAM fails with authentication errors
 - Enhanced error handling with user-friendly messages
 
 ### File: `apps/web/src/hooks/useWebcam.ts`
+
 - Added `onProgress` callback to display detector initialization status to users
 
 ## Result
 
 ✅ **SlimSAM detector now initializes successfully**
+
 - Model loads: `Xenova/slimsam-77-uniform`
 - No more 401 errors
 - No more "Unsupported model type" errors
@@ -94,6 +109,7 @@ const FALLBACK_MODELS = [
 ## Testing
 
 The fix was verified on `http://localhost:3000/game/game-elymc5m1q`:
+
 - ✅ No console errors
 - ✅ SlimSAM loads successfully
 - ✅ Page renders correctly

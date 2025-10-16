@@ -1,32 +1,37 @@
 /**
  * OWL-ViT-based card detector implementation
- * 
+ *
  * Zero-shot object detection using text prompts.
  * Uses Transformers.js for browser-based inference.
- * 
+ *
  * OWL-ViT advantages:
  * - Zero-shot detection with text prompts ("Magic: The Gathering card")
  * - Better at detecting specific object types
  * - Can be fine-tuned with custom prompts
- * 
+ *
  * @module detectors/owl-vit-detector
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { pipeline } from '@huggingface/transformers'
 import type { DetectedCard, Point } from '@/types/card-query'
+import { pipeline } from '@huggingface/transformers'
+
 import type {
   CardDetector,
+  DetectionOutput,
   DetectorConfig,
   DetectorStatus,
-  DetectionOutput,
 } from './types'
 
 /**
  * OWL-ViT detector configuration
  */
-export interface OWLViTConfig extends Omit<DetectorConfig, 'modelId' | 'confidenceThreshold' | 'detectionIntervalMs'> {
+export interface OWLViTConfig
+  extends Omit<
+    DetectorConfig,
+    'modelId' | 'confidenceThreshold' | 'detectionIntervalMs'
+  > {
   /** Text prompts for detection (e.g., ["Magic card", "trading card"]) */
   prompts?: string[]
   /** Model ID to use (default: 'Xenova/owlvit-base-patch32') */
@@ -59,11 +64,7 @@ export class OWLViTDetector implements CardDetector {
   constructor(config: OWLViTConfig = {}) {
     this.config = {
       modelId: 'Xenova/owlvit-base-patch32',
-      prompts: [
-        'Magic: The Gathering card',
-        'trading card',
-        'playing card',
-      ],
+      prompts: ['Magic: The Gathering card', 'trading card', 'playing card'],
       confidenceThreshold: 0.15,
       detectionIntervalMs: 500,
       ...config,
@@ -95,7 +96,7 @@ export class OWLViTDetector implements CardDetector {
               // Progress logging removed
             }
           },
-        }
+        },
       )
 
       this.setStatus('ready', 'OWL-ViT model loaded successfully')
@@ -108,7 +109,7 @@ export class OWLViTDetector implements CardDetector {
   async detect(
     canvas: HTMLCanvasElement,
     canvasWidth: number,
-    canvasHeight: number
+    canvasHeight: number,
   ): Promise<DetectionOutput> {
     if (!this.detector || this.status !== 'ready') {
       throw new Error('OWL-ViT detector not initialized')
@@ -124,7 +125,7 @@ export class OWLViTDetector implements CardDetector {
         {
           threshold: this.config.confidenceThreshold,
           percentage: true, // Return coordinates as percentages
-        }
+        },
       )
 
       // Filter and convert to DetectedCard format
@@ -151,7 +152,7 @@ export class OWLViTDetector implements CardDetector {
   private filterAndConvert(
     detections: OWLViTDetection[],
     canvasWidth: number,
-    canvasHeight: number
+    canvasHeight: number,
   ): DetectedCard[] {
     const cards: DetectedCard[] = []
 

@@ -1,19 +1,20 @@
 /**
  * Card Identification Result Component
- * 
+ *
  * Displays top-1 match from similarity search with card metadata.
  * Shows card name, set, thumbnail, and Scryfall link.
- * 
+ *
  * Implements:
  * - T043: Create CardIdentificationResult component
  * - T044: Display card name, set, thumbnail, Scryfall link
  */
 
-import { ExternalLink, AlertCircle } from 'lucide-react'
-import { Card } from '@repo/ui/components/card'
-import { Button } from '@repo/ui/components/button'
-import { Alert, AlertDescription } from '@repo/ui/components/alert'
 import type { SearchResult } from '@/lib/search/similarity-search'
+import { AlertCircle, ExternalLink } from 'lucide-react'
+
+import { Alert, AlertDescription } from '@repo/ui/components/alert'
+import { Button } from '@repo/ui/components/button'
+import { Card } from '@repo/ui/components/card'
 
 interface CardIdentificationResultProps {
   /** Search result with card metadata and score */
@@ -33,7 +34,7 @@ export function CardIdentificationResult({
   result,
   isLoading = false,
   error = null,
-  onClose
+  onClose,
 }: CardIdentificationResultProps) {
   // Don't render if no result and not loading
   if (!result && !isLoading && !error) {
@@ -47,9 +48,7 @@ export function CardIdentificationResult({
         <div className="flex items-center justify-between border-b border-slate-800 bg-slate-950/50 px-3 py-2">
           <div className="flex items-center gap-2">
             <div className="h-2 w-2 rounded-full bg-purple-400" />
-            <span className="text-sm text-slate-300">
-              Card Identification
-            </span>
+            <span className="text-sm text-slate-300">Card Identification</span>
           </div>
           {onClose && (
             <Button
@@ -58,8 +57,7 @@ export function CardIdentificationResult({
               onClick={onClose}
               className="h-6 w-6 p-0"
             >
-              <span className="sr-only">Close</span>
-              ×
+              <span className="sr-only">Close</span>×
             </Button>
           )}
         </div>
@@ -118,7 +116,7 @@ export function CardIdentificationResult({
                       <div
                         className="h-full bg-purple-400 transition-all"
                         style={{
-                          width: `${Math.max(0, Math.min(100, result.score * 100))}%`
+                          width: `${Math.max(0, Math.min(100, result.score * 100))}%`,
                         }}
                       />
                     </div>
@@ -161,7 +159,8 @@ export function CardIdentificationResult({
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription className="text-xs">
-                    Low confidence match. Try clicking closer to the card center or ensuring better lighting.
+                    Low confidence match. Try clicking closer to the card center
+                    or ensuring better lighting.
                   </AlertDescription>
                 </Alert>
               )}

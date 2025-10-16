@@ -48,11 +48,13 @@ Edge refinement is **enabled by default** and **loads automatically** when you u
 ## 🎯 Expected Results
 
 ### Before (DETR Only)
+
 - ~70-80% card pixels
 - ~20-30% background (table, hand, etc.)
 - May be tilted
 
 ### After (DETR + OpenCV)
+
 - ~95-98% card pixels
 - ~2-5% background (minimal)
 - Perspective corrected
@@ -67,7 +69,7 @@ webcam.setEdgeRefinement(false)
 webcam.setEdgeRefinement(true)
 
 // Check status
-webcam.isEdgeRefinementEnabled()  // true/false
+webcam.isEdgeRefinementEnabled() // true/false
 webcam.isEdgeRefinementAvailable() // true if OpenCV loaded
 ```
 
@@ -95,15 +97,19 @@ webcam.isEdgeRefinementAvailable() // true if OpenCV loaded
 ## 🐛 Troubleshooting
 
 ### No blob URLs in console?
+
 → Check if card detection is enabled
 
 ### Only one blob URL?
+
 → OpenCV didn't load or refinement failed (check console warnings)
 
 ### Low confidence score?
+
 → Card may be bent, tilted, or poorly lit (still usable)
 
 ### "No quadrilateral found" error?
+
 → Automatic fallback to DETR crop (check lighting/positioning)
 
 ## ✨ Summary

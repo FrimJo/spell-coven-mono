@@ -1,9 +1,9 @@
 /**
  * Embeddings configuration
- * 
+ *
  * Provides paths to versioned embedding artifacts.
  * Version is controlled via VITE_EMBEDDINGS_VERSION environment variable.
- * 
+ *
  * @module search/embeddings-config
  */
 

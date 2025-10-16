@@ -7,6 +7,10 @@ interface UseWebcamOptions {
   enableCardDetection?: boolean
   /** Detector type to use (opencv, detr, owl-vit) */
   detectorType?: DetectorType
+  /** Enable frame buffer for temporal optimization */
+  useFrameBuffer?: boolean
+  /** Enable perspective warp for corner refinement */
+  usePerspectiveWarp?: boolean
   /** Callback when a card is cropped */
   onCrop?: (canvas: HTMLCanvasElement) => void
   /** Auto-start video on mount */
@@ -72,6 +76,8 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
   const {
     enableCardDetection = false,
     detectorType,
+    useFrameBuffer = true,
+    usePerspectiveWarp = true,
     onCrop: onCropProp,
     autoStart = false,
     deviceId = null,
@@ -146,6 +152,8 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
           cropped: croppedRef.current,
           fullRes: fullResRef.current,
           detectorType,
+          useFrameBuffer,
+          usePerspectiveWarp,
           onCrop: (canvas: HTMLCanvasElement) => {
             setHasCroppedImage(true)
             if (onCrop) {
@@ -167,11 +175,11 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
           // Auto-start if requested
           if (autoStartRef.current) {
             // In development, use demo video as default if no deviceId specified
-            const defaultDeviceId = 
+            const defaultDeviceId =
               !deviceIdRef.current && import.meta.env.DEV
                 ? 'video-file:/card_demo.webm'
                 : deviceIdRef.current
-            
+
             await webcamController.current.startVideo(defaultDeviceId)
             await webcamController.current.populateCameraSelect(
               cameraSelectRef.current,
@@ -206,11 +214,11 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
       }
       try {
         // In development, use demo video as default if no deviceId specified
-        const finalDeviceId = 
+        const finalDeviceId =
           !deviceId && import.meta.env.DEV
             ? 'video-file:/card_demo.webm'
             : deviceId || null
-        
+
         await webcamController.current.startVideo(finalDeviceId)
         await webcamController.current.populateCameraSelect(
           cameraSelectRef.current,

@@ -19,11 +19,16 @@ import {
 
 import type {
   CardDetector,
+  CardQuad,
   DetectionOutput,
   DetectorConfig,
   DetectorStatus,
 } from './types'
 import { MTG_CARD_ASPECT_RATIO } from '../detection-constants'
+import { loadOpenCV } from '../opencv-loader'
+import { extractQuadFromMask } from './geometry/contours'
+import { warpCardToCanonical } from './geometry/perspective'
+import { validateQuad } from './geometry/validation'
 
 // Suppress ONNX Runtime warnings
 if (
@@ -225,7 +230,7 @@ export class SlimSAMDetector implements CardDetector {
         iouScores: iouScores?.data,
       })
 
-      // T030-T032: Convert masks to card detections
+      // T030-T032: Convert masks to card detections with corner refinement
       const cards: DetectedCard[] = []
 
       // Process each mask (SAM typically returns 3 masks per point)
@@ -250,29 +255,108 @@ export class SlimSAMDetector implements CardDetector {
         if (bestScore > 0.5) {
           const mask = masks[bestMaskIdx]
 
-          // T030: Convert mask to bounding box
-          const boundingBox = this.maskToBoundingBox(mask)
+          // T018-T020: Extract quad from mask using contour detection
+          const quad = await this.extractQuadFromMask(
+            mask,
+            canvasWidth,
+            canvasHeight,
+          )
 
-          if (boundingBox) {
-            // T031: Create polygon from bounding box (4 corners)
-            const polygon: Point[] = [
-              { x: boundingBox.xmin, y: boundingBox.ymin },
-              { x: boundingBox.xmax, y: boundingBox.ymin },
-              { x: boundingBox.xmax, y: boundingBox.ymax },
-              { x: boundingBox.xmin, y: boundingBox.ymax },
-            ]
+          if (quad) {
+            // T019: Validate quad
+            const validation = validateQuad(quad, canvasWidth, canvasHeight)
 
-            // Calculate aspect ratio
-            const width = boundingBox.xmax - boundingBox.xmin
-            const height = boundingBox.ymax - boundingBox.ymin
-            const aspectRatio = height > 0 ? width / height : 0
+            if (validation.valid) {
+              // T020: Apply perspective warp to get canonical 384x384 image
+              const warpedCanvas = await warpCardToCanonical(canvas, quad)
 
-            cards.push({
-              box: boundingBox,
-              polygon,
-              score: bestScore,
-              aspectRatio,
-            })
+              // Convert quad to normalized polygon for DetectedCard
+              const polygon: Point[] = [
+                {
+                  x: quad.topLeft.x / canvasWidth,
+                  y: quad.topLeft.y / canvasHeight,
+                },
+                {
+                  x: quad.topRight.x / canvasWidth,
+                  y: quad.topRight.y / canvasHeight,
+                },
+                {
+                  x: quad.bottomRight.x / canvasWidth,
+                  y: quad.bottomRight.y / canvasHeight,
+                },
+                {
+                  x: quad.bottomLeft.x / canvasWidth,
+                  y: quad.bottomLeft.y / canvasHeight,
+                },
+              ]
+
+              // Create bounding box from quad
+              const xs = polygon.map((p) => p.x)
+              const ys = polygon.map((p) => p.y)
+              const boundingBox = {
+                xmin: Math.min(...xs),
+                ymin: Math.min(...ys),
+                xmax: Math.max(...xs),
+                ymax: Math.max(...ys),
+              }
+
+              cards.push({
+                box: boundingBox,
+                polygon,
+                score: bestScore,
+                aspectRatio: validation.aspectRatio,
+                warpedCanvas, // Store warped canvas for extraction
+              })
+
+              console.log(
+                '[SlimSAMDetector] Successfully extracted and warped card:',
+                {
+                  quad,
+                  aspectRatio: validation.aspectRatio,
+                  warpedSize: `${warpedCanvas.width}x${warpedCanvas.height}`,
+                },
+              )
+            } else {
+              // T023: Handle invalid quad geometry (partial occlusion case)
+              console.warn(
+                '[SlimSAMDetector] Invalid quad geometry:',
+                validation.reason,
+              )
+              // Fall back to bounding box if quad validation fails
+              const boundingBox = this.maskToBoundingBox(mask)
+              if (boundingBox) {
+                const polygon: Point[] = [
+                  { x: boundingBox.xmin, y: boundingBox.ymin },
+                  { x: boundingBox.xmax, y: boundingBox.ymin },
+                  { x: boundingBox.xmax, y: boundingBox.ymax },
+                  { x: boundingBox.xmin, y: boundingBox.ymax },
+                ]
+                cards.push({
+                  box: boundingBox,
+                  polygon,
+                  score: bestScore,
+                })
+              }
+            }
+          } else {
+            // T023: Quad extraction failed, fall back to bounding box
+            console.warn(
+              '[SlimSAMDetector] Quad extraction failed, using bounding box',
+            )
+            const boundingBox = this.maskToBoundingBox(mask)
+            if (boundingBox) {
+              const polygon: Point[] = [
+                { x: boundingBox.xmin, y: boundingBox.ymin },
+                { x: boundingBox.xmax, y: boundingBox.ymin },
+                { x: boundingBox.xmax, y: boundingBox.ymax },
+                { x: boundingBox.xmin, y: boundingBox.ymax },
+              ]
+              cards.push({
+                box: boundingBox,
+                polygon,
+                score: bestScore,
+              })
+            }
           }
         }
       }
@@ -305,6 +389,79 @@ export class SlimSAMDetector implements CardDetector {
     this.processor = null
     this.clickPoint = null
     this.status = 'uninitialized'
+  }
+
+  /**
+   * Extract quad from mask using OpenCV contour detection
+   *
+   * @param mask - SlimSAM output mask
+   * @param canvasWidth - Canvas width for coordinate conversion
+   * @param canvasHeight - Canvas height for coordinate conversion
+   * @returns CardQuad or null if extraction fails
+   */
+  private async extractQuadFromMask(
+    mask: any,
+    canvasWidth: number,
+    canvasHeight: number,
+  ): Promise<CardQuad | null> {
+    try {
+      // Load OpenCV
+      const cv = await loadOpenCV()
+
+      // Convert mask to OpenCV Mat
+      const maskData = mask.data
+      const dims = mask.dims
+
+      if (!maskData || !dims || dims.length < 3) {
+        console.warn(
+          '[SlimSAMDetector] Invalid mask format for quad extraction',
+        )
+        return null
+      }
+
+      const maskHeight = dims[dims.length - 2]
+      const maskWidth = dims[dims.length - 1]
+
+      // Create binary mask (0 or 255)
+      const binaryData = new Uint8Array(maskHeight * maskWidth)
+      for (let i = 0; i < maskData.length; i++) {
+        binaryData[i] = maskData[i] ? 255 : 0
+      }
+
+      // Create OpenCV Mat from binary data
+      const cvMask = new cv.Mat(maskHeight, maskWidth, cv.CV_8UC1)
+      cvMask.data.set(binaryData)
+
+      // Extract quad using contour detection
+      const quad = await extractQuadFromMask(cvMask)
+
+      // Cleanup
+      cvMask.delete()
+
+      if (!quad) {
+        return null
+      }
+
+      // Scale quad from mask coordinates to canvas coordinates
+      const scaleX = canvasWidth / maskWidth
+      const scaleY = canvasHeight / maskHeight
+
+      return {
+        topLeft: { x: quad.topLeft.x * scaleX, y: quad.topLeft.y * scaleY },
+        topRight: { x: quad.topRight.x * scaleX, y: quad.topRight.y * scaleY },
+        bottomRight: {
+          x: quad.bottomRight.x * scaleX,
+          y: quad.bottomRight.y * scaleY,
+        },
+        bottomLeft: {
+          x: quad.bottomLeft.x * scaleX,
+          y: quad.bottomLeft.y * scaleY,
+        },
+      }
+    } catch (error) {
+      console.error('[SlimSAMDetector] Error extracting quad from mask:', error)
+      return null
+    }
   }
 
   /**

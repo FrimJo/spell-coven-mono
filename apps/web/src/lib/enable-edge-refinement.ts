@@ -1,17 +1,17 @@
 /**
  * Helper to enable edge refinement with OpenCV
- * 
+ *
  * Usage:
  * import { enableEdgeRefinement } from '@/lib/enable-edge-refinement'
  * await enableEdgeRefinement()
  */
 
-import { loadOpenCV, isOpenCVLoaded } from './card-edge-refiner'
+import { isOpenCVLoaded, loadOpenCV } from './card-edge-refiner'
 
 /**
  * Enable edge refinement by loading OpenCV
  * Safe to call multiple times (won't reload if already loaded)
- * 
+ *
  * @returns Promise that resolves when OpenCV is ready
  * @throws Error if OpenCV fails to load
  */
@@ -19,7 +19,6 @@ export async function enableEdgeRefinement(): Promise<void> {
   if (isOpenCVLoaded()) {
     return
   }
-
 
   try {
     await loadOpenCV()

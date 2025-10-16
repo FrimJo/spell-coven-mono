@@ -1,8 +1,8 @@
 /**
  * Card detector module exports
- * 
+ *
  * Provides pluggable card detection with support for multiple models.
- * 
+ *
  * @module detectors
  */
 

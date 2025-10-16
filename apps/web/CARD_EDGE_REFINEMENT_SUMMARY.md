@@ -14,11 +14,13 @@ When cropping cards using DETR bounding boxes, the results include extra backgro
 Implemented a two-stage pipeline combining DETR and OpenCV:
 
 ### Stage 1: DETR Detection (Fast)
+
 - Detects cards in real-time video stream
 - Provides approximate bounding boxes
 - Runs continuously at 500ms intervals
 
 ### Stage 2: OpenCV Refinement (Precise)
+
 - Finds exact card edges using computer vision
 - Applies perspective transform for perfect alignment
 - Runs only when user clicks to capture a card
@@ -85,19 +87,21 @@ Perfectly Aligned Card
 ### Enable Edge Refinement
 
 ```typescript
-import { setupWebcam } from './lib/webcam'
 import { loadOpenCV } from './lib/card-edge-refiner'
+import { setupWebcam } from './lib/webcam'
 
 // 1. Load OpenCV (once at startup)
 await loadOpenCV()
 
 // 2. Setup webcam
-const webcam = await setupWebcam({ /* ... */ })
+const webcam = await setupWebcam({
+  /* ... */
+})
 
 // 3. Enable edge refinement
 webcam.setEdgeRefinement(true)
 
-// Now when users click to crop a card, 
+// Now when users click to crop a card,
 // it will automatically apply edge refinement!
 ```
 
@@ -114,16 +118,19 @@ if (webcam.isEdgeRefinementAvailable()) {
 ## Benefits
 
 ### Accuracy
+
 - **Exact card boundaries** instead of approximate boxes
 - **Perspective correction** for tilted cards
 - **Confidence score** to assess quality
 
 ### Performance
+
 - **No impact on detection loop** (only runs on crop)
 - **50-200ms processing time** per card
 - **Graceful fallback** if OpenCV unavailable
 
 ### User Experience
+
 - **Optional feature** - can be toggled on/off
 - **Automatic loading** - OpenCV loads in background
 - **Error handling** - falls back to DETR crops if refinement fails
@@ -131,12 +138,14 @@ if (webcam.isEdgeRefinementAvailable()) {
 ## Technical Details
 
 ### OpenCV.js
+
 - Loaded from CDN: `https://docs.opencv.org/4.10.0/opencv.js`
 - Size: ~8MB (cached after first load)
 - Load time: ~2-3 seconds
 - Memory: ~20-30MB
 
 ### Computer Vision Pipeline
+
 1. **Grayscale Conversion** - Simplify image for edge detection
 2. **Gaussian Blur** - Reduce noise (5×5 kernel)
 3. **Canny Edge Detection** - Find edges (thresholds: 50, 150)
@@ -146,7 +155,9 @@ if (webcam.isEdgeRefinementAvailable()) {
 7. **Perspective Transform** - Straighten and align card
 
 ### Confidence Calculation
+
 Measures how rectangular the detected shape is:
+
 - Compares opposite side lengths
 - Perfect rectangle = 1.0
 - Typical cards = 0.7-0.95
@@ -155,11 +166,13 @@ Measures how rectangular the detected shape is:
 ## Example Results
 
 ### Before (DETR only)
+
 - Rectangular crop with background padding
 - Card may be tilted
 - Extra space around edges
 
 ### After (DETR + OpenCV)
+
 - Exact card boundaries
 - Perfectly aligned (no tilt)
 - Minimal background
@@ -170,12 +183,15 @@ Measures how rectangular the detected shape is:
 ### To Use This Feature
 
 1. **Load OpenCV** at app startup:
+
    ```typescript
    import { loadOpenCV } from './lib/card-edge-refiner'
+
    await loadOpenCV()
    ```
 
 2. **Enable in webcam setup**:
+
    ```typescript
    webcam.setEdgeRefinement(true)
    ```
@@ -216,6 +232,7 @@ OpenCV.js is loaded dynamically from CDN at runtime.
 ## Testing
 
 Run tests:
+
 ```bash
 npm run test
 ```

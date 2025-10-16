@@ -1,12 +1,15 @@
-import { chromium, FullConfig } from '@playwright/test'
-import { resolve, dirname } from 'path'
+import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
+import { chromium, FullConfig } from '@playwright/test'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 // Path to store the browser state with cached model
-const STORAGE_STATE_PATH = resolve(__dirname, '../.playwright-storage/state.json')
+const STORAGE_STATE_PATH = resolve(
+  __dirname,
+  '../.playwright-storage/state.json',
+)
 
 /**
  * Global setup for Playwright tests.
@@ -15,13 +18,13 @@ const STORAGE_STATE_PATH = resolve(__dirname, '../.playwright-storage/state.json
  */
 async function globalSetup(config: FullConfig) {
   console.log('🚀 Starting global setup - initializing model and embeddings...')
-  
+
   const browser = await chromium.launch()
   const context = await browser.newContext({
     permissions: ['camera'],
   })
   const page = await context.newPage()
-  
+
   // Set a longer timeout for model loading operations
   page.setDefaultTimeout(180_000) // 3 minutes
 
@@ -33,18 +36,20 @@ async function globalSetup(config: FullConfig) {
 
     // Wait for the loading overlay to appear (indicates model loading has started)
     console.log('⏳ Waiting for model initialization to start...')
-    await page.waitForSelector('[role="dialog"][aria-label="Loading"]', { 
-      timeout: 10000 
+    await page.waitForSelector('[role="dialog"][aria-label="Loading"]', {
+      timeout: 10000,
     })
 
     // Wait for the loading overlay to disappear (indicates model is fully loaded)
     console.log('🔄 Model loading started, waiting for completion...')
     await page.waitForFunction(
       () => {
-        const overlay = document.querySelector('[role="dialog"][aria-label="Loading"]')
+        const overlay = document.querySelector(
+          '[role="dialog"][aria-label="Loading"]',
+        )
         return overlay === null
       },
-      { timeout: 180_000 } // 3 minutes timeout for model loading
+      { timeout: 180_000 }, // 3 minutes timeout for model loading
     )
 
     // Verify the model is actually ready by checking browser storage
@@ -52,14 +57,17 @@ async function globalSetup(config: FullConfig) {
       // Check if transformers.js has cached the model in IndexedDB
       try {
         const databases = await indexedDB.databases()
-        const hasTransformersCache = databases.some(db => 
-          db.name?.includes('transformers') || db.name?.includes('huggingface')
+        const hasTransformersCache = databases.some(
+          (db) =>
+            db.name?.includes('transformers') ||
+            db.name?.includes('huggingface'),
         )
-        
+
         // Also check if our embeddings are loaded in memory
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const hasEmbeddings = typeof (window as any).loadEmbeddingsAndMetaFromPackage === 'function'
-        
+        const hasEmbeddings =
+          typeof (window as any).loadEmbeddingsAndMetaFromPackage === 'function'
+
         return { hasTransformersCache, hasEmbeddings }
       } catch (e) {
         console.error('Error checking model cache:', e)
@@ -73,7 +81,10 @@ async function globalSetup(config: FullConfig) {
     // Store a flag in localStorage to indicate setup is complete
     await page.evaluate(() => {
       localStorage.setItem('playwright-model-setup-complete', 'true')
-      localStorage.setItem('playwright-model-setup-timestamp', Date.now().toString())
+      localStorage.setItem(
+        'playwright-model-setup-timestamp',
+        Date.now().toString(),
+      )
     })
 
     console.log('💾 Setup completion flag stored in localStorage')
@@ -82,7 +93,6 @@ async function globalSetup(config: FullConfig) {
     // This will be loaded by all tests to reuse the cached model
     await context.storageState({ path: STORAGE_STATE_PATH })
     console.log(`💾 Browser storage state saved to ${STORAGE_STATE_PATH}`)
-
   } catch (error) {
     console.error('❌ Global setup failed:', error)
     throw error

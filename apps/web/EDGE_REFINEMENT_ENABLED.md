@@ -7,6 +7,7 @@ Edge refinement is now **enabled by default** and provides **detailed console lo
 ## Changes Made
 
 ### 1. Edge Refinement Enabled by Default
+
 - `useEdgeRefinement = true` (was `false`)
 - Automatically applies OpenCV edge detection when OpenCV is loaded
 - Graceful fallback to DETR crop if OpenCV not available
@@ -154,6 +155,7 @@ await webcam.startVideo()
 ### How to Compare
 
 1. **Copy first URL** (Bounding Box Crop)
+
    ```
    blob:http://localhost:3000/12345678-1234
    ```
@@ -161,6 +163,7 @@ await webcam.startVideo()
 2. **Open in new tab** - You'll see the DETR crop with background
 
 3. **Copy second URL** (Refined Card)
+
    ```
    blob:http://localhost:3000/87654321-4321
    ```
@@ -172,12 +175,14 @@ await webcam.startVideo()
 ### Expected Differences
 
 **Bounding Box Crop (DETR):**
+
 - Rectangular crop
 - May include background (table, hand, etc.)
 - Card may be tilted
 - ~70-80% card pixels
 
 **Refined Card (OpenCV):**
+
 - Precise card edges
 - Minimal background
 - Perspective corrected

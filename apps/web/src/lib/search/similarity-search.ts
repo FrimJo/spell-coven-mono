@@ -1,15 +1,15 @@
 /**
  * Similarity search module
- * 
+ *
  * Performs dot product similarity search over L2-normalized embeddings.
  * Returns top-1 match with card metadata.
- * 
+ *
  * @module search/similarity-search
  */
 
-import type { EmbeddingDatabase } from './embeddings-loader'
-import type { MetadataFile, CardRecord } from '../validation/contract-validator'
+import type { CardRecord, MetadataFile } from '../validation/contract-validator'
 import type { QueryEmbedding } from './clip-embedder'
+import type { EmbeddingDatabase } from './embeddings-loader'
 
 export interface SearchResult {
   /** Matched card metadata */
@@ -24,10 +24,10 @@ export interface SearchResult {
 
 /**
  * T041: Compute dot product similarity (FR-007)
- * 
+ *
  * For L2-normalized vectors: cosine similarity = dot product
  * No additional normalization needed.
- * 
+ *
  * @param queryVec - Query embedding vector (512-dim)
  * @param dbVec - Database embedding vector (512-dim)
  * @param embeddingDim - Dimension of embeddings (512)
@@ -37,7 +37,7 @@ export function computeSimilarity(
   queryVec: Float32Array,
   dbVec: Float32Array,
   offset: number,
-  embeddingDim: number
+  embeddingDim: number,
 ): number {
   let score = 0
   for (let j = 0; j < embeddingDim; j++) {
@@ -48,10 +48,10 @@ export function computeSimilarity(
 
 /**
  * T042: Return top-1 match (FR-012)
- * 
+ *
  * Performs brute-force search over all database vectors.
  * Returns single best match with highest similarity score.
- * 
+ *
  * @param query - Query embedding from CLIP
  * @param database - Loaded embedding database
  * @param metadata - Metadata with card records
@@ -61,7 +61,7 @@ export function computeSimilarity(
 export function top1(
   query: QueryEmbedding,
   database: EmbeddingDatabase,
-  metadata: MetadataFile
+  metadata: MetadataFile,
 ): SearchResult {
   const startTime = performance.now()
 
@@ -72,7 +72,7 @@ export function top1(
 
   if (query.vector.length !== database.embeddingDim) {
     throw new Error(
-      `Query dimension mismatch: expected ${database.embeddingDim}, got ${query.vector.length}`
+      `Query dimension mismatch: expected ${database.embeddingDim}, got ${query.vector.length}`,
     )
   }
 
@@ -86,7 +86,7 @@ export function top1(
       query.vector,
       database.vectors,
       offset,
-      database.embeddingDim
+      database.embeddingDim,
     )
 
     if (score > maxScore) {
@@ -104,7 +104,7 @@ export function top1(
 
   if (bestIdx >= metadata.records.length) {
     throw new Error(
-      `Best match index ${bestIdx} out of bounds (metadata has ${metadata.records.length} records)`
+      `Best match index ${bestIdx} out of bounds (metadata has ${metadata.records.length} records)`,
     )
   }
 
@@ -112,13 +112,13 @@ export function top1(
     card: metadata.records[bestIdx],
     score: maxScore,
     inferenceTimeMs,
-    index: bestIdx
+    index: bestIdx,
   }
 }
 
 /**
  * Search with multiple results (future enhancement)
- * 
+ *
  * @param query - Query embedding
  * @param database - Embedding database
  * @param metadata - Metadata file
@@ -129,7 +129,7 @@ export function topK(
   query: QueryEmbedding,
   database: EmbeddingDatabase,
   metadata: MetadataFile,
-  k: number
+  k: number,
 ): SearchResult[] {
   const startTime = performance.now()
 
@@ -140,20 +140,20 @@ export function topK(
 
   if (query.vector.length !== database.embeddingDim) {
     throw new Error(
-      `Query dimension mismatch: expected ${database.embeddingDim}, got ${query.vector.length}`
+      `Query dimension mismatch: expected ${database.embeddingDim}, got ${query.vector.length}`,
     )
   }
 
   // Compute all similarities
   const scores: Array<{ score: number; index: number }> = []
-  
+
   for (let i = 0; i < database.numCards; i++) {
     const offset = i * database.embeddingDim
     const score = computeSimilarity(
       query.vector,
       database.vectors,
       offset,
-      database.embeddingDim
+      database.embeddingDim,
     )
     scores.push({ score, index: i })
   }
@@ -171,6 +171,6 @@ export function topK(
     card: metadata.records[index],
     score,
     inferenceTimeMs: inferenceTimeMs / topKScores.length, // Amortized time
-    index
+    index,
   }))
 }

@@ -84,7 +84,9 @@ initializeApp()
 If you want to disable edge refinement:
 
 ```typescript
-const webcam = await setupWebcam({ /* ... */ })
+const webcam = await setupWebcam({
+  /* ... */
+})
 
 // Disable edge refinement
 webcam.setEdgeRefinement(false)
@@ -96,8 +98,8 @@ webcam.setEdgeRefinement(true)
 ## Example: Full Integration
 
 ```typescript
-import { setupWebcam } from '@/lib/webcam'
 import { loadOpenCV } from '@/lib/card-edge-refiner'
+import { setupWebcam } from '@/lib/webcam'
 
 async function setupCardDetection() {
   // 1. Load OpenCV (takes 2-3 seconds)
@@ -142,6 +144,7 @@ async function setupCardDetection() {
 ### "No quadrilateral found" error
 
 **Causes**:
+
 - Card is too small in the frame
 - Poor lighting or low contrast
 - Card is heavily occluded
@@ -152,6 +155,7 @@ async function setupCardDetection() {
 ### Low confidence score (< 70%)
 
 **Causes**:
+
 - Card is bent or warped
 - Extreme perspective distortion
 - Card edges are unclear

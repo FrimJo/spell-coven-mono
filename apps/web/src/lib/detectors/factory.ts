@@ -1,19 +1,23 @@
 /**
  * Detector factory for creating card detection instances
- * 
+ *
  * Provides a centralized way to create and configure different
  * detector implementations (DETR, OWL-ViT, etc.)
- * 
+ *
  * @module detectors/factory
  */
 
-import { DETR_MODEL_ID, CONFIDENCE_THRESHOLD, DETECTION_INTERVAL_MS } from '../detection-constants'
+import type { CardDetector, DetectorConfig, DetectorType } from './types'
+import {
+  CONFIDENCE_THRESHOLD,
+  DETECTION_INTERVAL_MS,
+  DETR_MODEL_ID,
+} from '../detection-constants'
 import { ACTIVE_DETECTOR } from '../detector-config'
-import { OpenCVDetector } from './opencv-detector'
 import { DETRDetector } from './detr-detector'
+import { OpenCVDetector } from './opencv-detector'
 import { OWLViTDetector } from './owl-vit-detector'
 import { SlimSAMDetector } from './slimsam-detector'
-import type { CardDetector, DetectorType, DetectorConfig } from './types'
 
 /**
  * Default configurations for each detector type
@@ -50,21 +54,21 @@ const DEFAULT_CONFIGS: Record<DetectorType, Partial<DetectorConfig>> = {
 
 /**
  * Create a card detector instance
- * 
+ *
  * @param type Type of detector to create
  * @param config Optional configuration overrides
  * @returns Configured detector instance
- * 
+ *
  * @example
  * ```ts
  * // Create DETR detector with defaults
  * const detector = createDetector('detr')
- * 
+ *
  * // Create DETR detector with custom config
  * const detector = createDetector('detr', {
  *   confidenceThreshold: 0.6,
  * })
- * 
+ *
  * // Create OWL-ViT detector (when implemented)
  * const detector = createDetector('owl-vit', {
  *   prompts: ['Magic card', 'trading card']
@@ -73,14 +77,16 @@ const DEFAULT_CONFIGS: Record<DetectorType, Partial<DetectorConfig>> = {
  */
 export function createDetector(
   type: DetectorType,
-  config?: Partial<DetectorConfig>
+  config?: Partial<DetectorConfig>,
 ): CardDetector {
   // Merge default config with user overrides
   const defaultConfig = DEFAULT_CONFIGS[type]
   const finalConfig: DetectorConfig = {
     modelId: config?.modelId || defaultConfig.modelId || '',
-    confidenceThreshold: config?.confidenceThreshold ?? defaultConfig.confidenceThreshold ?? 0.5,
-    detectionIntervalMs: config?.detectionIntervalMs ?? defaultConfig.detectionIntervalMs ?? 500,
+    confidenceThreshold:
+      config?.confidenceThreshold ?? defaultConfig.confidenceThreshold ?? 0.5,
+    detectionIntervalMs:
+      config?.detectionIntervalMs ?? defaultConfig.detectionIntervalMs ?? 500,
     onProgress: config?.onProgress,
     device: config?.device || defaultConfig.device,
     dtype: config?.dtype || defaultConfig.dtype,
@@ -91,16 +97,16 @@ export function createDetector(
     case 'opencv':
       // OpenCV is click-only mode - returns empty detections for continuous detection
       return new OpenCVDetector(finalConfig)
-    
+
     case 'detr':
       return new DETRDetector(finalConfig)
-    
+
     case 'owl-vit':
       return new OWLViTDetector(finalConfig)
-    
+
     case 'slimsam':
       return new SlimSAMDetector(finalConfig)
-    
+
     default:
       throw new Error(`Unknown detector type: ${type}`)
   }
@@ -108,7 +114,7 @@ export function createDetector(
 
 /**
  * Get the current default detector type
- * 
+ *
  * This can be changed in detector-config.ts to switch the default detector.
  */
 export function getDefaultDetectorType(): DetectorType {
@@ -117,12 +123,12 @@ export function getDefaultDetectorType(): DetectorType {
 
 /**
  * Create a detector with default settings
- * 
+ *
  * @param onProgress Optional progress callback
  * @returns Detector instance with default configuration
  */
 export function createDefaultDetector(
-  onProgress?: (msg: string) => void
+  onProgress?: (msg: string) => void,
 ): CardDetector {
   const type = getDefaultDetectorType()
   return createDetector(type, { onProgress })

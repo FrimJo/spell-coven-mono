@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import type { DetectorType } from '@/lib/detectors'
+import { useEffect, useState } from 'react'
 import { useWebcam } from '@/hooks/useWebcam'
 import {
   Camera,
@@ -37,6 +37,10 @@ interface VideoStreamGridProps {
   enableCardDetection?: boolean
   /** Detector type to use (opencv, detr, owl-vit) */
   detectorType?: DetectorType
+  /** Enable frame buffer for temporal optimization */
+  useFrameBuffer?: boolean
+  /** Enable perspective warp for corner refinement */
+  usePerspectiveWarp?: boolean
   /** Callback when a card is cropped */
   onCardCrop?: (canvas: HTMLCanvasElement) => void
 }
@@ -52,21 +56,28 @@ export function VideoStreamGrid({
   onLifeChange,
   enableCardDetection = true, // Always enabled by default
   detectorType,
+  useFrameBuffer = true,
+  usePerspectiveWarp = true,
   onCardCrop,
 }: VideoStreamGridProps) {
   // Initialize webcam with card detection
   const {
-    videoRef: localVideoRef,
+    videoRef,
     overlayRef,
     croppedRef,
     fullResRef,
+    cameraSelectRef,
     startVideo,
     stopVideo,
-    getCameras,
+    isReady,
+    status,
+    isLoading,
     isVideoActive,
   } = useWebcam({
     enableCardDetection,
     detectorType,
+    useFrameBuffer,
+    usePerspectiveWarp,
     onCrop: onCardCrop,
     autoStart: false,
   })

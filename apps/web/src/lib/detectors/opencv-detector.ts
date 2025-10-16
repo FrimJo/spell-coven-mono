@@ -1,27 +1,27 @@
 /**
  * OpenCV-based card detector implementation
- * 
+ *
  * Uses edge detection (Canny) and contour finding to detect rectangular cards.
  * This is the original detection method before DETR.
- * 
+ *
  * Advantages:
  * - Fast (~50-100ms per frame)
  * - Small footprint (no ML model to download)
  * - Works offline immediately
- * 
+ *
  * Disadvantages:
  * - Sensitive to lighting conditions
  * - Requires clear edges
  * - More false positives
- * 
+ *
  * @module detectors/opencv-detector
  */
 
 import type {
   CardDetector,
+  DetectionOutput,
   DetectorConfig,
   DetectorStatus,
-  DetectionOutput,
 } from './types'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -40,16 +40,16 @@ declare global {
 export interface OpenCVConfig extends DetectorConfig {
   /** Minimum card area in pixels */
   minCardArea?: number
-  
+
   /** Canny edge detection low threshold */
   cannyLowThreshold?: number
-  
+
   /** Canny edge detection high threshold */
   cannyHighThreshold?: number
-  
+
   /** Gaussian blur kernel size */
   blurKernelSize?: number
-  
+
   /** Contour approximation epsilon factor */
   approxEpsilon?: number
 }
@@ -60,7 +60,7 @@ export interface OpenCVConfig extends DetectorConfig {
 export class OpenCVDetector implements CardDetector {
   private status: DetectorStatus = 'uninitialized'
   private config: OpenCVConfig
-  
+
   // OpenCV matrices (reused for performance)
   private src: any = null
   private gray: any = null
@@ -95,7 +95,7 @@ export class OpenCVDetector implements CardDetector {
     try {
       // Load OpenCV.js if not already loaded
       await this.ensureOpenCVLoaded()
-      
+
       this.status = 'ready'
       this.setStatus('OpenCV ready')
     } catch (err) {
@@ -132,7 +132,7 @@ export class OpenCVDetector implements CardDetector {
     this.edged = null
     this.contours = null
     this.hierarchy = null
-    
+
     this.status = 'uninitialized'
   }
 
@@ -185,5 +185,4 @@ export class OpenCVDetector implements CardDetector {
 
     return window.__cvReadyPromise
   }
-
 }

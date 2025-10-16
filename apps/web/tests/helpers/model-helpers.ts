@@ -10,7 +10,9 @@ import { Page } from '@playwright/test'
  */
 export async function isModelSetupComplete(page: Page): Promise<boolean> {
   return await page.evaluate(() => {
-    const setupComplete = localStorage.getItem('playwright-model-setup-complete')
+    const setupComplete = localStorage.getItem(
+      'playwright-model-setup-complete',
+    )
     return setupComplete === 'true'
   })
 }
@@ -18,7 +20,9 @@ export async function isModelSetupComplete(page: Page): Promise<boolean> {
 /**
  * Get the timestamp when model setup was completed
  */
-export async function getModelSetupTimestamp(page: Page): Promise<number | null> {
+export async function getModelSetupTimestamp(
+  page: Page,
+): Promise<number | null> {
   return await page.evaluate(() => {
     const timestamp = localStorage.getItem('playwright-model-setup-timestamp')
     return timestamp ? parseInt(timestamp, 10) : null
@@ -29,48 +33,61 @@ export async function getModelSetupTimestamp(page: Page): Promise<number | null>
  * Wait for the model to be ready (either from cache or fresh load).
  * This is much faster than the original waitForClipModel when using cached model.
  */
-export async function waitForModelReady(page: Page, timeout = 30_000): Promise<void> {
+export async function waitForModelReady(
+  page: Page,
+  timeout = 30_000,
+): Promise<void> {
   const setupComplete = await isModelSetupComplete(page)
-  
+
   if (setupComplete) {
-    console.log('✅ Model already initialized by global setup, checking if still ready...')
-    
+    console.log(
+      '✅ Model already initialized by global setup, checking if still ready...',
+    )
+
     // Quick check - if no loading overlay is visible, model is ready
-    const hasLoadingOverlay = await page.locator('[role="dialog"][aria-label="Loading"]').isVisible().catch(() => false)
-    
+    const hasLoadingOverlay = await page
+      .locator('[role="dialog"][aria-label="Loading"]')
+      .isVisible()
+      .catch(() => false)
+
     if (!hasLoadingOverlay) {
       console.log('🚀 Model ready from cache!')
       return
     }
   }
-  
+
   console.log('⏳ Waiting for model to be ready...')
-  
+
   // Wait for loading overlay to disappear
   await page.waitForFunction(
     () => {
-      const overlay = document.querySelector('[role="dialog"][aria-label="Loading"]')
+      const overlay = document.querySelector(
+        '[role="dialog"][aria-label="Loading"]',
+      )
       return overlay === null
     },
-    { timeout }
+    { timeout },
   )
-  
+
   console.log('✅ Model is ready!')
 }
 
 /**
  * Enhanced OpenCV readiness check with better error handling
  */
-export async function waitForOpenCv(page: Page, timeout = 30_000): Promise<void> {
+export async function waitForOpenCv(
+  page: Page,
+  timeout = 30_000,
+): Promise<void> {
   console.log('⏳ Waiting for OpenCV to be ready...')
-  
+
   await page.waitForFunction(
     () => {
       return typeof (window as unknown as { cv?: unknown }).cv !== 'undefined'
     },
-    { timeout }
+    { timeout },
   )
-  
+
   console.log('✅ OpenCV is ready!')
 }
 
@@ -79,12 +96,9 @@ export async function waitForOpenCv(page: Page, timeout = 30_000): Promise<void>
  */
 export async function waitForAllDependencies(page: Page): Promise<void> {
   console.log('🔄 Waiting for all dependencies (Model + OpenCV)...')
-  
-  await Promise.all([
-    waitForModelReady(page),
-    waitForOpenCv(page)
-  ])
-  
+
+  await Promise.all([waitForModelReady(page), waitForOpenCv(page)])
+
   console.log('🎉 All dependencies ready!')
 }
 
@@ -94,13 +108,13 @@ export async function waitForAllDependencies(page: Page): Promise<void> {
 export async function canUseCachedModel(page: Page): Promise<boolean> {
   const setupComplete = await isModelSetupComplete(page)
   const timestamp = await getModelSetupTimestamp(page)
-  
+
   if (!setupComplete || !timestamp) {
     return false
   }
-  
+
   // Check if setup was recent (within last hour)
-  const hourAgo = Date.now() - (60 * 60 * 1000)
+  const hourAgo = Date.now() - 60 * 60 * 1000
   return timestamp > hourAgo
 }
 
@@ -111,11 +125,13 @@ export async function logModelCacheStatus(page: Page): Promise<void> {
   const setupComplete = await isModelSetupComplete(page)
   const timestamp = await getModelSetupTimestamp(page)
   const canUseCache = await canUseCachedModel(page)
-  
+
   console.log('📊 Model Cache Status:', {
     setupComplete,
     timestamp: timestamp ? new Date(timestamp).toISOString() : null,
     canUseCache,
-    age: timestamp ? `${Math.round((Date.now() - timestamp) / 1000)}s ago` : null
+    age: timestamp
+      ? `${Math.round((Date.now() - timestamp) / 1000)}s ago`
+      : null,
   })
 }
