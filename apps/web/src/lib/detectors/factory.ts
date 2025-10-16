@@ -12,6 +12,7 @@ import { ACTIVE_DETECTOR } from '../detector-config'
 import { OpenCVDetector } from './opencv-detector'
 import { DETRDetector } from './detr-detector'
 import { OWLViTDetector } from './owl-vit-detector'
+import { SlimSAMDetector } from './slimsam-detector'
 import type { CardDetector, DetectorType, DetectorConfig } from './types'
 
 /**
@@ -37,6 +38,13 @@ const DEFAULT_CONFIGS: Record<DetectorType, Partial<DetectorConfig>> = {
     detectionIntervalMs: DETECTION_INTERVAL_MS,
     device: 'auto',
     dtype: 'fp32',
+  },
+  slimsam: {
+    modelId: 'Xenova/slimsam',
+    confidenceThreshold: 0.5,
+    detectionIntervalMs: DETECTION_INTERVAL_MS,
+    device: 'auto',
+    dtype: 'fp16',
   },
 }
 
@@ -89,6 +97,9 @@ export function createDetector(
     
     case 'owl-vit':
       return new OWLViTDetector(finalConfig)
+    
+    case 'slimsam':
+      return new SlimSAMDetector(finalConfig)
     
     default:
       throw new Error(`Unknown detector type: ${type}`)

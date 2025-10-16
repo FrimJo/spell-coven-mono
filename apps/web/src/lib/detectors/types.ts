@@ -95,7 +95,7 @@ export interface CardDetector {
 /**
  * Detector type identifier
  */
-export type DetectorType = 'opencv' | 'detr' | 'owl-vit'
+export type DetectorType = 'opencv' | 'detr' | 'owl-vit' | 'slimsam'
 
 /**
  * Factory configuration for creating detectors
