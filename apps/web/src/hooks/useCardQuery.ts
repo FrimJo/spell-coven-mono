@@ -21,7 +21,6 @@ export function useCardQuery(): UseCardQueryReturn {
 
   const query = useCallback(
     async (canvas: HTMLCanvasElement) => {
-      console.log('[useCardQuery] query() called with canvas:', canvas)
       
       // Cancel any pending query
       cancel()
@@ -31,9 +30,7 @@ export function useCardQuery(): UseCardQueryReturn {
       abortControllerRef.current = abortController
 
       // Validate canvas
-      console.log('[useCardQuery] Validating canvas...')
       const validation = validateCanvas(canvas)
-      console.log('[useCardQuery] Validation result:', validation)
       
       if (!validation.isValid) {
         console.error('[useCardQuery] Canvas validation failed:', validation.error)
@@ -49,14 +46,12 @@ export function useCardQuery(): UseCardQueryReturn {
       if (import.meta.env.DEV) {
         canvas.toBlob((blob) => {
           if (blob) {
-            const blobUrl = URL.createObjectURL(blob)
-            console.log('Cropped card image:', blobUrl)
+            URL.createObjectURL(blob)
           }
         })
       }
 
       // Set querying state
-      console.log('[useCardQuery] Setting status to "querying"')
       setState({
         status: 'querying',
         result: null,
@@ -66,14 +61,11 @@ export function useCardQuery(): UseCardQueryReturn {
       try {
         // Check if aborted
         if (abortController.signal.aborted) {
-          console.log('[useCardQuery] Query aborted before embedding')
           return
         }
 
         // Embed the canvas
-        console.log('[useCardQuery] Calling embedFromCanvas...')
         const embedding = await embedFromCanvas(canvas)
-        console.log('[useCardQuery] Embedding complete:', embedding)
 
         // Check if aborted after embedding
         if (abortController.signal.aborted) {

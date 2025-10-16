@@ -17,16 +17,16 @@
  * @module detectors/opencv-detector
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import type {
   CardDetector,
   DetectorConfig,
   DetectorStatus,
   DetectionOutput,
-  Point,
 } from './types'
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+// OpenCV.js minimal type definitions
 declare global {
   interface Window {
     cv: any
@@ -86,7 +86,6 @@ export class OpenCVDetector implements CardDetector {
 
   async initialize(): Promise<void> {
     if (this.status === 'ready') {
-      console.log('[OpenCVDetector] Already initialized')
       return
     }
 
@@ -99,7 +98,6 @@ export class OpenCVDetector implements CardDetector {
       
       this.status = 'ready'
       this.setStatus('OpenCV ready')
-      console.log('[OpenCVDetector] Initialized successfully')
     } catch (err) {
       this.status = 'error'
       const errorMsg =
@@ -136,7 +134,6 @@ export class OpenCVDetector implements CardDetector {
     this.hierarchy = null
     
     this.status = 'uninitialized'
-    console.log('[OpenCVDetector] Disposed')
   }
 
   // ============================================================================
@@ -144,7 +141,6 @@ export class OpenCVDetector implements CardDetector {
   // ============================================================================
 
   private setStatus(msg: string) {
-    console.log(`[OpenCVDetector] ${msg}`)
     this.config.onProgress?.(msg)
   }
 
@@ -190,58 +186,4 @@ export class OpenCVDetector implements CardDetector {
     return window.__cvReadyPromise
   }
 
-  private initializeMatrices(width: number, height: number): void {
-    const cv = window.cv
-    this.src = new cv.Mat(height, width, cv.CV_8UC4)
-    this.gray = new cv.Mat()
-    this.blurred = new cv.Mat()
-    this.edged = new cv.Mat()
-    this.contours = new cv.MatVector()
-    this.hierarchy = new cv.Mat()
-  }
-
-  /**
-   * Order points in clockwise order: TL, TR, BR, BL
-   */
-  private calculateAngles(pts: Point[]): number[] {
-    // Calculate interior angles of the quadrilateral
-    const angles: number[] = []
-    for (let i = 0; i < 4; i++) {
-      const p1 = pts[i]
-      const p2 = pts[(i + 1) % 4]
-      const p3 = pts[(i + 2) % 4]
-      
-      // Vectors from p2 to p1 and p2 to p3
-      const v1 = { x: p1.x - p2.x, y: p1.y - p2.y }
-      const v2 = { x: p3.x - p2.x, y: p3.y - p2.y }
-      
-      // Calculate angle using dot product
-      const dot = v1.x * v2.x + v1.y * v2.y
-      const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y)
-      const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y)
-      
-      const cosAngle = dot / (mag1 * mag2)
-      const angle = Math.acos(Math.max(-1, Math.min(1, cosAngle))) * (180 / Math.PI)
-      angles.push(angle)
-    }
-    return angles
-  }
-
-  private orderPoints(pts: Point[]): Point[] {
-    // Sort by x coordinate
-    pts.sort((a, b) => a.x - b.x)
-    
-    // Split into left and right
-    const leftMost = pts.slice(0, 2)
-    const rightMost = pts.slice(2, 4)
-    
-    // Sort left by y (top first)
-    leftMost.sort((a, b) => a.y - b.y)
-    
-    // Sort right by y (top first)
-    rightMost.sort((a, b) => a.y - b.y)
-    
-    // Return in order: TL, TR, BR, BL
-    return [leftMost[0], rightMost[0], rightMost[1], leftMost[1]]
-  }
 }

@@ -3,7 +3,6 @@ import path from 'path'
 import { expect, Page, test } from '@playwright/test'
 import { 
   waitForModelReady, 
-  waitForOpenCv, 
   waitForAllDependencies,
   logModelCacheStatus 
 } from '../helpers/model-helpers'

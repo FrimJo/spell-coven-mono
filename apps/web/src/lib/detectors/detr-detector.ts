@@ -24,8 +24,8 @@ import type {
 } from './types'
 
 // Suppress ONNX Runtime warnings
-if (typeof env !== 'undefined' && (env as any).wasm) {
-  ;(env as any).wasm.numThreads = 1
+if (typeof env !== 'undefined' && 'wasm' in env.backends.onnx && env.backends.onnx.wasm) {
+  env.backends.onnx.wasm.numThreads = 1
 }
 
 /**
@@ -48,13 +48,11 @@ export class DETRDetector implements CardDetector {
   async initialize(): Promise<void> {
     // Return if already loaded
     if (this.detector) {
-      console.log('[DETRDetector] Already initialized')
       return
     }
 
     // Prevent concurrent loading
     if (this.isLoading) {
-      console.log('[DETRDetector] Loading in progress, waiting...')
       while (this.isLoading) {
         await new Promise((resolve) => setTimeout(resolve, 100))
       }
@@ -66,8 +64,8 @@ export class DETRDetector implements CardDetector {
 
     try {
       // Check GPU support
-      const gpuSupport = await this.checkGPUSupport()
-      console.log(`[DETRDetector] GPU support: ${gpuSupport.toUpperCase()}`)
+      const _gpuSupport = env.backends.onnx.wasm?.proxy ? 'WEBGPU' : 'WASM'
+      void _gpuSupport // Used for debugging
 
       this.setStatus('Loading detection model...')
 
@@ -85,7 +83,6 @@ export class DETRDetector implements CardDetector {
 
       this.status = 'ready'
       this.setStatus('Detection ready')
-      console.log('[DETRDetector] Model loaded successfully')
     } catch (err) {
       this.status = 'error'
       const errorMsg =
@@ -133,7 +130,6 @@ export class DETRDetector implements CardDetector {
   dispose(): void {
     this.detector = null
     this.status = 'uninitialized'
-    console.log('[DETRDetector] Disposed')
   }
 
   // ============================================================================
@@ -141,27 +137,7 @@ export class DETRDetector implements CardDetector {
   // ============================================================================
 
   private setStatus(msg: string) {
-    console.log(`[DETRDetector] ${msg}`)
     this.config.onProgress?.(msg)
-  }
-
-  private async checkGPUSupport(): Promise<string> {
-    // Check WebGPU
-    if ('gpu' in navigator) {
-      try {
-        const adapter = await (navigator as any).gpu.requestAdapter()
-        if (adapter) return 'webgpu'
-      } catch {
-        // WebGPU not available
-      }
-    }
-
-    // Check WebGL
-    const canvas = document.createElement('canvas')
-    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl')
-    if (gl) return 'webgl'
-
-    return 'cpu'
   }
 
   private boundingBoxToPolygon(

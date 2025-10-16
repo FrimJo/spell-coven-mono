@@ -12,26 +12,29 @@
  * @module detectors/owl-vit-detector
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { pipeline } from '@huggingface/transformers'
+import type { DetectedCard, Point } from '@/types/card-query'
 import type {
   CardDetector,
   DetectorConfig,
   DetectorStatus,
   DetectionOutput,
-  DetectedCard,
-  Point,
 } from './types'
 
 /**
  * OWL-ViT detector configuration
  */
-export interface OWLViTConfig extends DetectorConfig {
+export interface OWLViTConfig extends Omit<DetectorConfig, 'modelId' | 'confidenceThreshold' | 'detectionIntervalMs'> {
   /** Text prompts for detection (e.g., ["Magic card", "trading card"]) */
   prompts?: string[]
   /** Model ID to use (default: 'Xenova/owlvit-base-patch32') */
   modelId?: string
   /** Confidence threshold (default: 0.15) */
   confidenceThreshold?: number
+  /** Detection interval in milliseconds (default: 500) */
+  detectionIntervalMs?: number
 }
 
 interface OWLViTDetection {
@@ -62,6 +65,7 @@ export class OWLViTDetector implements CardDetector {
         'playing card',
       ],
       confidenceThreshold: 0.15,
+      detectionIntervalMs: 500,
       ...config,
     }
   }
@@ -73,7 +77,7 @@ export class OWLViTDetector implements CardDetector {
   private setStatus(status: DetectorStatus, message?: string): void {
     this.status = status
     if (message) {
-      console.log(`[OWLViTDetector] ${message}`)
+      // Message logging removed
     }
   }
 
@@ -88,9 +92,7 @@ export class OWLViTDetector implements CardDetector {
         {
           progress_callback: (progress: any) => {
             if (progress.status === 'downloading') {
-              console.log(
-                `[OWLViTDetector] Downloading ${progress.file}: ${progress.progress?.toFixed(0) || 0}%`
-              )
+              // Progress logging removed
             }
           },
         }
@@ -132,9 +134,7 @@ export class OWLViTDetector implements CardDetector {
 
       // Debug logging
       if (detections.length > 0 || cards.length > 0) {
-        console.log(
-          `[OWLViTDetector] ${inferenceTimeMs.toFixed(0)}ms | Raw: ${detections.length}, Filtered: ${cards.length} card(s)`
-        )
+        // Logging removed
       }
 
       return {
@@ -189,6 +189,7 @@ export class OWLViTDetector implements CardDetector {
           ymax: box.ymax,
         },
         score,
+        aspectRatio,
         polygon,
       })
     }
@@ -199,6 +200,5 @@ export class OWLViTDetector implements CardDetector {
   dispose(): void {
     this.detector = null
     this.status = 'uninitialized'
-    console.log('[OWLViTDetector] Disposed')
   }
 }

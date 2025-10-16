@@ -40,7 +40,6 @@ function ScannerPage() {
   } = useWebcam({
     enableCardDetection: true,
     onCrop: () => {
-      console.log('Card cropped!')
     },
   })
 

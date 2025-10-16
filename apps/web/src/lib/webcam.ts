@@ -1,8 +1,6 @@
 // Card detection for MTG webcam recognition
 // Uses pluggable detector architecture (DETR, OWL-ViT, etc.)
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import type { DetectedCard } from '@/types/card-query'
 
 import type { CardDetector, DetectorType } from './detectors'
@@ -49,15 +47,12 @@ const SLOW_INFERENCE_THRESHOLD_MS = 1000
 function logPerformanceMetrics() {
   if (performanceMetrics.inferenceTimeMs.length === 0) return
 
-  const avg =
-    performanceMetrics.inferenceTimeMs.reduce((a, b) => a + b, 0) /
-    performanceMetrics.inferenceTimeMs.length
-  const max = Math.max(...performanceMetrics.inferenceTimeMs)
-  const min = Math.min(...performanceMetrics.inferenceTimeMs)
+  // Performance metrics calculation (for future use)
+  void (performanceMetrics.inferenceTimeMs.reduce((a, b) => a + b, 0) /
+    performanceMetrics.inferenceTimeMs.length)
+  void Math.max(...performanceMetrics.inferenceTimeMs)
+  void Math.min(...performanceMetrics.inferenceTimeMs)
 
-  console.log(
-    `[Performance] Avg: ${avg.toFixed(0)}ms | Min: ${min.toFixed(0)}ms | Max: ${max.toFixed(0)}ms | Slow: ${performanceMetrics.slowInferenceCount}`,
-  )
 
   // Reset metrics
   performanceMetrics = {
@@ -114,9 +109,6 @@ async function initializeDetector(
   try {
     // If detector type changed, dispose old detector
     if (detector && currentDetectorType !== detectorType) {
-      console.log(
-        `[Detector] Switching from ${currentDetectorType} to ${detectorType}`,
-      )
       detector.dispose()
       detector = null
       currentDetectorType = undefined
@@ -132,7 +124,6 @@ async function initializeDetector(
       detector.getStatus() === 'ready' &&
       currentDetectorType === detectorType
     ) {
-      console.log('[Detector] Already initialized')
       return
     }
 
@@ -228,13 +219,9 @@ function renderDetections(cards: DetectedCard[]) {
 async function detectCards() {
   // Skip if already detecting or detector not ready
   if (!detector) {
-    console.log('[Detector] No detector available')
     return
   }
   if (detector.getStatus() !== 'ready') {
-    console.log(
-      `[Detector] Detector not ready, status: ${detector.getStatus()}`,
-    )
     return
   }
   if (isDetecting) {
@@ -280,9 +267,7 @@ async function detectCards() {
 
     // Log detection results (less verbose)
     if (detectedCards.length > 0) {
-      console.log(
-        `[Detector] ${result.inferenceTimeMs.toFixed(0)}ms | ${detectedCards.length} card(s)`,
-      )
+      // Detection logging removed
     }
   } catch (err) {
     console.error('[Detector] Detection error:', err)
@@ -298,10 +283,8 @@ async function detectCards() {
  */
 function startDetection() {
   if (detectionInterval) {
-    console.log('[Detector] Detection loop already running')
     return
   }
-  console.log('[Detector] Starting detection loop')
   detectionInterval = window.setInterval(detectCards, DETECTION_INTERVAL_MS)
 }
 
@@ -353,9 +336,6 @@ function cropCardFromBoundingBox(box: {
   const cardWidth = (box.xmax - box.xmin) * fullResCanvas.width
   const cardHeight = (box.ymax - box.ymin) * fullResCanvas.height
 
-  console.log(
-    `[Webcam] Detected card region: x=${x.toFixed(0)}, y=${y.toFixed(0)}, w=${cardWidth.toFixed(0)}, h=${cardHeight.toFixed(0)}`,
-  )
 
   // CRITICAL FIX: Apply square center-crop to match Python preprocessing
   // Python does: s = min(w, h); crop to square; resize to 384×384
@@ -363,9 +343,6 @@ function cropCardFromBoundingBox(box: {
   const cropX = x + (cardWidth - minDim) / 2
   const cropY = y + (cardHeight - minDim) / 2
 
-  console.log(
-    `[Webcam] Square center-crop: x=${cropX.toFixed(0)}, y=${cropY.toFixed(0)}, size=${minDim.toFixed(0)}×${minDim.toFixed(0)}`,
-  )
 
   // Extract square region from center of card
   const cardImageData = fullResCtx!.getImageData(cropX, cropY, minDim, minDim)
@@ -394,21 +371,12 @@ function cropCardFromBoundingBox(box: {
   )
 
   // Log cropped card as blob for debugging
-  croppedCanvas.toBlob((blob) => {
+  tempCanvas.toBlob((blob) => {
     if (blob) {
-      const url = URL.createObjectURL(blob)
-      console.log('[Webcam] Cropped card blob:', blob)
-      console.log('[Webcam] Cropped card URL:', url)
-      console.log(
-        `[Webcam] Final dimensions: ${croppedCanvas.width}×${croppedCanvas.height} (square)`,
-      )
-      console.log(
-        `[Webcam] Blob size: ${(blob.size / 1024).toFixed(2)}KB, type: ${blob.type}`,
-      )
+      void URL.createObjectURL(blob)
     }
   }, 'image/png')
 
-  console.log('[Webcam] Card cropped successfully with square center-crop preprocessing')
   return true
 }
 
@@ -457,9 +425,6 @@ function cropCardAt(x: number, y: number): boolean {
   }
 
   const card = detectedCards[closestIndex]
-  console.log(
-    `[Webcam] Cropping card ${closestIndex} (distance: ${minDist.toFixed(0)}px)`,
-  )
 
   // Use the DETR bounding box to crop
   return cropCardFromBoundingBox(card.box)
@@ -524,7 +489,6 @@ export async function setupWebcam(args: {
     requestAnimationFrame(() => {
       const ok = cropCardAt(x, y)
       if (ok && typeof args.onCrop === 'function') {
-        console.log('[Webcam] Calling onCrop callback with canvas')
         args.onCrop(croppedCanvas)
       }
     })
@@ -534,12 +498,32 @@ export async function setupWebcam(args: {
 
   return {
     async startVideo(deviceId: string | null = null) {
-      console.log('[webcam] startVideo called with deviceId:', deviceId)
 
       if (currentStream) {
         currentStream.getTracks().forEach((t) => t.stop())
         currentStream = null
       }
+
+      // Handle video file source (for testing/demo)
+      if (deviceId?.startsWith('video-file:')) {
+        const videoPath = deviceId.replace('video-file:', '')
+        videoEl.src = videoPath
+        videoEl.loop = true
+        videoEl.muted = true
+        currentDeviceId = deviceId
+        return new Promise<void>((resolve) => {
+          videoEl.onloadedmetadata = () => {
+            void videoEl.play()
+            if (!animationStarted) {
+              animationStarted = true
+              startDetection()
+            }
+            resolve()
+          }
+        })
+      }
+
+      // Handle regular webcam
       const constraints: MediaStreamConstraints = {
         audio: true,
         video: deviceId
@@ -550,13 +534,8 @@ export async function setupWebcam(args: {
             }
           : { width: { ideal: 1920 }, height: { ideal: 1080 } },
       }
-      console.log(
-        '[webcam] Requesting camera access with constraints:',
-        constraints,
-      )
       try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints)
-        console.log('[webcam] Camera access granted, stream:', stream)
         currentStream = stream
         videoEl.srcObject = stream
         const track = stream.getVideoTracks()[0]
@@ -564,10 +543,8 @@ export async function setupWebcam(args: {
           track.getSettings ? track.getSettings() : {}
         ) as MediaTrackSettings
         currentDeviceId = settings.deviceId || deviceId || null
-        console.log('[webcam] Video track settings:', settings)
         return new Promise<void>((resolve) => {
           videoEl.onloadedmetadata = () => {
-            console.log('[webcam] Video metadata loaded, starting playback')
             void videoEl.play()
             if (!animationStarted) {
               animationStarted = true

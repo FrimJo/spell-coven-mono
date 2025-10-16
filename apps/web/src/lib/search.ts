@@ -40,11 +40,12 @@ export type MetaWithQuantization = {
   records: CardMeta[]
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 let meta: CardMeta[] | null = null
 let db: Float32Array | null = null
-// Use any because ImageFeatureExtractionPipeline creates "union type too complex" error
 // Runtime type is ImageFeatureExtractionPipeline from @huggingface/transformers
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Using any to avoid "union type too complex" error
 let extractor: any = null
 let loadTask: Promise<void> | null = null
 
@@ -180,24 +181,15 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
     // Configure environment for Transformers.js
     // Models are downloaded directly to browser cache from Hugging Face CDN
     // See: https://xenova.github.io/transformers.js/environments
-    console.log('[model] Configuring transformers environment...')
 
     // Enable browser caching - models download once, then cached in IndexedDB
     env.useBrowserCache = true
     env.allowRemoteModels = true
     env.allowLocalModels = false
 
-    console.log('[model] Environment config:', {
-      useBrowserCache: env.useBrowserCache,
-      allowRemoteModels: env.allowRemoteModels,
-      allowLocalModels: env.allowLocalModels,
-    })
 
     // Initialize pipeline with proper options
     // CRITICAL: Must use CLIP ViT-B/32 to match backend embeddings (build_mtg_faiss.py line 111)
-    console.log(
-      '[model] Loading pipeline from Hugging Face CDN: Xenova/clip-vit-base-patch32',
-    )
     let lastLogTime = 0
     extractor = await pipeline(
       'image-feature-extraction',
@@ -217,7 +209,6 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
           // Only log every second
           const now = Date.now()
           if (now - lastLogTime >= 1000) {
-            console.log('[model] Progress:', progress)
             lastLogTime = now
           }
 
@@ -225,7 +216,6 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
         },
       },
     )
-    console.log('[model] Pipeline loaded successfully (cached in browser)')
   } catch (e: unknown) {
     console.error(
       '[model] Failed to initialize transformers pipeline. This often indicates a network/CORS error fetching model files (JSON or WASM) which may return HTML instead of JSON. Original error:',
