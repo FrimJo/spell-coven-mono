@@ -55,7 +55,6 @@ const DEFAULT_CONFIGS: Record<DetectorType, Partial<DetectorConfig>> = {
  * // Create DETR detector with custom config
  * const detector = createDetector('detr', {
  *   confidenceThreshold: 0.6,
- *   onProgress: (msg) => console.log(msg)
  * })
  * 
  * // Create OWL-ViT detector (when implemented)

@@ -251,10 +251,7 @@ function GameRoomContent({
               enableCardDetection={true}
               detectorType={detectorType}
               onCardCrop={(canvas: HTMLCanvasElement) => {
-                console.log('[GameRoom] onCardCrop called with canvas:', canvas)
-                console.log('[GameRoom] Calling query function...')
                 query(canvas)
-                console.log('[GameRoom] Query function called')
               }}
             />
           </div>
