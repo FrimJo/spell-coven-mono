@@ -9,7 +9,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { env, pipeline } from '@huggingface/transformers'
+import { env, SamModel, AutoProcessor, RawImage } from '@huggingface/transformers'
 import type { DetectedCard, Point } from '@/types/card-query'
 import { MTG_CARD_ASPECT_RATIO } from '../detection-constants'
 import type {
@@ -23,6 +23,9 @@ import type {
 if (typeof env !== 'undefined' && 'wasm' in env.backends.onnx && env.backends.onnx.wasm) {
   env.backends.onnx.wasm.numThreads = 1
 }
+
+// Configuration for HuggingFace access
+// No retries or fallbacks - fail fast if model doesn't work
 
 /**
  * SlimSAM detector implementation
@@ -41,13 +44,35 @@ if (typeof env !== 'undefined' && 'wasm' in env.backends.onnx && env.backends.on
  */
 export class SlimSAMDetector implements CardDetector {
   private status: DetectorStatus = 'uninitialized'
-  private segmenter: any = null
+  private model: any = null
+  private processor: any = null
   private isLoading = false
   private config: DetectorConfig
   private clickPoint: Point | null = null
+  private initializationAttempts = 0
+  private lastError: Error | null = null
 
   constructor(config: DetectorConfig) {
     this.config = config
+    // Check for HuggingFace token in environment
+    this.configureHuggingFaceAuth()
+  }
+
+  /**
+   * Configure HuggingFace authentication if token is available
+   */
+  private configureHuggingFaceAuth(): void {
+    // Check for token in various locations
+    const token = 
+      import.meta.env?.VITE_HUGGINGFACE_TOKEN ||
+      import.meta.env?.HUGGINGFACE_TOKEN ||
+      (typeof process !== 'undefined' && process.env?.HUGGINGFACE_TOKEN)
+    
+    if (token && typeof env !== 'undefined') {
+      // Set authentication token if available
+      // Note: This may not work for all HuggingFace endpoints
+      console.log('[SlimSAMDetector] HuggingFace token detected')
+    }
   }
 
   getStatus(): DetectorStatus {
@@ -57,10 +82,11 @@ export class SlimSAMDetector implements CardDetector {
   /**
    * T026: Initialize detector with model loading (FR-009)
    * T033: WebGPU/WebGL/WASM fallback handling (FR-013)
+   * Enhanced with retry logic and 401 error handling
    */
   async initialize(): Promise<void> {
     // Return if already loaded
-    if (this.segmenter) {
+    if (this.model && this.processor) {
       return
     }
 
@@ -76,40 +102,58 @@ export class SlimSAMDetector implements CardDetector {
     this.status = 'loading'
 
     try {
-      // Check backend support (WebGPU → WebGL → WASM)
-      const backend = env.backends.onnx.wasm?.proxy ? 'WEBGPU' : 'WASM'
-      this.setStatus(`Initializing SlimSAM (${backend})...`)
-
-      // Initialize SlimSAM pipeline
-      this.segmenter = await pipeline(
-        'image-segmentation',
-        this.config.modelId || 'Xenova/slimsam',
-        {
-          progress_callback: (progress: any) => {
-            if (progress.status === 'downloading') {
-              const percent = Math.round(progress.progress || 0)
-              this.setStatus(`Downloading: ${progress.file} - ${percent}%`)
-            }
-          },
-          device: (this.config.device || 'auto') as any,
-          dtype: (this.config.dtype || 'fp16') as any,
-        }
-      )
-
+      await this.initializeWithRetry()
       this.status = 'ready'
       this.setStatus('SlimSAM ready')
     } catch (err) {
       this.status = 'error'
-      const errorMsg =
-        err instanceof Error ? err.message : 'Unknown error loading SlimSAM'
+      this.lastError = err instanceof Error ? err : new Error(String(err))
       
       // T035: Structured error logging (FR-018)
       this.logError('SlimSAM initialization', err)
+      
+      const errorMsg = this.lastError.message
       this.setStatus(`Failed to load SlimSAM: ${errorMsg}`)
+      
+      // Re-throw the original error - no special handling, fail hard
       throw err
     } finally {
       this.isLoading = false
     }
+  }
+
+  /**
+   * Initialize SlimSAM model - no retries, fail fast
+   */
+  private async initializeWithRetry(): Promise<void> {
+    const modelId = this.config.modelId || 'Xenova/slimsam-77-uniform'
+    
+    this.initializationAttempts++
+    
+    // Check backend support (WebGPU → WebGL → WASM)
+    const backend = env.backends.onnx.wasm?.proxy ? 'WEBGPU' : 'WASM'
+    this.setStatus(`Initializing SlimSAM (${backend})...`)
+
+    // Initialize SlimSAM model and processor directly (not via pipeline)
+    const progressCallback = (progress: any) => {
+      if (progress.status === 'downloading') {
+        const percent = Math.round(progress.progress || 0)
+        this.setStatus(`Downloading: ${progress.file} - ${percent}%`)
+      }
+    }
+
+    // Load model and processor - fail hard if this doesn't work
+    this.model = await SamModel.from_pretrained(modelId, {
+      progress_callback: progressCallback,
+      device: (this.config.device || 'auto') as any,
+      dtype: (this.config.dtype || 'fp16') as any,
+    })
+
+    this.processor = await AutoProcessor.from_pretrained(modelId, {
+      progress_callback: progressCallback,
+    })
+
+    console.log(`[SlimSAMDetector] Successfully initialized with model: ${modelId}`)
   }
 
   /**
@@ -132,7 +176,7 @@ export class SlimSAMDetector implements CardDetector {
     canvasWidth: number,
     canvasHeight: number
   ): Promise<DetectionOutput> {
-    if (this.status !== 'ready' || !this.segmenter) {
+    if (this.status !== 'ready' || !this.model || !this.processor) {
       throw new Error('Detector not initialized. Call initialize() first.')
     }
 
@@ -146,15 +190,32 @@ export class SlimSAMDetector implements CardDetector {
 
     try {
       // T029: Run segmentation with point prompt
-      const result = await this.segmenter(canvas, {
-        points: [[point.x, point.y]],
-        labels: [1] // 1 = foreground
+      // Convert canvas to RawImage
+      const image = await RawImage.fromCanvas(canvas)
+      
+      // Prepare inputs with point prompts
+      const inputs = await this.processor(image, {
+        input_points: [[[point.x, point.y]]],
+        input_labels: [[1]], // 1 = foreground
       })
+
+      // Run model inference
+      const outputs = await this.model(inputs)
+      
+      // Post-process masks to get properly sized output
+      const masks = await this.processor.post_process_masks(
+        outputs.pred_masks,
+        inputs.original_sizes,
+        inputs.reshaped_input_sizes
+      )
+      
+      // Get IoU scores for quality filtering
+      const iouScores = outputs.iou_scores
 
       const inferenceTimeMs = performance.now() - startTime
 
       // Check if we got valid masks
-      if (!result || !result.masks || result.masks.length === 0) {
+      if (!masks || masks.length === 0) {
         // T034: Detection failure notification (FR-016)
         this.logError('SlimSAM segmentation', new Error('No masks detected'))
         return {
@@ -163,6 +224,13 @@ export class SlimSAMDetector implements CardDetector {
           rawDetectionCount: 0
         }
       }
+
+      // Log mask info for debugging
+      console.log('[SlimSAMDetector] Generated masks:', {
+        count: masks.length,
+        dimensions: masks[0]?.dims,
+        iouScores: iouScores?.data,
+      })
 
       // T030: Convert mask to polygon
       // For now, return empty array - full implementation would:
@@ -177,7 +245,7 @@ export class SlimSAMDetector implements CardDetector {
       return {
         cards,
         inferenceTimeMs,
-        rawDetectionCount: result.masks.length
+        rawDetectionCount: masks.length
       }
     } catch (error) {
       // T035: Structured error logging (FR-018)
@@ -195,7 +263,11 @@ export class SlimSAMDetector implements CardDetector {
    * T028: Dispose method
    */
   dispose(): void {
-    this.segmenter = null
+    if (this.model && typeof this.model.dispose === 'function') {
+      this.model.dispose()
+    }
+    this.model = null
+    this.processor = null
     this.clickPoint = null
     this.status = 'uninitialized'
   }

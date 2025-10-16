@@ -40,7 +40,7 @@ const DEFAULT_CONFIGS: Record<DetectorType, Partial<DetectorConfig>> = {
     dtype: 'fp32',
   },
   slimsam: {
-    modelId: 'Xenova/slimsam',
+    modelId: 'Xenova/slimsam-77-uniform',
     confidenceThreshold: 0.5,
     detectionIntervalMs: DETECTION_INTERVAL_MS,
     device: 'auto',
