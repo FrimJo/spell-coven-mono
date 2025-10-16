@@ -56,6 +56,9 @@ importers:
       '@tanstack/zod-adapter':
         specifier: ^1.133.3
         version: 1.133.3(@tanstack/react-router@1.132.17(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(zod@4.1.12)
+      '@techstark/opencv-js':
+        specifier: 4.11.0-release.1
+        version: 4.11.0-release.1
       lucide-react:
         specifier: ^0.487.0
         version: 0.487.0(react@19.1.1)
@@ -1998,6 +2001,9 @@ packages:
     peerDependencies:
       '@tanstack/react-router': '>=1.43.2'
       zod: ^3.23.8
+
+  '@techstark/opencv-js@4.11.0-release.1':
+    resolution: {integrity: sha512-d5h8cMiSbbnme5+I1ta4++EJ3mkca1zkVNh0A4+5ASJYOmO5OhVPRX3oPnNzs9I3KyGVX7QeFU8gVoI7I0w8RQ==}
 
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
@@ -6604,6 +6610,8 @@ snapshots:
     dependencies:
       '@tanstack/react-router': 1.132.17(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       zod: 4.1.12
+
+  '@techstark/opencv-js@4.11.0-release.1': {}
 
   '@testing-library/dom@10.4.1':
     dependencies:
