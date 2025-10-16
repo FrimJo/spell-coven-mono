@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "created": "2025-10-16",
+  "total_cards": 100,
+  "categories": {
+    "creatures": 25,
+    "spells": 25,
+    "artifacts_enchantments": 25,
+    "lands": 25
+  },
+  "selection_criteria": [
+    "Diverse colors and card types",
+    "Mix of old and new frames",
+    "Various art styles (simple to complex)",
+    "Different power levels and rarity",
+    "Include iconic and obscure cards"
+  ],
+  "cards": [
+    {
+      "id": 1,
+      "name": "Lightning Bolt",
+      "set": "LEA",
+      "type": "instant",
+      "category": "spell",
+      "colors": ["R"],
+      "notes": "Iconic red instant, simple artwork"
+    },
+    {
+      "id": 2,
+      "name": "Black Lotus",
+      "set": "LEA",
+      "type": "artifact",
+      "category": "artifact",
+      "colors": [],
+      "notes": "Most iconic MTG card, distinctive artwork"
+    },
+    {
+      "id": 3,
+      "name": "Tarmogoyf",
+      "set": "FUT",
+      "type": "creature",
+      "category": "creature",
+      "colors": ["G"],
+      "notes": "Modern staple, unique creature type"
+    },
+    {
+      "id": 4,
+      "name": "Island",
+      "set": "UNH",
+      "type": "land",
+      "category": "land",
+      "colors": [],
+      "notes": "Basic land with full-art treatment"
+    },
+    {
+      "id": 5,
+      "name": "Counterspell",
+      "set": "ICE",
+      "type": "instant",
+      "category": "spell",
+      "colors": ["U"],
+      "notes": "Classic blue instant, iconic artwork"
+    }
+  ],
+  "notes": [
+    "TODO: Complete selection of remaining 95 cards",
+    "Ensure diversity across:",
+    "- Card colors (WUBRG + colorless + multicolor)",
+    "- Card frames (old, modern, future-shifted)",
+    "- Art complexity (simple, detailed, abstract)",
+    "- Card types (creatures, spells, permanents, lands)",
+    "- Sets (Alpha through current)",
+    "Prioritize cards that are:",
+    "- Commonly played (for practical testing)",
+    "- Visually distinctive (easier to verify results)",
+    "- Available in your collection or easily accessible"
+  ]
+}
