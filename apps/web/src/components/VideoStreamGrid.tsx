@@ -66,12 +66,9 @@ export function VideoStreamGrid({
     overlayRef,
     croppedRef,
     fullResRef,
-    cameraSelectRef,
     startVideo,
     stopVideo,
-    isReady,
-    status,
-    isLoading,
+    getCameras,
     isVideoActive,
   } = useWebcam({
     enableCardDetection,
@@ -141,8 +138,8 @@ export function VideoStreamGrid({
   void toggleVideo
 
   const toggleLocalAudio = () => {
-    if (localVideoRef.current && localVideoRef.current.srcObject) {
-      const stream = localVideoRef.current.srcObject as MediaStream
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream
       const audioTracks = stream.getAudioTracks()
       audioTracks.forEach((track) => {
         track.enabled = !track.enabled
@@ -190,7 +187,7 @@ export function VideoStreamGrid({
               {isLocal && (
                 <>
                   <video
-                    ref={localVideoRef}
+                    ref={videoRef}
                     autoPlay
                     muted
                     playsInline

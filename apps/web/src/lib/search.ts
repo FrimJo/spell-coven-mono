@@ -185,6 +185,7 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
 
     // Initialize pipeline with proper options
     // CRITICAL: Must use CLIP ViT-B/32 to match backend embeddings (build_mtg_faiss.py line 111)
+    // Note: Using Xenova/ prefix for ONNX-converted model (required for transformers.js browser compatibility)
     let lastLogTime = 0
     extractor = await pipeline(
       'image-feature-extraction',
@@ -217,6 +218,7 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
       e,
     )
     console.error('[model] Error stack:', (e as Error).stack)
+
     throw new Error(
       `Model load failed (transformers). Check network requests to huggingface/CDN for non-200 or text/html responses. Original: ${(e as Error)?.message || e}`,
     )
