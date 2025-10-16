@@ -17,15 +17,15 @@ interface UseWebcamOptions {
 
 interface UseWebcamReturn {
   /** Ref for the video element */
-  videoRef: React.RefObject<HTMLVideoElement>
+  videoRef: React.RefObject<HTMLVideoElement | null>
   /** Ref for the overlay canvas (used for card detection) */
-  overlayRef: React.RefObject<HTMLCanvasElement>
+  overlayRef: React.RefObject<HTMLCanvasElement | null>
   /** Ref for the cropped canvas (stores cropped card image) */
-  croppedRef: React.RefObject<HTMLCanvasElement>
+  croppedRef: React.RefObject<HTMLCanvasElement | null>
   /** Ref for the full resolution canvas (internal use) */
-  fullResRef: React.RefObject<HTMLCanvasElement>
+  fullResRef: React.RefObject<HTMLCanvasElement | null>
   /** Ref for camera select element */
-  cameraSelectRef: React.RefObject<HTMLSelectElement>
+  cameraSelectRef: React.RefObject<HTMLSelectElement | null>
   /** Start the webcam with optional device ID */
   startVideo: (deviceId?: string | null) => Promise<void>
   /** Stop the webcam */
@@ -58,7 +58,6 @@ interface UseWebcamReturn {
  * const { videoRef, overlayRef, startVideo, isReady } = useWebcam({
  *   enableCardDetection: true,
  *   autoStart: true,
- *   onCrop: () => console.log('Card cropped!')
  * })
  *
  * return (
@@ -127,13 +126,11 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
         !croppedRef.current ||
         !fullResRef.current
       ) {
-        console.log('useWebcam: Waiting for refs to be attached...')
         return
       }
 
       // Skip if already initialized (prevents re-initialization loop)
       if (isInitialized.current) {
-        console.log('useWebcam: Already initialized, skipping')
         return
       }
       isInitialized.current = true
@@ -150,10 +147,8 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
           fullRes: fullResRef.current,
           detectorType,
           onCrop: (canvas: HTMLCanvasElement) => {
-            console.log('[useWebcam] onCrop called with canvas:', canvas)
             setHasCroppedImage(true)
             if (onCrop) {
-              console.log('[useWebcam] Forwarding canvas to parent onCrop')
               onCrop(canvas)
             }
           },
@@ -166,7 +161,13 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
 
           // Auto-start if requested
           if (autoStartRef.current) {
-            await webcamController.current.startVideo(deviceIdRef.current)
+            // In development, use demo video as default if no deviceId specified
+            const defaultDeviceId = 
+              !deviceIdRef.current && import.meta.env.DEV
+                ? 'video-file:/card_demo.webm'
+                : deviceIdRef.current
+            
+            await webcamController.current.startVideo(defaultDeviceId)
             await webcamController.current.populateCameraSelect(
               cameraSelectRef.current,
             )
@@ -199,7 +200,13 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
         return
       }
       try {
-        await webcamController.current.startVideo(deviceId || null)
+        // In development, use demo video as default if no deviceId specified
+        const finalDeviceId = 
+          !deviceId && import.meta.env.DEV
+            ? 'video-file:/card_demo.webm'
+            : deviceId || null
+        
+        await webcamController.current.startVideo(finalDeviceId)
         await webcamController.current.populateCameraSelect(
           cameraSelectRef.current,
         )

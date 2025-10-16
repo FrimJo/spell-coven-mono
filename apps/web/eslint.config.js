@@ -9,7 +9,7 @@ export default [
   ...baseConfig,
   ...reactConfig,
   ...pluginQuery.configs['flat/recommended'],
-  { ignores: ['public/mockServiceWorker.js'] },
+  { ignores: ['public/mockServiceWorker.js', '**/*.demo.ts'] },
   {
     files: ['**/*.ts', '**/*.tsx'],
     ignores: [
@@ -17,6 +17,7 @@ export default [
       'src/routeTree.gen.ts',
       'eslint.config.js',
       'playwright.config.ts',
+      '**/*.demo.ts',
     ],
     languageOptions: {
       parserOptions: {
