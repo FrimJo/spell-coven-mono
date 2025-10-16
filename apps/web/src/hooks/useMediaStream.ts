@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface UseMediaStreamOptions {
   /** Auto-start video on mount */
@@ -13,7 +13,7 @@ interface UseMediaStreamOptions {
 
 interface UseMediaStreamReturn {
   /** Ref for the video element */
-  videoRef: React.RefObject<HTMLVideoElement>
+  videoRef: React.RefObject<HTMLVideoElement | null>
   /** Current media stream */
   stream: MediaStream | null
   /** Start the media stream */
@@ -75,7 +75,7 @@ export function useMediaStream(
   const [isActive, setIsActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const startStream = async (requestedDeviceId?: string | null) => {
+  const startStream = useCallback(async (requestedDeviceId?: string | null) => {
     try {
       setError(null)
 
@@ -88,29 +88,20 @@ export function useMediaStream(
       }
 
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
-      console.log('[useMediaStream] Got media stream:', mediaStream)
-      console.log(
-        '[useMediaStream] Video tracks:',
-        mediaStream.getVideoTracks(),
-      )
 
       if (videoRef.current) {
-        console.log('[useMediaStream] Setting srcObject on video element')
         videoRef.current.srcObject = mediaStream
 
         // Wait for metadata to load before playing
         await new Promise<void>((resolve) => {
           if (videoRef.current) {
             videoRef.current.onloadedmetadata = () => {
-              console.log('[useMediaStream] Video metadata loaded')
               resolve()
             }
           }
         })
 
-        console.log('[useMediaStream] Playing video')
         await videoRef.current.play()
-        console.log('[useMediaStream] Video playing')
       }
 
       setStream(mediaStream)
@@ -121,11 +112,9 @@ export function useMediaStream(
       const audioTrack = mediaStream.getAudioTracks()[0]
 
       if (videoTrack) {
-        console.log('[useMediaStream] Video track enabled:', videoTrack.enabled)
         setIsVideoEnabled(videoTrack.enabled)
       }
       if (audioTrack) {
-        console.log('[useMediaStream] Audio track enabled:', audioTrack.enabled)
         setIsAudioEnabled(audioTrack.enabled)
       }
     } catch (err) {
@@ -135,9 +124,9 @@ export function useMediaStream(
       setError(errorMessage)
       setIsActive(false)
     }
-  }
+  }, [deviceId, audio, videoConstraints])
 
-  const stopStream = () => {
+  const stopStream = useCallback(() => {
     if (stream) {
       stream.getTracks().forEach((track) => track.stop())
       if (videoRef.current) {
@@ -146,9 +135,9 @@ export function useMediaStream(
       setStream(null)
       setIsActive(false)
     }
-  }
+  }, [stream])
 
-  const toggleVideo = () => {
+  const toggleVideo = useCallback(() => {
     if (stream) {
       const videoTrack = stream.getVideoTracks()[0]
       if (videoTrack) {
@@ -156,9 +145,9 @@ export function useMediaStream(
         setIsVideoEnabled(videoTrack.enabled)
       }
     }
-  }
+  }, [stream])
 
-  const toggleAudio = () => {
+  const toggleAudio = useCallback(() => {
     if (stream) {
       const audioTrack = stream.getAudioTracks()[0]
       if (audioTrack) {
@@ -166,17 +155,17 @@ export function useMediaStream(
         setIsAudioEnabled(audioTrack.enabled)
       }
     }
-  }
+  }, [stream])
 
-  const getCameras = async () => {
+  const getCameras = useCallback(async () => {
     const devices = await navigator.mediaDevices.enumerateDevices()
     return devices.filter((d) => d.kind === 'videoinput')
-  }
+  }, [])
 
-  const getAudioDevices = async () => {
+  const getAudioDevices = useCallback(async () => {
     const devices = await navigator.mediaDevices.enumerateDevices()
     return devices.filter((d) => d.kind === 'audioinput')
-  }
+  }, [])
 
   // Auto-start effect
   useEffect(() => {
@@ -188,8 +177,7 @@ export function useMediaStream(
     return () => {
       stopStream()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoStart])
+  }, [autoStart, startStream, stopStream])
 
   return {
     videoRef,

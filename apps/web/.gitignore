@@ -22,4 +22,4 @@ public/index_out/
 !public/data/mtg-embeddings/**
 
 test-results/
-.playwright-storage/
+.playwright-storage/*.demo.ts
