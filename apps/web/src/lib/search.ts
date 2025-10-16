@@ -4,11 +4,7 @@
 // To update: run the build script in packages/mtg-image-db, then copy the output files here
 
 // Top-level import for transformers (no SSR)
-import {
-  env,
-  pipeline,
-  ProgressInfo,
-} from '@huggingface/transformers'
+import { env, pipeline, ProgressInfo } from '@huggingface/transformers'
 
 // Version of the embeddings data - configured via environment variable
 const EMBEDDINGS_VERSION = import.meta.env.VITE_EMBEDDINGS_VERSION || 'v1.0'
@@ -187,7 +183,6 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
     env.allowRemoteModels = true
     env.allowLocalModels = false
 
-
     // Initialize pipeline with proper options
     // CRITICAL: Must use CLIP ViT-B/32 to match backend embeddings (build_mtg_faiss.py line 111)
     let lastLogTime = 0
@@ -236,29 +231,29 @@ export async function embedFromImageElement(imgEl: HTMLImageElement) {
 
 export async function embedFromCanvas(canvas: HTMLCanvasElement) {
   if (!extractor) throw new Error('Model not loaded')
-  
+
   // Validate preprocessing pipeline alignment (User Story 3)
   // CRITICAL: Canvas must be square and 384×384 to match Python preprocessing
   // See: packages/mtg-image-db/build_mtg_faiss.py lines 122-135
-  
+
   // Check if canvas is square
   if (canvas.width !== canvas.height) {
     console.warn(
       `[search] ⚠️  Canvas should be square for optimal matching. ` +
-      `Got ${canvas.width}×${canvas.height}. Results may be inaccurate. ` +
-      `Expected: square dimensions matching Python preprocessing pipeline.`
+        `Got ${canvas.width}×${canvas.height}. Results may be inaccurate. ` +
+        `Expected: square dimensions matching Python preprocessing pipeline.`,
     )
   }
-  
+
   // Check if dimensions match Python target_size (384×384)
   if (canvas.width !== 384 || canvas.height !== 384) {
     console.warn(
       `[search] ⚠️  Canvas dimensions should be 384×384 to match database preprocessing. ` +
-      `Got ${canvas.width}×${canvas.height}. ` +
-      `Database embeddings were generated from 384×384 square images.`
+        `Got ${canvas.width}×${canvas.height}. ` +
+        `Database embeddings were generated from 384×384 square images.`,
     )
   }
-  
+
   const out = await extractor(canvas)
   return l2norm(Float32Array.from(out.data))
 }

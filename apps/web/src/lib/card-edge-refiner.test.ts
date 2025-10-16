@@ -1,11 +1,12 @@
 /**
  * Tests for card edge refinement
- * 
+ *
  * Note: These tests require a browser environment with canvas support
  * Run with: npm run test (using vitest with jsdom)
  */
 
-import { describe, it, expect, beforeAll } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
+
 import { isOpenCVLoaded, refineCardEdges } from './card-edge-refiner'
 
 describe('Card Edge Refiner', () => {

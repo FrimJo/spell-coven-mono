@@ -1,30 +1,35 @@
 /**
  * DETR-based card detector implementation
- * 
+ *
  * Uses Transformers.js DETR model for object detection.
  * Filters detections by confidence, aspect ratio, and object class.
- * 
+ *
  * @module detectors/detr-detector
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { env, pipeline } from '@huggingface/transformers'
 import type { DetectedCard, DetectionResult, Point } from '@/types/card-query'
-import {
-  MTG_CARD_ASPECT_RATIO,
-  ASPECT_RATIO_TOLERANCE,
-  MIN_CARD_AREA,
-} from '../detection-constants'
+import { env, pipeline } from '@huggingface/transformers'
+
 import type {
   CardDetector,
+  DetectionOutput,
   DetectorConfig,
   DetectorStatus,
-  DetectionOutput,
 } from './types'
+import {
+  ASPECT_RATIO_TOLERANCE,
+  MIN_CARD_AREA,
+  MTG_CARD_ASPECT_RATIO,
+} from '../detection-constants'
 
 // Suppress ONNX Runtime warnings
-if (typeof env !== 'undefined' && 'wasm' in env.backends.onnx && env.backends.onnx.wasm) {
+if (
+  typeof env !== 'undefined' &&
+  'wasm' in env.backends.onnx &&
+  env.backends.onnx.wasm
+) {
   env.backends.onnx.wasm.numThreads = 1
 }
 
@@ -97,7 +102,7 @@ export class DETRDetector implements CardDetector {
   async detect(
     canvas: HTMLCanvasElement,
     canvasWidth: number,
-    canvasHeight: number
+    canvasHeight: number,
   ): Promise<DetectionOutput> {
     if (!this.detector || this.status !== 'ready') {
       throw new Error('Detector not initialized')
@@ -115,7 +120,7 @@ export class DETRDetector implements CardDetector {
     const cards = this.filterCardDetections(
       detections,
       canvasWidth,
-      canvasHeight
+      canvasHeight,
     )
 
     const inferenceTimeMs = performance.now() - startTime
@@ -143,7 +148,7 @@ export class DETRDetector implements CardDetector {
   private boundingBoxToPolygon(
     box: { xmin: number; ymin: number; xmax: number; ymax: number },
     canvasWidth: number,
-    canvasHeight: number
+    canvasHeight: number,
   ): Point[] {
     const xmin = box.xmin * canvasWidth
     const ymin = box.ymin * canvasHeight
@@ -161,7 +166,7 @@ export class DETRDetector implements CardDetector {
   private filterCardDetections(
     detections: DetectionResult[],
     canvasWidth: number,
-    canvasHeight: number
+    canvasHeight: number,
   ): DetectedCard[] {
     return detections
       .filter((det) => {

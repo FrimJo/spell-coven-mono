@@ -31,6 +31,8 @@ interface GameRoomProps {
   onLeaveGame: () => void
   isLobbyOwner?: boolean
   detectorType?: DetectorType
+  useFrameBuffer?: boolean
+  usePerspectiveWarp?: boolean
 }
 
 interface Player {
@@ -46,6 +48,8 @@ function GameRoomContent({
   onLeaveGame,
   isLobbyOwner = true,
   detectorType,
+  useFrameBuffer = true,
+  usePerspectiveWarp = true,
 }: GameRoomProps) {
   const { query } = useCardQueryContext()
   const [copied, setCopied] = useState(false)
@@ -257,6 +261,8 @@ function GameRoomContent({
               onLifeChange={handleLifeChange}
               enableCardDetection={true}
               detectorType={detectorType}
+              useFrameBuffer={useFrameBuffer}
+              usePerspectiveWarp={usePerspectiveWarp}
               onCardCrop={(canvas: HTMLCanvasElement) => {
                 query(canvas)
               }}

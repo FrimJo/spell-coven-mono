@@ -24,13 +24,13 @@ In the same file, uncomment and adjust settings:
 ```typescript
 export const DETECTOR_OVERRIDES = {
   opencv: {
-    minCardArea: 4000,        // Adjust for card size
-    cannyLowThreshold: 75,    // Lower = more sensitive
-    cannyHighThreshold: 200,  // Higher = less noise
+    minCardArea: 4000, // Adjust for card size
+    cannyLowThreshold: 75, // Lower = more sensitive
+    cannyHighThreshold: 200, // Higher = less noise
   },
   detr: {
     confidenceThreshold: 0.5, // Higher = fewer false positives
-    device: 'auto',           // 'webgpu' for GPU, 'wasm' for CPU
+    device: 'auto', // 'webgpu' for GPU, 'wasm' for CPU
   },
 }
 ```
@@ -48,7 +48,7 @@ const webcam = await setupWebcam({
   cropped: croppedCanvas,
   fullRes: fullResCanvas,
   onProgress: (msg) => console.log(msg),
-  onCrop: () => console.log('Card captured!')
+  onCrop: () => console.log('Card captured!'),
 })
 
 // Start detection
@@ -83,7 +83,7 @@ import { createDetector } from '@/lib/detectors'
 // Create specific detector
 const detector = createDetector('opencv', {
   minCardArea: 5000,
-  onProgress: (msg) => console.log(msg)
+  onProgress: (msg) => console.log(msg),
 })
 
 await detector.initialize()
@@ -104,7 +104,7 @@ await Promise.all([opencv.initialize(), detr.initialize()])
 // Run both
 const [opencvResult, detrResult] = await Promise.all([
   opencv.detect(canvas, width, height),
-  detr.detect(canvas, width, height)
+  detr.detect(canvas, width, height),
 ])
 
 console.log('OpenCV:', opencvResult.cards.length, 'cards')
@@ -114,16 +114,19 @@ console.log('DETR:', detrResult.cards.length, 'cards')
 ## Troubleshooting
 
 ### OpenCV not detecting?
+
 - Improve lighting
 - Use solid background
 - Adjust `cannyLowThreshold` (lower = more sensitive)
 
 ### DETR too slow?
+
 - Enable GPU: `device: 'webgpu'`
 - Reduce detection interval
 - Use OpenCV for preview, DETR for capture
 
 ### Too many false positives?
+
 - **OpenCV**: Increase `minCardArea`
 - **DETR**: Increase `confidenceThreshold`
 

@@ -44,8 +44,8 @@ Output: Perfectly aligned card
 ### Basic Setup
 
 ```typescript
-import { setupWebcam } from './lib/webcam'
 import { loadOpenCV } from './lib/card-edge-refiner'
+import { setupWebcam } from './lib/webcam'
 
 // 1. Load OpenCV (do this once at app startup)
 await loadOpenCV()
@@ -74,8 +74,8 @@ await webcam.startVideo()
 // Check if available
 if (webcam.isEdgeRefinementAvailable()) {
   // Enable/disable
-  webcam.setEdgeRefinement(true)  // or false
-  
+  webcam.setEdgeRefinement(true) // or false
+
   // Check current state
   const enabled = webcam.isEdgeRefinementEnabled()
 }
@@ -99,7 +99,7 @@ const result = await refineCardEdgesWithAutoLoad(canvas, 384, 384)
 if (result.success) {
   // Use refined canvas
   document.body.appendChild(result.refinedCanvas!)
-  
+
   // Check quality
   console.log('Confidence:', result.edges?.confidence)
   console.log('Corners:', result.edges?.corners)
@@ -117,6 +117,7 @@ Loads OpenCV.js library from CDN.
 **Returns:** `Promise<void>`
 
 **Example:**
+
 ```typescript
 try {
   await loadOpenCV()
@@ -137,6 +138,7 @@ Checks if OpenCV is loaded and ready.
 Refines card edges from a roughly cropped card image.
 
 **Parameters:**
+
 - `inputCanvas: HTMLCanvasElement` - Canvas containing the card
 - `targetWidth?: number` - Output width (default: 384)
 - `targetHeight?: number` - Output height (default: 384)
@@ -149,7 +151,7 @@ interface RefinementResult {
   refinedCanvas?: HTMLCanvasElement
   edges?: {
     corners: Array<{ x: number; y: number }>
-    confidence: number  // 0-1, higher is better
+    confidence: number // 0-1, higher is better
   }
   error?: string
 }
@@ -182,14 +184,17 @@ Check if OpenCV is loaded and edge refinement is available.
 ## Performance
 
 ### Loading Time
+
 - OpenCV.js: ~2-3 seconds (one-time, at startup)
 - CDN size: ~8MB (cached after first load)
 
 ### Processing Time
+
 - Edge refinement: ~50-200ms per card
 - Does not affect detection loop (only runs on crop)
 
 ### Memory Usage
+
 - OpenCV.js: ~20-30MB
 - Temporary matrices are cleaned up after each refinement
 
@@ -209,6 +214,7 @@ The refinement returns a confidence score (0-1) indicating how well the detected
 **Problem:** Network error or CDN unavailable
 
 **Solution:**
+
 ```typescript
 try {
   await loadOpenCV()
@@ -223,12 +229,14 @@ try {
 **Problem:** Card edges not detected
 
 **Possible causes:**
+
 - Card is too small in the image
 - Poor lighting or low contrast
 - Card is heavily occluded
 - Background is too cluttered
 
 **Solution:**
+
 - Ensure DETR bounding box is tight around card
 - Improve lighting conditions
 - Move camera closer to card
@@ -238,11 +246,13 @@ try {
 **Problem:** Detected shape doesn't match a rectangle well
 
 **Possible causes:**
+
 - Card is bent or warped
 - Perspective distortion is too extreme
 - Partial occlusion
 
 **Solution:**
+
 - Hold card flat
 - Position card more perpendicular to camera
 - Ensure full card is visible
@@ -250,6 +260,7 @@ try {
 ## Example: Complete Integration
 
 See `card-edge-refiner.demo.ts` for complete examples including:
+
 - Webcam setup with edge refinement
 - Toggle button for enabling/disabling
 - Standalone image refinement

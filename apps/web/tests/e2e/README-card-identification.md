@@ -5,12 +5,15 @@ End-to-end tests for the card identification feature using Playwright.
 ## Test Files
 
 ### `card-identification.spec.ts`
+
 Comprehensive test suite covering all user stories:
+
 - **US1**: Card identification from video stream
 - **US2**: Debug cropped images (base64 logging)
 - **US3**: Error handling and low confidence warnings
 
 **Test Cases**:
+
 1. Loading overlay during model initialization
 2. Card result display after clicking detected card
 3. Loading state while querying
@@ -22,9 +25,11 @@ Comprehensive test suite covering all user stories:
 9. Card result positioning below player list
 
 ### `card-identification-debug.spec.ts`
+
 Debug version with detailed logging and screenshots for interactive debugging.
 
 **Features**:
+
 - Console message logging
 - Network request tracking
 - Screenshots at each step
@@ -32,6 +37,7 @@ Debug version with detailed logging and screenshots for interactive debugging.
 - Slower execution for observation
 
 **Test Cases**:
+
 1. Full flow with detailed logging
 2. Rapid click cancellation test
 
@@ -92,7 +98,7 @@ mcp0_evaluate_script({
   function: `() => {
     const overlay = document.querySelector('canvas[width="640"][height="480"]')
     return { exists: !!overlay, dimensions: { width: overlay?.width, height: overlay?.height } }
-  }`
+  }`,
 })
 ```
 
@@ -101,10 +107,12 @@ mcp0_evaluate_script({
 Tests generate screenshots in `test-results/`:
 
 ### Standard Tests
+
 - `card-result-displayed.png` - Card result after query
 - `card-result-layout.png` - Layout verification
 
 ### Debug Tests
+
 - `debug-01-page-load.png` - Initial page load
 - `debug-02-model-loaded.png` - After CLIP model loads
 - `debug-03-video-active.png` - Video stream active
@@ -117,26 +125,34 @@ Tests generate screenshots in `test-results/`:
 ## Debugging Tips
 
 ### Model Not Loading
+
 If tests timeout waiting for model:
+
 1. Check network requests for `embeddings.i8bin` and `meta.json`
 2. Verify files exist in `public/data/mtg-embeddings/v1.0/`
 3. Check browser console for errors
 
 ### Card Not Detected
+
 If green borders don't appear:
+
 1. Verify OpenCV loaded: Check console for `cv` object
 2. Check video is playing: Inspect video element state
 3. Verify demo video has card visible
 
 ### Query Fails
+
 If card identification fails:
+
 1. Check console for base64 image log
 2. Verify canvas dimensions (446x620)
 3. Check CLIP model loaded successfully
 4. Inspect network for embedding requests
 
 ### No Results Displayed
+
 If card result doesn't appear:
+
 1. Check React component tree in devtools
 2. Verify CardResultDisplay is rendered
 3. Check query state in React devtools
@@ -145,6 +161,7 @@ If card result doesn't appear:
 ## Expected Behavior
 
 ### Successful Flow
+
 1. **Page Load** → Loading overlay appears
 2. **Model Loading** → Progress messages shown
 3. **Model Ready** → Loading overlay disappears
@@ -159,13 +176,17 @@ If card result doesn't appear:
    - Scryfall link
 
 ### Debug Logging
+
 Console should show:
+
 ```
 Cropped card image: data:image/png;base64,iVBORw0KG...
 ```
 
 ### Low Confidence
+
 If score < 0.70:
+
 ```
 Low confidence match. Try a clearer view of the card.
 ```
@@ -173,16 +194,19 @@ Low confidence match. Try a clearer view of the card.
 ## Troubleshooting
 
 ### Test Hangs on Model Loading
+
 - Increase timeout in `waitForClipModel()`
 - Check if embeddings files are accessible
 - Verify network is not blocking requests
 
 ### Flaky Tests
+
 - Increase wait times in debug version
 - Use `page.waitForFunction()` instead of `waitForTimeout()`
 - Check for race conditions in query cancellation
 
 ### Screenshots Not Generated
+
 - Ensure `test-results/` directory exists
 - Check file permissions
 - Verify screenshot path is correct
@@ -195,7 +219,7 @@ For continuous integration:
 # .github/workflows/e2e-tests.yml
 - name: Run E2E Tests
   run: pnpm test:e2e card-identification.spec
-  
+
 - name: Upload Screenshots
   if: failure()
   uses: actions/upload-artifact@v3
@@ -207,6 +231,7 @@ For continuous integration:
 ## Performance Benchmarks
 
 Expected timings:
+
 - Model loading: 5-15 seconds
 - Card detection: < 1 second
 - Query execution: 1-3 seconds

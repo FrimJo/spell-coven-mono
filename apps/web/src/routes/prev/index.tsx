@@ -39,8 +39,7 @@ function ScannerPage() {
     isLoading,
   } = useWebcam({
     enableCardDetection: true,
-    onCrop: () => {
-    },
+    onCrop: () => {},
   })
 
   function setSpinner(text: string, show = true) {

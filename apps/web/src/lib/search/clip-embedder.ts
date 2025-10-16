@@ -1,9 +1,9 @@
 /**
  * CLIP embedder module
- * 
+ *
  * Generates 512-dimensional L2-normalized embeddings from canvas images.
  * Uses Transformers.js CLIP model for browser-based embedding.
- * 
+ *
  * @module search/clip-embedder
  */
 
@@ -22,7 +22,7 @@ export interface QueryEmbedding {
 
 /**
  * CLIP embedder class
- * 
+ *
  * Implements:
  * - T037: CLIP model initialization (FR-010)
  * - T038: embedFromCanvas() function (FR-009a)
@@ -70,8 +70,8 @@ export class CLIPEmbedder {
             }
           },
           device: 'auto', // WebGPU → WebGL → WASM fallback
-          dtype: 'fp16',  // Consistent with SlimSAM, optimized for performance
-        }
+          dtype: 'fp16', // Consistent with SlimSAM, optimized for performance
+        },
       )
 
       onProgress?.('CLIP model ready')
@@ -80,7 +80,7 @@ export class CLIPEmbedder {
         timestamp: new Date().toISOString(),
         type: 'embedding',
         context: 'CLIP initialization',
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       }
       console.error('[CLIPEmbedder]', JSON.stringify(errorLog, null, 2))
       throw error
@@ -92,7 +92,7 @@ export class CLIPEmbedder {
   /**
    * T038: Embed from canvas (FR-009a)
    * T039: Verify embedding is 512-dim L2-normalized vector
-   * 
+   *
    * @param canvas - Canvas containing image to embed
    * @returns Query embedding with verification
    * @throws Error if embedding fails or validation fails
@@ -106,7 +106,7 @@ export class CLIPEmbedder {
       // Extract features using CLIP
       const result = await this.extractor(canvas, {
         pooling: 'mean',
-        normalize: true
+        normalize: true,
       })
 
       // Convert to Float32Array
@@ -123,7 +123,7 @@ export class CLIPEmbedder {
       if (vector.length !== 512) {
         throw new Error(
           `Invalid embedding dimension: expected 512, got ${vector.length}. ` +
-          `CLIP ViT-B/32 should produce 512-dimensional vectors.`
+            `CLIP ViT-B/32 should produce 512-dimensional vectors.`,
         )
       }
 
@@ -144,26 +144,26 @@ export class CLIPEmbedder {
           type: 'embedding',
           context: 'CLIP embedding normalization',
           error: `Embedding L2 norm ${norm.toFixed(4)} outside tolerance (1.0 ±${tolerance})`,
-          norm
+          norm,
         }
         console.error('[CLIPEmbedder]', JSON.stringify(errorLog, null, 2))
-        
+
         throw new Error(
-          `Embedding not properly normalized: L2 norm = ${norm.toFixed(4)}, expected ~1.0 ±${tolerance}`
+          `Embedding not properly normalized: L2 norm = ${norm.toFixed(4)}, expected ~1.0 ±${tolerance}`,
         )
       }
 
       return {
         vector,
         isNormalized,
-        norm
+        norm,
       }
     } catch (error) {
       const errorLog = {
         timestamp: new Date().toISOString(),
         type: 'embedding',
         context: 'CLIP embedding generation',
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       }
       console.error('[CLIPEmbedder]', JSON.stringify(errorLog, null, 2))
       throw error

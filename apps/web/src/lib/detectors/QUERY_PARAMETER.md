@@ -16,26 +16,32 @@ Add `?detector=<type>` to your game URL:
 ## Examples
 
 ### DETR (Default, ML-based)
+
 ```
 http://localhost:5173/game/ga-abc123
 ```
+
 - **No query parameter needed** - DETR is the default
 - Robust detection
 - ~160MB model download (first time only)
 - Best for production
 
 ### OpenCV (Fast, no download)
+
 ```
 http://localhost:5173/game/ga-abc123?detector=opencv
 ```
+
 - Instant startup
 - No model download
 - Best for testing and low-end devices
 
 ### OWL-ViT (Not yet implemented)
+
 ```
 http://localhost:5173/game/ga-abc123?detector=owl-vit
 ```
+
 - Will show error until implemented
 - Reserved for future use
 
@@ -56,6 +62,7 @@ const defaultValues = {
 ```
 
 The URL will automatically strip `?detector=detr` to keep URLs clean, so these are equivalent:
+
 - `/game/ga-abc123`
 - `/game/ga-abc123?detector=detr` (automatically becomes `/game/ga-abc123`)
 
@@ -80,17 +87,16 @@ CardDetector (OpenCV/DETR/OWL-ViT)
 ## Use Cases
 
 ### Testing Different Detectors
+
 ```typescript
 // Compare performance
-const urls = [
-  '/game/ga-test?detector=opencv',
-  '/game/ga-test?detector=detr',
-]
+const urls = ['/game/ga-test?detector=opencv', '/game/ga-test?detector=detr']
 
 // Open in different tabs and compare
 ```
 
 ### User Preferences
+
 ```typescript
 // Allow users to choose their detector
 const detectorSelect = document.querySelector('select')
@@ -101,6 +107,7 @@ detectorSelect.addEventListener('change', (e) => {
 ```
 
 ### A/B Testing
+
 ```typescript
 // Randomly assign detector for testing
 const detectors = ['opencv', 'detr']
@@ -109,6 +116,7 @@ window.location.href = `/game/${gameId}?detector=${randomDetector}`
 ```
 
 ### Device-Based Selection
+
 ```typescript
 // Use OpenCV on mobile, DETR on desktop
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
@@ -158,18 +166,23 @@ navigator.clipboard.writeText(shareLink)
 ## Development Tips
 
 ### Quick Switching
+
 Bookmark different URLs for quick testing:
+
 - `http://localhost:5173/game/test?detector=opencv` (Fast)
 - `http://localhost:5173/game/test?detector=detr` (Accurate)
 
 ### Console Logging
+
 Check which detector is active:
+
 ```typescript
 // In browser console
 console.log(window.location.search) // ?detector=opencv
 ```
 
 ### URL Builder Helper
+
 ```typescript
 function buildGameUrl(gameId: string, detector?: DetectorType): string {
   const base = `/game/${gameId}`
@@ -184,17 +197,20 @@ const url = buildGameUrl('ga-abc123', 'opencv')
 ## Troubleshooting
 
 ### Detector not changing
+
 - Check browser console for errors
 - Verify the query parameter is correct
 - Clear browser cache
 - Reload the page
 
 ### Invalid detector value
+
 - Only `opencv`, `detr`, and `owl-vit` are valid
 - Case-sensitive (use lowercase)
 - Check for typos in URL
 
 ### OWL-ViT not working
+
 - OWL-ViT is not yet implemented
 - Use `opencv` or `detr` instead
 - See `owl-vit-detector.ts` for implementation status

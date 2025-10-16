@@ -1,6 +1,6 @@
 /**
  * Card Edge Refinement using OpenCV.js
- * 
+ *
  * Takes a roughly cropped card image (from DETR) and finds the exact card edges
  * using computer vision techniques:
  * 1. Convert to grayscale
@@ -47,7 +47,7 @@ export async function loadOpenCV(): Promise<void> {
     const script = document.createElement('script')
     script.src = 'https://docs.opencv.org/4.10.0/opencv.js'
     script.async = true
-    
+
     script.onload = () => {
       // OpenCV.js needs a moment to initialize
       const checkReady = setInterval(() => {
@@ -56,18 +56,18 @@ export async function loadOpenCV(): Promise<void> {
           resolve()
         }
       }, 100)
-      
+
       // Timeout after 10 seconds
       setTimeout(() => {
         clearInterval(checkReady)
         reject(new Error('OpenCV initialization timeout'))
       }, 10000)
     }
-    
+
     script.onerror = () => {
       reject(new Error('Failed to load OpenCV.js'))
     }
-    
+
     document.head.appendChild(script)
   })
 }
@@ -88,22 +88,22 @@ function findLargestQuadrilateral(contours: any): any {
   const cv = window.cv
   let maxArea = 0
   let bestContour = null
-  
+
   for (let i = 0; i < contours.size(); i++) {
     const contour = contours.get(i)
     const area = cv.contourArea(contour)
-    
+
     // Skip small contours
     if (area < 1000) {
       contour.delete()
       continue
     }
-    
+
     // Approximate contour to polygon
     const peri = cv.arcLength(contour, true)
     const approx = new cv.Mat()
     cv.approxPolyDP(contour, approx, 0.02 * peri, true)
-    
+
     // Check if it's a quadrilateral (4 corners)
     if (approx.rows === 4 && area > maxArea) {
       if (bestContour) bestContour.delete()
@@ -112,10 +112,10 @@ function findLargestQuadrilateral(contours: any): any {
     } else {
       approx.delete()
     }
-    
+
     contour.delete()
   }
-  
+
   return bestContour
 }
 
@@ -124,20 +124,22 @@ function findLargestQuadrilateral(contours: any): any {
  * @param points Array of 4 corner points
  * @returns Ordered points [top-left, top-right, bottom-right, bottom-left]
  */
-function orderPoints(points: Array<{ x: number; y: number }>): Array<{ x: number; y: number }> {
+function orderPoints(
+  points: Array<{ x: number; y: number }>,
+): Array<{ x: number; y: number }> {
   // Sort by y-coordinate
   const sorted = [...points].sort((a, b) => a.y - b.y)
-  
+
   // Top two points
   const top = sorted.slice(0, 2).sort((a, b) => a.x - b.x)
   // Bottom two points
   const bottom = sorted.slice(2, 4).sort((a, b) => a.x - b.x)
-  
+
   return [
-    top[0],      // top-left
-    top[1],      // top-right
-    bottom[1],   // bottom-right
-    bottom[0],   // bottom-left
+    top[0], // top-left
+    top[1], // top-right
+    bottom[1], // bottom-right
+    bottom[0], // bottom-left
   ]
 }
 
@@ -156,46 +158,54 @@ function applyPerspectiveTransform(
   targetHeight: number,
 ): any {
   const cv = window.cv
-  
+
   // Order corners
   const ordered = orderPoints(corners)
-  
+
   // Source points (card corners in original image)
   const srcPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
-    ordered[0].x, ordered[0].y,
-    ordered[1].x, ordered[1].y,
-    ordered[2].x, ordered[2].y,
-    ordered[3].x, ordered[3].y,
+    ordered[0].x,
+    ordered[0].y,
+    ordered[1].x,
+    ordered[1].y,
+    ordered[2].x,
+    ordered[2].y,
+    ordered[3].x,
+    ordered[3].y,
   ])
-  
+
   // Destination points (rectangle in output image)
   const dstPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
-    0, 0,
-    targetWidth, 0,
-    targetWidth, targetHeight,
-    0, targetHeight,
+    0,
+    0,
+    targetWidth,
+    0,
+    targetWidth,
+    targetHeight,
+    0,
+    targetHeight,
   ])
-  
+
   // Calculate perspective transform matrix
   const M = cv.getPerspectiveTransform(srcPoints, dstPoints)
-  
+
   // Apply transform
   const dst = new cv.Mat()
   const dsize = new cv.Size(targetWidth, targetHeight)
   cv.warpPerspective(src, dst, M, dsize)
-  
+
   // Cleanup
   srcPoints.delete()
   dstPoints.delete()
   M.delete()
-  
+
   return dst
 }
 
 /**
  * Refine card edges using OpenCV
  * Takes a roughly cropped card image and returns a precisely cropped and aligned card
- * 
+ *
  * @param inputCanvas Canvas containing the roughly cropped card
  * @param targetWidth Target width for output (default: 384)
  * @param targetHeight Target height for output (default: 384)
@@ -212,7 +222,7 @@ export function refineCardEdges(
       error: 'OpenCV not loaded. Call loadOpenCV() first.',
     }
   }
-  
+
   const cv = window.cv
   let src: any = null
   let gray: any = null
@@ -222,24 +232,24 @@ export function refineCardEdges(
   let hierarchy: any = null
   let quad: any = null
   let warped: any = null
-  
+
   try {
     // Read image from canvas
     src = cv.imread(inputCanvas)
-    
+
     // Convert to grayscale
     gray = new cv.Mat()
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY)
-    
+
     // Apply Gaussian blur to reduce noise
     blurred = new cv.Mat()
     const ksize = new cv.Size(5, 5)
     cv.GaussianBlur(gray, blurred, ksize, 0)
-    
+
     // Canny edge detection
     edges = new cv.Mat()
     cv.Canny(blurred, edges, 50, 150)
-    
+
     // Find contours
     contours = new cv.MatVector()
     hierarchy = new cv.Mat()
@@ -250,18 +260,17 @@ export function refineCardEdges(
       cv.RETR_EXTERNAL,
       cv.CHAIN_APPROX_SIMPLE,
     )
-    
-    
+
     // Find largest quadrilateral
     quad = findLargestQuadrilateral(contours)
-    
+
     if (!quad) {
       return {
         success: false,
         error: 'No quadrilateral card shape found in image',
       }
     }
-    
+
     // Extract corner points
     const corners: Array<{ x: number; y: number }> = []
     for (let i = 0; i < 4; i++) {
@@ -270,8 +279,7 @@ export function refineCardEdges(
         y: quad.data32F[i * 2 + 1],
       })
     }
-    
-    
+
     // Calculate confidence based on how rectangular the shape is
     // (A perfect rectangle would have corners at right angles)
     const orderedCorners = orderPoints(corners)
@@ -291,21 +299,20 @@ export function refineCardEdges(
       orderedCorners[2].x - orderedCorners[1].x,
       orderedCorners[2].y - orderedCorners[1].y,
     )
-    
+
     const widthDiff = Math.abs(width1 - width2) / Math.max(width1, width2)
     const heightDiff = Math.abs(height1 - height2) / Math.max(height1, height2)
     const confidence = 1 - (widthDiff + heightDiff) / 2
-    
-    
+
     // Apply perspective transform
     warped = applyPerspectiveTransform(src, corners, targetWidth, targetHeight)
-    
+
     // Create output canvas
     const outputCanvas = document.createElement('canvas')
     outputCanvas.width = targetWidth
     outputCanvas.height = targetHeight
     cv.imshow(outputCanvas, warped)
-    
+
     return {
       success: true,
       refinedCanvas: outputCanvas,
@@ -355,6 +362,6 @@ export async function refineCardEdgesWithAutoLoad(
       }
     }
   }
-  
+
   return refineCardEdges(inputCanvas, targetWidth, targetHeight)
 }

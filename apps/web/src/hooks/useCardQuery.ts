@@ -21,7 +21,6 @@ export function useCardQuery(): UseCardQueryReturn {
 
   const query = useCallback(
     async (canvas: HTMLCanvasElement) => {
-      
       // Cancel any pending query
       cancel()
 
@@ -31,9 +30,12 @@ export function useCardQuery(): UseCardQueryReturn {
 
       // Validate canvas
       const validation = validateCanvas(canvas)
-      
+
       if (!validation.isValid) {
-        console.error('[useCardQuery] Canvas validation failed:', validation.error)
+        console.error(
+          '[useCardQuery] Canvas validation failed:',
+          validation.error,
+        )
         setState({
           status: 'error',
           result: null,

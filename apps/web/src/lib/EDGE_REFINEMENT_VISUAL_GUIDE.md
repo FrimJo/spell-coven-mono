@@ -5,6 +5,7 @@
 The image you provided shows a card cropped using DETR bounding boxes:
 
 **Issues visible:**
+
 - ✗ Extra background around card edges (brown table visible)
 - ✗ Card may be slightly tilted
 - ✗ Rectangular crop doesn't follow card contours
@@ -74,6 +75,7 @@ The image you provided shows a card cropped using DETR bounding boxes:
 ## Before vs After Comparison
 
 ### Before (DETR Only)
+
 ```
 Dimensions: 384×384 (square)
 Card fills: ~70-80% of image
@@ -83,6 +85,7 @@ Perspective: May be distorted
 ```
 
 ### After (DETR + OpenCV)
+
 ```
 Dimensions: 384×384 (square)
 Card fills: ~95-98% of image
@@ -98,11 +101,13 @@ Perspective: Corrected (perfectly flat)
 Looking at the "Rampant Growth" card you provided:
 
 **Current crop includes:**
+
 - Brown table surface (top-left, bottom-right corners)
 - Part of a finger (bottom edge)
 - ~15-20% non-card pixels
 
 **With edge refinement, you would get:**
+
 - Just the card (99% card pixels)
 - Perfectly aligned borders
 - Corrected perspective (if card was tilted)
@@ -161,18 +166,21 @@ Looking at the "Rampant Growth" card you provided:
 ## When Edge Refinement Helps Most
 
 ### High Impact Scenarios ✅
+
 - Card is tilted/rotated in frame
 - Card has high contrast with background
 - Good lighting conditions
 - Card is relatively flat
 
 ### Low Impact Scenarios ⚠️
+
 - Card is already perfectly aligned
 - Poor lighting (hard to detect edges)
 - Card is bent/warped
 - Background is similar color to card
 
 ### Won't Help ❌
+
 - Card is partially occluded
 - Image is very blurry
 - Card is too small in frame
@@ -198,6 +206,7 @@ When you enable edge refinement, you'll see logs like:
 ## Testing Recommendations
 
 ### Quick Test
+
 1. Enable edge refinement
 2. Point camera at a card on a table
 3. Click to crop
@@ -205,12 +214,14 @@ When you enable edge refinement, you'll see logs like:
 5. Visual inspection of cropped result
 
 ### A/B Comparison
+
 1. Crop same card with refinement OFF
 2. Crop same card with refinement ON
 3. Compare side-by-side
 4. Check embedding similarity scores
 
 ### Edge Cases to Test
+
 - Tilted card (45° angle)
 - Card on cluttered background
 - Card partially in shadow

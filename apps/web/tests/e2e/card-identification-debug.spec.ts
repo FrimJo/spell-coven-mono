@@ -1,9 +1,9 @@
 /**
  * Debug version of card identification e2e test
- * 
+ *
  * This test uses chrome-devtools MCP server for interactive debugging.
  * Run with: pnpm test:e2e:debug
- * 
+ *
  * Features:
  * - Takes snapshots at each step for inspection
  * - Logs console messages
@@ -33,7 +33,9 @@ async function waitForClipModel(page: Page) {
   console.log('⏳ Waiting for CLIP model to load...')
   await page.waitForFunction(
     () => {
-      const overlay = document.querySelector('[role="dialog"][aria-label="Loading"]')
+      const overlay = document.querySelector(
+        '[role="dialog"][aria-label="Loading"]',
+      )
       return overlay === null
     },
     { timeout: 60_000 },
@@ -54,7 +56,8 @@ async function mockGetUserMedia(page: Page, videoUrl: string) {
         video.src = videoUrl
         video.muted = true
         video.loop = true
-        ;(video as HTMLVideoElement & { playsInline: boolean }).playsInline = true
+        ;(video as HTMLVideoElement & { playsInline: boolean }).playsInline =
+          true
         await video.play()
         const stream =
           (
@@ -82,7 +85,7 @@ async function mockGetUserMedia(page: Page, videoUrl: string) {
 // TODO: Debug tests have same integration issues as main tests
 // Skip for now - use manual testing or fix integration first
 test.describe.skip('Card Identification - Debug Mode', () => {
-  test.use({ 
+  test.use({
     permissions: ['camera'],
     // Slow down for debugging
     actionTimeout: 30_000,
@@ -96,7 +99,7 @@ test.describe.skip('Card Identification - Debug Mode', () => {
     page.on('console', (msg) => {
       const type = msg.type()
       const text = msg.text()
-      
+
       if (type === 'error') {
         console.error('❌ Browser Error:', text)
       } else if (text.includes('Cropped card image:')) {
@@ -133,16 +136,16 @@ test.describe.skip('Card Identification - Debug Mode', () => {
     console.log('✅ Page loaded')
 
     // Screenshot 1: Initial page load
-    await page.screenshot({ 
+    await page.screenshot({
       path: 'test-results/debug-01-page-load.png',
       fullPage: true,
     })
 
     // Wait for CLIP model
     await waitForClipModel(page)
-    
+
     // Screenshot 2: Model loaded
-    await page.screenshot({ 
+    await page.screenshot({
       path: 'test-results/debug-02-model-loaded.png',
       fullPage: true,
     })
@@ -161,7 +164,7 @@ test.describe.skip('Card Identification - Debug Mode', () => {
     await page.waitForTimeout(5000)
 
     // Screenshot 3: Video stream active
-    await page.screenshot({ 
+    await page.screenshot({
       path: 'test-results/debug-03-video-active.png',
       fullPage: true,
     })
@@ -172,7 +175,7 @@ test.describe.skip('Card Identification - Debug Mode', () => {
         'canvas[width="640"][height="480"]',
       ) as HTMLCanvasElement
       const video = document.querySelector('video') as HTMLVideoElement
-      
+
       return {
         overlayExists: !!overlay,
         overlayDimensions: overlay
@@ -228,7 +231,7 @@ test.describe.skip('Card Identification - Debug Mode', () => {
     await page.waitForTimeout(500)
 
     // Screenshot 4: Query in progress
-    await page.screenshot({ 
+    await page.screenshot({
       path: 'test-results/debug-04-query-started.png',
       fullPage: true,
     })
@@ -238,7 +241,7 @@ test.describe.skip('Card Identification - Debug Mode', () => {
     await page.waitForTimeout(5000)
 
     // Screenshot 5: Query complete
-    await page.screenshot({ 
+    await page.screenshot({
       path: 'test-results/debug-05-query-complete.png',
       fullPage: true,
     })
@@ -248,7 +251,9 @@ test.describe.skip('Card Identification - Debug Mode', () => {
       const cardName = document.querySelector('[class*="font-semibold"]')
       const setCode = document.querySelector('text=/\\[.*\\]/')
       const score = document.querySelector('text=/Score:/')
-      const scryfallLink = document.querySelector('a:has-text("View on Scryfall")')
+      const scryfallLink = document.querySelector(
+        'a:has-text("View on Scryfall")',
+      )
       const errorMessage = document.querySelector('[role="alert"]')
       const loadingMessage = document.querySelector('text=/Identifying/')
 
@@ -277,10 +282,13 @@ test.describe.skip('Card Identification - Debug Mode', () => {
         sidebarHTML: sidebar?.innerHTML,
       }
     })
-    console.log('📋 Final result HTML:', finalResult.sidebarHTML?.substring(0, 500))
+    console.log(
+      '📋 Final result HTML:',
+      finalResult.sidebarHTML?.substring(0, 500),
+    )
 
     // Final screenshot
-    await page.screenshot({ 
+    await page.screenshot({
       path: 'test-results/debug-06-final-state.png',
       fullPage: true,
     })
@@ -317,21 +325,21 @@ test.describe.skip('Card Identification - Debug Mode', () => {
       .first()
 
     console.log('👆 Performing rapid clicks...')
-    
+
     // Click 1
     await overlayCanvas.click({ position: { x: 300, y: 240 }, force: true })
     await page.screenshot({ path: 'test-results/debug-rapid-01.png' })
     console.log('  Click 1')
-    
+
     await page.waitForTimeout(200)
-    
+
     // Click 2
     await overlayCanvas.click({ position: { x: 340, y: 240 }, force: true })
     await page.screenshot({ path: 'test-results/debug-rapid-02.png' })
     console.log('  Click 2')
-    
+
     await page.waitForTimeout(200)
-    
+
     // Click 3
     await overlayCanvas.click({ position: { x: 320, y: 260 }, force: true })
     await page.screenshot({ path: 'test-results/debug-rapid-03.png' })

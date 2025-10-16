@@ -9,6 +9,7 @@ Edge refinement with OpenCV is now **fully integrated** into your application. I
 ### Modified Files
 
 **`src/hooks/useWebcam.ts`**
+
 - ✅ Added import for `enableEdgeRefinement`
 - ✅ Automatically loads OpenCV when card detection is enabled
 - ✅ Runs in parallel with detector initialization (no extra wait time)
@@ -56,10 +57,10 @@ When you use the webcam with card detection:
 
 ```typescript
 const { videoRef, overlayRef } = useWebcam({
-  enableCardDetection: true,  // ← This triggers OpenCV loading
+  enableCardDetection: true, // ← This triggers OpenCV loading
   onCrop: (canvas) => {
     // canvas is the refined crop!
-  }
+  },
 })
 ```
 
@@ -114,7 +115,7 @@ The main component that uses webcam:
 ```typescript
 // src/components/VideoStreamGrid.tsx
 const { videoRef, overlayRef } = useWebcam({
-  enableCardDetection: true,  // ← OpenCV loads automatically
+  enableCardDetection: true, // ← OpenCV loads automatically
   detectorType,
   onCrop: onCardCrop,
 })
@@ -167,6 +168,7 @@ Point camera at an MTG card. You'll see green detection boxes.
 ### 5. Crop a Card
 
 Click on a detected card. Check the console for:
+
 - ✅ OpenCV loading message
 - ✅ Two blob URLs (DETR crop + refined crop)
 - ✅ Confidence score
@@ -179,14 +181,17 @@ Open both blob URLs in separate tabs to see the difference!
 ## Performance
 
 ### Loading Time
+
 - **First load**: ~3 seconds (OpenCV + DETR in parallel)
 - **Subsequent loads**: Instant (cached)
 
 ### Processing Time
+
 - **DETR detection**: ~200-500ms (continuous)
 - **Edge refinement**: ~50-200ms (on-demand, when clicking)
 
 ### Memory Usage
+
 - **Base**: ~50MB
 - **With OpenCV**: ~70-80MB (+20-30MB)
 
@@ -197,7 +202,9 @@ Open both blob URLs in separate tabs to see the difference!
 If you want to disable edge refinement for testing:
 
 ```typescript
-const webcam = await setupWebcam({ /* ... */ })
+const webcam = await setupWebcam({
+  /* ... */
+})
 webcam.setEdgeRefinement(false)
 ```
 
@@ -217,6 +224,7 @@ console.log('Available:', webcam.isEdgeRefinementAvailable())
 ## Files Summary
 
 ### Created
+
 - `src/lib/card-edge-refiner.ts` - Core OpenCV edge detection
 - `src/lib/enable-edge-refinement.ts` - Helper for loading OpenCV
 - `src/lib/card-edge-refiner.demo.ts` - Usage examples
@@ -224,6 +232,7 @@ console.log('Available:', webcam.isEdgeRefinementAvailable())
 - Documentation files (EDGE_REFINEMENT.md, etc.)
 
 ### Modified
+
 - `src/lib/webcam.ts` - Integrated edge refinement
 - `src/hooks/useWebcam.ts` - Auto-loads OpenCV
 
