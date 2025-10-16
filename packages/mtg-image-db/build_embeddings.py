@@ -184,14 +184,19 @@ def build_embeddings_from_cache(
     
     # Process in chunks to enable parallel loading
     chunk_size = batch_size * 4  # Load 4 batches ahead
-    for chunk_start in tqdm(range(0, len(paths), chunk_size), desc="Embedding", unit="chunk"):
+    for chunk_start in tqdm(range(0, len(paths), chunk_size), desc="Processing chunks", unit="chunk"):
         chunk_end = min(chunk_start + chunk_size, len(paths))
         chunk_paths = paths[chunk_start:chunk_end]
         
-        # Parallel load images for this chunk
+        # Parallel load images for this chunk with progress
         with Pool(num_workers) as pool:
             load_args = [(p, target_size) for p in chunk_paths]
-            chunk_images = pool.map(_load_image_worker, load_args)
+            chunk_images = list(tqdm(
+                pool.imap(_load_image_worker, load_args),
+                total=len(chunk_paths),
+                desc=f"  Loading images (chunk {chunk_start//chunk_size + 1})",
+                leave=False
+            ))
         
         # Process loaded images through CLIP
         for i, img in enumerate(chunk_images):

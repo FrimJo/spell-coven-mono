@@ -1,4 +1,6 @@
 image_cache/
+image_cache_v2/
 venv/
 index_out/
+index_out_v2/
 __pycache__/
