@@ -45,10 +45,13 @@ export const MIN_CARD_AREA = 0.01 // 1% of frame
 
 /**
  * Cropped card dimensions (pixels) - Must match CLIP model expectations
- * These dimensions are required by the card identification pipeline
+ * CRITICAL: These dimensions MUST match the Python embedding pipeline preprocessing
+ * Python uses square center-crop to 384×384 before CLIP embedding
+ * Browser must use identical preprocessing for embedding space alignment
+ * See: packages/mtg-image-db/build_mtg_faiss.py lines 122-135
  */
-export const CROPPED_CARD_WIDTH = 446
-export const CROPPED_CARD_HEIGHT = 620
+export const CROPPED_CARD_WIDTH = 384
+export const CROPPED_CARD_HEIGHT = 384
 
 /**
  * Computed aspect ratio range for validation
