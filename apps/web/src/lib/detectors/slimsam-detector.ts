@@ -1,26 +1,36 @@
 /**
  * SlimSAM-based card detector implementation
- * 
+ *
  * Uses Transformers.js SlimSAM model for point-prompt segmentation.
  * Extracts card region from click point, refines corners, and enforces aspect ratio.
- * 
+ *
  * @module detectors/slimsam-detector
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { env, SamModel, AutoProcessor, RawImage } from '@huggingface/transformers'
 import type { DetectedCard, Point } from '@/types/card-query'
-import { MTG_CARD_ASPECT_RATIO } from '../detection-constants'
+import {
+  AutoProcessor,
+  env,
+  RawImage,
+  SamModel,
+} from '@huggingface/transformers'
+
 import type {
   CardDetector,
+  DetectionOutput,
   DetectorConfig,
   DetectorStatus,
-  DetectionOutput,
 } from './types'
+import { MTG_CARD_ASPECT_RATIO } from '../detection-constants'
 
 // Suppress ONNX Runtime warnings
-if (typeof env !== 'undefined' && 'wasm' in env.backends.onnx && env.backends.onnx.wasm) {
+if (
+  typeof env !== 'undefined' &&
+  'wasm' in env.backends.onnx &&
+  env.backends.onnx.wasm
+) {
   env.backends.onnx.wasm.numThreads = 1
 }
 
@@ -29,7 +39,7 @@ if (typeof env !== 'undefined' && 'wasm' in env.backends.onnx && env.backends.on
 
 /**
  * SlimSAM detector implementation
- * 
+ *
  * Implements:
  * - T026: initialize() with model loading (FR-009)
  * - T027: getStatus() method
@@ -54,25 +64,6 @@ export class SlimSAMDetector implements CardDetector {
 
   constructor(config: DetectorConfig) {
     this.config = config
-    // Check for HuggingFace token in environment
-    this.configureHuggingFaceAuth()
-  }
-
-  /**
-   * Configure HuggingFace authentication if token is available
-   */
-  private configureHuggingFaceAuth(): void {
-    // Check for token in various locations
-    const token = 
-      import.meta.env?.VITE_HUGGINGFACE_TOKEN ||
-      import.meta.env?.HUGGINGFACE_TOKEN ||
-      (typeof process !== 'undefined' && process.env?.HUGGINGFACE_TOKEN)
-    
-    if (token && typeof env !== 'undefined') {
-      // Set authentication token if available
-      // Note: This may not work for all HuggingFace endpoints
-      console.log('[SlimSAMDetector] HuggingFace token detected')
-    }
   }
 
   getStatus(): DetectorStatus {
@@ -108,13 +99,13 @@ export class SlimSAMDetector implements CardDetector {
     } catch (err) {
       this.status = 'error'
       this.lastError = err instanceof Error ? err : new Error(String(err))
-      
+
       // T035: Structured error logging (FR-018)
       this.logError('SlimSAM initialization', err)
-      
+
       const errorMsg = this.lastError.message
       this.setStatus(`Failed to load SlimSAM: ${errorMsg}`)
-      
+
       // Re-throw the original error - no special handling, fail hard
       throw err
     } finally {
@@ -127,9 +118,9 @@ export class SlimSAMDetector implements CardDetector {
    */
   private async initializeWithRetry(): Promise<void> {
     const modelId = this.config.modelId || 'Xenova/slimsam-77-uniform'
-    
+
     this.initializationAttempts++
-    
+
     // Check backend support (WebGPU → WebGL → WASM)
     const backend = env.backends.onnx.wasm?.proxy ? 'WEBGPU' : 'WASM'
     this.setStatus(`Initializing SlimSAM (${backend})...`)
@@ -153,7 +144,9 @@ export class SlimSAMDetector implements CardDetector {
       progress_callback: progressCallback,
     })
 
-    console.log(`[SlimSAMDetector] Successfully initialized with model: ${modelId}`)
+    console.log(
+      `[SlimSAMDetector] Successfully initialized with model: ${modelId}`,
+    )
   }
 
   /**
@@ -174,7 +167,7 @@ export class SlimSAMDetector implements CardDetector {
   async detect(
     canvas: HTMLCanvasElement,
     canvasWidth: number,
-    canvasHeight: number
+    canvasHeight: number,
   ): Promise<DetectionOutput> {
     if (this.status !== 'ready' || !this.model || !this.processor) {
       throw new Error('Detector not initialized. Call initialize() first.')
@@ -183,7 +176,7 @@ export class SlimSAMDetector implements CardDetector {
     // Use click point if provided, otherwise center
     const point = this.clickPoint || {
       x: canvasWidth / 2,
-      y: canvasHeight / 2
+      y: canvasHeight / 2,
     }
 
     const startTime = performance.now()
@@ -192,7 +185,7 @@ export class SlimSAMDetector implements CardDetector {
       // T029: Run segmentation with point prompt
       // Convert canvas to RawImage
       const image = await RawImage.fromCanvas(canvas)
-      
+
       // Prepare inputs with point prompts
       const inputs = await this.processor(image, {
         input_points: [[[point.x, point.y]]],
@@ -201,14 +194,14 @@ export class SlimSAMDetector implements CardDetector {
 
       // Run model inference
       const outputs = await this.model(inputs)
-      
+
       // Post-process masks to get properly sized output
       const masks = await this.processor.post_process_masks(
         outputs.pred_masks,
         inputs.original_sizes,
-        inputs.reshaped_input_sizes
+        inputs.reshaped_input_sizes,
       )
-      
+
       // Get IoU scores for quality filtering
       const iouScores = outputs.iou_scores
 
@@ -221,7 +214,7 @@ export class SlimSAMDetector implements CardDetector {
         return {
           cards: [],
           inferenceTimeMs,
-          rawDetectionCount: 0
+          rawDetectionCount: 0,
         }
       }
 
@@ -234,28 +227,32 @@ export class SlimSAMDetector implements CardDetector {
 
       // T030-T032: Convert masks to card detections
       const cards: DetectedCard[] = []
-      
+
       // Process each mask (SAM typically returns 3 masks per point)
       // Use the one with highest IoU score
       if (masks.length > 0 && iouScores?.data) {
         // Find best mask by IoU score
         let bestMaskIdx = 0
         let bestScore = iouScores.data[0]
-        
-        for (let i = 1; i < Math.min(masks.length, iouScores.data.length); i++) {
+
+        for (
+          let i = 1;
+          i < Math.min(masks.length, iouScores.data.length);
+          i++
+        ) {
           if (iouScores.data[i] > bestScore) {
             bestScore = iouScores.data[i]
             bestMaskIdx = i
           }
         }
-        
+
         // Only use masks with good IoU scores (> 0.5)
         if (bestScore > 0.5) {
           const mask = masks[bestMaskIdx]
-          
+
           // T030: Convert mask to bounding box
-          const boundingBox = this.maskToBoundingBox(mask, canvasWidth, canvasHeight)
-          
+          const boundingBox = this.maskToBoundingBox(mask)
+
           if (boundingBox) {
             // T031: Create polygon from bounding box (4 corners)
             const polygon: Point[] = [
@@ -264,11 +261,17 @@ export class SlimSAMDetector implements CardDetector {
               { x: boundingBox.xmax, y: boundingBox.ymax },
               { x: boundingBox.xmin, y: boundingBox.ymax },
             ]
-            
+
+            // Calculate aspect ratio
+            const width = boundingBox.xmax - boundingBox.xmin
+            const height = boundingBox.ymax - boundingBox.ymin
+            const aspectRatio = height > 0 ? width / height : 0
+
             cards.push({
               box: boundingBox,
               polygon,
               score: bestScore,
+              aspectRatio,
             })
           }
         }
@@ -277,16 +280,16 @@ export class SlimSAMDetector implements CardDetector {
       return {
         cards,
         inferenceTimeMs,
-        rawDetectionCount: masks.length
+        rawDetectionCount: masks.length,
       }
     } catch (error) {
       // T035: Structured error logging (FR-018)
       this.logError('SlimSAM segmentation', error)
-      
+
       // T034: Detection failure notification (FR-016)
       const errorMsg = error instanceof Error ? error.message : 'Unknown error'
       this.setStatus(`Detection failed: ${errorMsg}`)
-      
+
       throw error
     }
   }
@@ -310,31 +313,29 @@ export class SlimSAMDetector implements CardDetector {
    */
   private maskToBoundingBox(
     mask: any,
-    canvasWidth: number,
-    canvasHeight: number
   ): { xmin: number; ymin: number; xmax: number; ymax: number } | null {
     try {
       // Mask dimensions are [batch, num_masks, height, width]
       // We need to access the actual mask data
       const maskData = mask.data
       const dims = mask.dims
-      
+
       if (!maskData || !dims || dims.length < 3) {
         console.warn('[SlimSAMDetector] Invalid mask format')
         return null
       }
-      
+
       // Get mask dimensions (last 2 dims are height, width)
       const maskHeight = dims[dims.length - 2]
       const maskWidth = dims[dims.length - 1]
-      
+
       // Find bounding box of true pixels
       let minX = maskWidth
       let minY = maskHeight
       let maxX = 0
       let maxY = 0
       let hasPixels = false
-      
+
       // Iterate through mask to find bounds
       for (let y = 0; y < maskHeight; y++) {
         for (let x = 0; x < maskWidth; x++) {
@@ -349,11 +350,11 @@ export class SlimSAMDetector implements CardDetector {
           }
         }
       }
-      
+
       if (!hasPixels) {
         return null
       }
-      
+
       // Convert from mask coordinates to canvas coordinates
       // Normalize to 0-1 range
       return {
@@ -363,7 +364,10 @@ export class SlimSAMDetector implements CardDetector {
         ymax: maxY / maskHeight,
       }
     } catch (err) {
-      console.error('[SlimSAMDetector] Error converting mask to bounding box:', err)
+      console.error(
+        '[SlimSAMDetector] Error converting mask to bounding box:',
+        err,
+      )
       return null
     }
   }
@@ -377,7 +381,7 @@ export class SlimSAMDetector implements CardDetector {
       type: 'detection' as const,
       context: `SlimSAM: ${context}`,
       error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
+      stack: error instanceof Error ? error.stack : undefined,
     }
     console.error('[SlimSAMDetector]', JSON.stringify(errorLog, null, 2))
   }
