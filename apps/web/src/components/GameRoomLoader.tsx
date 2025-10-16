@@ -10,10 +10,11 @@ interface LoadingStep {
 }
 
 const LOADING_STEPS: LoadingStep[] = [
-  { label: 'Initializing connection...', progress: 25, duration: 500 },
-  { label: 'Connecting to peers...', progress: 50, duration: 800 },
-  { label: 'Loading video streams...', progress: 75, duration: 700 },
-  { label: 'Setting up game state...', progress: 100, duration: 600 },
+  { label: 'Loading card embeddings...', progress: 20, duration: 600 },
+  { label: 'Downloading CLIP model...', progress: 40, duration: 800 },
+  { label: 'Initializing SlimSAM detector...', progress: 60, duration: 700 },
+  { label: 'Downloading segmentation model...', progress: 80, duration: 900 },
+  { label: 'Setting up game room...', progress: 100, duration: 500 },
 ]
 
 interface GameRoomLoaderProps {
