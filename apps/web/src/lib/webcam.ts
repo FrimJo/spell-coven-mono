@@ -323,8 +323,10 @@ function stopDetection() {
 }
 
 /**
- * Crop card using DETR bounding box
- * Simple crop without perspective correction - DETR provides good bounding boxes
+ * Crop card using DETR bounding box with square center-crop preprocessing
+ * CRITICAL: Must match Python embedding pipeline preprocessing for accuracy
+ * Python pipeline: center-crop to square (min dimension) → resize to 384×384
+ * See: packages/mtg-image-db/build_mtg_faiss.py lines 122-135
  * @param box Bounding box from DETR detection (normalized coordinates)
  * @returns True if crop succeeded
  */
@@ -348,35 +350,47 @@ function cropCardFromBoundingBox(box: {
   // Convert normalized coordinates to pixels
   const x = box.xmin * fullResCanvas.width
   const y = box.ymin * fullResCanvas.height
-  const width = (box.xmax - box.xmin) * fullResCanvas.width
-  const height = (box.ymax - box.ymin) * fullResCanvas.height
+  const cardWidth = (box.xmax - box.xmin) * fullResCanvas.width
+  const cardHeight = (box.ymax - box.ymin) * fullResCanvas.height
 
   console.log(
-    `[Webcam] Cropping card: x=${x.toFixed(0)}, y=${y.toFixed(0)}, w=${width.toFixed(0)}, h=${height.toFixed(0)}`,
+    `[Webcam] Detected card region: x=${x.toFixed(0)}, y=${y.toFixed(0)}, w=${cardWidth.toFixed(0)}, h=${cardHeight.toFixed(0)}`,
   )
 
-  // Extract the card region
-  const cardImageData = fullResCtx!.getImageData(x, y, width, height)
+  // CRITICAL FIX: Apply square center-crop to match Python preprocessing
+  // Python does: s = min(w, h); crop to square; resize to 384×384
+  const minDim = Math.min(cardWidth, cardHeight)
+  const cropX = x + (cardWidth - minDim) / 2
+  const cropY = y + (cardHeight - minDim) / 2
 
-  // Create temporary canvas for the extracted region
+  console.log(
+    `[Webcam] Square center-crop: x=${cropX.toFixed(0)}, y=${cropY.toFixed(0)}, size=${minDim.toFixed(0)}×${minDim.toFixed(0)}`,
+  )
+
+  // Extract square region from center of card
+  const cardImageData = fullResCtx!.getImageData(cropX, cropY, minDim, minDim)
+
+  // Create temporary canvas for the square extracted region
   const tempCanvas = document.createElement('canvas')
-  tempCanvas.width = width
-  tempCanvas.height = height
+  tempCanvas.width = minDim
+  tempCanvas.height = minDim
   const tempCtx = tempCanvas.getContext('2d')!
   tempCtx.putImageData(cardImageData, 0, 0)
 
-  // Scale to standard card size (315x440) maintaining aspect ratio
+  // Resize to 384×384 (matching Python target_size parameter)
+  croppedCanvas.width = CROPPED_CARD_WIDTH
+  croppedCanvas.height = CROPPED_CARD_HEIGHT
   croppedCtx!.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height)
   croppedCtx!.drawImage(
     tempCanvas,
     0,
     0,
-    width,
-    height,
+    minDim,
+    minDim,
     0,
     0,
-    croppedCanvas.width,
-    croppedCanvas.height,
+    CROPPED_CARD_WIDTH,
+    CROPPED_CARD_HEIGHT,
   )
 
   // Log cropped card as blob for debugging
@@ -386,12 +400,15 @@ function cropCardFromBoundingBox(box: {
       console.log('[Webcam] Cropped card blob:', blob)
       console.log('[Webcam] Cropped card URL:', url)
       console.log(
+        `[Webcam] Final dimensions: ${croppedCanvas.width}×${croppedCanvas.height} (square)`,
+      )
+      console.log(
         `[Webcam] Blob size: ${(blob.size / 1024).toFixed(2)}KB, type: ${blob.type}`,
       )
     }
   }, 'image/png')
 
-  console.log('[Webcam] Card cropped successfully')
+  console.log('[Webcam] Card cropped successfully with square center-crop preprocessing')
   return true
 }
 
