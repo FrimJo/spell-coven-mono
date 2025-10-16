@@ -21,6 +21,7 @@
     "@tanstack/react-router": "^1.132.0",
     "@tanstack/router-plugin": "^1.132.0",
     "@tanstack/zod-adapter": "^1.133.3",
+    "@techstark/opencv-js": "4.11.0-release.1",
     "lucide-react": "^0.487.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
