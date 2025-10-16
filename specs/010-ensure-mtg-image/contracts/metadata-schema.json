@@ -1,0 +1,165 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://spell-coven.dev/schemas/embeddings-metadata-v1.0.json",
+  "title": "MTG Embeddings Metadata",
+  "description": "Metadata for int8-quantized CLIP embeddings exported from mtg-image-db",
+  "type": "object",
+  "required": ["version", "quantization", "shape", "records"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Format version for compatibility tracking"
+    },
+    "quantization": {
+      "type": "object",
+      "description": "Quantization parameters for dequantization",
+      "required": ["dtype", "scale_factor", "original_dtype", "note"],
+      "properties": {
+        "dtype": {
+          "type": "string",
+          "enum": ["int8"],
+          "description": "Quantized data type"
+        },
+        "scale_factor": {
+          "type": "number",
+          "const": 127,
+          "description": "Scale factor for dequantization (int8_value / scale_factor = float32_value)"
+        },
+        "original_dtype": {
+          "type": "string",
+          "const": "float32",
+          "description": "Original data type before quantization"
+        },
+        "note": {
+          "type": "string",
+          "description": "Human-readable description of quantization"
+        }
+      },
+      "additionalProperties": false
+    },
+    "shape": {
+      "type": "array",
+      "description": "Embedding array dimensions [N cards, 512 dimensions]",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
+    "records": {
+      "type": "array",
+      "description": "Per-card metadata array (same order as embeddings)",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "description": "Metadata for a single MTG card",
+        "required": ["name", "set", "image_url", "card_url"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Card name"
+          },
+          "set": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Set code (e.g., 'M21', 'KHM')"
+          },
+          "scryfall_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Scryfall unique identifier (optional)"
+          },
+          "face_id": {
+            "type": "string",
+            "description": "Face identifier for multi-face cards (optional)"
+          },
+          "collector_number": {
+            "type": "string",
+            "description": "Collector number (optional)"
+          },
+          "frame": {
+            "type": "string",
+            "description": "Frame type (optional)"
+          },
+          "layout": {
+            "type": "string",
+            "description": "Card layout (e.g., 'normal', 'transform', 'modal_dfc') (optional)"
+          },
+          "lang": {
+            "type": "string",
+            "pattern": "^[a-z]{2}$",
+            "description": "Language code (ISO 639-1) (optional)"
+          },
+          "colors": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["W", "U", "B", "R", "G"]
+            },
+            "description": "Color identity (optional)"
+          },
+          "image_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to card image (required for display)"
+          },
+          "card_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to card display page (required for display)"
+          },
+          "scryfall_uri": {
+            "type": "string",
+            "format": "uri",
+            "description": "Link to Scryfall page (optional but recommended)"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "version": "1.0",
+      "quantization": {
+        "dtype": "int8",
+        "scale_factor": 127,
+        "original_dtype": "float32",
+        "note": "Embeddings quantized from L2-normalized float32 to int8 using scale factor 127"
+      },
+      "shape": [50000, 512],
+      "records": [
+        {
+          "name": "Lightning Bolt",
+          "set": "LEA",
+          "scryfall_id": "a2e6c3a5-4e7d-4f8e-9b1c-2d3e4f5a6b7c",
+          "collector_number": "161",
+          "frame": "1993",
+          "layout": "normal",
+          "lang": "en",
+          "colors": ["R"],
+          "image_url": "https://cards.scryfall.io/normal/front/a/2/a2e6c3a5.jpg",
+          "card_url": "https://cards.scryfall.io/large/front/a/2/a2e6c3a5.jpg",
+          "scryfall_uri": "https://scryfall.com/card/lea/161/lightning-bolt"
+        },
+        {
+          "name": "Black Lotus",
+          "set": "LEA",
+          "scryfall_id": "b1c2d3e4-5f6a-7b8c-9d0e-1f2a3b4c5d6e",
+          "collector_number": "232",
+          "frame": "1993",
+          "layout": "normal",
+          "lang": "en",
+          "colors": [],
+          "image_url": "https://cards.scryfall.io/normal/front/b/1/b1c2d3e4.jpg",
+          "card_url": "https://cards.scryfall.io/large/front/b/1/b1c2d3e4.jpg",
+          "scryfall_uri": "https://scryfall.com/card/lea/232/black-lotus"
+        }
+      ]
+    }
+  ]
+}
