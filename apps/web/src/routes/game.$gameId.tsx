@@ -8,11 +8,11 @@ import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
 
 const defaultValues = {
-  detector: 'detr' as const,
+  detector: 'slimsam' as const,
 }
 
 const gameSearchSchema = z.object({
-  detector: z.enum(['opencv', 'detr', 'owl-vit']).default(defaultValues.detector),
+  detector: z.enum(['opencv', 'detr', 'owl-vit', 'slimsam']).default(defaultValues.detector),
 })
 
 export const Route = createFileRoute('/game/$gameId')({
