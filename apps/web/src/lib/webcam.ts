@@ -370,10 +370,28 @@ function cropCardFromBoundingBox(box: {
     CROPPED_CARD_HEIGHT,
   )
 
-  // Log cropped card as blob for debugging
+  // Log cropped images as blobs for debugging
+  // 1. Log the square extracted region (before resize)
   tempCanvas.toBlob((blob) => {
     if (blob) {
-      void URL.createObjectURL(blob)
+      const url = URL.createObjectURL(blob)
+      console.log('[Webcam] Square extracted region (before resize):', {
+        url,
+        dimensions: `${minDim}x${minDim}`,
+        blob
+      })
+    }
+  }, 'image/png')
+
+  // 2. Log the final query image (384x384)
+  croppedCanvas.toBlob((blob) => {
+    if (blob) {
+      const url = URL.createObjectURL(blob)
+      console.log('[Webcam] Query image for database (384x384):', {
+        url,
+        dimensions: `${CROPPED_CARD_WIDTH}x${CROPPED_CARD_HEIGHT}`,
+        blob
+      })
     }
   }, 'image/png')
 

@@ -232,15 +232,47 @@ export class SlimSAMDetector implements CardDetector {
         iouScores: iouScores?.data,
       })
 
-      // T030: Convert mask to polygon
-      // For now, return empty array - full implementation would:
-      // 1. Extract largest connected component from mask
-      // 2. Find contours
-      // 3. Approximate polygon
-      // 4. T031: Refine corners and enforce aspect ratio
-      // 5. T032: Apply perspective warp
-      
+      // T030-T032: Convert masks to card detections
       const cards: DetectedCard[] = []
+      
+      // Process each mask (SAM typically returns 3 masks per point)
+      // Use the one with highest IoU score
+      if (masks.length > 0 && iouScores?.data) {
+        // Find best mask by IoU score
+        let bestMaskIdx = 0
+        let bestScore = iouScores.data[0]
+        
+        for (let i = 1; i < Math.min(masks.length, iouScores.data.length); i++) {
+          if (iouScores.data[i] > bestScore) {
+            bestScore = iouScores.data[i]
+            bestMaskIdx = i
+          }
+        }
+        
+        // Only use masks with good IoU scores (> 0.5)
+        if (bestScore > 0.5) {
+          const mask = masks[bestMaskIdx]
+          
+          // T030: Convert mask to bounding box
+          const boundingBox = this.maskToBoundingBox(mask, canvasWidth, canvasHeight)
+          
+          if (boundingBox) {
+            // T031: Create polygon from bounding box (4 corners)
+            const polygon: Point[] = [
+              { x: boundingBox.xmin, y: boundingBox.ymin },
+              { x: boundingBox.xmax, y: boundingBox.ymin },
+              { x: boundingBox.xmax, y: boundingBox.ymax },
+              { x: boundingBox.xmin, y: boundingBox.ymax },
+            ]
+            
+            cards.push({
+              box: boundingBox,
+              polygon,
+              score: bestScore,
+            })
+          }
+        }
+      }
 
       return {
         cards,
@@ -273,6 +305,70 @@ export class SlimSAMDetector implements CardDetector {
   }
 
   /**
+   * T030: Convert binary mask to bounding box
+   * Finds the tight bounding box around all true pixels in the mask
+   */
+  private maskToBoundingBox(
+    mask: any,
+    canvasWidth: number,
+    canvasHeight: number
+  ): { xmin: number; ymin: number; xmax: number; ymax: number } | null {
+    try {
+      // Mask dimensions are [batch, num_masks, height, width]
+      // We need to access the actual mask data
+      const maskData = mask.data
+      const dims = mask.dims
+      
+      if (!maskData || !dims || dims.length < 3) {
+        console.warn('[SlimSAMDetector] Invalid mask format')
+        return null
+      }
+      
+      // Get mask dimensions (last 2 dims are height, width)
+      const maskHeight = dims[dims.length - 2]
+      const maskWidth = dims[dims.length - 1]
+      
+      // Find bounding box of true pixels
+      let minX = maskWidth
+      let minY = maskHeight
+      let maxX = 0
+      let maxY = 0
+      let hasPixels = false
+      
+      // Iterate through mask to find bounds
+      for (let y = 0; y < maskHeight; y++) {
+        for (let x = 0; x < maskWidth; x++) {
+          const idx = y * maskWidth + x
+          // Mask is boolean, check if pixel is part of segmentation
+          if (maskData[idx]) {
+            hasPixels = true
+            minX = Math.min(minX, x)
+            minY = Math.min(minY, y)
+            maxX = Math.max(maxX, x)
+            maxY = Math.max(maxY, y)
+          }
+        }
+      }
+      
+      if (!hasPixels) {
+        return null
+      }
+      
+      // Convert from mask coordinates to canvas coordinates
+      // Normalize to 0-1 range
+      return {
+        xmin: minX / maskWidth,
+        ymin: minY / maskHeight,
+        xmax: maxX / maskWidth,
+        ymax: maxY / maskHeight,
+      }
+    } catch (err) {
+      console.error('[SlimSAMDetector] Error converting mask to bounding box:', err)
+      return null
+    }
+  }
+
+  /**
    * T035: Structured error logging (FR-018)
    */
   private logError(context: string, error: unknown): void {
@@ -291,45 +387,5 @@ export class SlimSAMDetector implements CardDetector {
   }
 }
 
-/**
- * Helper functions for T030-T032 (to be implemented)
- */
-
-/**
- * T030: Convert binary mask to polygon
- * TODO: Implement mask-to-polygon conversion
- */
-function maskToPolygon(): Point[] {
-  // Placeholder - would use contour detection
-  // Parameters: mask: any, width: number, height: number
-  return []
-}
-
-/**
- * T031: Refine corners and enforce aspect ratio
- * TODO: Implement corner refinement
- */
-function refineCorners(): Point[] {
-  // Placeholder - would use corner detection and aspect ratio constraints
-  // Parameters: polygon: Point[], aspectRatio: number
-  return []
-}
-
-/**
- * T032: Apply perspective warp to canonical rectangle
- * TODO: Implement perspective transformation
- */
-function warpPerspective(
-  targetWidth: number,
-  targetHeight: number
-): HTMLCanvasElement {
-  // Placeholder - would use perspective transformation matrix
-  // Parameters: canvas: HTMLCanvasElement, corners: Point[], targetWidth: number, targetHeight: number
-  const outputCanvas = document.createElement('canvas')
-  outputCanvas.width = targetWidth
-  outputCanvas.height = targetHeight
-  return outputCanvas
-}
-
-// Export helper functions for testing
-export { maskToPolygon, refineCorners, warpPerspective, MTG_CARD_ASPECT_RATIO }
+// Export MTG_CARD_ASPECT_RATIO for testing
+export { MTG_CARD_ASPECT_RATIO }
