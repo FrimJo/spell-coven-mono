@@ -152,6 +152,11 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
               onCrop(canvas)
             }
           },
+          onProgress: (msg: string) => {
+            if (mounted) {
+              setStatus(msg)
+            }
+          },
         })
 
         if (mounted) {
