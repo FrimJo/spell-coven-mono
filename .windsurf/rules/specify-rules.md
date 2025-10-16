@@ -15,6 +15,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-13
 - TypeScript 5.x (browser), Python 3.11 (embedding pipeline - reference only) (009-improve-cropped-card)
 - N/A (client-side only, no persistence changes) (009-improve-cropped-card)
 - TypeScript 5.x (frontend), Python 3.11+ (mtg-image-db pipeline) (010-ensure-mtg-image)
+- TypeScript 5.x (React/Vite frontend) (011-advanced-card-extraction)
+- Browser IndexedDB (model caching), in-memory frame buffer (011-advanced-card-extraction)
 
 ## Project Structure
 ```
@@ -29,9 +31,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (frontend), Node.js 20+ (build tooling): Follow standard conventions
 
 ## Recent Changes
+- 011-advanced-card-extraction: Added TypeScript 5.x (React/Vite frontend)
 - 010-ensure-mtg-image: Added TypeScript 5.x (frontend), Python 3.11+ (mtg-image-db pipeline)
 - 009-improve-cropped-card: Added TypeScript 5.x (browser), Python 3.11 (embedding pipeline - reference only)
-- 008-replace-opencv-card: Added TypeScript 5.x (existing project standard) + @huggingface/transformers ^3.7.5 (already installed), React 19, Vite 7
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
