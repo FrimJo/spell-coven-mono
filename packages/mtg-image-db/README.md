@@ -1,7 +1,7 @@
 # MTG Card Visual Search
 
 This project builds a visual search engine for Magic: The Gathering (MTG) cards.
-It downloads Scryfall bulk data, caches full card images, embeds them with CLIP, builds a FAISS index for Python querying, and exports artifacts for a fully in-browser search experience using Transformers.js.
+It downloads Scryfall bulk data (using 'small' 488×680 JPG images for optimal storage), caches images, embeds them with CLIP ViT-L/14@336px (768-dim), builds a FAISS index for Python querying, and exports artifacts for a fully in-browser search experience using Transformers.js.
 
 ## Documentation
 
@@ -99,8 +99,8 @@ python build_embeddings.py --kind unique_artwork --hnsw-m 16 --hnsw-ef-construct
 # High quality, slower build (production)
 python build_embeddings.py --kind unique_artwork --hnsw-m 64 --hnsw-ef-construction 400
 
-# Default balanced settings
-python build_embeddings.py --kind unique_artwork --hnsw-m 32 --hnsw-ef-construction 200
+# Default balanced settings (336px images for ViT-L/14@336px)
+python build_embeddings.py --kind unique_artwork --hnsw-m 32 --hnsw-ef-construction 200 --size 336
 ```
 
 **Single-step process (legacy):**
@@ -115,9 +115,9 @@ make build-all  # Runs both download and embed steps
 ```
 
 Artifacts written:
-- `index_out/mtg_embeddings.npy`
-- `index_out/mtg_cards.faiss`
-- `index_out/mtg_meta.jsonl`
+- `index_out/mtg_embeddings.npy` (768-dim float32, L2-normalized)
+- `index_out/mtg_cards.faiss` (HNSW index with METRIC_INNER_PRODUCT)
+- `index_out/mtg_meta.jsonl` (per-card metadata)
 
 You can limit for quick tests, e.g. `--limit 2000`.
 
@@ -128,7 +128,7 @@ You can limit for quick tests, e.g. `--limit 2000`.
 
 ### 3) Export for the browser
 
-Converts the `.npy` embeddings to an int8 quantized binary for the browser (75% smaller than float32) and the JSONL to a JSON array with quantization metadata.
+Converts the `.npy` embeddings (768-dim) to an int8 quantized binary for the browser (75% smaller than float32) and the JSONL to a JSON array with quantization metadata.
 
 ```bash
 python export_for_browser.py
@@ -137,8 +137,8 @@ python export_for_browser.py --input-dir index_in --output-dir index_out
 ```
 
 Artifacts written:
-- `index_out/embeddings.i8bin` (int8 quantized, ~75% smaller than float32)
-- `index_out/meta.json` (includes quantization metadata for browser dequantization)
+- `index_out/embeddings.i8bin` (int8 quantized 768-dim vectors, ~75% smaller than float32)
+- `index_out/meta.json` (includes quantization metadata and shape [N, 768] for browser dequantization)
 
 ### 4) Python query example
 
@@ -156,6 +156,36 @@ It prints the top-k nearest images by cosine similarity, along with names and UR
 
 The browser UI and client-side search have moved to the web app documentation.
 See `apps/web/README.md` for setup and usage.
+
+## Technical Details
+
+### Model & Preprocessing
+
+**CLIP Model**: ViT-L/14@336px
+- **Input resolution**: 336×336 pixels (50% more than ViT-B/32's 224×224)
+- **Embedding dimension**: 768 (vs 512 for ViT-B/32)
+- **Performance**: ~25× slower than ViT-B/32, but significantly better quality
+- **Use case**: Optimal for card detection where quality matters more than speed
+
+**Image Preprocessing**:
+- Downloads Scryfall 'small' size: **488×680 JPG** (~15KB each)
+- **Black padding** to square (preserves full card information)
+  - For 488×680 cards: creates 680×680 canvas with ~96px black padding on sides
+  - Preserves card name, mana cost, text box, and P/T (important for detection)
+- Resizes to **336×336** for CLIP input
+- L2-normalizes embeddings for cosine similarity via dot product
+
+**Storage Optimization**:
+- Small JPG vs PNG: **~97% reduction** (~50GB → ~1.5GB for 100K cards)
+- int8 quantization for browser: **75% reduction** vs float32
+- Total browser payload: ~8MB for 100K cards (768-dim embeddings)
+
+### Why These Choices?
+
+1. **Small JPG**: 488×680 provides enough detail for 336px CLIP while saving massive storage
+2. **Black padding**: Preserves all card information vs center-crop which loses top/bottom
+3. **ViT-L/14@336px**: Higher resolution and larger model = better card matching accuracy
+4. **336px resize**: Matches CLIP's native input size (no wasteful intermediate resizing)
 
 ## Development Tips
 
