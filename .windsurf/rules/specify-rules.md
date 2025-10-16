@@ -14,6 +14,7 @@ Auto-generated from all feature plans. Last updated: 2025-10-13
 - Browser IndexedDB (for DETR model caching via Transformers.js), existing canvas-based video processing (008-replace-opencv-card)
 - TypeScript 5.x (browser), Python 3.11 (embedding pipeline - reference only) (009-improve-cropped-card)
 - N/A (client-side only, no persistence changes) (009-improve-cropped-card)
+- TypeScript 5.x (frontend), Python 3.11+ (mtg-image-db pipeline) (010-ensure-mtg-image)
 
 ## Project Structure
 ```
@@ -28,9 +29,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (frontend), Node.js 20+ (build tooling): Follow standard conventions
 
 ## Recent Changes
+- 010-ensure-mtg-image: Added TypeScript 5.x (frontend), Python 3.11+ (mtg-image-db pipeline)
 - 009-improve-cropped-card: Added TypeScript 5.x (browser), Python 3.11 (embedding pipeline - reference only)
 - 008-replace-opencv-card: Added TypeScript 5.x (existing project standard) + @huggingface/transformers ^3.7.5 (already installed), React 19, Vite 7
-- 007-refactor-card-cropping: Added TypeScript 5.x / React 18.x
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
