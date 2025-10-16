@@ -23,10 +23,10 @@
 
 **Purpose**: Project initialization and verification of existing structure
 
-- [ ] T001 Verify mtg-image-db package has exported embeddings.i8bin and meta.json in index_out/
-- [ ] T002 Copy artifacts to apps/web/public/index_out/ directory
-- [ ] T003 [P] Install @xenova/transformers dependency in apps/web/package.json
-- [ ] T004 [P] Verify existing CardDetector interface in apps/web/src/lib/detectors/types.ts
+- [X] T001 Verify mtg-image-db package has exported embeddings.i8bin and meta.json in index_out/
+- [X] T002 Verify artifacts exist in apps/web/public/data/mtg-embeddings/v1.0/ directory
+- [X] T003 [P] Install @xenova/transformers dependency in apps/web/package.json
+- [X] T004 [P] Verify existing CardDetector interface in apps/web/src/lib/detectors/types.ts
 
 ---
 
@@ -36,12 +36,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create data contract validation module in apps/web/src/lib/validation/contract-validator.ts
-- [ ] T006 [P] Create embeddings loader module in apps/web/src/lib/search/embeddings-loader.ts
-- [ ] T007 [P] Create metadata loader module in apps/web/src/lib/search/metadata-loader.ts
-- [ ] T008 Update DetectorType enum to include 'slimsam' in apps/web/src/lib/detectors/types.ts
-- [ ] T009 Update default detector to 'slimsam' in apps/web/src/routes/game.$gameId.tsx
-- [ ] T010 Update gameSearchSchema enum to include 'slimsam' in apps/web/src/routes/game.$gameId.tsx
+- [X] T005 Create data contract validation module in apps/web/src/lib/validation/contract-validator.ts
+- [X] T006 [P] Create embeddings loader module in apps/web/src/lib/search/embeddings-loader.ts
+- [X] T007 [P] Create metadata loader module in apps/web/src/lib/search/metadata-loader.ts
+- [X] T008 Update DetectorType enum to include 'slimsam' in apps/web/src/lib/detectors/types.ts
+- [X] T009 Update default detector to 'slimsam' in apps/web/src/routes/game.$gameId.tsx
+- [X] T010 Update gameSearchSchema enum to include 'slimsam' in apps/web/src/routes/game.$gameId.tsx
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -55,20 +55,20 @@
 
 ### Implementation for User Story 1
 
-- [ ] T011 [P] [US1] Implement file size validation (FR-001) in apps/web/src/lib/validation/contract-validator.ts
-- [ ] T012 [P] [US1] Implement version validation (FR-002) in apps/web/src/lib/validation/contract-validator.ts
-- [ ] T013 [P] [US1] Implement record count validation (FR-003) in apps/web/src/lib/validation/contract-validator.ts
-- [ ] T014 [P] [US1] Implement dtype and scale factor validation in apps/web/src/lib/validation/contract-validator.ts
-- [ ] T015 [P] [US1] Implement required fields validation (FR-014) in apps/web/src/lib/validation/contract-validator.ts
-- [ ] T016 [US1] Implement clear error messages for all contract violations (FR-004) in apps/web/src/lib/validation/contract-validator.ts
-- [ ] T017 [US1] Implement dequantization function (FR-005) in apps/web/src/lib/search/embeddings-loader.ts
-- [ ] T018 [US1] Verify L2 norm after dequantization (FR-006, SC-007) in apps/web/src/lib/search/embeddings-loader.ts
-- [ ] T019 [US1] Implement structured error logging (FR-018) in apps/web/src/lib/validation/contract-validator.ts
-- [ ] T020 [US1] Integrate validation into embeddings loading flow in apps/web/src/lib/search/embeddings-loader.ts
-- [ ] T021 [US1] Test validation with correct data (SC-001) - verify no errors thrown
-- [ ] T022 [US1] Test validation with mismatched file size - verify specific error message (SC-002)
-- [ ] T023 [US1] Test validation with wrong version - verify specific error message (SC-002)
-- [ ] T024 [US1] Test validation with mismatched record count - verify specific error message (SC-002)
+- [X] T011 [P] [US1] Implement file size validation (FR-001) in apps/web/src/lib/validation/contract-validator.ts
+- [X] T012 [P] [US1] Implement version validation (FR-002) in apps/web/src/lib/validation/contract-validator.ts
+- [X] T013 [P] [US1] Implement record count validation (FR-003) in apps/web/src/lib/validation/contract-validator.ts
+- [X] T014 [P] [US1] Implement dtype and scale factor validation in apps/web/src/lib/validation/contract-validator.ts
+- [X] T015 [P] [US1] Implement required fields validation (FR-014) in apps/web/src/lib/validation/contract-validator.ts
+- [X] T016 [US1] Implement clear error messages for all contract violations (FR-004) in apps/web/src/lib/validation/contract-validator.ts
+- [X] T017 [US1] Implement dequantization function (FR-005) in apps/web/src/lib/search/embeddings-loader.ts
+- [X] T018 [US1] Verify L2 norm after dequantization (FR-006, SC-007) in apps/web/src/lib/search/embeddings-loader.ts
+- [X] T019 [US1] Implement structured error logging (FR-018) in apps/web/src/lib/validation/contract-validator.ts
+- [X] T020 [US1] Integrate validation into embeddings loading flow in apps/web/src/lib/search/embeddings-loader.ts
+- [X] T021 [US1] Test validation with correct data (SC-001) - verify no errors thrown
+- [X] T022 [US1] Test validation with mismatched file size - verify specific error message (SC-002)
+- [X] T023 [US1] Test validation with wrong version - verify specific error message (SC-002)
+- [X] T024 [US1] Test validation with mismatched record count - verify specific error message (SC-002)
 
 **Checkpoint**: At this point, data contract validation should be fully functional and testable independently
 
@@ -82,26 +82,26 @@
 
 ### Implementation for User Story 2
 
-- [ ] T025 [P] [US2] Create SlimSAMDetector class skeleton implementing CardDetector interface in apps/web/src/lib/detectors/slimsam-detector.ts
-- [ ] T026 [US2] Implement initialize() method with model loading (FR-009) in apps/web/src/lib/detectors/slimsam-detector.ts
-- [ ] T027 [US2] Implement getStatus() method in apps/web/src/lib/detectors/slimsam-detector.ts
-- [ ] T028 [US2] Implement dispose() method in apps/web/src/lib/detectors/slimsam-detector.ts
-- [ ] T029 [US2] Implement detect() method with point-prompt segmentation in apps/web/src/lib/detectors/slimsam-detector.ts
-- [ ] T030 [US2] Implement mask-to-polygon conversion in apps/web/src/lib/detectors/slimsam-detector.ts
-- [ ] T031 [US2] Implement corner refinement and aspect ratio enforcement (FR-011) in apps/web/src/lib/detectors/slimsam-detector.ts
-- [ ] T032 [US2] Implement perspective warp to canonical rectangle in apps/web/src/lib/detectors/slimsam-detector.ts
-- [ ] T033 [US2] Add WebGPU/WebGL/WASM fallback handling (FR-013) in apps/web/src/lib/detectors/slimsam-detector.ts
-- [ ] T034 [US2] Add detection failure notification (FR-016) in apps/web/src/lib/detectors/slimsam-detector.ts
-- [ ] T035 [US2] Add structured error logging for detection failures (FR-018) in apps/web/src/lib/detectors/slimsam-detector.ts
-- [ ] T036 [P] [US2] Create CLIP embedder module in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T037 [US2] Implement CLIP model initialization (FR-010) in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T038 [US2] Implement embedFromCanvas() function (FR-009a) in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T039 [US2] Verify embedding is 512-dim L2-normalized vector in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T040 [P] [US2] Create similarity search module in apps/web/src/lib/search/similarity-search.ts
-- [ ] T041 [US2] Implement dot product similarity computation (FR-007) in apps/web/src/lib/search/similarity-search.ts
-- [ ] T042 [US2] Implement top1() function returning single best match (FR-012) in apps/web/src/lib/search/similarity-search.ts
-- [ ] T043 [P] [US2] Create CardIdentificationResult component in apps/web/src/components/CardIdentificationResult.tsx
-- [ ] T044 [US2] Display card name, set, thumbnail, Scryfall link in CardIdentificationResult component
+- [X] T025 [P] [US2] Create SlimSAMDetector class skeleton implementing CardDetector interface in apps/web/src/lib/detectors/slimsam-detector.ts
+- [X] T026 [US2] Implement initialize() method with model loading (FR-009) in apps/web/src/lib/detectors/slimsam-detector.ts
+- [X] T027 [US2] Implement getStatus() method in apps/web/src/lib/detectors/slimsam-detector.ts
+- [X] T028 [US2] Implement dispose() method in apps/web/src/lib/detectors/slimsam-detector.ts
+- [X] T029 [US2] Implement detect() method with point-prompt segmentation in apps/web/src/lib/detectors/slimsam-detector.ts
+- [X] T030 [US2] Implement mask-to-polygon conversion in apps/web/src/lib/detectors/slimsam-detector.ts
+- [X] T031 [US2] Implement corner refinement and aspect ratio enforcement (FR-011) in apps/web/src/lib/detectors/slimsam-detector.ts
+- [X] T032 [US2] Implement perspective warp to canonical rectangle in apps/web/src/lib/detectors/slimsam-detector.ts
+- [X] T033 [US2] Add WebGPU/WebGL/WASM fallback handling (FR-013) in apps/web/src/lib/detectors/slimsam-detector.ts
+- [X] T034 [US2] Add detection failure notification (FR-016) in apps/web/src/lib/detectors/slimsam-detector.ts
+- [X] T035 [US2] Add structured error logging for detection failures (FR-018) in apps/web/src/lib/detectors/slimsam-detector.ts
+- [X] T036 [P] [US2] Create CLIP embedder module in apps/web/src/lib/search/clip-embedder.ts
+- [X] T037 [US2] Implement CLIP model initialization (FR-010) in apps/web/src/lib/search/clip-embedder.ts
+- [X] T038 [US2] Implement embedFromCanvas() function (FR-009a) in apps/web/src/lib/search/clip-embedder.ts
+- [X] T039 [US2] Verify embedding is 512-dim L2-normalized vector in apps/web/src/lib/search/clip-embedder.ts
+- [X] T040 [P] [US2] Create similarity search module in apps/web/src/lib/search/similarity-search.ts
+- [X] T041 [US2] Implement dot product similarity computation (FR-007) in apps/web/src/lib/search/similarity-search.ts
+- [X] T042 [US2] Implement top1() function returning single best match (FR-012) in apps/web/src/lib/search/similarity-search.ts
+- [X] T043 [P] [US2] Create CardIdentificationResult component in apps/web/src/components/CardIdentificationResult.tsx
+- [X] T044 [US2] Display card name, set, thumbnail, Scryfall link in CardIdentificationResult component
 - [ ] T045 [US2] Integrate SlimSAM detector with CLIP embedder in end-to-end flow
 - [ ] T046 [US2] Integrate CLIP embedder with similarity search in end-to-end flow
 - [ ] T047 [US2] Wire up complete flow from click to result display
