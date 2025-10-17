@@ -6,14 +6,16 @@ This is step 2 of the build process - run after download_images.py
 import argparse
 import json
 import time
+import gc
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional
 import numpy as np
 from tqdm import tqdm
 import faiss
-from multiprocessing import Pool, cpu_count
-from functools import partial
+from multiprocessing import cpu_count
+from multiprocessing.pool import ThreadPool
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 
 # Import helpers from build script
 import sys
@@ -54,10 +56,10 @@ def _validate_cache_worker(args):
 
 def _load_image_worker(args):
     """Worker function for parallel image loading."""
-    path, target_size = args
+    idx, path, target_size = args
     if path is None:
-        return None
-    return load_image_rgb(path, target_size=target_size)
+        return idx, None
+    return idx, load_image_rgb(path, target_size=target_size)
 
 
 def build_embeddings_from_cache(
@@ -65,7 +67,7 @@ def build_embeddings_from_cache(
     out_dir: Path,
     cache_dir: Path,
     limit: int = None,
-    batch_size: int = 512,
+    batch_size: int = 256,
     target_size: int = 336,
     validate_cache: bool = True,
     hnsw_m: int = 32,
@@ -128,10 +130,10 @@ def build_embeddings_from_cache(
     desc = "Validating cached images (parallel)" if validate_cache else "Checking image cache (parallel)"
     print(f"Using {num_workers} parallel workers for cache validation")
     
-    with Pool(num_workers) as pool:
+    with ThreadPool(num_workers) as pool:
         validation_args = [(rec, cache_dir) for rec in records]
         results = list(tqdm(
-            pool.imap(_validate_cache_worker, validation_args, chunksize=128),
+            pool.imap(_validate_cache_worker, validation_args, chunksize=64),
             total=len(records),
             desc=desc
         ))
@@ -177,53 +179,64 @@ def build_embeddings_from_cache(
     vecs = np.zeros((len(records), 768), dtype="float32")
     good = np.zeros((len(records),), dtype=bool)
     
-    # Use multiprocessing for parallel image loading
-    print(f"Using {num_workers} parallel workers for image loading")
-    
-    batch_imgs, batch_idx = [], []
-    
-    # Process in chunks to enable parallel loading
-    # With smaller images (~20KB vs 1.7MB), we can load many more at once
-    chunk_size = batch_size * 32  # Load 32 batches ahead (~8K images, ~160MB memory)
-    
-    # Create pool ONCE outside the loop - this was the bottleneck!
-    with Pool(num_workers) as pool:
-        for chunk_start in tqdm(range(0, len(paths), chunk_size), desc="Processing chunks", unit="chunk"):
-            chunk_end = min(chunk_start + chunk_size, len(paths))
-            chunk_paths = paths[chunk_start:chunk_end]
-            
-            # Parallel load images for this chunk with progress
-            load_args = [(p, target_size) for p in chunk_paths]
-            # Use larger chunksize for imap to reduce overhead with small images
-            chunk_images = list(tqdm(
-                pool.imap(_load_image_worker, load_args, chunksize=64),
-                total=len(chunk_paths),
-                desc=f"  Loading images (chunk {chunk_start//chunk_size + 1})",
-                leave=False
-            ))
-            
-            # Process loaded images through CLIP
-            for i, img in enumerate(chunk_images):
-                global_idx = chunk_start + i
-                if img is None:
-                    continue
-                
-                batch_imgs.append(img)
-                batch_idx.append(global_idx)
-                
-                if len(batch_imgs) == batch_size:
-                    Z = embedder.encode_images(batch_imgs)
-                    for local, global_i in enumerate(batch_idx):
-                        if batch_imgs[local] is not None and Z.shape[0] > local:
-                            vecs[global_i] = Z[local]
-                            good[global_i] = True
-                    batch_imgs, batch_idx = [], []
-    
-    # flush remaining
+    # Use moderate parallelism with batch-by-batch processing for best speed/memory balance
+    load_workers = max(1, min(4, cpu_count()))  # 4 workers is the sweet spot
+    print(f"Using {load_workers} workers, processing {batch_size} images per batch")
+
+    prefetch_batches = 2
+    prefetch_limit = max(load_workers, min(valid_count, batch_size * prefetch_batches))
+    embed_batches = 0
+    batch_imgs: List = []
+    batch_idx: List[int] = []
+
+    with ThreadPoolExecutor(max_workers=load_workers) as executor:
+        path_iter = iter(enumerate(paths))
+        pending = {}
+
+        with tqdm(total=len(paths), desc="Embedding images", unit="img") as pbar:
+            def refill_pending():
+                while len(pending) < prefetch_limit:
+                    try:
+                        idx, path = next(path_iter)
+                    except StopIteration:
+                        break
+                    if path is None:
+                        pbar.update(1)
+                        continue
+                    future = executor.submit(_load_image_worker, (idx, path, target_size))
+                    pending[future] = None
+
+            refill_pending()
+
+            while pending:
+                done, _ = wait(list(pending.keys()), return_when=FIRST_COMPLETED)
+                for fut in done:
+                    idx, img = fut.result()
+                    del pending[fut]
+                    if img is not None:
+                        batch_idx.append(idx)
+                        batch_imgs.append(img)
+                    pbar.update(1)
+
+                    if len(batch_idx) == batch_size:
+                        Z = embedder.encode_images(batch_imgs)
+                        for local, global_i in enumerate(batch_idx):
+                            if local < Z.shape[0]:
+                                vecs[global_i] = Z[local]
+                                good[global_i] = True
+                        del Z
+                        batch_imgs.clear()
+                        batch_idx.clear()
+                        embed_batches += 1
+                        if embed_batches % 10 == 0:
+                            gc.collect()
+
+                refill_pending()
+
     if batch_imgs:
         Z = embedder.encode_images(batch_imgs)
         for local, global_i in enumerate(batch_idx):
-            if batch_imgs[local] is not None and Z.shape[0] > local:
+            if local < Z.shape[0]:
                 vecs[global_i] = Z[local]
                 good[global_i] = True
     
@@ -326,8 +339,8 @@ def main():
                     help="Directory with cached images.")
     ap.add_argument("--limit", type=int, default=None, 
                     help="Limit number of faces (for testing).")
-    ap.add_argument("--batch", type=int, default=512, 
-                    help="Embedding batch size (default: 512, optimized for M2 Max with small images).")
+    ap.add_argument("--batch", type=int, default=256, 
+                    help="Embedding batch size (default: 256, optimized for M2 Max with 64GB RAM).")
     ap.add_argument("--size", type=int, default=336, 
                     help="Square resize for images before CLIP preprocess (336px for ViT-L/14@336px).")
     ap.add_argument("--validate-cache", dest="validate_cache", action="store_true", default=True,
