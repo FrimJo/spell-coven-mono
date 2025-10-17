@@ -7,8 +7,6 @@
  * @module detectors/detr-detector
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import type { DetectedCard, DetectionResult, Point } from '@/types/card-query'
 import { env, pipeline } from '@huggingface/transformers'
 
@@ -38,6 +36,7 @@ if (
  */
 export class DETRDetector implements CardDetector {
   private status: DetectorStatus = 'uninitialized'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any --  Using any to avoid "union type too complex" error
   private detector: any = null
   private isLoading = false
   private config: DetectorConfig
@@ -76,14 +75,14 @@ export class DETRDetector implements CardDetector {
 
       // Initialize DETR pipeline
       this.detector = await pipeline('object-detection', this.config.modelId, {
-        progress_callback: (progress: any) => {
-          if (progress.status === 'downloading') {
+        progress_callback: (progress) => {
+          if (progress.status === 'progress') {
             const percent = Math.round(progress.progress || 0)
             this.setStatus(`Downloading: ${progress.file} - ${percent}%`)
           }
         },
-        device: (this.config.device || 'auto') as any,
-        dtype: (this.config.dtype || 'fp32') as any,
+        device: this.config.device ?? 'auto',
+        dtype: this.config.dtype ?? 'fp32',
       })
 
       this.status = 'ready'

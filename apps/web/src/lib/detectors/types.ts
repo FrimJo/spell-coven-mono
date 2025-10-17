@@ -8,6 +8,7 @@
  */
 
 import type { DetectedCard } from '@/types/card-query'
+import type { DataType, DeviceType } from '@huggingface/transformers'
 
 /**
  * Configuration for detector initialization
@@ -26,10 +27,10 @@ export interface DetectorConfig {
   onProgress?: (message: string) => void
 
   /** Optional device preference ('auto', 'webgpu', 'wasm', 'cpu') */
-  device?: string
+  device?: DeviceType
 
   /** Optional data type ('fp32', 'fp16') */
-  dtype?: string
+  dtype?: DataType
 }
 
 /**
