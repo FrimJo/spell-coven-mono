@@ -9,6 +9,8 @@
  * @module detectors/geometry/contours
  */
 
+import type { Mat } from '@techstark/opencv-js'
+
 import type { CardQuad, Point } from '../types'
 import { loadOpenCV } from '../../opencv-loader'
 
@@ -18,7 +20,7 @@ import { loadOpenCV } from '../../opencv-loader'
  * @param mask - OpenCV Mat containing binary mask (0 or 255)
  * @returns Array of contours (each contour is an array of points)
  */
-export async function maskToContours(mask: any): Promise<any[]> {
+export async function maskToContours(mask: Mat): Promise<Mat[]> {
   const cv = await loadOpenCV()
 
   const contours = new cv.MatVector()
@@ -35,7 +37,7 @@ export async function maskToContours(mask: any): Promise<any[]> {
     )
 
     // Convert to array
-    const result: any[] = []
+    const result: Mat[] = []
     for (let i = 0; i < contours.size(); i++) {
       result.push(contours.get(i))
     }
@@ -54,7 +56,7 @@ export async function maskToContours(mask: any): Promise<any[]> {
  * @param contours - Array of OpenCV contours
  * @returns Largest contour or null if array is empty
  */
-export async function findLargestContour(contours: any[]): Promise<any | null> {
+export async function findLargestContour(contours: Mat[]): Promise<Mat | null> {
   if (contours.length === 0) {
     return null
   }
@@ -62,7 +64,7 @@ export async function findLargestContour(contours: any[]): Promise<any | null> {
   const cv = await loadOpenCV()
 
   let maxArea = 0
-  let largestContour: any | null = null
+  let largestContour: Mat | null = null
 
   for (const contour of contours) {
     const area = cv.contourArea(contour)
@@ -83,7 +85,7 @@ export async function findLargestContour(contours: any[]): Promise<any | null> {
  * @returns Approximated polygon or null if not a quadrilateral
  */
 export async function approximateToQuad(
-  contour: any,
+  contour: Mat,
   epsilon: number = 0.02,
 ): Promise<Point[] | null> {
   const cv = await loadOpenCV()
@@ -191,7 +193,7 @@ export function orderQuadPoints(points: Point[]): CardQuad {
  * @returns Ordered CardQuad or null if extraction fails
  */
 export async function extractQuadFromMask(
-  mask: any,
+  mask: Mat,
   epsilon: number = 0.02,
 ): Promise<CardQuad | null> {
   try {

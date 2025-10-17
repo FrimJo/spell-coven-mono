@@ -17,6 +17,8 @@
  * @module detectors/opencv-detector
  */
 
+import type { CV, InputArray, Mat, MatVector } from '@techstark/opencv-js'
+
 import type {
   CardDetector,
   DetectionOutput,
@@ -24,12 +26,10 @@ import type {
   DetectorStatus,
 } from './types'
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 // OpenCV.js minimal type definitions
 declare global {
   interface Window {
-    cv: any
+    cv: CV
     __cvReadyPromise?: Promise<void>
   }
 }
@@ -62,12 +62,12 @@ export class OpenCVDetector implements CardDetector {
   private config: OpenCVConfig
 
   // OpenCV matrices (reused for performance)
-  private src: any = null
-  private gray: any = null
-  private blurred: any = null
-  private edged: any = null
-  private contours: any = null
-  private hierarchy: any = null
+  private src: Mat | null = null
+  private gray: InputArray | null = null
+  private blurred: InputArray | null = null
+  private edges: InputArray | null = null
+  private contours: MatVector | null = null
+  private hierarchy: Mat | null = null
 
   constructor(config: OpenCVConfig) {
     this.config = {
@@ -122,14 +122,14 @@ export class OpenCVDetector implements CardDetector {
     if (this.src) this.src.delete()
     if (this.gray) this.gray.delete()
     if (this.blurred) this.blurred.delete()
-    if (this.edged) this.edged.delete()
+    if (this.edges) this.edges.delete()
     if (this.contours) this.contours.delete()
     if (this.hierarchy) this.hierarchy.delete()
 
     this.src = null
     this.gray = null
     this.blurred = null
-    this.edged = null
+    this.edges = null
     this.contours = null
     this.hierarchy = null
 

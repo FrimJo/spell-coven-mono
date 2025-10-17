@@ -7,15 +7,20 @@
  * @module detectors/slimsam-detector
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import type { DetectedCard, Point } from '@/types/card-query'
+import type {
+  PreTrainedModel,
+  ProgressCallback,
+  Tensor,
+} from '@huggingface/transformers'
 import {
   AutoProcessor,
   env,
   RawImage,
   SamModel,
+  SamProcessor,
 } from '@huggingface/transformers'
+import { ImageProcessorResult } from 'node_modules/@huggingface/transformers/types/base/image_processors_utils'
 
 import type {
   CardDetector,
@@ -59,8 +64,8 @@ if (
  */
 export class SlimSAMDetector implements CardDetector {
   private status: DetectorStatus = 'uninitialized'
-  private model: any = null
-  private processor: any = null
+  private model: PreTrainedModel | null = null
+  private processor: SamProcessor | null = null
   private isLoading = false
   private config: DetectorConfig
   private clickPoint: Point | null = null
@@ -131,8 +136,8 @@ export class SlimSAMDetector implements CardDetector {
     this.setStatus(`Initializing SlimSAM (${backend})...`)
 
     // Initialize SlimSAM model and processor directly (not via pipeline)
-    const progressCallback = (progress: any) => {
-      if (progress.status === 'downloading') {
+    const progressCallback: ProgressCallback = (progress) => {
+      if (progress.status === 'progress') {
         const percent = Math.round(progress.progress || 0)
         this.setStatus(`Downloading: ${progress.file} - ${percent}%`)
       }
@@ -141,13 +146,22 @@ export class SlimSAMDetector implements CardDetector {
     // Load model and processor - fail hard if this doesn't work
     this.model = await SamModel.from_pretrained(modelId, {
       progress_callback: progressCallback,
-      device: (this.config.device || 'auto') as any,
-      dtype: (this.config.dtype || 'fp16') as any,
+      device: this.config.device || 'auto',
+      dtype: this.config.dtype || 'fp16',
     })
 
-    this.processor = await AutoProcessor.from_pretrained(modelId, {
+    const processor = await AutoProcessor.from_pretrained(modelId, {
       progress_callback: progressCallback,
     })
+
+    const isProcessorSamProcessor = processor instanceof SamProcessor
+
+    if (!isProcessorSamProcessor) {
+      const error = new Error('Processor is not a SamProcessor')
+      this.logError('SlimSAM initialization', error)
+      throw error
+    }
+    this.processor = processor
 
     console.log(
       `[SlimSAMDetector] Successfully initialized with model: ${modelId}`,
@@ -175,24 +189,36 @@ export class SlimSAMDetector implements CardDetector {
     canvasHeight: number,
   ): Promise<DetectionOutput> {
     if (this.status !== 'ready' || !this.model || !this.processor) {
-      throw new Error('Detector not initialized. Call initialize() first.')
+      const error = new Error(
+        'Detector not initialized. Call initialize() first.',
+      )
+      this.logError('SlimSAM detect', error)
+      throw error
     }
 
     // Use click point if provided, otherwise center
-    const point = this.clickPoint || {
-      x: canvasWidth / 2,
-      y: canvasHeight / 2,
+    const point = this.clickPoint
+
+    if (!point) {
+      const error = new Error(
+        'SlimSAM detection requires a click point. Call setClickPoint() before detect().',
+      )
+      this.logError('SlimSAM detect', error)
+      throw error
     }
+
+    // Reset click point so each detection requires an explicit prompt
+    this.clickPoint = null
 
     const startTime = performance.now()
 
     try {
       // T029: Run segmentation with point prompt
       // Convert canvas to RawImage
-      const image = await RawImage.fromCanvas(canvas)
+      const image = RawImage.fromCanvas(canvas)
 
       // Prepare inputs with point prompts
-      const inputs = await this.processor(image, {
+      const inputs: ImageProcessorResult = await this.processor(image, {
         input_points: [[[point.x, point.y]]],
         input_labels: [[1]], // 1 = foreground
       })
@@ -201,7 +227,7 @@ export class SlimSAMDetector implements CardDetector {
       const outputs = await this.model(inputs)
 
       // Post-process masks to get properly sized output
-      const masks = await this.processor.post_process_masks(
+      const masks: Tensor[] = await this.processor.post_process_masks(
         outputs.pred_masks,
         inputs.original_sizes,
         inputs.reshaped_input_sizes,
@@ -313,27 +339,25 @@ export class SlimSAMDetector implements CardDetector {
                 {
                   quad,
                   aspectRatio: validation.aspectRatio,
+                  bestScore,
                   warpedSize: `${warpedCanvas.width}x${warpedCanvas.height}`,
                 },
               )
             } else {
               // T023: Handle invalid quad geometry - FAIL EXPLICITLY
-              console.error(
-                '[SlimSAMDetector] CRITICAL: Invalid quad geometry:',
-                validation.reason,
-              )
-              throw new Error(
+              const error = new Error(
                 `SlimSAM quad validation failed: ${validation.reason}`,
               )
+              this.logError('SlimSAM quad validation', error)
+              throw error
             }
           } else {
             // T023: Quad extraction failed - FAIL EXPLICITLY
-            console.error(
-              '[SlimSAMDetector] CRITICAL: Quad extraction failed',
-            )
-            throw new Error(
+            const error = new Error(
               'SlimSAM failed to extract quad from mask - segmentation quality too low',
             )
+            this.logError('SlimSAM quad extraction', error)
+            throw error
           }
         }
       }
@@ -377,7 +401,7 @@ export class SlimSAMDetector implements CardDetector {
    * @returns CardQuad or null if extraction fails
    */
   private async extractQuadFromMask(
-    mask: any,
+    mask: Tensor,
     canvasWidth: number,
     canvasHeight: number,
   ): Promise<CardQuad | null> {
@@ -401,8 +425,9 @@ export class SlimSAMDetector implements CardDetector {
 
       // Create binary mask (0 or 255)
       const binaryData = new Uint8Array(maskHeight * maskWidth)
+      const threshold = 0.5
       for (let i = 0; i < maskData.length; i++) {
-        binaryData[i] = maskData[i] ? 255 : 0
+        binaryData[i] = maskData[i] > threshold ? 255 : 0
       }
 
       // Create OpenCV Mat from binary data
@@ -436,72 +461,7 @@ export class SlimSAMDetector implements CardDetector {
         },
       }
     } catch (error) {
-      console.error('[SlimSAMDetector] Error extracting quad from mask:', error)
-      return null
-    }
-  }
-
-  /**
-   * T030: Convert binary mask to bounding box
-   * Finds the tight bounding box around all true pixels in the mask
-   */
-  private maskToBoundingBox(
-    mask: any,
-  ): { xmin: number; ymin: number; xmax: number; ymax: number } | null {
-    try {
-      // Mask dimensions are [batch, num_masks, height, width]
-      // We need to access the actual mask data
-      const maskData = mask.data
-      const dims = mask.dims
-
-      if (!maskData || !dims || dims.length < 3) {
-        console.warn('[SlimSAMDetector] Invalid mask format')
-        return null
-      }
-
-      // Get mask dimensions (last 2 dims are height, width)
-      const maskHeight = dims[dims.length - 2]
-      const maskWidth = dims[dims.length - 1]
-
-      // Find bounding box of true pixels
-      let minX = maskWidth
-      let minY = maskHeight
-      let maxX = 0
-      let maxY = 0
-      let hasPixels = false
-
-      // Iterate through mask to find bounds
-      for (let y = 0; y < maskHeight; y++) {
-        for (let x = 0; x < maskWidth; x++) {
-          const idx = y * maskWidth + x
-          // Mask is boolean, check if pixel is part of segmentation
-          if (maskData[idx]) {
-            hasPixels = true
-            minX = Math.min(minX, x)
-            minY = Math.min(minY, y)
-            maxX = Math.max(maxX, x)
-            maxY = Math.max(maxY, y)
-          }
-        }
-      }
-
-      if (!hasPixels) {
-        return null
-      }
-
-      // Convert from mask coordinates to canvas coordinates
-      // Normalize to 0-1 range
-      return {
-        xmin: minX / maskWidth,
-        ymin: minY / maskHeight,
-        xmax: maxX / maskWidth,
-        ymax: maxY / maskHeight,
-      }
-    } catch (err) {
-      console.error(
-        '[SlimSAMDetector] Error converting mask to bounding box:',
-        err,
-      )
+      this.logError('SlimSAM quad extraction (OpenCV)', error)
       return null
     }
   }

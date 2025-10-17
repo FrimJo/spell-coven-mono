@@ -12,8 +12,6 @@
  * @module detectors/owl-vit-detector
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import type { DetectedCard, Point } from '@/types/card-query'
 import { pipeline } from '@huggingface/transformers'
 
@@ -59,6 +57,7 @@ interface OWLViTDetection {
 export class OWLViTDetector implements CardDetector {
   private status: DetectorStatus = 'uninitialized'
   private config: OWLViTConfig
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any --  Using any to avoid "union type too complex" error
   private detector: any = null
 
   constructor(config: OWLViTConfig = {}) {
@@ -91,8 +90,8 @@ export class OWLViTDetector implements CardDetector {
         'zero-shot-object-detection',
         this.config.modelId!,
         {
-          progress_callback: (progress: any) => {
-            if (progress.status === 'downloading') {
+          progress_callback: (progress) => {
+            if (progress.status === 'progress') {
               // Progress logging removed
             }
           },
