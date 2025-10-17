@@ -18,28 +18,3 @@ import type { DetectorType } from './detectors'
  * - 'owl-vit': OWL-ViT zero-shot detector (not yet implemented)
  */
 export const ACTIVE_DETECTOR: DetectorType = 'detr'
-
-/**
- * Detector-specific configuration overrides
- *
- * Customize settings for each detector type.
- * These override the default values from the factory.
- */
-export const DETECTOR_OVERRIDES = {
-  opencv: {
-    // Uncomment to customize OpenCV settings
-    // minCardArea: 4000,
-    // cannyLowThreshold: 75,
-    // cannyHighThreshold: 200,
-  },
-  detr: {
-    // Uncomment to customize DETR settings
-    // confidenceThreshold: 0.6,
-    // device: 'webgpu',
-  },
-  'owl-vit': {
-    // Uncomment to customize OWL-ViT settings
-    // confidenceThreshold: 0.3,
-    // prompts: ['Magic: The Gathering card', 'trading card'],
-  },
-} as const
