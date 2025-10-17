@@ -26,7 +26,7 @@ build:
 	$(PYTHON) build_mtg_faiss.py --kind unique_artwork --out index_out --cache image_cache
 
 export:
-	$(PYTHON) export_for_browser.py
+	$(PYTHON) export_for_browser.py --input-dir index_out --output-dir index_out
 
 query:
 	@echo "Usage: $(PYTHON) query_index.py <image_path> [--k N]"
