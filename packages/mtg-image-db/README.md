@@ -87,7 +87,7 @@ python download_images.py --kind unique_artwork --workers 4 --max-retries 10
 
 Step 2: Build embeddings and FAISS index from cached images:
 ```bash
-python build_embeddings.py --kind unique_artwork --out index_out --cache image_cache
+python build_embeddings.py --kind unique_artwork --out index_out --cache image_cache --batch 256
 # Or: make embed
 ```
 
@@ -306,8 +306,11 @@ python scripts/validate_cache.py --cache image_cache --report validation_report.
 **Build Time Optimization**:
 - Use parallel downloads: `--workers 16` (default)
 - Use appropriate HNSW parameters for your use case
-- For testing: `--limit 2000 --hnsw-m 16 --hnsw-ef-construction 100`
-- For production: `--hnsw-m 32 --hnsw-ef-construction 200` (default)
+- For small-memory runs: `--batch 64 --limit 2000 --hnsw-m 16 --hnsw-ef-construction 100`
+- For production on Apple M2 Max / 64GB RAM: start with `--batch 256` and, after confirming `torch.backends.mps.is_available()` is `True`, experiment with `--batch 384` or `--batch 512` for higher throughput.
+- The embedding step now uses a bounded prefetch queue (≈`batch_size * 2`) to keep memory predictable even when loader threads run ahead.
+- Expect ~35–45 img/s on Apple M2 Max when MPS is active; CPU-only runs remain around 6–7 img/s.
+- If you see `WARNING: Vectors not properly normalized` during the build, it indicates minor float16 drift; the script re-normalizes automatically and you can safely ignore the message.
 
 ### Checkpoint Issues
 
