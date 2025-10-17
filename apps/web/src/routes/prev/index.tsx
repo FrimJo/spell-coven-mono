@@ -5,7 +5,7 @@ import {
   loadEmbeddingsAndMetaFromPackage,
   loadModel,
   top1,
-} from '@/lib/search'
+} from '@/lib/clip-search'
 import { createFileRoute } from '@tanstack/react-router'
 
 type Result = {

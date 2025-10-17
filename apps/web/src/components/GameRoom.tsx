@@ -5,7 +5,7 @@ import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
-import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/search'
+import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { ArrowLeft, Check, Copy, Settings, Users } from 'lucide-react'
 import { toast } from 'sonner'
 

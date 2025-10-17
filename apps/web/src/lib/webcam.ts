@@ -4,11 +4,7 @@
 import type { DetectedCard } from '@/types/card-query'
 
 import type { CardDetector, DetectorType } from './detectors'
-import {
-  CROPPED_CARD_HEIGHT,
-  CROPPED_CARD_WIDTH,
-  DETECTION_INTERVAL_MS,
-} from './detection-constants'
+import { CROPPED_CARD_HEIGHT, CROPPED_CARD_WIDTH } from './detection-constants'
 import { createDefaultDetector, createDetector } from './detectors'
 import { calculateSharpness } from './detectors/geometry/sharpness'
 import { FrameBuffer } from './frame-buffer'
@@ -256,8 +252,12 @@ async function detectCards(clickPoint?: { x: number; y: number }) {
     }
 
     // Set click point for SlimSAM detector if provided
-    if (clickPoint && 'setClickPoint' in detector) {
-      ;(detector as any).setClickPoint(clickPoint)
+    if (
+      clickPoint &&
+      'setClickPoint' in detector &&
+      typeof detector.setClickPoint === 'function'
+    ) {
+      detector.setClickPoint(clickPoint)
     }
 
     // Run detection using pluggable detector
@@ -297,17 +297,6 @@ async function detectCards(clickPoint?: { x: number; y: number }) {
   } finally {
     isDetecting = false
   }
-}
-
-/**
- * Start detection loop
- * Begins periodic detection at configured interval (default: 500ms)
- */
-function startDetection() {
-  if (detectionInterval) {
-    return
-  }
-  detectionInterval = window.setInterval(detectCards, DETECTION_INTERVAL_MS)
 }
 
 /**
@@ -351,7 +340,7 @@ function cropCardFromBoundingBox(
 ): boolean {
   // Use provided source canvas or draw from video element
   let canvasToUse: HTMLCanvasElement
-  
+
   if (sourceCanvas) {
     canvasToUse = sourceCanvas
   } else {
@@ -491,7 +480,7 @@ function cropCardAt(x: number, y: number): boolean {
   let sourceCanvas: HTMLCanvasElement | null = null
   if (frameBuffer && !frameBuffer.isEmpty()) {
     const clickTime = performance.now()
-    
+
     // Try to get frame within time window first
     let sharpestFrame = frameBuffer.getSharpest(clickTime)
 
@@ -502,10 +491,13 @@ function cropCardAt(x: number, y: number): boolean {
         // Sort by timestamp descending and get the most recent
         allFrames.sort((a, b) => b.timestamp - a.timestamp)
         sharpestFrame = allFrames[0]
-        console.log('[Webcam] No frame in time window, using most recent frame:', {
-          sharpness: sharpestFrame.sharpness.toFixed(2),
-          age: `${clickTime - sharpestFrame.timestamp}ms`,
-        })
+        console.log(
+          '[Webcam] No frame in time window, using most recent frame:',
+          {
+            sharpness: sharpestFrame.sharpness.toFixed(2),
+            age: `${clickTime - sharpestFrame.timestamp}ms`,
+          },
+        )
       }
     } else {
       console.log('[Webcam] Using sharpest frame from buffer:', {
@@ -521,11 +513,14 @@ function cropCardAt(x: number, y: number): boolean {
 
   // CRITICAL: No fallback - fail fast if frame buffer doesn't provide a canvas
   if (!sourceCanvas) {
-    console.error('[Webcam] CRITICAL: No source canvas available from frame buffer!', {
-      hasFrameBuffer: !!frameBuffer,
-      isEmpty: frameBuffer ? frameBuffer.isEmpty() : 'N/A',
-      clickTime: performance.now(),
-    })
+    console.error(
+      '[Webcam] CRITICAL: No source canvas available from frame buffer!',
+      {
+        hasFrameBuffer: !!frameBuffer,
+        isEmpty: frameBuffer ? frameBuffer.isEmpty() : 'N/A',
+        clickTime: performance.now(),
+      },
+    )
     return false
   }
 
@@ -619,7 +614,9 @@ export async function setupWebcam(args: {
 
   // Set perspective warp flag
   enablePerspectiveWarp = args.usePerspectiveWarp !== false
-  console.log(`[Webcam] Perspective warp ${enablePerspectiveWarp ? 'enabled' : 'disabled'}`)
+  console.log(
+    `[Webcam] Perspective warp ${enablePerspectiveWarp ? 'enabled' : 'disabled'}`,
+  )
 
   // Initialize detector
   try {
@@ -645,7 +642,7 @@ export async function setupWebcam(args: {
     requestAnimationFrame(async () => {
       // Run detection at click point first
       await detectCards({ x, y })
-      
+
       // Then crop the detected card
       const ok = cropCardAt(x, y)
       if (ok && typeof args.onCrop === 'function') {

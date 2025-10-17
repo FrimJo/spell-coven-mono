@@ -1,6 +1,6 @@
 import type { CardQueryState, UseCardQueryReturn } from '@/types/card-query'
 import { useCallback, useRef, useState } from 'react'
-import { embedFromCanvas, top1 } from '@/lib/search'
+import { embedFromCanvas, top1 } from '@/lib/clip-search'
 import { validateCanvas } from '@/types/card-query'
 
 export function useCardQuery(): UseCardQueryReturn {
