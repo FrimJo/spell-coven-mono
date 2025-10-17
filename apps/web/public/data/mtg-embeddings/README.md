@@ -2,11 +2,11 @@
 
 This directory contains versioned MTG card embeddings data used by the image search feature.
 
-## Current Version: v1.0
+## Current Version: v1.1
 
-**Build Date:** 2025-10-14  
-**Total Cards:** 52,491 unique artworks  
-**Embedding Model:** CLIP ViT-B/32 (Xenova/clip-vit-base-patch32)  
+**Build Date:** 2025-10-17
+**Total Cards:** 52,491 unique artworks
+**Embedding Model:** CLIP ViT-B/32 (Xenova/clip-vit-base-patch32)
 **Quantization:** int8 (scale factor: 127)
 
 ## Files
@@ -25,13 +25,16 @@ When the MTG card database is updated:
 
    ```bash
    cd packages/mtg-image-db
-   pnpm build  # or: python3 build_mtg_faiss.py --out index_out --cache image_cache
+   python build_embeddings.py --kind unique_artwork --cache image_cache --out index_out --batch 256 --size 336 --hnsw-m 32 --hnsw-ef-construction 200
+   python export_for_browser.py --input-dir index_out --output-dir index_out
    ```
+
+   > Shortcut: `pnpm build` runs the legacy single-step pipeline targeting `index_out/`.
 
 2. **Create new version directory**:
 
    ```bash
-   mkdir -p apps/web/public/data/mtg-embeddings/v1.1
+   mkdir -p apps/web/public/data/mtg-embeddings/v{MAJOR.MINOR}
    ```
 
 3. **Copy the required files**:
@@ -40,21 +43,21 @@ When the MTG card database is updated:
    cp packages/mtg-image-db/index_out/meta.json \
       packages/mtg-image-db/index_out/embeddings.i8bin \
       packages/mtg-image-db/index_out/build_manifest.json \
-      apps/web/public/data/mtg-embeddings/v1.1/
+      apps/web/public/data/mtg-embeddings/v{MAJOR.MINOR}/
    ```
 
 4. **Update the version in environment files**:
 
    ```bash
    # Update both .env.development and .env.production
-   echo "VITE_EMBEDDINGS_VERSION=v1.1" > apps/web/.env.development
-   echo "VITE_EMBEDDINGS_VERSION=v1.1" > apps/web/.env.production
+   echo "VITE_EMBEDDINGS_VERSION=v{MAJOR.MINOR}" > apps/web/.env.development
+   echo "VITE_EMBEDDINGS_VERSION=v{MAJOR.MINOR}" > apps/web/.env.production
    ```
 
 5. **Commit the new files**:
    ```bash
-   git add apps/web/public/data/mtg-embeddings/v1.1/
-   git commit -m "chore: update MTG embeddings to v1.1"
+   git add apps/web/public/data/mtg-embeddings/v{MAJOR.MINOR}/
+   git commit -m "chore: update MTG embeddings to v{MAJOR.MINOR}"
    ```
 
 ## Why Version These Files?
