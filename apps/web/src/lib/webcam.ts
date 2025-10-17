@@ -224,8 +224,9 @@ function renderDetections(cards: DetectedCard[]) {
  * Run detection on current video frame
  * Captures video frame, runs detector inference, filters results, and renders bounding boxes
  * Includes performance monitoring and error handling
+ * @param clickPoint Optional click coordinates for point-based detection
  */
-async function detectCards() {
+async function detectCards(clickPoint?: { x: number; y: number }) {
   // Skip if already detecting or detector not ready
   if (!detector) {
     return
@@ -252,6 +253,11 @@ async function detectCards() {
       const timestamp = performance.now()
       const sharpness = await calculateSharpness(tempCanvas)
       frameBuffer.add(tempCanvas, timestamp, sharpness)
+    }
+
+    // Set click point for SlimSAM detector if provided
+    if (clickPoint && 'setClickPoint' in detector) {
+      ;(detector as any).setClickPoint(clickPoint)
     }
 
     // Run detection using pluggable detector
@@ -326,35 +332,53 @@ function stopDetection() {
 }
 
 /**
- * Crop card using DETR bounding box with square center-crop preprocessing
+ * Crop card from bounding box
  * CRITICAL: Must match Python embedding pipeline preprocessing for accuracy
  * Python pipeline: center-crop to square (min dimension) → resize to 384×384
  * See: packages/mtg-image-db/build_mtg_faiss.py lines 122-135
  * @param box Bounding box from DETR detection (normalized coordinates)
+ * @param sourceCanvas Optional source canvas to crop from (if not provided, uses videoEl)
  * @returns True if crop succeeded
  */
-function cropCardFromBoundingBox(box: {
-  xmin: number
-  ymin: number
-  xmax: number
-  ymax: number
-}): boolean {
-  // Draw full resolution video to canvas
-  fullResCanvas.width = videoEl.videoWidth
-  fullResCanvas.height = videoEl.videoHeight
-  fullResCtx!.drawImage(
-    videoEl,
-    0,
-    0,
-    fullResCanvas.width,
-    fullResCanvas.height,
-  )
+function cropCardFromBoundingBox(
+  box: {
+    xmin: number
+    ymin: number
+    xmax: number
+    ymax: number
+  },
+  sourceCanvas?: HTMLCanvasElement | null,
+): boolean {
+  // Use provided source canvas or draw from video element
+  let canvasToUse: HTMLCanvasElement
+  
+  if (sourceCanvas) {
+    canvasToUse = sourceCanvas
+  } else {
+    // Draw full resolution video to canvas
+    fullResCanvas.width = videoEl.videoWidth
+    fullResCanvas.height = videoEl.videoHeight
+    fullResCtx!.drawImage(
+      videoEl,
+      0,
+      0,
+      fullResCanvas.width,
+      fullResCanvas.height,
+    )
+    canvasToUse = fullResCanvas
+  }
 
   // Convert normalized coordinates to pixels
-  const x = box.xmin * fullResCanvas.width
-  const y = box.ymin * fullResCanvas.height
-  const cardWidth = (box.xmax - box.xmin) * fullResCanvas.width
-  const cardHeight = (box.ymax - box.ymin) * fullResCanvas.height
+  const x = box.xmin * canvasToUse.width
+  const y = box.ymin * canvasToUse.height
+  const cardWidth = (box.xmax - box.xmin) * canvasToUse.width
+  const cardHeight = (box.ymax - box.ymin) * canvasToUse.height
+
+  console.log('[Webcam] Bounding box details:', {
+    normalized: box,
+    canvasSize: { width: canvasToUse.width, height: canvasToUse.height },
+    pixels: { x, y, width: cardWidth, height: cardHeight },
+  })
 
   // CRITICAL FIX: Apply square center-crop to match Python preprocessing
   // Python does: s = min(w, h); crop to square; resize to 384×384
@@ -363,7 +387,8 @@ function cropCardFromBoundingBox(box: {
   const cropY = y + (cardHeight - minDim) / 2
 
   // Extract square region from center of card
-  const cardImageData = fullResCtx!.getImageData(cropX, cropY, minDim, minDim)
+  const canvasCtx = canvasToUse.getContext('2d')!
+  const cardImageData = canvasCtx.getImageData(cropX, cropY, minDim, minDim)
 
   // Create temporary canvas for the square extracted region
   const tempCanvas = document.createElement('canvas')
@@ -466,24 +491,42 @@ function cropCardAt(x: number, y: number): boolean {
   let sourceCanvas: HTMLCanvasElement | null = null
   if (frameBuffer && !frameBuffer.isEmpty()) {
     const clickTime = performance.now()
-    const sharpestFrame = frameBuffer.getSharpest(clickTime)
+    
+    // Try to get frame within time window first
+    let sharpestFrame = frameBuffer.getSharpest(clickTime)
 
-    if (sharpestFrame) {
+    // If no frame in time window, get the most recent frame regardless of timing
+    if (!sharpestFrame) {
+      const allFrames = frameBuffer.getAll()
+      if (allFrames.length > 0) {
+        // Sort by timestamp descending and get the most recent
+        allFrames.sort((a, b) => b.timestamp - a.timestamp)
+        sharpestFrame = allFrames[0]
+        console.log('[Webcam] No frame in time window, using most recent frame:', {
+          sharpness: sharpestFrame.sharpness.toFixed(2),
+          age: `${clickTime - sharpestFrame.timestamp}ms`,
+        })
+      }
+    } else {
       console.log('[Webcam] Using sharpest frame from buffer:', {
         sharpness: sharpestFrame.sharpness.toFixed(2),
         timeDelta: `${sharpestFrame.timestamp - clickTime}ms`,
       })
+    }
+
+    if (sharpestFrame) {
       sourceCanvas = sharpestFrame.canvas
     }
   }
 
-  // Fallback to current video frame if no buffer available
+  // CRITICAL: No fallback - fail fast if frame buffer doesn't provide a canvas
   if (!sourceCanvas) {
-    sourceCanvas = document.createElement('canvas')
-    sourceCanvas.width = fullResCanvas.width
-    sourceCanvas.height = fullResCanvas.height
-    const ctx = sourceCanvas.getContext('2d')!
-    ctx.drawImage(videoEl, 0, 0, sourceCanvas.width, sourceCanvas.height)
+    console.error('[Webcam] CRITICAL: No source canvas available from frame buffer!', {
+      hasFrameBuffer: !!frameBuffer,
+      isEmpty: frameBuffer ? frameBuffer.isEmpty() : 'N/A',
+      clickTime: performance.now(),
+    })
+    return false
   }
 
   // T022: Use warped canvas if available (from perspective correction) and enabled
@@ -522,7 +565,7 @@ function cropCardAt(x: number, y: number): boolean {
   }
 
   // Fallback: Use the DETR bounding box to crop from source canvas
-  return cropCardFromBoundingBox(card.box)
+  return cropCardFromBoundingBox(card.box, sourceCanvas)
 }
 
 /**
@@ -599,7 +642,11 @@ export async function setupWebcam(args: {
 
     // Use requestAnimationFrame to make this async and prevent blocking Playwright
     // This ensures the click event completes before we process the crop
-    requestAnimationFrame(() => {
+    requestAnimationFrame(async () => {
+      // Run detection at click point first
+      await detectCards({ x, y })
+      
+      // Then crop the detected card
       const ok = cropCardAt(x, y)
       if (ok && typeof args.onCrop === 'function') {
         args.onCrop(croppedCanvas)
@@ -628,7 +675,8 @@ export async function setupWebcam(args: {
             void videoEl.play()
             if (!animationStarted) {
               animationStarted = true
-              startDetection()
+              // DISABLED: No automatic detection - only detect on click
+              // startDetection()
             }
             resolve()
           }
@@ -660,7 +708,8 @@ export async function setupWebcam(args: {
             void videoEl.play()
             if (!animationStarted) {
               animationStarted = true
-              startDetection()
+              // DISABLED: No automatic detection - only detect on click
+              // startDetection()
             }
             resolve()
           }
