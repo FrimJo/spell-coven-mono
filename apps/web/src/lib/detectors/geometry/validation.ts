@@ -201,11 +201,12 @@ export function validateQuad(
     return convexResult
   }
 
-  // Check aspect ratio
-  const aspectResult = validateQuadAspectRatio(quad)
-  if (!aspectResult.valid) {
-    return aspectResult
-  }
+  // REMOVED: Aspect ratio check - webcam can be at any angle
+  // Cards viewed from an angle won't have the correct aspect ratio in the stream
+  // const aspectResult = validateQuadAspectRatio(quad)
+  // if (!aspectResult.valid) {
+  //   return aspectResult
+  // }
 
   // Check bounds if frame dimensions provided
   if (frameWidth !== undefined && frameHeight !== undefined) {
@@ -214,6 +215,9 @@ export function validateQuad(
       return boundsResult
     }
   }
+
+  // Calculate aspect ratio for logging purposes only
+  const aspectResult = validateQuadAspectRatio(quad)
 
   return {
     valid: true,

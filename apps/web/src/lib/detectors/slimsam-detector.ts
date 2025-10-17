@@ -317,46 +317,23 @@ export class SlimSAMDetector implements CardDetector {
                 },
               )
             } else {
-              // T023: Handle invalid quad geometry (partial occlusion case)
-              console.warn(
-                '[SlimSAMDetector] Invalid quad geometry:',
+              // T023: Handle invalid quad geometry - FAIL EXPLICITLY
+              console.error(
+                '[SlimSAMDetector] CRITICAL: Invalid quad geometry:',
                 validation.reason,
               )
-              // Fall back to bounding box if quad validation fails
-              const boundingBox = this.maskToBoundingBox(mask)
-              if (boundingBox) {
-                const polygon: Point[] = [
-                  { x: boundingBox.xmin, y: boundingBox.ymin },
-                  { x: boundingBox.xmax, y: boundingBox.ymin },
-                  { x: boundingBox.xmax, y: boundingBox.ymax },
-                  { x: boundingBox.xmin, y: boundingBox.ymax },
-                ]
-                cards.push({
-                  box: boundingBox,
-                  polygon,
-                  score: bestScore,
-                })
-              }
+              throw new Error(
+                `SlimSAM quad validation failed: ${validation.reason}`,
+              )
             }
           } else {
-            // T023: Quad extraction failed, fall back to bounding box
-            console.warn(
-              '[SlimSAMDetector] Quad extraction failed, using bounding box',
+            // T023: Quad extraction failed - FAIL EXPLICITLY
+            console.error(
+              '[SlimSAMDetector] CRITICAL: Quad extraction failed',
             )
-            const boundingBox = this.maskToBoundingBox(mask)
-            if (boundingBox) {
-              const polygon: Point[] = [
-                { x: boundingBox.xmin, y: boundingBox.ymin },
-                { x: boundingBox.xmax, y: boundingBox.ymin },
-                { x: boundingBox.xmax, y: boundingBox.ymax },
-                { x: boundingBox.xmin, y: boundingBox.ymax },
-              ]
-              cards.push({
-                box: boundingBox,
-                polygon,
-                score: bestScore,
-              })
-            }
+            throw new Error(
+              'SlimSAM failed to extract quad from mask - segmentation quality too low',
+            )
           }
         }
       }
