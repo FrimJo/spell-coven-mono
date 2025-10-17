@@ -64,9 +64,10 @@ async function globalSetup(config: FullConfig) {
         )
 
         // Also check if our embeddings are loaded in memory
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const hasEmbeddings =
-          typeof (window as any).loadEmbeddingsAndMetaFromPackage === 'function'
+          typeof (
+            window as unknown as { loadEmbeddingsAndMetaFromPackage?: unknown }
+          ).loadEmbeddingsAndMetaFromPackage === 'function'
 
         return { hasTransformersCache, hasEmbeddings }
       } catch (e) {

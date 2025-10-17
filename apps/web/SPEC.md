@@ -42,7 +42,7 @@ This spec defines the browser client that performs on-device visual search over 
   - Compute cosine similarity via dot product on L2-normalized vectors against the database. [WEB-FR-SS-01]
   - Provide `topK(query, K)` and `top1(query)` utilities returning metadata merged with score. [WEB-FR-SS-02]
 - Public API [WEB-FR-API]
-  - Expose functions in `apps/web/src/lib/search.ts`: `loadEmbeddingsAndMeta(basePath?)`, `loadModel(opts?)`, `embedFromCanvas(canvas)`, `embedFromImageElement(img)`, `topK(query, K)`, `top1(query)`. [WEB-FR-API-01]
+  - Expose functions in `apps/web/src/lib/clip-search.ts`: `loadEmbeddingsAndMeta(basePath?)`, `loadModel(opts?)`, `embedFromCanvas(canvas)`, `embedFromImageElement(img)`, `topK(query, K)`, `top1(query)`. [WEB-FR-API-01]
 - UI Hooks [WEB-FR-UI]
   - The application should be capable of wiring a file-upload flow and (optionally) a webcam crop to produce a canvas/image for querying. [WEB-FR-UI-01]
 

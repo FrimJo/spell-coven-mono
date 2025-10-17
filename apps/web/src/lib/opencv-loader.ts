@@ -7,8 +7,9 @@
  * @module opencv-loader
  */
 
-let cvPromise: Promise<any> | null = null
-let cachedCv: any = null
+import type { CV } from '@techstark/opencv-js'
+
+let cachedCv: CV | null = null
 
 /**
  * Lazy-load OpenCV.js from npm package
@@ -28,31 +29,28 @@ let cachedCv: any = null
  * const mat = new cv.Mat()
  * ```
  */
-export async function loadOpenCV(): Promise<any> {
-  // Return cached promise if already loading/loaded
-  if (cvPromise) {
-    return cvPromise
+export async function loadOpenCV(): Promise<CV> {
+  // Return cached open cv if already loading/loaded
+  if (cachedCv) {
+    return cachedCv
   }
 
   console.log('[OpenCV] Starting lazy load from npm package...')
 
-  cvPromise = (async () => {
-    try {
-      // Dynamic import to keep it lazy-loaded
-      const { default: cvReadyPromise } = await import('@techstark/opencv-js')
-      const cv = await cvReadyPromise
-      cachedCv = cv // Cache the cv object for isOpenCVLoaded() and getOpenCVVersion()
-      console.log('[OpenCV] Runtime initialized successfully')
-      console.log('[OpenCV] Build info:', cv.getBuildInformation())
-      return cv
-    } catch (error) {
-      console.error('[OpenCV] Failed to load:', error)
-      cvPromise = null // Reset so retry is possible
-      throw new Error('Failed to load OpenCV.js from npm package')
-    }
-  })()
-
-  return cvPromise
+  try {
+    // Dynamic import to keep it lazy-loaded
+    const cv = await import('@techstark/opencv-js').then(
+      (module) => module.default,
+    )
+    cachedCv = cv // Cache the cv object for isOpenCVLoaded() and getOpenCVVersion()
+    console.log('[OpenCV] Runtime initialized successfully')
+    console.log('[OpenCV] Build info:', cv.getBuildInformation())
+    return cv
+  } catch (error) {
+    console.error('[OpenCV] Failed to load:', error)
+    cachedCv = null // Reset so retry is possible
+    throw new Error('Failed to load OpenCV.js from npm package')
+  }
 }
 
 /**
@@ -60,8 +58,8 @@ export async function loadOpenCV(): Promise<any> {
  *
  * @returns true if OpenCV is loaded and ready
  */
-export function isOpenCVLoaded(): boolean {
-  return cachedCv !== null && cachedCv.Mat !== undefined
+export function isOpenCVLoaded(cv = cachedCv): cv is CV {
+  return cv !== null && cv.Mat !== undefined
 }
 
 /**
@@ -70,7 +68,7 @@ export function isOpenCVLoaded(): boolean {
  * @returns OpenCV version or null if not loaded
  */
 export function getOpenCVVersion(): string | null {
-  if (!isOpenCVLoaded()) {
+  if (!isOpenCVLoaded(cachedCv)) {
     return null
   }
 

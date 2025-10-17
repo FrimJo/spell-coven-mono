@@ -43,7 +43,7 @@ pnpm --filter @repo/web build
 pnpm --filter @repo/web serve
 ```
 
-## Programmatic API (from `src/lib/search.ts`)
+## Programmatic API (from `src/lib/clip-search.ts`)
 
 ```ts
 import {
@@ -53,7 +53,7 @@ import {
   loadModel,
   top1,
   topK,
-} from './src/lib/search'
+} from './src/lib/clip-search'
 
 await loadEmbeddingsAndMetaFromPackage() // loads from public/data/mtg-embeddings/v1.0/
 await loadModel({ onProgress: (m) => console.log(m) })
@@ -93,7 +93,7 @@ These files are committed to the repo for reliable deployment. See `public/data/
 Transformers.js downloads the CLIP model directly to the browser's cache from Hugging Face CDN:
 
 ```typescript
-// Configured in src/lib/search.ts
+// Configured in src/lib/clip-search.ts
 env.useBrowserCache = true // Cache in browser (IndexedDB)
 env.allowRemoteModels = true // Download from Hugging Face
 env.allowLocalModels = false // Don't serve from web server

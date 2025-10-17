@@ -11,13 +11,13 @@
  * 6. Apply perspective transform to get perfectly aligned card
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { CV, InputArray, Mat, MatVector } from '@techstark/opencv-js'
 
 // OpenCV.js types (minimal definitions)
 // OpenCV.js is a JavaScript library without proper TypeScript definitions
 declare global {
   interface Window {
-    cv: any
+    cv: CV
   }
 }
 
@@ -84,7 +84,7 @@ export function isOpenCVLoaded(): boolean {
  * @param contours Array of contours from OpenCV
  * @returns The largest quadrilateral contour, or null if none found
  */
-function findLargestQuadrilateral(contours: any): any {
+function findLargestQuadrilateral(contours: MatVector): Mat | null {
   const cv = window.cv
   let maxArea = 0
   let bestContour = null
@@ -152,11 +152,11 @@ function orderPoints(
  * @returns Transformed image
  */
 function applyPerspectiveTransform(
-  src: any,
+  src: InputArray,
   corners: Array<{ x: number; y: number }>,
   targetWidth: number,
   targetHeight: number,
-): any {
+): Mat {
   const cv = window.cv
 
   // Order corners
@@ -224,14 +224,14 @@ export function refineCardEdges(
   }
 
   const cv = window.cv
-  let src: any = null
-  let gray: any = null
-  let blurred: any = null
-  let edges: any = null
-  let contours: any = null
-  let hierarchy: any = null
-  let quad: any = null
-  let warped: any = null
+  let src: Mat | null = null
+  let gray: InputArray | null = null
+  let blurred: InputArray | null = null
+  let edges: InputArray | null = null
+  let contours: MatVector | null = null
+  let hierarchy: Mat | null = null
+  let quad: Mat | null = null
+  let warped: Mat | null = null
 
   try {
     // Read image from canvas

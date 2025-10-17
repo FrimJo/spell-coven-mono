@@ -7,8 +7,6 @@
  * @module search/clip-embedder
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { pipeline } from '@huggingface/transformers'
 
 export interface QueryEmbedding {
@@ -29,6 +27,7 @@ export interface QueryEmbedding {
  * - T039: Verify embedding is 512-dim L2-normalized vector
  */
 export class CLIPEmbedder {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any --  Using any to avoid "union type too complex" error
   private extractor: any = null
   private isLoading = false
   private modelId: string

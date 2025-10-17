@@ -30,7 +30,7 @@ export interface FrameBufferConfig {
  * Enables selecting the sharpest frame within a time window.
  */
 export class FrameBuffer {
-  private buffer: HTMLCanvasElement[]
+  private buffer: (HTMLCanvasElement | null)[]
   private metadata: WeakMap<
     HTMLCanvasElement,
     { timestamp: number; sharpness: number }
@@ -180,7 +180,7 @@ export class FrameBuffer {
   clear(): void {
     // Clear references to allow garbage collection
     for (let i = 0; i < this.buffer.length; i++) {
-      this.buffer[i] = null as any
+      this.buffer[i] = null
     }
 
     this.writeIndex = 0
