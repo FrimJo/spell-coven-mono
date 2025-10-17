@@ -65,7 +65,7 @@ def build_embeddings_from_cache(
     out_dir: Path,
     cache_dir: Path,
     limit: int = None,
-    batch_size: int = 256,
+    batch_size: int = 512,
     target_size: int = 336,
     validate_cache: bool = True,
     hnsw_m: int = 32,
@@ -131,7 +131,7 @@ def build_embeddings_from_cache(
     with Pool(num_workers) as pool:
         validation_args = [(rec, cache_dir) for rec in records]
         results = list(tqdm(
-            pool.imap(_validate_cache_worker, validation_args),
+            pool.imap(_validate_cache_worker, validation_args, chunksize=128),
             total=len(records),
             desc=desc
         ))
@@ -183,37 +183,41 @@ def build_embeddings_from_cache(
     batch_imgs, batch_idx = [], []
     
     # Process in chunks to enable parallel loading
-    chunk_size = batch_size * 4  # Load 4 batches ahead
-    for chunk_start in tqdm(range(0, len(paths), chunk_size), desc="Processing chunks", unit="chunk"):
-        chunk_end = min(chunk_start + chunk_size, len(paths))
-        chunk_paths = paths[chunk_start:chunk_end]
-        
-        # Parallel load images for this chunk with progress
-        with Pool(num_workers) as pool:
+    # With smaller images (~20KB vs 1.7MB), we can load many more at once
+    chunk_size = batch_size * 32  # Load 32 batches ahead (~8K images, ~160MB memory)
+    
+    # Create pool ONCE outside the loop - this was the bottleneck!
+    with Pool(num_workers) as pool:
+        for chunk_start in tqdm(range(0, len(paths), chunk_size), desc="Processing chunks", unit="chunk"):
+            chunk_end = min(chunk_start + chunk_size, len(paths))
+            chunk_paths = paths[chunk_start:chunk_end]
+            
+            # Parallel load images for this chunk with progress
             load_args = [(p, target_size) for p in chunk_paths]
+            # Use larger chunksize for imap to reduce overhead with small images
             chunk_images = list(tqdm(
-                pool.imap(_load_image_worker, load_args),
+                pool.imap(_load_image_worker, load_args, chunksize=64),
                 total=len(chunk_paths),
                 desc=f"  Loading images (chunk {chunk_start//chunk_size + 1})",
                 leave=False
             ))
-        
-        # Process loaded images through CLIP
-        for i, img in enumerate(chunk_images):
-            global_idx = chunk_start + i
-            if img is None:
-                continue
             
-            batch_imgs.append(img)
-            batch_idx.append(global_idx)
-            
-            if len(batch_imgs) == batch_size:
-                Z = embedder.encode_images(batch_imgs)
-                for local, global_i in enumerate(batch_idx):
-                    if batch_imgs[local] is not None and Z.shape[0] > local:
-                        vecs[global_i] = Z[local]
-                        good[global_i] = True
-                batch_imgs, batch_idx = [], []
+            # Process loaded images through CLIP
+            for i, img in enumerate(chunk_images):
+                global_idx = chunk_start + i
+                if img is None:
+                    continue
+                
+                batch_imgs.append(img)
+                batch_idx.append(global_idx)
+                
+                if len(batch_imgs) == batch_size:
+                    Z = embedder.encode_images(batch_imgs)
+                    for local, global_i in enumerate(batch_idx):
+                        if batch_imgs[local] is not None and Z.shape[0] > local:
+                            vecs[global_i] = Z[local]
+                            good[global_i] = True
+                    batch_imgs, batch_idx = [], []
     
     # flush remaining
     if batch_imgs:
@@ -322,8 +326,8 @@ def main():
                     help="Directory with cached images.")
     ap.add_argument("--limit", type=int, default=None, 
                     help="Limit number of faces (for testing).")
-    ap.add_argument("--batch", type=int, default=256, 
-                    help="Embedding batch size (default: 256, optimized for M2 Max).")
+    ap.add_argument("--batch", type=int, default=512, 
+                    help="Embedding batch size (default: 512, optimized for M2 Max with small images).")
     ap.add_argument("--size", type=int, default=336, 
                     help="Square resize for images before CLIP preprocess (336px for ViT-L/14@336px).")
     ap.add_argument("--validate-cache", dest="validate_cache", action="store_true", default=True,
