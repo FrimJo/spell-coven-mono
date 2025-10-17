@@ -36,12 +36,10 @@ export type MetaWithQuantization = {
   records: CardMeta[]
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 let meta: CardMeta[] | null = null
 let db: Float32Array | null = null
 // Runtime type is ImageFeatureExtractionPipeline from @huggingface/transformers
-// Using any to avoid "union type too complex" error
+// eslint-disable-next-line @typescript-eslint/no-explicit-any --  Using any to avoid "union type too complex" error
 let extractor: any = null
 let loadTask: Promise<void> | null = null
 
