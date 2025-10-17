@@ -17,6 +17,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-13
 - TypeScript 5.x (frontend), Python 3.11+ (mtg-image-db pipeline) (010-ensure-mtg-image)
 - TypeScript 5.x (React/Vite frontend) (011-advanced-card-extraction)
 - Browser IndexedDB (model caching), in-memory frame buffer (011-advanced-card-extraction)
+- TypeScript 5.x (ES2022 target), React 19 + @huggingface/transformers 3.7.5, Vite 7.x, TanStack Router, Tailwind CSS 4.x (012-fix-clip-model-alignment)
+- Browser IndexedDB (model caching), CDN-served embeddings (int8 quantized binaries) (012-fix-clip-model-alignment)
 
 ## Project Structure
 ```
@@ -31,9 +33,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (frontend), Node.js 20+ (build tooling): Follow standard conventions
 
 ## Recent Changes
+- 012-fix-clip-model-alignment: Added TypeScript 5.x (ES2022 target), React 19 + @huggingface/transformers 3.7.5, Vite 7.x, TanStack Router, Tailwind CSS 4.x
 - 011-advanced-card-extraction: Added TypeScript 5.x (React/Vite frontend)
 - 010-ensure-mtg-image: Added TypeScript 5.x (frontend), Python 3.11+ (mtg-image-db pipeline)
-- 009-improve-cropped-card: Added TypeScript 5.x (browser), Python 3.11 (embedding pipeline - reference only)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
