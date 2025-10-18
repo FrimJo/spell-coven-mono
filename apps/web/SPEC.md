@@ -31,9 +31,9 @@ This spec defines the browser client that performs on-device visual search over 
 
 - Artifacts Loading [WEB-FR-AL]
   - Load `index_out/meta.json` (version 1.0 format with quantization metadata) containing an array of card records in the same order as the embeddings. [WEB-FR-AL-01]
-  - Load `index_out/embeddings.i8bin` and dequantize int8 → float32 using the scale factor from `meta.json` to a contiguous `Float32Array` of shape `[N * 512]`. [WEB-FR-AL-02]
+  - Load `index_out/embeddings.i8bin` and dequantize int8 → float32 using the scale factor from `meta.json` to a contiguous `Float32Array` of shape `[N * 768]`. [WEB-FR-AL-02]
 - Model Init [WEB-FR-MI]
-  - Initialize Transformers.js pipeline: `image-feature-extraction` with `Xenova/clip-vit-base-patch32`. [WEB-FR-MI-01]
+  - Initialize Transformers.js pipeline: `image-feature-extraction` with `Xenova/clip-vit-large-patch14-336`. [WEB-FR-MI-01]
   - Provide a progress callback to surface model download/status. [WEB-FR-MI-02]
 - Query/Embedding [WEB-FR-QE]
   - Support embedding from an `HTMLImageElement` and from a `HTMLCanvasElement`. [WEB-FR-QE-01]
@@ -58,19 +58,19 @@ This spec defines the browser client that performs on-device visual search over 
 ## 5. Data Contracts
 
 - Inputs (from `packages/mtg-image-db` export):
-  - `index_out/embeddings.i8bin`: flat int8 buffer of length `N*512`. [WEB-DC-IN-01]
-  - `index_out/meta.json`: JSON object (version 1.0) with `{version, quantization: {dtype, scale_factor, ...}, shape: [N, 512], records: [...]}`. Each record has at minimum: `name`, `set`, and optionally `scryfall_uri`, `image_url`, `card_url`. [WEB-DC-IN-02]
+  - `index_out/embeddings.i8bin`: flat int8 buffer of length `N*768`. [WEB-DC-IN-01]
+  - `index_out/meta.json`: JSON object (version 1.0) with `{version, quantization: {dtype, scale_factor, ...}, shape: [N, 768], records: [...]}`. Each record has at minimum: `name`, `set`, and optionally `scryfall_uri`, `image_url`, `card_url`. [WEB-DC-IN-02]
 - Derived in browser:
-  - `Float32Array` database `db` of length `N*512`, dequantized from int8 and L2-normalized per vector. [WEB-DC-DRV-01]
+  - `Float32Array` database `db` of length `N*768`, dequantized from int8 and L2-normalized per vector. [WEB-DC-DRV-01]
 
 ## 6. Acceptance Criteria
 
 - Assets Load [WEB-AC-ASSETS-01]
-  - When `public/index_out/{embeddings.i8bin, meta.json}` are present, calling `loadEmbeddingsAndMeta()` resolves and keeps `meta.records.length === (embeddings.length / 512)`.
+  - When `public/index_out/{embeddings.i8bin, meta.json}` are present, calling `loadEmbeddingsAndMeta()` resolves and keeps `meta.records.length === (embeddings.length / 768)`.
 - Model Load [WEB-AC-MODEL-01]
   - Calling `loadModel()` resolves and subsequent embed calls succeed without throwing.
 - Query [WEB-AC-QUERY-01]
-  - Calling `embedFromCanvas()` with a valid canvas returns a `Float32Array(512)` normalized to ~unit length.
+  - Calling `embedFromCanvas()` with a valid canvas returns a `Float32Array(768)` normalized to ~unit length.
 - Search [WEB-AC-SEARCH-01]
   - `top1(query)` returns an object with `score` and metadata fields; `topK(query, K)` returns `K` items sorted by descending score.
 - UI Smoke [WEB-AC-UI-01]

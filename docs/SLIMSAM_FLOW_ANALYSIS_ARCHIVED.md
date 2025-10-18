@@ -1,3 +1,28 @@
+# SlimSAM Flow Analysis - ARCHIVED
+
+**Status**: This analysis document has been archived as of 2025-10-18.
+
+**Reason**: All issues identified in this document have been resolved in [Spec 012: Fix CLIP Model Alignment](../specs/012-fix-clip-model-alignment/).
+
+## Issues Resolved
+
+✅ **CRITICAL: Dimension mismatch (512 → 768)** - Fixed  
+✅ **HIGH: Preprocessing mismatch (center-crop → black padding)** - Fixed  
+✅ **MEDIUM: Redundant resize step (384→446×620→384)** - Verified not present  
+✅ **Model alignment (ViT-B/32 → ViT-L/14@336px)** - Fixed  
+
+## See Current Documentation
+
+For current implementation details, refer to:
+- `/specs/012-fix-clip-model-alignment/` - Complete specification and implementation
+- `/apps/web/src/lib/clip-search.ts` - Current CLIP implementation (768-dim, ViT-L/14@336px)
+- `/apps/web/src/lib/detection-constants.ts` - Preprocessing constants (336×336)
+
+---
+
+**Original document preserved below for historical reference**
+
+---
 # SlimSAM Flow Analysis: Click to Database Query
 
 **Date:** 2025-10-17  
