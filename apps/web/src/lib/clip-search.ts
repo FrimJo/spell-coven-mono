@@ -14,7 +14,7 @@ const EMB_URL = `${BASE_PATH}data/mtg-embeddings/${EMBEDDINGS_VERSION}/embedding
 const META_URL = `${BASE_PATH}data/mtg-embeddings/${EMBEDDINGS_VERSION}/meta.json`
 
 // Embedding dimension from the prototype
-const D = 512
+const D = 768
 
 export type CardMeta = {
   name: string
@@ -182,14 +182,14 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
     env.allowLocalModels = false
 
     // Initialize pipeline with proper options
-    // CRITICAL: Must use CLIP ViT-B/32 to match backend embeddings (build_mtg_faiss.py line 111)
+    // CRITICAL: Must use CLIP ViT-L/14@336px to match backend embeddings (build_mtg_faiss.py)
     // Note: Using Xenova/ prefix for ONNX-converted model (required for transformers.js browser compatibility)
     let lastLogTime = 0
     extractor = await pipeline(
       'image-feature-extraction',
-      'Xenova/clip-vit-base-patch32',
+      'Xenova/clip-vit-large-patch14-336',
       {
-        dtype: 'fp32', // CLIP requires full precision for accurate embeddings
+        dtype: 'fp32', // ViT-L/14 requires full precision for accuracy
         progress_callback: (progress: ProgressInfo) => {
           // Handle different progress types
           let msg = progress.status
@@ -232,9 +232,9 @@ export async function embedFromImageElement(imgEl: HTMLImageElement) {
 export async function embedFromCanvas(canvas: HTMLCanvasElement) {
   if (!extractor) throw new Error('Model not loaded')
 
-  // Validate preprocessing pipeline alignment (User Story 3)
-  // CRITICAL: Canvas must be square and 384×384 to match Python preprocessing
-  // See: packages/mtg-image-db/build_mtg_faiss.py lines 122-135
+  // Validate preprocessing pipeline alignment (User Story 2)
+  // CRITICAL: Canvas must be square and 336×336 to match Python preprocessing
+  // See: packages/mtg-image-db/build_mtg_faiss.py
 
   // Check if canvas is square
   if (canvas.width !== canvas.height) {
@@ -245,12 +245,12 @@ export async function embedFromCanvas(canvas: HTMLCanvasElement) {
     )
   }
 
-  // Check if dimensions match Python target_size (384×384)
-  if (canvas.width !== 384 || canvas.height !== 384) {
+  // Check if dimensions match Python target_size (336×336)
+  if (canvas.width !== 336 || canvas.height !== 336) {
     console.warn(
-      `[search] ⚠️  Canvas dimensions should be 384×384 to match database preprocessing. ` +
+      `[search] ⚠️  Canvas dimensions should be 336×336 to match database preprocessing. ` +
         `Got ${canvas.width}×${canvas.height}. ` +
-        `Database embeddings were generated from 384×384 square images.`,
+        `Database embeddings were generated from 336×336 square images.`,
     )
   }
 

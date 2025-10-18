@@ -82,10 +82,10 @@ export function validateEmbeddings(
   }
 
   // Validate embedding dimension
-  if (embeddingDim !== 512) {
+  if (embeddingDim !== 768) {
     errors.push(
-      `Invalid embedding dimension: expected 512, got ${embeddingDim}. ` +
-        `CLIP model produces 512-dimensional vectors.`,
+      `Invalid embedding dimension: expected 768, got ${embeddingDim}. ` +
+        `CLIP ViT-L/14@336px model produces 768-dimensional vectors.`,
     )
   }
 
