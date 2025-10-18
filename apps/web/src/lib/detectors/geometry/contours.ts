@@ -185,11 +185,11 @@ export function orderQuadPoints(points: Point[]): CardQuad {
  * Complete pipeline:
  * 1. Find contours in mask
  * 2. Select largest contour
- * 3. Approximate to quadrilateral
+ * 3. Approximate to quadrilateral (with retry logic)
  * 4. Order points consistently
  *
  * @param mask - OpenCV Mat containing binary mask
- * @param epsilon - Polygon approximation accuracy (default: 0.02)
+ * @param epsilon - Initial polygon approximation accuracy (default: 0.02)
  * @returns Ordered CardQuad or null if extraction fails
  */
 export async function extractQuadFromMask(
@@ -217,8 +217,22 @@ export async function extractQuadFromMask(
       return null
     }
 
-    // Approximate to quad
-    const points = await approximateToQuad(largestContour, epsilon)
+    // Try multiple epsilon values if initial approximation fails
+    // Start with provided epsilon, then try progressively higher values
+    const epsilonValues = [epsilon, 0.03, 0.04, 0.05, 0.06]
+    let points: Point[] | null = null
+
+    for (const eps of epsilonValues) {
+      points = await approximateToQuad(largestContour, eps)
+      if (points) {
+        if (eps !== epsilon) {
+          console.log(
+            `[Contours] Quad approximation succeeded with epsilon=${eps} (initial=${epsilon})`,
+          )
+        }
+        break
+      }
+    }
 
     // Cleanup contours
     for (const contour of contours) {
@@ -226,7 +240,9 @@ export async function extractQuadFromMask(
     }
 
     if (!points) {
-      console.warn('[Contours] Failed to approximate contour to quadrilateral')
+      console.warn(
+        '[Contours] Failed to approximate contour to quadrilateral after trying multiple epsilon values',
+      )
       return null
     }
 

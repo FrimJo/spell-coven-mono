@@ -71,7 +71,7 @@ export interface ModelLoadingState {
  * Created when user clicks a detected card in the video stream.
  */
 export interface CroppedCardData {
-  /** Canvas containing cropped card (446x620px) */
+  /** Canvas containing cropped card (336×336px) */
   canvas: HTMLCanvasElement
 
   /** When the crop was created (for cancellation tracking) */
@@ -160,9 +160,9 @@ export const CARD_QUERY_CONSTANTS = {
   /** Similarity score threshold for low confidence warning */
   LOW_CONFIDENCE_THRESHOLD: 0.7,
 
-  /** Expected canvas dimensions - MUST match preprocessing pipeline (384×384 square) */
-  CANVAS_WIDTH: 384,
-  CANVAS_HEIGHT: 384,
+  /** Expected canvas dimensions - MUST match preprocessing pipeline (336×336 square) */
+  CANVAS_WIDTH: 336,
+  CANVAS_HEIGHT: 336,
 
   /** Maximum query timeout (milliseconds) */
   QUERY_TIMEOUT_MS: 10000,

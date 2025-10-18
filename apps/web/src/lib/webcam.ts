@@ -95,6 +95,9 @@ let animationStarted = false
 let currentStream: MediaStream | null = null
 let currentDeviceId: string | null = null
 let clickHandler: ((evt: MouseEvent) => void) | null = null
+let isProcessingClick = false // Prevent overlapping click processing
+let lastClickTime = 0 // Track last click timestamp for debouncing
+const CLICK_DEBOUNCE_MS = 2000 // Minimum time between clicks (2 seconds)
 
 // ============================================================================
 // Detector Initialization
@@ -323,11 +326,11 @@ function stopDetection() {
 /**
  * Crop card from bounding box
  * CRITICAL: Must match Python embedding pipeline preprocessing for accuracy
- * Python pipeline: center-crop to square (min dimension) → resize to 384×384
+ * Python pipeline: center-crop to square (min dimension) → resize to 336×336
  * See: packages/mtg-image-db/build_mtg_faiss.py lines 122-135
  * @param box Bounding box from DETR detection (normalized coordinates)
  * @param sourceCanvas Optional source canvas to crop from (if not provided, uses videoEl)
- * @returns True if crop succeeded
+ * @returns True if crop succeeded, false otherwise
  */
 function cropCardFromBoundingBox(
   box: {
@@ -370,7 +373,7 @@ function cropCardFromBoundingBox(
   })
 
   // CRITICAL FIX: Apply square center-crop to match Python preprocessing
-  // Python does: s = min(w, h); crop to square; resize to 384×384
+  // Python does: s = min(w, h); crop to square; resize to 336×336
   const minDim = Math.min(cardWidth, cardHeight)
   const cropX = x + (cardWidth - minDim) / 2
   const cropY = y + (cardHeight - minDim) / 2
@@ -386,7 +389,7 @@ function cropCardFromBoundingBox(
   const tempCtx = tempCanvas.getContext('2d')!
   tempCtx.putImageData(cardImageData, 0, 0)
 
-  // Resize to 384×384 (matching Python target_size parameter)
+  // Resize to 336×336 (matching Python target_size parameter)
   croppedCanvas.width = CROPPED_CARD_WIDTH
   croppedCanvas.height = CROPPED_CARD_HEIGHT
   croppedCtx!.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height)
@@ -415,11 +418,11 @@ function cropCardFromBoundingBox(
     }
   }, 'image/png')
 
-  // 2. Log the final query image (384x384)
+  // 2. Log the final query image (336×336)
   croppedCanvas.toBlob((blob) => {
     if (blob) {
       const url = URL.createObjectURL(blob)
-      console.log('[Webcam] Query image for database (384x384):', {
+      console.log('[Webcam] Query image for database (336×336):', {
         url,
         dimensions: `${CROPPED_CARD_WIDTH}x${CROPPED_CARD_HEIGHT}`,
         blob,
@@ -526,7 +529,7 @@ function cropCardAt(x: number, y: number): boolean {
 
   // T022: Use warped canvas if available (from perspective correction) and enabled
   if (enablePerspectiveWarp && card.warpedCanvas) {
-    console.log('[Webcam] Using perspective-corrected 384×384 canvas')
+    console.log('[Webcam] Using perspective-corrected 336×336 canvas')
 
     // Copy warped canvas to cropped canvas
     croppedCanvas.width = CROPPED_CARD_WIDTH
@@ -548,7 +551,7 @@ function cropCardAt(x: number, y: number): boolean {
     croppedCanvas.toBlob((blob) => {
       if (blob) {
         const url = URL.createObjectURL(blob)
-        console.log('[Webcam] Perspective-corrected query image (384×384):', {
+        console.log('[Webcam] Perspective-corrected query image (336×336):', {
           url,
           dimensions: `${CROPPED_CARD_WIDTH}×${CROPPED_CARD_HEIGHT}`,
           blob,
@@ -633,20 +636,45 @@ export async function setupWebcam(args: {
 
   // Create new click handler
   clickHandler = (evt: MouseEvent) => {
+    const now = performance.now()
+    
+    // Debounce: Ignore clicks that are too close together
+    if (now - lastClickTime < CLICK_DEBOUNCE_MS) {
+      console.log('[Webcam] Click ignored - too soon after previous click', {
+        timeSinceLastClick: `${(now - lastClickTime).toFixed(0)}ms`,
+        debounceThreshold: `${CLICK_DEBOUNCE_MS}ms`,
+      })
+      return
+    }
+    
+    // Prevent overlapping click processing
+    if (isProcessingClick) {
+      console.log('[Webcam] Click ignored - already processing a click')
+      return
+    }
+    
     const rect = overlayEl.getBoundingClientRect()
     const x = evt.clientX - rect.left
     const y = evt.clientY - rect.top
+    
+    lastClickTime = now
+    isProcessingClick = true
 
     // Use requestAnimationFrame to make this async and prevent blocking Playwright
     // This ensures the click event completes before we process the crop
     requestAnimationFrame(async () => {
-      // Run detection at click point first
-      await detectCards({ x, y })
+      try {
+        // Run detection at click point first
+        await detectCards({ x, y })
 
-      // Then crop the detected card
-      const ok = cropCardAt(x, y)
-      if (ok && typeof args.onCrop === 'function') {
-        args.onCrop(croppedCanvas)
+        // Then crop the detected card
+        const ok = cropCardAt(x, y)
+        if (ok && typeof args.onCrop === 'function') {
+          args.onCrop(croppedCanvas)
+        }
+      } finally {
+        // Always reset the flag, even if there was an error
+        isProcessingClick = false
       }
     })
   }
