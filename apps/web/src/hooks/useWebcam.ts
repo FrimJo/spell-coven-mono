@@ -203,7 +203,13 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     return () => {
       mounted = false
     }
-  }, [enableCardDetection, detectorType, onCrop, useFrameBuffer, usePerspectiveWarp])
+  }, [
+    enableCardDetection,
+    detectorType,
+    onCrop,
+    useFrameBuffer,
+    usePerspectiveWarp,
+  ])
 
   const startVideo = async (deviceId?: string | null) => {
     if (enableCardDetection) {

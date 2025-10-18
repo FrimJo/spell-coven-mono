@@ -22,10 +22,10 @@
 
 **Purpose**: Verify environment and prepare for implementation
 
-- [ ] T001 Verify TypeScript, React 19, and @huggingface/transformers 3.7.5 are installed in apps/web/package.json
-- [ ] T002 [P] Run type checking to establish baseline: `pnpm check-types` from apps/web/
-- [ ] T003 [P] Run linting to establish baseline: `pnpm lint` from apps/web/
-- [ ] T004 Create backup of current CLIP implementation files (clip-embedder.ts, clip-search.ts, contract-validator.ts)
+- [x] T001 Verify TypeScript, React 19, and @huggingface/transformers 3.7.5 are installed in apps/web/package.json
+- [x] T002 [P] Run type checking to establish baseline: `pnpm check-types` from apps/web/
+- [x] T003 [P] Run linting to establish baseline: `pnpm lint` from apps/web/
+- [x] T004 Create backup of current CLIP implementation files (clip-embedder.ts, clip-search.ts, contract-validator.ts)
 
 ---
 
@@ -35,12 +35,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Update CLIP model configuration constant: Change model ID from 'Xenova/clip-vit-base-patch32' to 'Xenova/clip-vit-large-patch14-336' in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T006 [P] Update expected embedding dimension constant from 512 to 768 in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T007 [P] Update expected embedding dimension constant from 512 to 768 in apps/web/src/lib/validation/contract-validator.ts
-- [ ] T008 [P] Update CROPPED_CARD_WIDTH and CROPPED_CARD_HEIGHT from 384 to 336 in apps/web/src/lib/detection-constants.ts
-- [ ] T009 Update model ID from 'Xenova/clip-vit-base-patch32' to 'Xenova/clip-vit-large-patch14-336' in apps/web/src/lib/search/clip-search.ts (if separate implementation exists)
-- [ ] T010 Run type checking to verify no type errors: `pnpm check-types` from apps/web/
+- [x] T005 Update CLIP model configuration constant: Change model ID from 'Xenova/clip-vit-base-patch32' to 'Xenova/clip-vit-large-patch14-336' in apps/web/src/lib/search/clip-embedder.ts
+- [x] T006 [P] Update expected embedding dimension constant from 512 to 768 in apps/web/src/lib/search/clip-embedder.ts
+- [x] T007 [P] Update expected embedding dimension constant from 512 to 768 in apps/web/src/lib/validation/contract-validator.ts
+- [x] T008 [P] Update CROPPED_CARD_WIDTH and CROPPED_CARD_HEIGHT from 384 to 336 in apps/web/src/lib/detection-constants.ts
+- [x] T009 Update model ID from 'Xenova/clip-vit-base-patch32' to 'Xenova/clip-vit-large-patch14-336' in apps/web/src/lib/search/clip-search.ts (if separate implementation exists)
+- [x] T010 Run type checking to verify no type errors: `pnpm check-types` from apps/web/
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -58,15 +58,15 @@
 
 ### Implementation for User Story 1
 
-- [ ] T011 [P] [US1] Update QueryEmbedding interface: Change vector comment from "512-dimensional" to "768-dimensional" in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T012 [P] [US1] Update dimension validation in embedFromCanvas(): Change expected dimension from 512 to 768 in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T013 [P] [US1] Update error message in embedFromCanvas(): Change "512" to "768" and "ViT-B/32" to "ViT-L/14@336px" in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T014 [P] [US1] Update dimension validation error message in contract-validator.ts: Change expected dimension from 512 to 768 and update model reference to "ViT-L/14@336px"
-- [ ] T015 [P] [US1] Update database dimension validation in contract-validator.ts: Change embeddingDim check from 512 to 768
-- [ ] T016 [US1] Update dtype configuration in CLIPEmbedder constructor: Change from 'fp16' to 'fp32' for ViT-L/14 accuracy in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T017 [US1] Add console logging for embedding dimension verification in embedFromCanvas() for debugging in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T018 [US1] Run type checking: `pnpm check-types` from apps/web/
-- [ ] T019 [US1] Run linting: `pnpm lint` from apps/web/
+- [x] T011 [P] [US1] Update QueryEmbedding interface: Change vector comment from "512-dimensional" to "768-dimensional" in apps/web/src/lib/search/clip-embedder.ts
+- [x] T012 [P] [US1] Update dimension validation in embedFromCanvas(): Change expected dimension from 512 to 768 in apps/web/src/lib/search/clip-embedder.ts
+- [x] T013 [P] [US1] Update error message in embedFromCanvas(): Change "512" to "768" and "ViT-B/32" to "ViT-L/14@336px" in apps/web/src/lib/search/clip-embedder.ts
+- [x] T014 [P] [US1] Update dimension validation error message in contract-validator.ts: Change expected dimension from 512 to 768 and update model reference to "ViT-L/14@336px"
+- [x] T015 [P] [US1] Update database dimension validation in contract-validator.ts: Change embeddingDim check from 512 to 768
+- [x] T016 [US1] Update dtype configuration in CLIPEmbedder constructor: Change from 'fp16' to 'fp32' for ViT-L/14 accuracy in apps/web/src/lib/search/clip-embedder.ts
+- [x] T017 [US1] Add console logging for embedding dimension verification in embedFromCanvas() for debugging in apps/web/src/lib/search/clip-embedder.ts
+- [x] T018 [US1] Run type checking: `pnpm check-types` from apps/web/
+- [x] T019 [US1] Run linting: `pnpm lint` from apps/web/
 - [ ] T020 [US1] Manual test: Click card, verify 768-dim embedding in console, confirm search completes successfully
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - browser generates 768-dim embeddings matching database
@@ -85,12 +85,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T021 [P] [US2] Update canvas dimension validation warnings in embedFromCanvas(): Change expected dimensions from 384×384 to 336×336 in apps/web/src/lib/search/clip-search.ts
-- [ ] T022 [P] [US2] Update preprocessing documentation comments: Change references from "384×384" to "336×336" and note black padding approach in apps/web/src/lib/search/clip-search.ts
-- [ ] T023 [P] [US2] Update CROPPED_CARD dimension comments in detection-constants.ts: Change from "384×384" to "336×336" and note ViT-L/14@336px alignment
-- [ ] T024 [US2] Verify Transformers.js automatic preprocessing: Add temporary debug code to log canvas dimensions before/after CLIP preprocessing in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T025 [US2] Run type checking: `pnpm check-types` from apps/web/
-- [ ] T026 [US2] Run linting: `pnpm lint` from apps/web/
+- [x] T021 [P] [US2] Update canvas dimension validation warnings in embedFromCanvas(): Change expected dimensions from 384×384 to 336×336 in apps/web/src/lib/search/clip-search.ts
+- [x] T022 [P] [US2] Update preprocessing documentation comments: Change references from "384×384" to "336×336" and note black padding approach in apps/web/src/lib/search/clip-search.ts
+- [x] T023 [P] [US2] Update CROPPED_CARD dimension comments in detection-constants.ts: Change from "384×384" to "336×336" and note ViT-L/14@336px alignment
+- [x] T024 [US2] Verify Transformers.js automatic preprocessing: Add temporary debug code to log canvas dimensions before/after CLIP preprocessing in apps/web/src/lib/search/clip-embedder.ts
+- [x] T025 [US2] Run type checking: `pnpm check-types` from apps/web/
+- [x] T026 [US2] Run linting: `pnpm lint` from apps/web/
 - [ ] T027 [US2] Manual test: Process same card in Python and browser, export preprocessed images, visual inspection for alignment
 - [ ] T028 [US2] Manual test: Verify embedding cosine similarity ≥0.95 between Python and browser for same card
 
@@ -109,12 +109,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T029 [P] [US3] Search for and identify any code creating 446×620 canvas between SlimSAM and CLIP in apps/web/src/
-- [ ] T030 [US3] Remove or comment out 446×620 resize operation (if found) in identified file
-- [ ] T031 [US3] Verify SlimSAM output (384×384) flows directly to CLIP preprocessing (336×336) without intermediate resize
-- [ ] T032 [P] [US3] Update any comments or documentation referencing the 446×620 intermediate step
-- [ ] T033 [US3] Run type checking: `pnpm check-types` from apps/web/
-- [ ] T034 [US3] Run linting: `pnpm lint` from apps/web/
+- [x] T029 [P] [US3] Search for and identify any code creating 446×620 canvas between SlimSAM and CLIP in apps/web/src/
+- [x] T030 [US3] Remove or comment out 446×620 resize operation (if found) in identified file
+- [x] T031 [US3] Verify SlimSAM output (384×384) flows directly to CLIP preprocessing (336×336) without intermediate resize
+- [x] T032 [P] [US3] Update any comments or documentation referencing the 446×620 intermediate step
+- [x] T033 [US3] Run type checking: `pnpm check-types` from apps/web/
+- [x] T034 [US3] Run linting: `pnpm lint` from apps/web/
 - [ ] T035 [US3] Manual test: Measure click-to-result latency, should be 5-10ms faster than baseline
 - [ ] T036 [US3] Manual test: Verify search results identical to previous pipeline (no accuracy loss)
 
@@ -134,15 +134,15 @@
 
 ### Implementation for User Story 4
 
-- [ ] T037 [P] [US4] Add getLoadingState() method to CLIPEmbedder class returning ModelLoadingState in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T038 [P] [US4] Update initialize() method to track loading state transitions (not-loaded → loading → ready/error) in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T039 [US4] Modify embedFromCanvas() to call initialize() automatically if model not loaded in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T040 [US4] Find card click handler in game room UI components (likely in apps/web/src/routes/)
-- [ ] T041 [US4] Add loading state UI: Show progress indicator when model is loading in card click handler component
-- [ ] T042 [US4] Add loading state UI: Display progress messages from onProgress callback in card click handler component
-- [ ] T043 [US4] Ensure model initialization is NOT called on page load (verify no eager loading) in game room page component
-- [ ] T044 [US4] Run type checking: `pnpm check-types` from apps/web/
-- [ ] T045 [US4] Run linting: `pnpm lint` from apps/web/
+- [x] T037 [P] [US4] Add getLoadingState() method to CLIPEmbedder class returning ModelLoadingState in apps/web/src/lib/search/clip-embedder.ts
+- [x] T038 [P] [US4] Update initialize() method to track loading state transitions (not-loaded → loading → ready/error) in apps/web/src/lib/search/clip-embedder.ts
+- [x] T039 [US4] Modify embedFromCanvas() to call initialize() automatically if model not loaded in apps/web/src/lib/search/clip-embedder.ts
+- [x] T040 [US4] Find card click handler in game room UI components (likely in apps/web/src/routes/)
+- [x] T041 [US4] Add loading state UI: Show progress indicator when model is loading in card click handler component
+- [x] T042 [US4] Add loading state UI: Display progress messages from onProgress callback in card click handler component
+- [x] T043 [US4] Ensure model initialization is NOT called on page load (verify no eager loading) in game room page component
+- [x] T044 [US4] Run type checking: `pnpm check-types` from apps/web/
+- [x] T045 [US4] Run linting: `pnpm lint` from apps/web/
 - [ ] T046 [US4] Manual test: Load page, verify no model download in Network tab
 - [ ] T047 [US4] Manual test: Click first card, verify model downloads with progress indicator
 - [ ] T048 [US4] Manual test: Click second card, verify instant processing (no re-download)
@@ -163,16 +163,16 @@
 
 ### Implementation for User Story 5
 
-- [ ] T049 [P] [US5] Add retry counter to CLIPEmbedder class (retryCount field, max 3) in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T050 [P] [US5] Implement retry logic in initialize() method: Catch errors, increment retryCount, retry up to 3 times in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T051 [US5] Add permanent error state after 3 failed retries in initialize() method in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T052 [US5] Update error messages to include retry count and clear instructions in initialize() method in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T053 [US5] Enhance dimension mismatch error message: Include "expected 768, got X" and migration instructions in contract-validator.ts
-- [ ] T054 [US5] Enhance normalization error message: Include actual norm value and tolerance in embedFromCanvas() in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T055 [US5] Add error banner UI component for permanent model loading failures in game room page component
-- [ ] T056 [US5] Display persistent error banner after 3 failed retry attempts with "refresh page" instruction in game room page component
-- [ ] T057 [US5] Run type checking: `pnpm check-types` from apps/web/
-- [ ] T058 [US5] Run linting: `pnpm lint` from apps/web/
+- [x] T049 [P] [US5] Add retry counter to CLIPEmbedder class (retryCount field, max 3) in apps/web/src/lib/search/clip-embedder.ts
+- [x] T050 [P] [US5] Implement retry logic in initialize() method: Catch errors, increment retryCount, retry up to 3 times in apps/web/src/lib/search/clip-embedder.ts
+- [x] T051 [US5] Add permanent error state after 3 failed retries in initialize() method in apps/web/src/lib/search/clip-embedder.ts
+- [x] T052 [US5] Update error messages to include retry count and clear instructions in initialize() method in apps/web/src/lib/search/clip-embedder.ts
+- [x] T053 [US5] Enhance dimension mismatch error message: Include "expected 768, got X" and migration instructions in contract-validator.ts
+- [x] T054 [US5] Enhance normalization error message: Include actual norm value and tolerance in embedFromCanvas() in apps/web/src/lib/search/clip-embedder.ts
+- [x] T055 [US5] Add error banner UI component for permanent model loading failures in game room page component
+- [x] T056 [US5] Display persistent error banner after 3 failed retry attempts with "refresh page" instruction in game room page component
+- [x] T057 [US5] Run type checking: `pnpm check-types` from apps/web/
+- [x] T058 [US5] Run linting: `pnpm lint` from apps/web/
 - [ ] T059 [US5] Manual test: Simulate dimension mismatch, verify clear error message with expected vs actual
 - [ ] T060 [US5] Manual test: Simulate model loading failure (throttle network), verify retry attempts
 - [ ] T061 [US5] Manual test: After 3 failures, verify persistent error banner appears requiring page refresh
@@ -185,14 +185,14 @@
 
 **Purpose**: Final cleanup and documentation
 
-- [ ] T062 [P] Remove temporary debug logging added in T017 and T024 from apps/web/src/lib/search/clip-embedder.ts
-- [ ] T063 [P] Update inline code comments to reflect new 768-dim model and 336×336 preprocessing across all modified files
-- [ ] T064 [P] Add JSDoc comments for new methods (getLoadingState, retry logic) in apps/web/src/lib/search/clip-embedder.ts
-- [ ] T065 [P] Update README.md or relevant documentation with breaking change notice and migration instructions
-- [ ] T066 [P] Create migration guide document explaining how to regenerate embeddings with ViT-L/14@336px
-- [ ] T067 Run final type checking: `pnpm check-types` from apps/web/
-- [ ] T068 Run final linting: `pnpm lint` from apps/web/
-- [ ] T069 Run formatting: `pnpm format` from apps/web/
+- [x] T062 [P] Remove temporary debug logging added in T017 and T024 from apps/web/src/lib/search/clip-embedder.ts
+- [x] T063 [P] Update inline code comments to reflect new 768-dim model and 336×336 preprocessing across all modified files
+- [x] T064 [P] Add JSDoc comments for new methods (getLoadingState, retry logic) in apps/web/src/lib/search/clip-embedder.ts
+- [x] T065 [P] Update README.md or relevant documentation with breaking change notice and migration instructions
+- [x] T066 [P] Create migration guide document explaining how to regenerate embeddings with ViT-L/14@336px
+- [x] T067 Run final type checking: `pnpm check-types` from apps/web/
+- [x] T068 Run final linting: `pnpm lint` from apps/web/
+- [x] T069 Run formatting: `pnpm format` from apps/web/
 - [ ] T070 Verify all acceptance criteria from spec.md are met (review each user story)
 - [ ] T071 Run quickstart.md validation: Follow quickstart guide end-to-end to verify instructions
 
