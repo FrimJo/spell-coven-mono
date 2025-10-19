@@ -18,6 +18,7 @@ import { DETRDetector } from './detr-detector'
 import { OpenCVDetector } from './opencv-detector'
 import { OWLViTDetector } from './owl-vit-detector'
 import { SlimSAMDetector } from './slimsam-detector'
+import { YOLOv8Detector } from './yolov8-detector'
 
 /**
  * Default configurations for each detector type
@@ -49,6 +50,11 @@ const DEFAULT_CONFIGS: Record<DetectorType, Partial<DetectorConfig>> = {
     detectionIntervalMs: DETECTION_INTERVAL_MS,
     device: 'auto',
     dtype: 'fp16',
+  },
+  yolov8: {
+    modelId: '/models/yolov8n-cards.onnx',
+    confidenceThreshold: 0.25,
+    detectionIntervalMs: DETECTION_INTERVAL_MS,
   },
 }
 
@@ -106,6 +112,9 @@ export function createDetector(
 
     case 'slimsam':
       return new SlimSAMDetector(finalConfig)
+
+    case 'yolov8':
+      return new YOLOv8Detector(finalConfig)
 
     default:
       throw new Error(`Unknown detector type: ${type}`)

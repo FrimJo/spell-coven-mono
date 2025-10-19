@@ -94,9 +94,9 @@ export interface CardDetector {
 }
 
 /**
- * Detector type identifier
+ * Supported detector types
  */
-export type DetectorType = 'opencv' | 'detr' | 'owl-vit' | 'slimsam'
+export type DetectorType = 'opencv' | 'detr' | 'owl-vit' | 'slimsam' | 'yolov8'
 
 /**
  * Factory configuration for creating detectors
@@ -143,8 +143,10 @@ export const MTG_CARD_ASPECT_RATIO = 63 / 88 // ≈ 0.716
 
 /**
  * Canonical output size for extracted cards (matches embedding model input)
+ * CRITICAL: Must match CLIP model input size (336×336) used in Python preprocessing
+ * See: packages/mtg-image-db/build_mtg_faiss.py
  */
-export const CANONICAL_CARD_SIZE: Size = { width: 384, height: 384 }
+export const CANONICAL_CARD_SIZE: Size = { width: 336, height: 336 }
 
 /**
  * Metadata associated with a buffered video frame
