@@ -8,6 +8,7 @@ import { CROPPED_CARD_HEIGHT, CROPPED_CARD_WIDTH } from './detection-constants'
 import { createDefaultDetector, createDetector } from './detectors'
 import { calculateSharpness } from './detectors/geometry/sharpness'
 import { FrameBuffer } from './frame-buffer'
+import { loadingEvents } from './loading-events'
 
 // OpenCV removed - using DETR bounding boxes for cropping
 
@@ -132,22 +133,57 @@ async function initializeDetector(
       detector.getStatus() === 'ready' &&
       currentDetectorType === detectorType
     ) {
+      // Still emit events for already-initialized detector
+      loadingEvents.emit({
+        step: 'detector',
+        progress: 80,
+        message: 'Card detector ready',
+      })
       return
     }
 
+    // Emit detector initialization start
+    loadingEvents.emit({
+      step: 'detector',
+      progress: 60,
+      message: 'Initializing card detector...',
+    })
+
     // Create detector if not exists
     if (!detector) {
+      // Track progress for smooth loading bar updates
+      let lastProgress = 60
+      const progressCallback = (msg: string) => {
+        onProgress?.(msg)
+        // Increment progress gradually (60-75% during download)
+        lastProgress = Math.min(lastProgress + 1, 75)
+        loadingEvents.emit({
+          step: 'detector',
+          progress: lastProgress,
+          message: msg,
+        })
+      }
+
       if (detectorType) {
-        detector = createDetector(detectorType, { onProgress })
+        detector = createDetector(detectorType, { 
+          onProgress: progressCallback
+        })
         currentDetectorType = detectorType
       } else {
-        detector = createDefaultDetector(onProgress)
+        detector = createDefaultDetector(progressCallback)
         currentDetectorType = undefined
       }
     }
 
     // Initialize detector
     await detector.initialize()
+    
+    // Emit detector ready
+    loadingEvents.emit({
+      step: 'detector',
+      progress: 80,
+      message: 'Card detector ready',
+    })
   } catch (err) {
     // Provide user-friendly error messages based on error type
     const errorMessage = err instanceof Error ? err.message : String(err)
@@ -372,24 +408,19 @@ function cropCardFromBoundingBox(
     pixels: { x, y, width: cardWidth, height: cardHeight },
   })
 
-  // CRITICAL FIX: Apply square center-crop to match Python preprocessing
-  // Python does: s = min(w, h); crop to square; resize to 336×336
-  const minDim = Math.min(cardWidth, cardHeight)
-  const cropX = x + (cardWidth - minDim) / 2
-  const cropY = y + (cardHeight - minDim) / 2
-
-  // Extract square region from center of card
+  // Extract the full card region from the bounding box
   const canvasCtx = canvasToUse.getContext('2d')!
-  const cardImageData = canvasCtx.getImageData(cropX, cropY, minDim, minDim)
+  const cardImageData = canvasCtx.getImageData(x, y, cardWidth, cardHeight)
 
-  // Create temporary canvas for the square extracted region
+  // Create temporary canvas for the extracted card
   const tempCanvas = document.createElement('canvas')
-  tempCanvas.width = minDim
-  tempCanvas.height = minDim
+  tempCanvas.width = cardWidth
+  tempCanvas.height = cardHeight
   const tempCtx = tempCanvas.getContext('2d')!
   tempCtx.putImageData(cardImageData, 0, 0)
 
-  // Resize to 336×336 (matching Python target_size parameter)
+  // Resize to target dimensions (336×336) - this will stretch/squash to square
+  // The CLIP model expects square images, so we resize the card to fit
   croppedCanvas.width = CROPPED_CARD_WIDTH
   croppedCanvas.height = CROPPED_CARD_HEIGHT
   croppedCtx!.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height)
@@ -397,8 +428,8 @@ function cropCardFromBoundingBox(
     tempCanvas,
     0,
     0,
-    minDim,
-    minDim,
+    cardWidth,
+    cardHeight,
     0,
     0,
     CROPPED_CARD_WIDTH,
@@ -406,13 +437,13 @@ function cropCardFromBoundingBox(
   )
 
   // Log cropped images as blobs for debugging
-  // 1. Log the square extracted region (before resize)
+  // 1. Log the extracted card region (before resize)
   tempCanvas.toBlob((blob) => {
     if (blob) {
       const url = URL.createObjectURL(blob)
-      console.log('[Webcam] Square extracted region (before resize):', {
+      console.log('[Webcam] Extracted card region (before resize):', {
         url,
-        dimensions: `${minDim}x${minDim}`,
+        dimensions: `${cardWidth}x${cardHeight}`,
         blob,
       })
     }
@@ -746,7 +777,26 @@ export async function setupWebcam(args: {
     },
     async getCameras() {
       const devices = await navigator.mediaDevices.enumerateDevices()
-      return devices.filter((d) => d.kind === 'videoinput')
+      const cameras = devices.filter((d) => d.kind === 'videoinput')
+      
+      // In development mode, add mock video file as a camera option
+      if (import.meta.env.DEV) {
+        const mockCamera: MediaDeviceInfo = {
+          deviceId: 'video-file:/card_demo.webm',
+          kind: 'videoinput',
+          label: 'Mock Webcam (Demo Video)',
+          groupId: 'mock-group',
+          toJSON: () => ({
+            deviceId: 'video-file:/card_demo.webm',
+            kind: 'videoinput',
+            label: 'Mock Webcam (Demo Video)',
+            groupId: 'mock-group',
+          }),
+        }
+        cameras.unshift(mockCamera) // Add at the beginning
+      }
+      
+      return cameras
     },
     getCurrentDeviceId() {
       return currentDeviceId

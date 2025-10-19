@@ -1,68 +1,41 @@
+import type { LoadingEvent } from '@/lib/loading-events'
 import { useEffect, useState } from 'react'
+import { loadingEvents } from '@/lib/loading-events'
 import { Loader2 } from 'lucide-react'
 
 import { Progress } from '@repo/ui/components/progress'
-
-interface LoadingStep {
-  label: string
-  progress: number
-  duration: number
-}
-
-const LOADING_STEPS: LoadingStep[] = [
-  { label: 'Loading card embeddings...', progress: 20, duration: 600 },
-  { label: 'Downloading CLIP model...', progress: 40, duration: 800 },
-  { label: 'Initializing SlimSAM detector...', progress: 60, duration: 700 },
-  { label: 'Downloading segmentation model...', progress: 80, duration: 900 },
-  { label: 'Setting up game room...', progress: 100, duration: 500 },
-]
 
 interface GameRoomLoaderProps {
   onLoadingComplete: () => void
 }
 
+// Number of loading steps (embeddings, clip-model, detector, game-room)
+const TOTAL_STEPS = 4
+
 export function GameRoomLoader({ onLoadingComplete }: GameRoomLoaderProps) {
-  const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [progress, setProgress] = useState(0)
+  const [currentMessage, setCurrentMessage] = useState('Loading...')
+
+  // Calculate current step based on progress (0-20%, 20-50%, 50-80%, 80-100%)
+  const currentStep = Math.min(Math.floor(progress / 25), TOTAL_STEPS - 1)
 
   useEffect(() => {
-    if (currentStepIndex >= LOADING_STEPS.length) {
-      // All steps complete
-      setTimeout(onLoadingComplete, 300)
-      return
-    }
+    // Subscribe to loading events
+    const unsubscribe = loadingEvents.subscribe((event: LoadingEvent) => {
+      // Update progress and message from real loading events
+      setProgress(event.progress)
+      setCurrentMessage(event.message)
 
-    const currentStep = LOADING_STEPS[currentStepIndex]
-
-    // Animate progress to current step's progress value
-    const startProgress =
-      currentStepIndex === 0 ? 0 : LOADING_STEPS[currentStepIndex - 1].progress
-    const targetProgress = currentStep.progress
-    const stepDuration = currentStep.duration
-    const frames = 30
-    const increment = (targetProgress - startProgress) / frames
-    const frameDelay = stepDuration / frames
-
-    let currentFrame = 0
-    const intervalId = setInterval(() => {
-      currentFrame++
-      if (currentFrame >= frames) {
-        setProgress(targetProgress)
-        clearInterval(intervalId)
-        // Move to next step
-        setTimeout(() => {
-          setCurrentStepIndex((prev) => prev + 1)
-        }, 200)
-      } else {
-        setProgress(startProgress + increment * currentFrame)
+      // Complete loading when done
+      if (event.step === 'complete') {
+        setTimeout(onLoadingComplete, 300)
       }
-    }, frameDelay)
+    })
 
-    return () => clearInterval(intervalId)
-  }, [currentStepIndex, onLoadingComplete])
-
-  const currentStep =
-    LOADING_STEPS[Math.min(currentStepIndex, LOADING_STEPS.length - 1)]
+    return () => {
+      unsubscribe()
+    }
+  }, [onLoadingComplete])
 
   return (
     <div className="absolute inset-0 top-[57px] z-50 flex items-center justify-center bg-slate-950">
@@ -79,7 +52,7 @@ export function GameRoomLoader({ onLoadingComplete }: GameRoomLoaderProps) {
           {/* Loading Text */}
           <div className="space-y-2 text-center">
             <h2 className="text-slate-200">Loading Game Room</h2>
-            <p className="text-sm text-slate-400">{currentStep.label}</p>
+            <p className="text-sm text-slate-400">{currentMessage}</p>
           </div>
 
           {/* Progress Bar */}
@@ -91,14 +64,14 @@ export function GameRoomLoader({ onLoadingComplete }: GameRoomLoaderProps) {
           </div>
 
           {/* Step Indicators */}
-          <div className="flex items-center gap-2">
-            {LOADING_STEPS.map((_step, index) => (
+          <div className="flex items-center justify-center gap-2">
+            {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
               <div
                 key={index}
                 className={`h-2 w-2 rounded-full transition-all duration-300 ${
-                  index < currentStepIndex
+                  index < currentStep
                     ? 'bg-purple-500'
-                    : index === currentStepIndex
+                    : index === currentStep
                       ? 'scale-125 bg-purple-400'
                       : 'bg-slate-700'
                 }`}

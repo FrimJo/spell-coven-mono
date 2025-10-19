@@ -1,6 +1,7 @@
 import type { DetectorType } from '@/lib/detectors'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { setupWebcam } from '@/lib/webcam'
+import { loadingEvents } from '@/lib/loading-events'
 
 interface UseWebcamOptions {
   /** Enable card detection */
@@ -118,6 +119,11 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     let mounted = true
 
     async function init() {
+      // Skip if already initialized (prevents re-initialization loop)
+      if (isInitialized.current) {
+        return
+      }
+
       if (!enableCardDetection) {
         // Simple webcam without OpenCV
         setIsReady(true)
@@ -135,10 +141,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
         return
       }
 
-      // Skip if already initialized (prevents re-initialization loop)
-      if (isInitialized.current) {
-        return
-      }
+      // Mark as initialized before starting async work
       isInitialized.current = true
 
       // Initialize webcam with card detection
@@ -167,6 +170,24 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
           },
         })
 
+        // Emit final game room setup events regardless of mounted state
+        // (loading events need to fire to complete the loading UI)
+        loadingEvents.emit({
+          step: 'game-room',
+          progress: 90,
+          message: 'Setting up game room...',
+        })
+
+        // Small delay for final setup
+        await new Promise((resolve) => setTimeout(resolve, 300))
+
+        loadingEvents.emit({
+          step: 'complete',
+          progress: 100,
+          message: 'Game room ready!',
+        })
+
+        // Update component state only if still mounted
         if (mounted) {
           setIsReady(true)
           setStatus('Webcam ready')
@@ -269,7 +290,26 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
       return webcamController.current.getCameras()
     }
     const devices = await navigator.mediaDevices.enumerateDevices()
-    return devices.filter((d) => d.kind === 'videoinput')
+    const cameras = devices.filter((d) => d.kind === 'videoinput')
+    
+    // In development mode, add mock video file as a camera option
+    if (import.meta.env.DEV) {
+      const mockCamera: MediaDeviceInfo = {
+        deviceId: 'video-file:/card_demo.webm',
+        kind: 'videoinput',
+        label: 'Mock Webcam (Demo Video)',
+        groupId: 'mock-group',
+        toJSON: () => ({
+          deviceId: 'video-file:/card_demo.webm',
+          kind: 'videoinput',
+          label: 'Mock Webcam (Demo Video)',
+          groupId: 'mock-group',
+        }),
+      }
+      cameras.unshift(mockCamera) // Add at the beginning
+    }
+    
+    return cameras
   }
 
   const getCurrentDeviceId = () => {

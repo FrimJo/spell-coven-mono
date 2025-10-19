@@ -1,16 +1,15 @@
 import type { DetectorType } from '@/lib/detectors'
-import type { ModelLoadingState } from '@/types/card-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
+import { loadingEvents } from '@/lib/loading-events'
 import { ArrowLeft, Check, Copy, Settings, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
-import { LoadingOverlay } from '@repo/ui/components/loading-overlay'
 import { Toaster } from '@repo/ui/components/sonner'
 import {
   Tooltip,
@@ -59,13 +58,9 @@ function GameRoomContent({
     { id: '3', name: 'Jordan', life: 20, isActive: false },
     { id: '4', name: 'Sam', life: 20, isActive: false },
   ])
-  const [modelLoading, setModelLoading] = useState<ModelLoadingState>({
-    isLoading: true,
-    progress: '',
-    isReady: false,
-  })
 
   const [isLoading, setIsLoading] = useState(true)
+  const hasInitialized = useRef(false)
 
   const handleLoadingComplete = () => {
     setIsLoading(false)
@@ -73,51 +68,77 @@ function GameRoomContent({
 
   // Initialize CLIP model and embeddings on mount
   useEffect(() => {
+    // Prevent double initialization in React Strict Mode
+    if (hasInitialized.current) return
+    hasInitialized.current = true
+
     let mounted = true
 
     async function initModel() {
       try {
         if (!mounted) return
 
-        setModelLoading({
-          isLoading: true,
-          progress: 'Loading embeddings...',
-          isReady: false,
+        // Step 1: Load embeddings
+        loadingEvents.emit({
+          step: 'embeddings',
+          progress: 10,
+          message: 'Loading card embeddings...',
         })
 
         await loadEmbeddingsAndMetaFromPackage()
 
         if (!mounted) return
 
-        setModelLoading({
-          isLoading: true,
-          progress: 'Downloading CLIP model...',
-          isReady: false,
+        loadingEvents.emit({
+          step: 'embeddings',
+          progress: 20,
+          message: 'Card embeddings loaded',
+        })
+
+        // Step 2: Load CLIP model
+        loadingEvents.emit({
+          step: 'clip-model',
+          progress: 25,
+          message: 'Downloading CLIP model...',
         })
 
         await loadModel({
           onProgress: (msg) => {
             if (mounted) {
-              setModelLoading((prev) => ({ ...prev, progress: msg }))
+              // Parse progress from message (e.g., "progress onnx/model.onnx 45.5%")
+              const percentMatch = msg.match(/(\d+(?:\.\d+)?)\s*%/)
+              let progress = 25 // Default start
+              
+              if (percentMatch) {
+                const downloadPercent = parseFloat(percentMatch[1])
+                // Map download progress (0-100%) to loading range (25-50%)
+                progress = 25 + (downloadPercent / 100) * 25
+              }
+              
+              loadingEvents.emit({
+                step: 'clip-model',
+                progress: Math.min(progress, 50),
+                message: msg,
+              })
             }
           },
         })
 
         if (!mounted) return
 
-        setModelLoading({
-          isLoading: false,
-          progress: '',
-          isReady: true,
+        loadingEvents.emit({
+          step: 'clip-model',
+          progress: 50,
+          message: 'CLIP model ready',
         })
+
+        if (!mounted) return
+
+        // Note: Detector initialization happens in VideoStreamGrid/useWebcam
+        // It will emit its own loading events (60-100%) when it initializes
       } catch (err) {
         console.error('Model initialization error:', err)
         if (mounted) {
-          setModelLoading({
-            isLoading: false,
-            progress: '',
-            isReady: false,
-          })
           toast.error('Failed to load card recognition model')
         }
       }
@@ -162,10 +183,6 @@ function GameRoomContent({
   return (
     <div className="flex h-screen flex-col bg-slate-950">
       <Toaster />
-      <LoadingOverlay
-        isVisible={modelLoading.isLoading}
-        message={modelLoading.progress}
-      />
 
       {/* Header */}
       <header className="flex-shrink-0 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
