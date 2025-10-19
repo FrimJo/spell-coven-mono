@@ -78,6 +78,64 @@ export async function findLargestContour(contours: Mat[]): Promise<Mat | null> {
 }
 
 /**
+ * Find the smallest contour containing a specific point
+ * This is useful for finding the card when the mask includes larger objects (like a playmat)
+ *
+ * @param contours - Array of OpenCV contours
+ * @param point - Point that should be inside the contour
+ * @param minArea - Minimum contour area to consider (filters out noise)
+ * @returns Smallest contour containing the point, or null if none found
+ */
+export async function findSmallestContourContainingPoint(
+  contours: Mat[],
+  point: Point,
+  minArea: number = 1000,
+): Promise<Mat | null> {
+  if (contours.length === 0) {
+    return null
+  }
+
+  const cv = await loadOpenCV()
+  const cvPoint = new cv.Point(point.x, point.y)
+
+  let minArea_found = Infinity
+  let smallestContour: Mat | null = null
+
+  const contoursContainingPoint: Array<{ contour: Mat; area: number }> = []
+  
+  for (const contour of contours) {
+    const area = cv.contourArea(contour)
+    
+    // Skip contours that are too small (noise)
+    if (area < minArea) {
+      continue
+    }
+    
+    // Check if point is inside this contour
+    const distance = cv.pointPolygonTest(contour, cvPoint, false)
+    
+    // distance >= 0 means point is inside or on the contour
+    if (distance >= 0) {
+      contoursContainingPoint.push({ contour, area })
+      if (area < minArea_found) {
+        minArea_found = area
+        smallestContour = contour
+      }
+    }
+  }
+
+  console.log('[Contours] Found smallest contour containing click point:', {
+    point,
+    totalContours: contours.length,
+    contoursContainingPoint: contoursContainingPoint.length,
+    areas: contoursContainingPoint.map(c => Math.round(c.area)).sort((a, b) => a - b),
+    selectedArea: minArea_found === Infinity ? 'none' : Math.round(minArea_found),
+  })
+
+  return smallestContour
+}
+
+/**
  * Approximate a contour to a quadrilateral using Douglas-Peucker algorithm
  *
  * @param contour - OpenCV contour to approximate
@@ -180,35 +238,74 @@ export function orderQuadPoints(points: Point[]): CardQuad {
 }
 
 /**
- * Extract card quad from binary mask
+ * Extract quadrilateral from binary mask
  *
- * Complete pipeline:
+ * Workflow:
  * 1. Find contours in mask
- * 2. Select largest contour
- * 3. Approximate to quadrilateral (with retry logic)
- * 4. Order points consistently
+ * 2. Get smallest contour containing the click point (assumed to be the card)
+ * 3. Approximate contour to quadrilateral
+ * 4. Order points consistently (top-left, top-right, bottom-right, bottom-left)
  *
  * @param mask - OpenCV Mat containing binary mask
+ * @param clickPoint - Optional click point to find the contour containing it
  * @param epsilon - Initial polygon approximation accuracy (default: 0.02)
  * @returns Ordered CardQuad or null if extraction fails
  */
 export async function extractQuadFromMask(
   mask: Mat,
+  clickPoint?: Point,
   epsilon: number = 0.02,
 ): Promise<CardQuad | null> {
+  const cv = await loadOpenCV()
+  
   try {
+    // When we have a click point, skip erosion to preserve separate contours
+    // Erosion can merge the card with the playmat
+    let contoursSource: Mat
+    if (clickPoint) {
+      // Use original mask to preserve distinct contours
+      contoursSource = mask
+      console.log('[Contours] Using original mask (no erosion) to preserve card/playmat separation')
+    } else {
+      // Apply morphological erosion to tighten mask around card edges
+      // This helps remove loose boundaries and background noise
+      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3))
+      const erodedMask = new cv.Mat()
+      cv.erode(mask, erodedMask, kernel, new cv.Point(-1, -1), 2) // 2 iterations
+      kernel.delete()
+      contoursSource = erodedMask
+    }
+    
     // Find all contours
-    const contours = await maskToContours(mask)
+    const contours = await maskToContours(contoursSource)
+    
+    // Clean up eroded mask if we created one
+    if (contoursSource !== mask) {
+      contoursSource.delete()
+    }
 
     if (contours.length === 0) {
       console.warn('[Contours] No contours found in mask')
       return null
     }
 
-    // Get largest contour (should be the card)
-    const largestContour = await findLargestContour(contours)
+    // Get the appropriate contour based on whether we have a click point
+    let targetContour: Mat | null = null
+    
+    if (clickPoint) {
+      // Find smallest contour containing the click point (more precise for cards on playmats)
+      targetContour = await findSmallestContourContainingPoint(contours, clickPoint)
+      
+      if (!targetContour) {
+        console.warn('[Contours] No contour found containing click point, falling back to largest')
+        targetContour = await findLargestContour(contours)
+      }
+    } else {
+      // No click point provided, use largest contour
+      targetContour = await findLargestContour(contours)
+    }
 
-    if (!largestContour) {
+    if (!targetContour) {
       console.warn('[Contours] No valid contour found')
       // Cleanup
       for (const contour of contours) {
@@ -219,11 +316,12 @@ export async function extractQuadFromMask(
 
     // Try multiple epsilon values if initial approximation fails
     // Start with provided epsilon, then try progressively higher values
-    const epsilonValues = [epsilon, 0.03, 0.04, 0.05, 0.06]
+    // Higher epsilon = more aggressive simplification
+    const epsilonValues = [epsilon, 0.03, 0.04, 0.05, 0.06, 0.08, 0.10, 0.12]
     let points: Point[] | null = null
 
     for (const eps of epsilonValues) {
-      points = await approximateToQuad(largestContour, eps)
+      points = await approximateToQuad(targetContour, eps)
       if (points) {
         if (eps !== epsilon) {
           console.log(
@@ -249,7 +347,14 @@ export async function extractQuadFromMask(
     // Order points consistently
     const quad = orderQuadPoints(points)
 
-    console.log('[Contours] Successfully extracted quad:', quad)
+    console.log('[Contours] Successfully extracted quad:', {
+      topLeft: quad.topLeft,
+      topRight: quad.topRight,
+      bottomRight: quad.bottomRight,
+      bottomLeft: quad.bottomLeft,
+      width: Math.round(quad.topRight.x - quad.topLeft.x),
+      height: Math.round(quad.bottomLeft.y - quad.topLeft.y),
+    })
 
     return quad
   } catch (error) {

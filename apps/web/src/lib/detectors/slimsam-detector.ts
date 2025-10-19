@@ -213,14 +213,45 @@ export class SlimSAMDetector implements CardDetector {
     const startTime = performance.now()
 
     try {
-      // T029: Run segmentation with point prompt
+      // T029: Run segmentation with point + negative points prompt
       // Convert canvas to RawImage
       const image = RawImage.fromCanvas(canvas)
 
-      // Prepare inputs with point prompts
+      // Strategy: Use multiple positive points in a small grid around click
+      // This reinforces "segment THIS object" and prevents expanding to playmat
+      // Create a 3x3 grid of points around the click (within ~50px radius)
+      const gridRadius = 30 // pixels
+      const positivePoints = [
+        [point.x, point.y], // Center (original click)
+        [point.x - gridRadius, point.y - gridRadius], // Top-left
+        [point.x + gridRadius, point.y - gridRadius], // Top-right
+        [point.x - gridRadius, point.y + gridRadius], // Bottom-left
+        [point.x + gridRadius, point.y + gridRadius], // Bottom-right
+      ]
+      
+      // Add negative points far from the card
+      const margin = Math.min(canvasWidth, canvasHeight) * 0.1 // 10% margin
+      const negativePoints = [
+        [margin, margin], // Top-left corner
+        [canvasWidth - margin, margin], // Top-right corner
+        [margin, canvasHeight - margin], // Bottom-left corner
+        [canvasWidth - margin, canvasHeight - margin], // Bottom-right corner
+      ]
+      
+      // Combine all points
+      const allPoints = [...positivePoints, ...negativePoints]
+      const allLabels = [1, 1, 1, 1, 1, 0, 0, 0, 0] // 5 positive, 4 negative
+      
+      console.log('[SlimSAM] Using point prompts with negative edges:', {
+        click: point,
+        negativePoints,
+        canvasSize: { width: canvasWidth, height: canvasHeight },
+      })
+
+      // Prepare inputs with positive + negative point prompts
       const inputs: ImageProcessorResult = await this.processor(image, {
-        input_points: [[[point.x, point.y]]],
-        input_labels: [[1]], // 1 = foreground
+        input_points: [[allPoints]],
+        input_labels: [[allLabels]],
       })
 
       // Run model inference
@@ -289,11 +320,57 @@ export class SlimSAMDetector implements CardDetector {
           )
 
           if (quad) {
+            // DEBUG: Visualize the detected quad
+            const debugCanvas = document.createElement('canvas')
+            debugCanvas.width = canvasWidth
+            debugCanvas.height = canvasHeight
+            const debugCtx = debugCanvas.getContext('2d')!
+            debugCtx.drawImage(canvas, 0, 0)
+            
+            // Draw the quad corners and edges
+            debugCtx.strokeStyle = '#00ff00'
+            debugCtx.lineWidth = 3
+            debugCtx.beginPath()
+            debugCtx.moveTo(quad.topLeft.x, quad.topLeft.y)
+            debugCtx.lineTo(quad.topRight.x, quad.topRight.y)
+            debugCtx.lineTo(quad.bottomRight.x, quad.bottomRight.y)
+            debugCtx.lineTo(quad.bottomLeft.x, quad.bottomLeft.y)
+            debugCtx.closePath()
+            debugCtx.stroke()
+            
+            // Draw corner circles
+            debugCtx.fillStyle = '#ff0000'
+            const drawCorner = (x: number, y: number, label: string) => {
+              debugCtx.beginPath()
+              debugCtx.arc(x, y, 8, 0, 2 * Math.PI)
+              debugCtx.fill()
+              debugCtx.fillStyle = '#ffffff'
+              debugCtx.font = '14px monospace'
+              debugCtx.fillText(label, x + 12, y + 5)
+              debugCtx.fillStyle = '#ff0000'
+            }
+            drawCorner(quad.topLeft.x, quad.topLeft.y, 'TL')
+            drawCorner(quad.topRight.x, quad.topRight.y, 'TR')
+            drawCorner(quad.bottomRight.x, quad.bottomRight.y, 'BR')
+            drawCorner(quad.bottomLeft.x, quad.bottomLeft.y, 'BL')
+            
+            // Log the quad visualization
+            debugCanvas.toBlob((blob) => {
+              if (blob) {
+                const url = URL.createObjectURL(blob)
+                console.log('[SlimSAM] Detected quad corners (GREEN=edges, RED=corners):', {
+                  url,
+                  quad,
+                  blob,
+                })
+              }
+            }, 'image/png')
+
             // T019: Validate quad
             const validation = validateQuad(quad, canvasWidth, canvasHeight)
 
             if (validation.valid) {
-              // T020: Apply perspective warp to get canonical 384x384 image
+              // T020: Apply perspective warp to get canonical 336×336 image
               const warpedCanvas = await warpCardToCanonical(canvas, quad)
 
               // Convert quad to normalized polygon for DetectedCard
@@ -352,12 +429,11 @@ export class SlimSAMDetector implements CardDetector {
               throw error
             }
           } else {
-            // T023: Quad extraction failed - FAIL EXPLICITLY
-            const error = new Error(
-              'SlimSAM failed to extract quad from mask - segmentation quality too low',
+            // T023: Quad extraction failed - log warning but don't throw
+            console.warn(
+              '[SlimSAMDetector] Failed to extract quad from mask - segmentation quality too low. Try clicking again.',
             )
-            this.logError('SlimSAM quad extraction', error)
-            throw error
+            // Return empty cards array instead of throwing
           }
         }
       }
@@ -434,8 +510,25 @@ export class SlimSAMDetector implements CardDetector {
       const cvMask = new cv.Mat(maskHeight, maskWidth, cv.CV_8UC1)
       cvMask.data.set(binaryData)
 
-      // Extract quad using contour detection
-      const quad = await extractQuadFromMask(cvMask)
+      // Scale click point to mask coordinates if available
+      let clickPointInMask: Point | undefined = undefined
+      if (this.clickPoint) {
+        const scaleX = maskWidth / canvasWidth
+        const scaleY = maskHeight / canvasHeight
+        clickPointInMask = {
+          x: this.clickPoint.x * scaleX,
+          y: this.clickPoint.y * scaleY,
+        }
+        console.log('[SlimSAM] Click point scaled to mask coordinates:', {
+          canvas: this.clickPoint,
+          mask: clickPointInMask,
+          maskSize: { width: maskWidth, height: maskHeight },
+          canvasSize: { width: canvasWidth, height: canvasHeight },
+        })
+      }
+
+      // Extract quad using contour detection with click point
+      const quad = await extractQuadFromMask(cvMask, clickPointInMask)
 
       // Cleanup
       cvMask.delete()
