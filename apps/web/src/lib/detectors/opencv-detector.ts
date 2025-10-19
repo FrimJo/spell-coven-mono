@@ -71,10 +71,10 @@ export class OpenCVDetector implements CardDetector {
 
   constructor(config: OpenCVConfig) {
     this.config = {
-      minCardArea: 4000, // Match working version
-      cannyLowThreshold: 75,
-      cannyHighThreshold: 200,
-      blurKernelSize: 5,
+      minCardArea: 2000, // Lower threshold for smaller/distant cards
+      cannyLowThreshold: 30, // More sensitive edge detection
+      cannyHighThreshold: 100,
+      blurKernelSize: 3, // Less blur to preserve edges
       approxEpsilon: 0.02,
       ...config,
     }
