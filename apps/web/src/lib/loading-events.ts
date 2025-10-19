@@ -4,6 +4,7 @@
  * Provides a centralized event emitter for tracking:
  * - Card embeddings loading
  * - CLIP model download
+ * - OpenCV.js loading
  * - Detector initialization
  * - Game room setup
  */
@@ -11,6 +12,7 @@
 export type LoadingStep = 
   | 'embeddings'
   | 'clip-model'
+  | 'opencv'
   | 'detector'
   | 'game-room'
   | 'complete'

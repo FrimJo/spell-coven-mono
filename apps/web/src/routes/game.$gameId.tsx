@@ -12,7 +12,7 @@ import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
 
 const defaultValues = {
-  detector: 'slimsam' as const,
+  detector: 'owl-vit' as const,
   useFrameBuffer: true,
   usePerspectiveWarp: true, // SlimSAM provides quads
 }

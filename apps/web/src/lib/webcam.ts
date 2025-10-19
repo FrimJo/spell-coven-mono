@@ -419,22 +419,43 @@ function cropCardFromBoundingBox(
   const tempCtx = tempCanvas.getContext('2d')!
   tempCtx.putImageData(cardImageData, 0, 0)
 
-  // Resize to target dimensions (336×336) - this will stretch/squash to square
-  // The CLIP model expects square images, so we resize the card to fit
+  // Resize to target dimensions (336×336) with aspect ratio preservation and padding
+  // The CLIP model expects square images, so we center the card and add black padding
   croppedCanvas.width = CROPPED_CARD_WIDTH
   croppedCanvas.height = CROPPED_CARD_HEIGHT
-  croppedCtx!.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height)
+  croppedCtx!.fillStyle = 'black'
+  croppedCtx!.fillRect(0, 0, croppedCanvas.width, croppedCanvas.height)
+
+  // Calculate scaling to fit card within 336×336 while preserving aspect ratio
+  const scale = Math.min(
+    CROPPED_CARD_WIDTH / cardWidth,
+    CROPPED_CARD_HEIGHT / cardHeight,
+  )
+  const scaledWidth = cardWidth * scale
+  const scaledHeight = cardHeight * scale
+
+  // Center the card in the canvas
+  const offsetX = (CROPPED_CARD_WIDTH - scaledWidth) / 2
+  const offsetY = (CROPPED_CARD_HEIGHT - scaledHeight) / 2
+
   croppedCtx!.drawImage(
     tempCanvas,
     0,
     0,
     cardWidth,
     cardHeight,
-    0,
-    0,
-    CROPPED_CARD_WIDTH,
-    CROPPED_CARD_HEIGHT,
+    offsetX,
+    offsetY,
+    scaledWidth,
+    scaledHeight,
   )
+
+  console.log('[Webcam] Resize with aspect ratio preservation:', {
+    original: `${cardWidth.toFixed(1)}x${cardHeight.toFixed(1)}`,
+    scaled: `${scaledWidth.toFixed(1)}x${scaledHeight.toFixed(1)}`,
+    offset: `(${offsetX.toFixed(1)}, ${offsetY.toFixed(1)})`,
+    scale: scale.toFixed(3),
+  })
 
   // Log cropped images as blobs for debugging
   // 1. Log the extracted card region (before resize)
@@ -478,37 +499,122 @@ function cropCardAt(x: number, y: number): boolean {
     return false
   }
 
-  // Find closest card to click position
-  let closestIndex = -1
-  let minDist = Infinity
+  // Find best card at click position
+  // Priority: 1) Click inside box, 2) Smallest box, 3) Highest confidence
+  let bestIndex = -1
+  let bestScore = -Infinity
 
+  console.log('[Webcam] Finding detection at click:', {
+    click: { x, y },
+    totalDetections: detectedCards.length,
+  })
+
+  // First pass: log ALL detections to see where they are
   for (let i = 0; i < detectedCards.length; i++) {
     const card = detectedCards[i]
-    const poly = card.polygon
+    const box = card.box
+    const boxXMin = box.xmin * overlayEl.width
+    const boxYMin = box.ymin * overlayEl.height
+    const boxXMax = box.xmax * overlayEl.width
+    const boxYMax = box.ymax * overlayEl.height
+    const boxWidth = boxXMax - boxXMin
+    const boxHeight = boxYMax - boxYMin
+    const area = boxWidth * boxHeight
+    const canvasArea = overlayEl.width * overlayEl.height
+    const areaPercentage = area / canvasArea
 
-    // Calculate center of polygon
-    let cx = 0
-    let cy = 0
-    for (const p of poly) {
-      cx += p.x
-      cy += p.y
-    }
-    cx /= poly.length
-    cy /= poly.length
+    console.log(`[Webcam] ALL Detection ${i}:`, {
+      box: { 
+        xmin: boxXMin.toFixed(1), 
+        ymin: boxYMin.toFixed(1), 
+        xmax: boxXMax.toFixed(1), 
+        ymax: boxYMax.toFixed(1),
+        centerX: ((boxXMin + boxXMax) / 2).toFixed(1),
+        centerY: ((boxYMin + boxYMax) / 2).toFixed(1),
+      },
+      size: `${boxWidth.toFixed(1)}x${boxHeight.toFixed(1)}`,
+      areaPercentage: (areaPercentage * 100).toFixed(1) + '%',
+      confidence: card.score.toFixed(3),
+    })
+  }
 
-    const d = Math.hypot(cx - x, cy - y)
-    if (d < minDist) {
-      minDist = d
-      closestIndex = i
+  // Second pass: find best detection at click
+  for (let i = 0; i < detectedCards.length; i++) {
+    const card = detectedCards[i]
+    const box = card.box
+
+    // Convert normalized box to pixel coordinates
+    const boxXMin = box.xmin * overlayEl.width
+    const boxYMin = box.ymin * overlayEl.height
+    const boxXMax = box.xmax * overlayEl.width
+    const boxYMax = box.ymax * overlayEl.height
+
+    // Check if click is inside this box
+    const isInside =
+      x >= boxXMin && x <= boxXMax && y >= boxYMin && y <= boxYMax
+
+    if (!isInside) continue
+
+    // Calculate box area (smaller is better for cards)
+    const boxWidth = boxXMax - boxXMin
+    const boxHeight = boxYMax - boxYMin
+    const area = boxWidth * boxHeight
+    const canvasArea = overlayEl.width * overlayEl.height
+
+    // Score: balance between small size and high confidence
+    // Use percentage of canvas area - smaller boxes get exponentially higher scores
+    const areaPercentage = area / canvasArea
+    
+    // Exponential penalty for large boxes, but weight confidence heavily
+    // Small box (2% area) = sizeScore ~94,000
+    // Large box (90% area) = sizeScore ~1,000
+    const sizeScore = Math.pow(1 - areaPercentage, 3) * 100000
+    
+    // Weight confidence very heavily to prefer high-confidence detections
+    // 0.222 confidence = 222,000 score
+    // 0.015 confidence = 15,000 score
+    const confidenceScore = card.score * 1000000
+    
+    const totalScore = sizeScore + confidenceScore
+
+    console.log(`[Webcam] Detection ${i}:`, {
+      isInside,
+      box: { 
+        xmin: boxXMin.toFixed(1), 
+        ymin: boxYMin.toFixed(1), 
+        xmax: boxXMax.toFixed(1), 
+        ymax: boxYMax.toFixed(1),
+        width: boxWidth.toFixed(1),
+        height: boxHeight.toFixed(1),
+      },
+      area: area.toFixed(1),
+      areaPercentage: (areaPercentage * 100).toFixed(1) + '%',
+      confidence: card.score.toFixed(3),
+      sizeScore: sizeScore.toFixed(1),
+      confidenceScore: confidenceScore.toFixed(1),
+      totalScore: totalScore.toFixed(1),
+    })
+
+    if (totalScore > bestScore) {
+      bestScore = totalScore
+      bestIndex = i
     }
   }
 
-  if (closestIndex === -1) {
-    console.warn('[Webcam] No card found near click')
+  if (bestIndex === -1) {
+    console.warn('[Webcam] No detection found at click position')
     return false
   }
 
-  const card = detectedCards[closestIndex]
+  const card = detectedCards[bestIndex]
+  console.log('[Webcam] Selected detection at click position:', {
+    clickPosition: { x, y },
+    detectionIndex: bestIndex,
+    totalDetections: detectedCards.length,
+    boundingBox: card.box,
+    score: card.score.toFixed(3),
+    reason: 'Best score (smallest box + highest confidence)',
+  })
 
   // T035: Try to use sharpest frame from buffer if available
   let sourceCanvas: HTMLCanvasElement | null = null
@@ -685,8 +791,33 @@ export async function setupWebcam(args: {
     }
     
     const rect = overlayEl.getBoundingClientRect()
-    const x = evt.clientX - rect.left
-    const y = evt.clientY - rect.top
+    const clickX = evt.clientX - rect.left
+    const clickY = evt.clientY - rect.top
+    
+    // Scale click coordinates from display size to canvas size
+    const x = (clickX / rect.width) * overlayEl.width
+    const y = (clickY / rect.height) * overlayEl.height
+    
+    console.log('[Webcam] Click event:', {
+      clientX: evt.clientX,
+      clientY: evt.clientY,
+      rect: {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      },
+      canvasSize: {
+        width: overlayEl.width,
+        height: overlayEl.height,
+      },
+      clickOnDisplay: { x: clickX, y: clickY },
+      clickOnCanvas: { x, y },
+      scaleFactor: {
+        x: overlayEl.width / rect.width,
+        y: overlayEl.height / rect.height,
+      },
+    })
     
     lastClickTime = now
     isProcessingClick = true
@@ -722,6 +853,8 @@ export async function setupWebcam(args: {
       // Handle video file source (for testing/demo)
       if (deviceId?.startsWith('video-file:')) {
         const videoPath = deviceId.replace('video-file:', '')
+        // Clear srcObject when switching to file-based source
+        videoEl.srcObject = null
         videoEl.src = videoPath
         videoEl.loop = true
         videoEl.muted = true
@@ -753,6 +886,8 @@ export async function setupWebcam(args: {
       try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints)
         currentStream = stream
+        // Clear src when switching to stream-based source
+        videoEl.src = ''
         videoEl.srcObject = stream
         const track = stream.getVideoTracks()[0]
         const settings = (

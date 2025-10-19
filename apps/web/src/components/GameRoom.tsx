@@ -6,6 +6,7 @@ import {
 } from '@/contexts/CardQueryContext'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
+import { loadOpenCV } from '@/lib/opencv-loader'
 import { ArrowLeft, Check, Copy, Settings, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -78,7 +79,7 @@ function GameRoomContent({
       try {
         if (!mounted) return
 
-        // Step 1: Load embeddings
+        // Step 1: Load embeddings (0-20%)
         loadingEvents.emit({
           step: 'embeddings',
           progress: 10,
@@ -95,7 +96,7 @@ function GameRoomContent({
           message: 'Card embeddings loaded',
         })
 
-        // Step 2: Load CLIP model
+        // Step 2: Load CLIP model (20-40%)
         loadingEvents.emit({
           step: 'clip-model',
           progress: 25,
@@ -111,13 +112,13 @@ function GameRoomContent({
               
               if (percentMatch) {
                 const downloadPercent = parseFloat(percentMatch[1])
-                // Map download progress (0-100%) to loading range (25-50%)
-                progress = 25 + (downloadPercent / 100) * 25
+                // Map download progress (0-100%) to loading range (25-40%)
+                progress = 25 + (downloadPercent / 100) * 15
               }
               
               loadingEvents.emit({
                 step: 'clip-model',
-                progress: Math.min(progress, 50),
+                progress: Math.min(progress, 40),
                 message: msg,
               })
             }
@@ -128,8 +129,33 @@ function GameRoomContent({
 
         loadingEvents.emit({
           step: 'clip-model',
-          progress: 50,
+          progress: 40,
           message: 'CLIP model ready',
+        })
+
+        if (!mounted) return
+
+        // Step 3: Load OpenCV (40-60%)
+        loadingEvents.emit({
+          step: 'opencv',
+          progress: 45,
+          message: 'Loading OpenCV.js...',
+        })
+
+        try {
+          await loadOpenCV()
+          console.log('[GameRoom] OpenCV loaded successfully during initialization')
+        } catch (err) {
+          console.error('[GameRoom] Failed to load OpenCV during initialization:', err)
+          // Continue anyway - OpenCV will be lazy-loaded when needed
+        }
+
+        if (!mounted) return
+
+        loadingEvents.emit({
+          step: 'opencv',
+          progress: 60,
+          message: 'OpenCV.js ready',
         })
 
         if (!mounted) return

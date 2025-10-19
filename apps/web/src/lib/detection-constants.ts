@@ -15,8 +15,10 @@ export const DETR_MODEL_ID = 'Xenova/detr-resnet-50'
 /**
  * Minimum confidence threshold for DETR detections
  * Detections below this score are filtered out
+ * Set to 0.2 to catch "cell phone" detections (DETR often classifies cards as phones)
+ * User will click to select the specific region they want
  */
-export const CONFIDENCE_THRESHOLD = 0.5
+export const CONFIDENCE_THRESHOLD = 0.2
 
 /**
  * MTG card aspect ratio (width/height)

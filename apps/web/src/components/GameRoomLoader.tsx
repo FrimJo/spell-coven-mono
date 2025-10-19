@@ -9,15 +9,15 @@ interface GameRoomLoaderProps {
   onLoadingComplete: () => void
 }
 
-// Number of loading steps (embeddings, clip-model, detector, game-room)
-const TOTAL_STEPS = 4
+// Number of loading steps (embeddings, clip-model, opencv, detector, game-room)
+const TOTAL_STEPS = 5
 
 export function GameRoomLoader({ onLoadingComplete }: GameRoomLoaderProps) {
   const [progress, setProgress] = useState(0)
   const [currentMessage, setCurrentMessage] = useState('Loading...')
 
-  // Calculate current step based on progress (0-20%, 20-50%, 50-80%, 80-100%)
-  const currentStep = Math.min(Math.floor(progress / 25), TOTAL_STEPS - 1)
+  // Calculate current step based on progress (0-20%, 20-40%, 40-60%, 60-80%, 80-100%)
+  const currentStep = Math.min(Math.floor(progress / 20), TOTAL_STEPS - 1)
 
   useEffect(() => {
     // Subscribe to loading events

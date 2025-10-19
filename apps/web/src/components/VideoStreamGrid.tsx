@@ -182,7 +182,7 @@ export function VideoStreamGrid({
             key={player.id}
             className="flex flex-col overflow-hidden border-slate-800 bg-slate-900"
           >
-            <div className="relative flex-1 bg-slate-950">
+            <div className="relative flex-1 bg-black">
               {/* Video Stream Area - Always render video element for local player */}
               {isLocal && (
                 <>
@@ -197,7 +197,7 @@ export function VideoStreamGrid({
                       left: 0,
                       width: '100%',
                       height: '100%',
-                      objectFit: 'cover',
+                      objectFit: 'contain',
                       zIndex: 0,
                       display: isVideoActive ? 'block' : 'none',
                     }}
@@ -214,7 +214,7 @@ export function VideoStreamGrid({
                         left: 0,
                         width: '100%',
                         height: '100%',
-                        objectFit: 'cover',
+                        objectFit: 'contain',
                         cursor: 'pointer',
                         zIndex: 1,
                         display: isVideoActive ? 'block' : 'none',

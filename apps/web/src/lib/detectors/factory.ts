@@ -39,7 +39,7 @@ const DEFAULT_CONFIGS: Record<DetectorType, Partial<DetectorConfig>> = {
   },
   'owl-vit': {
     modelId: 'Xenova/owlvit-base-patch32',
-    confidenceThreshold: 0.3, // OWL-ViT typically needs lower threshold
+    confidenceThreshold: 0.01, // Extremely low threshold to catch all possible detections
     detectionIntervalMs: DETECTION_INTERVAL_MS,
     device: 'auto',
     dtype: 'fp32',
@@ -108,7 +108,19 @@ export function createDetector(
       return new DETRDetector(finalConfig)
 
     case 'owl-vit':
-      return new OWLViTDetector(finalConfig)
+      // OWL-ViT needs special handling for prompts
+      // Try simple, generic prompts that might match better
+      return new OWLViTDetector({
+        ...finalConfig,
+        prompts: [
+          'a card',
+          'a playing card', 
+          'a game card',
+          'a rectangular object',
+          'a paper card',
+          'a trading card',
+        ],
+      })
 
     case 'slimsam':
       return new SlimSAMDetector(finalConfig)

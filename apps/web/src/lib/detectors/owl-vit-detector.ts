@@ -63,8 +63,8 @@ export class OWLViTDetector implements CardDetector {
   constructor(config: OWLViTConfig = {}) {
     this.config = {
       modelId: 'Xenova/owlvit-base-patch32',
-      prompts: ['Magic: The Gathering card', 'trading card', 'playing card'],
-      confidenceThreshold: 0.15,
+      prompts: ['Magic: The Gathering card', 'trading card', 'playing card', 'card', 'game card'],
+      confidenceThreshold: 0.05, // Lower threshold to catch more detections
       detectionIntervalMs: 500,
       ...config,
     }
@@ -116,6 +116,19 @@ export class OWLViTDetector implements CardDetector {
 
     const startTime = performance.now()
 
+    // Log the frame OWL-ViT is analyzing
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        console.log('[OWL-ViT] Frame being analyzed:', {
+          url,
+          dimensions: `${canvas.width}x${canvas.height}`,
+          prompts: this.config.prompts,
+          blob,
+        })
+      }
+    }, 'image/png')
+
     try {
       // Run zero-shot detection with text prompts
       const detections: OWLViTDetection[] = await this.detector(
@@ -126,6 +139,27 @@ export class OWLViTDetector implements CardDetector {
           percentage: true, // Return coordinates as percentages
         },
       )
+
+      // Log all raw OWL-ViT detections
+      console.log('[OWL-ViT] All raw detections (threshold=' + this.config.confidenceThreshold + '):', {
+        count: detections.length,
+        prompts: this.config.prompts,
+        detections: detections
+          .sort((a, b) => b.score - a.score)
+          .map((det) => ({
+            label: det.label,
+            score: det.score.toFixed(3),
+            box: det.box,
+            width: ((det.box.xmax - det.box.xmin) * canvasWidth).toFixed(1),
+            height: ((det.box.ymax - det.box.ymin) * canvasHeight).toFixed(1),
+            aspectRatio: (
+              (det.box.xmax - det.box.xmin) /
+              (det.box.ymax - det.box.ymin)
+            ).toFixed(2),
+            centerX: (((det.box.xmin + det.box.xmax) / 2) * canvasWidth).toFixed(1),
+            centerY: (((det.box.ymin + det.box.ymax) / 2) * canvasHeight).toFixed(1),
+          })),
+      })
 
       // Filter and convert to DetectedCard format
       const cards = this.filterAndConvert(detections, canvasWidth, canvasHeight)
@@ -163,15 +197,8 @@ export class OWLViTDetector implements CardDetector {
       const height = box.ymax - box.ymin
       const aspectRatio = width / height
 
-      // MTG cards: 63mm × 88mm ≈ 0.716 (portrait) or 1.397 (landscape)
-      // Accept range of 0.5 to 1.5 to account for perspective
-      const isValidAspectRatio =
-        (aspectRatio >= 0.5 && aspectRatio <= 0.9) || // Portrait
-        (aspectRatio >= 1.1 && aspectRatio <= 1.8) // Landscape
-
-      if (!isValidAspectRatio) {
-        continue
-      }
+      // Accept ALL detections - no filtering
+      // User will click on the specific region they want to extract
 
       // Create polygon from bounding box
       const polygon: Point[] = [

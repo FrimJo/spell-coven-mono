@@ -2,7 +2,7 @@
  * DETR-based card detector implementation
  *
  * Uses Transformers.js DETR model for object detection.
- * Filters detections by confidence, aspect ratio, and object class.
+ * Accepts all detections - user clicks to select specific region.
  *
  * @module detectors/detr-detector
  */
@@ -16,11 +16,6 @@ import type {
   DetectorConfig,
   DetectorStatus,
 } from './types'
-import {
-  ASPECT_RATIO_TOLERANCE,
-  MIN_CARD_AREA,
-  MTG_CARD_ASPECT_RATIO,
-} from '../detection-constants'
 
 // Suppress ONNX Runtime warnings
 if (
@@ -109,18 +104,69 @@ export class DETRDetector implements CardDetector {
 
     const startTime = performance.now()
 
-    // Run detection
+    // Log the frame DETR is analyzing
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        console.log('[DETR] Frame being analyzed:', {
+          url,
+          dimensions: `${canvas.width}x${canvas.height}`,
+          blob,
+          message: 'Right-click the URL above and "Open in new tab" to see what DETR sees',
+        })
+      }
+    }, 'image/png')
+
+    // Run detection with very low threshold to see everything
     const detections: DetectionResult[] = await this.detector(canvas, {
       threshold: this.config.confidenceThreshold,
       percentage: true,
     })
 
+    // Log all raw DETR detections for debugging
+    console.log('[DETR] All raw detections (threshold=' + this.config.confidenceThreshold + '):', {
+      count: detections.length,
+      detections: detections
+        .sort((a, b) => b.score - a.score) // Sort by confidence descending
+        .map((det) => ({
+          label: det.label,
+          score: det.score.toFixed(3),
+          box: {
+            xmin: det.box.xmin.toFixed(3),
+            ymin: det.box.ymin.toFixed(3),
+            xmax: det.box.xmax.toFixed(3),
+            ymax: det.box.ymax.toFixed(3),
+          },
+          width: ((det.box.xmax - det.box.xmin) * canvasWidth).toFixed(1),
+          height: ((det.box.ymax - det.box.ymin) * canvasHeight).toFixed(1),
+          aspectRatio: (
+            (det.box.xmax - det.box.xmin) /
+            (det.box.ymax - det.box.ymin)
+          ).toFixed(2),
+          centerX: (((det.box.xmin + det.box.xmax) / 2) * canvasWidth).toFixed(1),
+          centerY: (((det.box.ymin + det.box.ymax) / 2) * canvasHeight).toFixed(1),
+        })),
+    })
+
     // Filter and convert to DetectedCard format
-    const cards = this.filterCardDetections(
+    const { cards, filterReasons } = this.filterCardDetections(
       detections,
       canvasWidth,
       canvasHeight,
     )
+
+    console.log('[DETR] Filtered cards:', {
+      count: cards.length,
+      filtered: cards.map((card) => ({
+        score: card.score.toFixed(3),
+        aspectRatio: card.aspectRatio.toFixed(2),
+      })),
+    })
+
+    // Log rejected detections
+    if (Object.keys(filterReasons).length > 0) {
+      console.log('[DETR] Rejected detections:', filterReasons)
+    }
 
     const inferenceTimeMs = performance.now() - startTime
 
@@ -166,58 +212,36 @@ export class DETRDetector implements CardDetector {
     detections: DetectionResult[],
     canvasWidth: number,
     canvasHeight: number,
-  ): DetectedCard[] {
-    return detections
-      .filter((det) => {
-        // Filter by confidence threshold
-        if (det.score < this.config.confidenceThreshold) return false
+  ): { cards: DetectedCard[]; filterReasons: Record<string, string[]> } {
+    const filterReasons: Record<string, string[]> = {}
 
-        // REJECT known non-card objects by label
-        const rejectLabels = [
-          'person',
-          'face',
-          'head',
-          'hand',
-          'laptop',
-          'tv',
-          'monitor',
-          'keyboard',
-          'mouse',
-        ]
-        if (rejectLabels.includes(det.label.toLowerCase())) {
-          return false
-        }
+    // Accept ALL detections - no filtering
+    // User will click on the specific region they want to extract
+    const cards = detections.map((det) => {
+      // Log if this is a "cell phone" detection (DETR often classifies cards as phones)
+      if (det.label.toLowerCase() === 'cell phone') {
+        console.log('[DETR] Found "cell phone" detection (likely a card):', {
+          score: det.score.toFixed(3),
+          box: det.box,
+          centerX: (((det.box.xmin + det.box.xmax) / 2) * canvasWidth).toFixed(1),
+          centerY: (((det.box.ymin + det.box.ymax) / 2) * canvasHeight).toFixed(1),
+        })
+      }
 
-        // Special handling for cell phone - only accept if portrait orientation
-        if (det.label.toLowerCase() === 'cell phone') {
-          return true
-        }
-
-        // Calculate dimensions
-        const width = det.box.xmax - det.box.xmin
-        const height = det.box.ymax - det.box.ymin
-        const area = width * height
-
-        // Filter by minimum area
-        if (area < MIN_CARD_AREA) return false
-
-        // Calculate aspect ratio
-        const aspectRatio = width / height
-        const minAR = MTG_CARD_ASPECT_RATIO * (1 - ASPECT_RATIO_TOLERANCE)
-        const maxAR = MTG_CARD_ASPECT_RATIO * (1 + ASPECT_RATIO_TOLERANCE)
-
-        // Accept if aspect ratio matches (portrait or landscape)
-        if (aspectRatio >= minAR && aspectRatio <= maxAR) return true
-        if (1 / aspectRatio >= minAR && 1 / aspectRatio <= maxAR) return true
-
-        return false
-      })
-      .map((det) => ({
+      return {
         box: det.box,
         score: det.score,
         aspectRatio:
           (det.box.xmax - det.box.xmin) / (det.box.ymax - det.box.ymin),
         polygon: this.boundingBoxToPolygon(det.box, canvasWidth, canvasHeight),
-      }))
+      }
+    })
+
+    console.log('[DETR] Accepting all detections (no filtering):', {
+      total: cards.length,
+      cellPhones: detections.filter(d => d.label.toLowerCase() === 'cell phone').length,
+    })
+
+    return { cards, filterReasons }
   }
 }
