@@ -178,8 +178,26 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
           message: 'Setting up game room...',
         })
 
-        // Small delay for final setup
-        await new Promise((resolve) => setTimeout(resolve, 300))
+        // Wait for CLIP model to be ready before completing
+        const { isModelReady } = await import('@/lib/clip-search')
+        console.log('[useWebcam] Checking if CLIP model is ready...')
+        
+        let attempts = 0
+        const maxAttempts = 100 // 20 seconds timeout
+        while (!isModelReady() && attempts < maxAttempts) {
+          if (attempts % 10 === 0) {
+            console.log(`[useWebcam] Waiting for CLIP model... (${attempts}/${maxAttempts})`)
+          }
+          await new Promise((resolve) => setTimeout(resolve, 200))
+          attempts++
+        }
+
+        if (!isModelReady()) {
+          console.error('[useWebcam] ❌ CLIP model not ready after waiting 20 seconds')
+          console.error('[useWebcam] This likely means the model failed to load. Check console for errors.')
+        } else {
+          console.log('[useWebcam] ✅ CLIP model is ready!')
+        }
 
         loadingEvents.emit({
           step: 'complete',

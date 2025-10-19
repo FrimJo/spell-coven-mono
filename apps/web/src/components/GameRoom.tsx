@@ -69,17 +69,20 @@ function GameRoomContent({
 
   // Initialize CLIP model and embeddings on mount
   useEffect(() => {
-    // Prevent double initialization in React Strict Mode
-    if (hasInitialized.current) return
-    hasInitialized.current = true
+    console.log('[GameRoom] Component mounted, starting initialization...')
 
     let mounted = true
 
     async function initModel() {
+      console.log('[GameRoom] initModel() called')
       try {
-        if (!mounted) return
+        if (!mounted) {
+          console.log('[GameRoom] Component unmounted, aborting initialization')
+          return
+        }
 
         // Step 1: Load embeddings (0-20%)
+        console.log('[GameRoom] Step 1: Loading embeddings...')
         loadingEvents.emit({
           step: 'embeddings',
           progress: 10,
@@ -87,6 +90,7 @@ function GameRoomContent({
         })
 
         await loadEmbeddingsAndMetaFromPackage()
+        console.log('[GameRoom] Embeddings loaded successfully')
 
         if (!mounted) return
 
@@ -106,6 +110,7 @@ function GameRoomContent({
         await loadModel({
           onProgress: (msg) => {
             if (mounted) {
+              console.log('[GameRoom] CLIP model loading:', msg)
               // Parse progress from message (e.g., "progress onnx/model.onnx 45.5%")
               const percentMatch = msg.match(/(\d+(?:\.\d+)?)\s*%/)
               let progress = 25 // Default start
@@ -127,6 +132,7 @@ function GameRoomContent({
 
         if (!mounted) return
 
+        console.log('[GameRoom] CLIP model loaded successfully')
         loadingEvents.emit({
           step: 'clip-model',
           progress: 40,
@@ -163,7 +169,11 @@ function GameRoomContent({
         // Note: Detector initialization happens in VideoStreamGrid/useWebcam
         // It will emit its own loading events (60-100%) when it initializes
       } catch (err) {
-        console.error('Model initialization error:', err)
+        console.error('[GameRoom] Model initialization error:', err)
+        console.error('[GameRoom] Error details:', {
+          message: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+        })
         if (mounted) {
           toast.error('Failed to load card recognition model')
         }

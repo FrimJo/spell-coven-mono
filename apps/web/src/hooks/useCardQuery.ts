@@ -21,6 +21,11 @@ export function useCardQuery(): UseCardQueryReturn {
 
   const query = useCallback(
     async (canvas: HTMLCanvasElement) => {
+      console.log('[useCardQuery] Query called with canvas:', {
+        width: canvas.width,
+        height: canvas.height,
+      })
+
       // Cancel any pending query
       cancel()
 
@@ -30,6 +35,7 @@ export function useCardQuery(): UseCardQueryReturn {
 
       // Validate canvas
       const validation = validateCanvas(canvas)
+      console.log('[useCardQuery] Canvas validation:', validation)
 
       if (!validation.isValid) {
         console.error(
@@ -67,7 +73,14 @@ export function useCardQuery(): UseCardQueryReturn {
         }
 
         // Embed the canvas
-        const embedding = await embedFromCanvas(canvas)
+        console.log('[useCardQuery] Embedding canvas...')
+        const embedding = await embedFromCanvas(canvas).catch((err) => {
+          console.error('[useCardQuery] Embedding failed:', err)
+          throw new Error(`Failed to embed canvas: ${err.message}`)
+        })
+        console.log('[useCardQuery] Embedding complete:', {
+          embeddingLength: embedding.length,
+        })
 
         // Check if aborted after embedding
         if (abortController.signal.aborted) {
@@ -75,7 +88,12 @@ export function useCardQuery(): UseCardQueryReturn {
         }
 
         // Query the database
+        console.log('[useCardQuery] Querying database...')
         const result = top1(embedding)
+        console.log('[useCardQuery] Query complete:', {
+          cardName: result.name,
+          score: result.score,
+        })
 
         // Check if aborted after query
         if (abortController.signal.aborted) {
@@ -88,6 +106,7 @@ export function useCardQuery(): UseCardQueryReturn {
           result,
           error: null,
         })
+        console.log('[useCardQuery] State updated to success')
       } catch (err) {
         // Only update state if not aborted
         if (!abortController.signal.aborted) {

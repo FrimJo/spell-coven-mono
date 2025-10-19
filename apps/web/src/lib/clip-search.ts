@@ -229,8 +229,17 @@ export async function embedFromImageElement(imgEl: HTMLImageElement) {
   return l2norm(Float32Array.from(out.data))
 }
 
+export function isModelReady(): boolean {
+  return extractor !== null && meta !== null && db !== null
+}
+
 export async function embedFromCanvas(canvas: HTMLCanvasElement) {
-  if (!extractor) throw new Error('Model not loaded')
+  if (!extractor) {
+    throw new Error('CLIP model not loaded. Please wait for initialization to complete.')
+  }
+  if (!meta || !db) {
+    throw new Error('Embeddings database not loaded. Please wait for initialization to complete.')
+  }
 
   // Validate preprocessing pipeline alignment (User Story 2)
   // CRITICAL: Canvas must be square and 336×336 to match Python preprocessing
