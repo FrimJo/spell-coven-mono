@@ -177,7 +177,8 @@ def build_embeddings_from_cache(
     # Load + embed with parallel image loading (M2 Max optimization)
     print(f"Initializing CLIP model...")
     embedder = Embedder()
-    vecs = np.zeros((len(records), 768), dtype="float32")
+    embedding_dim = embedder.embedding_dim
+    vecs = np.zeros((len(records), embedding_dim), dtype="float32")
     good = np.zeros((len(records),), dtype=bool)
     
     # Use moderate parallelism with batch-by-batch processing for best speed/memory balance

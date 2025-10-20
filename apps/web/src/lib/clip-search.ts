@@ -23,8 +23,9 @@ const META_URL = `${BASE_PATH}data/mtg-embeddings/${EMBEDDINGS_VERSION}/meta.jso
 // Must match the --contrast value used when building the embeddings database
 const QUERY_CONTRAST_ENHANCEMENT = parseFloat(import.meta.env.VITE_QUERY_CONTRAST || '1.0')
 
-// Embedding dimension from the prototype
-const D = 768
+// Embedding dimension will be read from metadata at runtime
+// Default to 512 (ViT-B/32) but will be overridden by actual metadata
+let D = 512
 
 export type CardMeta = {
   name: string
@@ -194,6 +195,10 @@ export async function loadEmbeddingsAndMetaFromPackage() {
       }
 
       meta = metaObj.records
+      
+      // Update embedding dimension from metadata
+      D = metaObj.shape[1]
+      console.log(`[loadEmbeddingsAndMetaFromPackage] Loaded embeddings with dimension D=${D}`)
 
       // Validate metadata count matches embeddings
       if (meta.length !== metaObj.shape[0]) {

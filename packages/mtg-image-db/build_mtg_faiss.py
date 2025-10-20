@@ -160,6 +160,8 @@ class Embedder:
           self.device = "cpu"
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)  # 512-dim, 32px patch size - faster inference
         self.lock = threading.Lock()  # CLIP is thread-safe with a lock for transform
+        # Get embedding dimension from model (ViT-B/32 = 512, ViT-L/14 = 768)
+        self.embedding_dim = self.model.visual.output_dim
 
     def encode_images(self, pil_images: List[Image.Image]) -> np.ndarray:
         tensors = []
@@ -173,13 +175,13 @@ class Embedder:
                     tensors.append(t)
             batch = [t for t in tensors if t is not None]
             if not batch:
-                return np.zeros((0, 768), dtype="float32")
+                return np.zeros((0, self.embedding_dim), dtype="float32")
             x = torch.cat(batch, dim=0).to(self.device)
             z = self.model.encode_image(x)
             z = z / z.norm(dim=-1, keepdim=True)
             arr = z.detach().cpu().numpy().astype("float32")
         # Reinsert blanks for failed images
-        out = np.zeros((len(pil_images), 768), dtype="float32")
+        out = np.zeros((len(pil_images), self.embedding_dim), dtype="float32")
         j = 0
         for i, t in enumerate(tensors):
             if t is None:
@@ -276,7 +278,8 @@ def build_index(
 
     # Load + embed
     embedder = Embedder()
-    vecs = np.zeros((len(records), 768), dtype="float32")
+    embedding_dim = embedder.embedding_dim
+    vecs = np.zeros((len(records), embedding_dim), dtype="float32")
     good = np.zeros((len(records),), dtype=bool)
 
     batch_imgs, batch_idx = [], []
