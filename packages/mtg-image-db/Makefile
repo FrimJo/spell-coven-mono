@@ -1,4 +1,4 @@
-.PHONY: install build build-all download embed embed-contrast embed-contrast-aggressive build-all-contrast build-all-contrast-aggressive export query serve clean conda-cpu conda-gpu conda-mps install-cpu install-gpu install-mps
+.PHONY: install build build-all download embed embed-contrast embed-contrast-aggressive build-all-contrast build-all-contrast-aggressive export test query serve clean conda-cpu conda-gpu conda-mps install-cpu install-gpu install-mps
 
 PYTHON ?= python
 PORT ?= 8000
@@ -20,6 +20,9 @@ embed:
 
 export:
 	$(PYTHON) export_for_browser.py --input-dir index_out --output-dir index_out
+
+test:
+	$(PYTHON) test_perfect_match.py
 
 query:
 	@echo "Usage: $(PYTHON) query_index.py <image_path> [--k N]"
