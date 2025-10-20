@@ -91,9 +91,18 @@ export function useCardQuery(): UseCardQueryReturn {
         console.log('[useCardQuery] Embedding completed')
 
         // Query the database
+        console.log('[useCardQuery] Embedding dimension:', embedding.length)
         const searchStart = performance.now()
-        const result = top1(embedding, canvas)
+        let result
+        try {
+          result = top1(embedding, canvas)
+        } catch (err) {
+          console.error('[useCardQuery] top1() threw error:', err)
+          throw err
+        }
         const searchMs = performance.now() - searchStart
+        console.log('[useCardQuery] Database search completed in', searchMs.toFixed(0), 'ms')
+        console.log('[useCardQuery] Search result:', result)
 
         if (!result) {
           throw new Error('No valid result from database search')

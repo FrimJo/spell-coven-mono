@@ -112,12 +112,12 @@ export function createDetector(
       return new OWLViTDetector({
         ...finalConfig,
         prompts: [
-          'a card',
           'a playing card', 
-          'a game card',
-          'a rectangular object',
-          'a paper card',
-          'a trading card',
+          // 'a card',
+          // 'a game card',
+          // 'a rectangular object',
+          // 'a paper card',
+          // 'a trading card',
         ],
       })
 

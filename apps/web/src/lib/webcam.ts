@@ -551,6 +551,40 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
 
   const sourceCanvas = currentFrameCanvas
 
+  const boxXMin = card.box.xmin * sourceCanvas.width
+  const boxYMin = card.box.ymin * sourceCanvas.height
+  const cardWidth = (card.box.xmax - card.box.xmin) * sourceCanvas.width
+  const cardHeight = (card.box.ymax - card.box.ymin) * sourceCanvas.height
+  const cardWidthPx = Math.max(1, Math.round(cardWidth))
+  const cardHeightPx = Math.max(1, Math.round(cardHeight))
+  const detectionCropCanvas = document.createElement('canvas')
+  detectionCropCanvas.width = cardWidthPx
+  detectionCropCanvas.height = cardHeightPx
+  const detectionCropCtx = detectionCropCanvas.getContext('2d')
+  if (detectionCropCtx) {
+    detectionCropCtx.drawImage(
+      sourceCanvas,
+      boxXMin,
+      boxYMin,
+      cardWidth,
+      cardHeight,
+      0,
+      0,
+      cardWidthPx,
+      cardHeightPx,
+    )
+    detectionCropCanvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        console.log('[Webcam] Detection crop image:', {
+          url,
+          dimensions: `${cardWidthPx}x${cardHeightPx}`,
+          blob,
+        })
+      }
+    }, 'image/png')
+  }
+
   // T022: Use warped canvas if available (from SlimSAM perspective correction) and enabled
   if (enablePerspectiveWarp && card.warpedCanvas) {
     // Copy warped canvas to cropped canvas
@@ -568,6 +602,18 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
       CROPPED_CARD_WIDTH,
       CROPPED_CARD_HEIGHT,
     )
+
+    croppedCanvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        console.log('[Webcam] Query image for database (from warped canvas):', {
+          url,
+          dimensions: `${croppedCanvas.width}x${croppedCanvas.height}`,
+          blob,
+        })
+        setTimeout(() => URL.revokeObjectURL(url), 1000)
+      }
+    }, 'image/png')
 
     return true
   }
@@ -588,6 +634,17 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
         // Step 2: Apply perspective correction to get canonical 336×336 image
         const warpedCanvas = await warpCardToCanonical(sourceCanvas, quad)
 
+        warpedCanvas.toBlob((blob) => {
+          if (blob) {
+            const url = URL.createObjectURL(blob)
+            console.log('[Webcam] Perspective corrected card image:', {
+              url,
+              dimensions: `${warpedCanvas.width}x${warpedCanvas.height}`,
+              blob,
+            })
+          }
+        }, 'image/png')
+
         // Copy warped canvas to cropped canvas
         croppedCanvas.width = CROPPED_CARD_WIDTH
         croppedCanvas.height = CROPPED_CARD_HEIGHT
@@ -603,6 +660,18 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
           CROPPED_CARD_WIDTH,
           CROPPED_CARD_HEIGHT,
         )
+
+        croppedCanvas.toBlob((blob) => {
+          if (blob) {
+            const url = URL.createObjectURL(blob)
+            console.log('[Webcam] Query image for database (after OpenCV warp):', {
+              url,
+              dimensions: `${croppedCanvas.width}x${croppedCanvas.height}`,
+              blob,
+            })
+            setTimeout(() => URL.revokeObjectURL(url), 1000)
+          }
+        }, 'image/png')
 
         return true
       }

@@ -369,38 +369,51 @@ export async function embedFromCanvas(canvas: HTMLCanvasElement): Promise<{ embe
   return { embedding, metrics }
 }
 
-export function topK(query: Float32Array, K = 5) {
-  if (!meta || !db) throw new Error('Embeddings not loaded')
-  const N = meta.length
-  const scores = new Float32Array(N)
-  for (let i = 0; i < N; i++) {
-    let s = 0
-    const off = i * D
-    for (let j = 0; j < D; j++) s += query[j] * db[off + j]
-    scores[i] = s
-  }
-  const idx = Array.from(scores.keys())
-  idx.sort((a, b) => scores[b] - scores[a])
-  return idx
-    .slice(0, K)
-    .map((i) => ({ score: scores[i], ...(meta as CardMeta[])[i] }))
-}
-
 export function top1(q: Float32Array, canvas?: HTMLCanvasElement): CardMeta | null {
   if (!db || !meta) throw new Error('Database not loaded')
+  
+  console.log('[top1] Database status:', {
+    metaCount: meta.length,
+    dbLength: db.length,
+    embeddingDim: D,
+    queryDim: q.length
+  })
   
   const n = meta.length
   let best = -Infinity
   let idx = -1
   for (let i = 0; i < n; i++) {
     let dot = 0
-    for (let d = 0; d < D; d++) dot += q[d] * db[i * D + d]
+    for (let d = 0; d < D; d++) {
+      if (d >= q.length) break;
+      dot += q[d] * db[i * D + d]
+    }
     if (dot > best) {
       best = dot
       idx = i
     }
   }
   
+  console.log('[top1] Best match:', { index: idx, score: best })
+  if (idx < 0) {
+    console.log('[top1] WARNING: No match found. This should not happen.')
+    console.log('[top1] Query embedding:', q)
+    console.log('[top1] Database embeddings:', db)
+    console.log('[top1] Database metadata:', meta)
+    console.log('[top1] Detailed logging:')
+    console.log('[top1] Embedding dimensions:', D)
+    console.log('[top1] Query embedding length:', q.length)
+    console.log('[top1] Database embedding length:', db.length)
+    console.log('[top1] Metadata length:', meta.length)
+    for (let i = 0; i < n; i++) {
+      console.log(`[top1] Embedding ${i}:`, db.slice(i * D, (i + 1) * D))
+    }
+  }
+  if (idx >= 0) {
+    console.log('[top1] Matched card:', meta[idx])
+  } else {
+    console.log('[top1] No match found')
+  }
   return idx >= 0 ? meta[idx] : null
 }
 
@@ -483,4 +496,21 @@ export function compareEmbeddings(
   }
   
   return comparison
+}
+
+export function topK(query: Float32Array, K = 5) {
+  if (!meta || !db) throw new Error('Embeddings not loaded')
+  const N = meta.length
+  const scores = new Float32Array(N)
+  for (let i = 0; i < N; i++) {
+    let s = 0
+    const off = i * D
+    for (let j = 0; j < D; j++) s += query[j] * db[off + j]
+    scores[i] = s
+  }
+  const idx = Array.from(scores.keys())
+  idx.sort((a, b) => scores[b] - scores[a])
+  return idx
+    .slice(0, K)
+    .map((i) => ({ score: scores[i], ...(meta as CardMeta[])[i] }))
 }

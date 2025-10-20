@@ -160,9 +160,9 @@ export const CARD_QUERY_CONSTANTS = {
   /** Similarity score threshold for low confidence warning */
   LOW_CONFIDENCE_THRESHOLD: 0.7,
 
-  /** Expected canvas dimensions - MUST match preprocessing pipeline (336×336 square) */
-  CANVAS_WIDTH: 336,
-  CANVAS_HEIGHT: 336,
+  /** Expected canvas dimensions - MUST match preprocessing pipeline (224×224 square) */
+  CANVAS_WIDTH: 224,
+  CANVAS_HEIGHT: 224,
 
   /** Maximum query timeout (milliseconds) */
   QUERY_TIMEOUT_MS: 10000,
