@@ -25,9 +25,8 @@ import { YOLOv8Detector } from './yolov8-detector'
 const DEFAULT_CONFIGS: Record<DetectorType, Partial<DetectorConfig>> = {
   opencv: {
     modelId: '', // OpenCV doesn't use a model
-    confidenceThreshold: 0, // OpenCV doesn't use confidence
+    confidenceThreshold: 0.5, // Filter by aspect ratio and area scoring
     detectionIntervalMs: DETECTION_INTERVAL_MS,
-    // OpenCV is now click-only mode - no continuous detection
   },
   detr: {
     modelId: DETR_MODEL_ID,
