@@ -138,7 +138,7 @@ function TestStandTogether() {
 
       // Embed
       setStatus({ message: 'Embedding image with CLIP...', type: 'loading' })
-      const embedding = await embedFromCanvas(canvas)
+      const { embedding } = await embedFromCanvas(canvas)
       console.log('Browser embedding shape:', embedding.length)
       
       // Compare with database embedding
@@ -150,9 +150,7 @@ function TestStandTogether() {
         
         const comparison = compareEmbeddings(
           embedding,
-          dbResult.embedding,
-          'Browser Embedding',
-          'Database Embedding'
+          dbResult.embedding
         )
         
         console.log('\n📊 Comparison Summary:')

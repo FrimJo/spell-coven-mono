@@ -83,32 +83,28 @@ export class YOLOv8Detector implements CardDetector {
 
     const startTime = performance.now()
 
-    try {
-      // Prepare input
-      const input = this.prepareInput(canvas)
+    // Prepare input
+    const input = this.prepareInput(canvas)
 
-      // Run inference
-      const outputs = await this.session.run({
-        images: input,
-      })
+    // Run inference
+    const outputs = await this.session.run({
+      images: input,
+    })
 
-      // Process output
-      const rawOutput = outputs['output0'].data as Float32Array
-      const cards = this.processOutput(
-        rawOutput,
-        canvasWidth,
-        canvasHeight,
-      )
+    // Process output
+    const rawOutput = outputs['output0'].data as Float32Array
+    const cards = this.processOutput(
+      rawOutput,
+      canvasWidth,
+      canvasHeight,
+    )
 
-      const inferenceTimeMs = performance.now() - startTime
+    const inferenceTimeMs = performance.now() - startTime
 
-      return {
-        cards,
-        inferenceTimeMs,
-        rawDetectionCount: cards.length,
-      }
-    } catch (error) {
-      throw error
+    return {
+      cards,
+      inferenceTimeMs,
+      rawDetectionCount: cards.length,
     }
   }
 

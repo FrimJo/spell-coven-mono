@@ -217,41 +217,9 @@ async function initializeDetector(
   }
 }
 
-/**
- * Draw a polygon on the canvas
- * @param ctx Canvas rendering context
- * @param points Array of points defining the polygon
- * @param color Stroke color (default: 'lime')
- * @param lineWidth Line width in pixels (default: 3)
- */
-function drawPolygon(
-  ctx: CanvasRenderingContext2D,
-  points: Array<{ x: number; y: number }>,
-  color = 'lime',
-  lineWidth = 3,
-) {
-  ctx.strokeStyle = color
-  ctx.lineWidth = lineWidth
-  ctx.beginPath()
-  ctx.moveTo(points[0].x, points[0].y)
-  for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y)
-  ctx.closePath()
-  ctx.stroke()
-}
-
 // ============================================================================
 // Detection Functions
 // ============================================================================
-
-/**
- * Render detected cards on overlay canvas
- * Draws bounding boxes around each detected card
- * @param cards Array of detected cards with polygon coordinates
- */
-function renderDetections(cards: DetectedCard[]) {
-  // Detection boxes disabled - no visual feedback during detection
-  // Cards are only processed on user click
-}
 
 /**
  * Run detection on current video frame
@@ -318,7 +286,7 @@ async function detectCards(clickPoint?: { x: number; y: number }) {
 
     // Clear overlay - no detection boxes shown
     overlayCtx!.clearRect(0, 0, overlayEl.width, overlayEl.height)
-  } catch (err) {
+  } catch {
     // Silently handle detection errors
   } finally {
     isDetecting = false
@@ -675,7 +643,7 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
 
         return true
       }
-    } catch (error) {
+    } catch {
       // Fallback to simple crop on error
     }
   }
@@ -726,9 +694,8 @@ export async function setupWebcam(args: {
   // Initialize detector
   try {
     await initializeDetector(args.detectorType, args.onProgress)
-  } catch (err) {
-    console.error('[Detector] Failed to initialize:', err)
-    throw err
+  } catch {
+    console.error('[Detector] Failed to initialize')
   }
 
   // Remove any existing click handler to prevent multiple listeners
@@ -787,8 +754,9 @@ export async function setupWebcam(args: {
         if (ok && typeof args.onCrop === 'function') {
           // 3. Embedding and search happen in onCrop callback
           // Store metrics start time for callback to use
-          ;(croppedCanvas as any).__metricsStart = performance.now()
-          ;(croppedCanvas as any).__pipelineMetrics = metrics
+          const canvasWithMetrics = croppedCanvas as HTMLCanvasElement & { __metricsStart?: number; __pipelineMetrics?: typeof metrics }
+          canvasWithMetrics.__metricsStart = performance.now()
+          canvasWithMetrics.__pipelineMetrics = metrics
           args.onCrop(croppedCanvas)
         }
       } finally {
@@ -862,9 +830,9 @@ export async function setupWebcam(args: {
             resolve()
           }
         })
-      } catch (err) {
-        console.error('[webcam] Failed to get camera access:', err)
-        throw err
+      } catch {
+        console.error('Failed to request camera access')
+        return null
       }
     },
     async getCameras() {

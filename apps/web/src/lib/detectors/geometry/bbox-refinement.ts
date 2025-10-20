@@ -211,8 +211,14 @@ export async function refineBoundingBoxToCorners(
     hierarchy.delete()
 
     return canvasQuad
-  } catch (error) {
-    return null
+  } catch {
+    // If refinement fails, return original bbox as CardQuad
+    return {
+      topLeft: { x: bbox.xmin, y: bbox.ymin },
+      topRight: { x: bbox.xmax, y: bbox.ymin },
+      bottomRight: { x: bbox.xmax, y: bbox.ymax },
+      bottomLeft: { x: bbox.xmin, y: bbox.ymax },
+    }
   }
 }
 

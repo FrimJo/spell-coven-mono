@@ -326,7 +326,8 @@ export async function extractQuadFromMask(
     const quad = orderQuadPoints(points)
 
     return quad
-  } catch (error) {
+  } catch {
+    console.error('Error extracting contours')
     return null
   }
 }

@@ -105,7 +105,7 @@ function ScannerPage() {
 
     try {
       setSpinner('Embedding cropped…', true)
-      const q = await embedFromCanvas(canvas)
+      const { embedding: q } = await embedFromCanvas(canvas)
       setSpinner('Searching…', true)
       const best = top1(q)
       setResults([best as Result])

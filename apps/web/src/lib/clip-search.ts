@@ -267,7 +267,6 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
     // Initialize pipeline with proper options
     // Using smaller CLIP model for faster browser inference (3-5x speedup)
     // Note: Using Xenova/ prefix for ONNX-converted model (required for transformers.js browser compatibility)
-    let lastLogTime = 0
     let lastLoggedPercent = -1
     extractor = await pipeline(
       'image-feature-extraction',
@@ -369,7 +368,7 @@ export async function embedFromCanvas(canvas: HTMLCanvasElement): Promise<{ embe
   return { embedding, metrics }
 }
 
-export function top1(q: Float32Array, canvas?: HTMLCanvasElement): CardMeta | null {
+export function top1(q: Float32Array): (CardMeta & { score: number }) | null {
   if (!db || !meta) throw new Error('Database not loaded')
   
   console.log('[top1] Database status:', {
@@ -414,7 +413,7 @@ export function top1(q: Float32Array, canvas?: HTMLCanvasElement): CardMeta | nu
   } else {
     console.log('[top1] No match found')
   }
-  return idx >= 0 ? meta[idx] : null
+  return idx >= 0 ? { ...meta[idx], score: best } : null
 }
 
 /**
@@ -455,8 +454,6 @@ export function getDatabaseEmbedding(cardName: string): {
 export function compareEmbeddings(
   embedding1: Float32Array,
   embedding2: Float32Array,
-  label1 = 'Embedding 1',
-  label2 = 'Embedding 2',
 ) {
   if (embedding1.length !== embedding2.length) {
     throw new Error(

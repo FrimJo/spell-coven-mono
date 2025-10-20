@@ -9,7 +9,7 @@ export default [
   ...baseConfig,
   ...reactConfig,
   ...pluginQuery.configs['flat/recommended'],
-  { ignores: ['public/mockServiceWorker.js', '**/*.demo.ts'] },
+  { ignores: ['public/**', 'public/mockServiceWorker.js', '**/*.demo.ts'] },
   {
     files: ['**/*.ts', '**/*.tsx'],
     ignores: [

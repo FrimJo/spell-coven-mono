@@ -116,40 +116,35 @@ export class OWLViTDetector implements CardDetector {
 
     const startTime = performance.now()
 
-    try {
-      // Run zero-shot detection with text prompts
-      const inferenceStart = performance.now()
-      const detections: OWLViTDetection[] = await this.detector(
-        canvas,
-        this.config.prompts!,
-        {
-          threshold: this.config.confidenceThreshold,
-          percentage: true, // Return coordinates as percentages
-        },
-      )
-      const inferenceMs = performance.now() - inferenceStart
+    // Run zero-shot detection with text prompts
+    const inferenceStart = performance.now()
+    const detections: OWLViTDetection[] = await this.detector(
+      canvas,
+      this.config.prompts!,
+      {
+        threshold: this.config.confidenceThreshold,
+        percentage: true, // Return coordinates as percentages
+      },
+    )
+    const inferenceMs = performance.now() - inferenceStart
 
-      // Filter and convert to DetectedCard format
-      const filterStart = performance.now()
-      const cards = this.filterAndConvert(detections, canvasWidth, canvasHeight)
-      const filterMs = performance.now() - filterStart
+    // Filter and convert to DetectedCard format
+    const filterStart = performance.now()
+    const cards = this.filterAndConvert(detections, canvasWidth, canvasHeight)
+    const filterMs = performance.now() - filterStart
 
-      const totalMs = performance.now() - startTime
+    const totalMs = performance.now() - startTime
 
-      console.log('[OWL-ViT] Detection timing:', {
-        inference: `${inferenceMs.toFixed(0)}ms`,
-        filter: `${filterMs.toFixed(0)}ms`,
-        total: `${totalMs.toFixed(0)}ms`,
-        detections: detections.length,
-      })
+    console.log('[OWL-ViT] Detection timing:', {
+      inference: `${inferenceMs.toFixed(0)}ms`,
+      filter: `${filterMs.toFixed(0)}ms`,
+      total: `${totalMs.toFixed(0)}ms`,
+    })
 
-      return {
-        cards,
-        inferenceTimeMs: totalMs,
-        rawDetectionCount: detections.length,
-      }
-    } catch (error) {
-      throw error
+    return {
+      cards,
+      inferenceTimeMs: totalMs,
+      rawDetectionCount: detections.length,
     }
   }
 

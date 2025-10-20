@@ -95,7 +95,7 @@ export function useCardQuery(): UseCardQueryReturn {
         const searchStart = performance.now()
         let result
         try {
-          result = top1(embedding, canvas)
+          result = top1(embedding)
         } catch (err) {
           console.error('[useCardQuery] top1() threw error:', err)
           throw err
@@ -114,8 +114,9 @@ export function useCardQuery(): UseCardQueryReturn {
         }
 
         // Log performance summary
-        if ((canvas as any).__pipelineMetrics) {
-          const metrics = (canvas as any).__pipelineMetrics
+        const canvasWithMetrics = canvas as HTMLCanvasElement & { __pipelineMetrics?: { detection: number; crop: number } }
+        if (canvasWithMetrics.__pipelineMetrics) {
+          const metrics = canvasWithMetrics.__pipelineMetrics
           const totalMs = metrics.detection + metrics.crop + embeddingMetrics.total + searchMs
           
           console.log('🎯 Pipeline Performance:', {

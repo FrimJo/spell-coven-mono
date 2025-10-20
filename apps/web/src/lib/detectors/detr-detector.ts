@@ -111,7 +111,7 @@ export class DETRDetector implements CardDetector {
     })
 
     // Filter and convert to DetectedCard format
-    const { cards, filterReasons } = this.filterCardDetections(
+    const { cards } = this.filterCardDetections(
       detections,
       canvasWidth,
       canvasHeight,
@@ -162,17 +162,24 @@ export class DETRDetector implements CardDetector {
     canvasWidth: number,
     canvasHeight: number,
   ): { cards: DetectedCard[]; filterReasons: Record<string, string[]> } {
+    const cards: DetectedCard[] = []
     const filterReasons: Record<string, string[]> = {}
 
-    // Accept ALL detections - no filtering
-    // User will click on the specific region they want to extract
-    const cards = detections.map((det) => ({
-      box: det.box,
-      score: det.score,
-      aspectRatio:
-        (det.box.xmax - det.box.xmin) / (det.box.ymax - det.box.ymin),
-      polygon: this.boundingBoxToPolygon(det.box, canvasWidth, canvasHeight),
-    }))
+    for (const detection of detections) {
+      const { box, score } = detection
+
+      // Filter by confidence
+      if (score < 0.5) continue
+
+      // Convert to DetectedCard
+      const card: DetectedCard = {
+        box,
+        score,
+        polygon: this.boundingBoxToPolygon(box, canvasWidth, canvasHeight),
+      }
+
+      cards.push(card)
+    }
 
     return { cards, filterReasons }
   }
