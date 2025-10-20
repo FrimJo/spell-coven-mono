@@ -13,7 +13,6 @@ import {
   DETECTION_INTERVAL_MS,
   DETR_MODEL_ID,
 } from '../detection-constants'
-import { ACTIVE_DETECTOR } from '../detector-config'
 import { DETRDetector } from './detr-detector'
 import { OpenCVDetector } from './opencv-detector'
 import { OWLViTDetector } from './owl-vit-detector'
@@ -131,26 +130,4 @@ export function createDetector(
     default:
       throw new Error(`Unknown detector type: ${type}`)
   }
-}
-
-/**
- * Get the current default detector type
- *
- * This can be changed in detector-config.ts to switch the default detector.
- */
-export function getDefaultDetectorType(): DetectorType {
-  return ACTIVE_DETECTOR
-}
-
-/**
- * Create a detector with default settings
- *
- * @param onProgress Optional progress callback
- * @returns Detector instance with default configuration
- */
-export function createDefaultDetector(
-  onProgress?: (msg: string) => void,
-): CardDetector {
-  const type = getDefaultDetectorType()
-  return createDetector(type, { onProgress })
 }

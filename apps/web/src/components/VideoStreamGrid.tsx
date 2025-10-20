@@ -37,8 +37,6 @@ interface VideoStreamGridProps {
   enableCardDetection?: boolean
   /** Detector type to use (opencv, detr, owl-vit) */
   detectorType?: DetectorType
-  /** Enable frame buffer for temporal optimization */
-  useFrameBuffer?: boolean
   /** Enable perspective warp for corner refinement */
   usePerspectiveWarp?: boolean
   /** Callback when a card is cropped */
@@ -56,7 +54,6 @@ export function VideoStreamGrid({
   onLifeChange,
   enableCardDetection = true, // Always enabled by default
   detectorType,
-  useFrameBuffer = true,
   usePerspectiveWarp = true,
   onCardCrop,
 }: VideoStreamGridProps) {
@@ -73,7 +70,6 @@ export function VideoStreamGrid({
   } = useWebcam({
     enableCardDetection,
     detectorType,
-    useFrameBuffer,
     usePerspectiveWarp,
     onCrop: onCardCrop,
     autoStart: false,

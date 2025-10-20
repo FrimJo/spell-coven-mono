@@ -103,6 +103,23 @@ python build_embeddings.py --kind unique_artwork --hnsw-m 64 --hnsw-ef-construct
 python build_embeddings.py --kind unique_artwork --hnsw-m 32 --hnsw-ef-construction 200 --size 336
 ```
 
+**New: Contrast enhancement for blurry cards**:
+```bash
+# Standard build (no enhancement)
+python build_embeddings.py --kind unique_artwork --out index_out --cache image_cache
+
+# With 20% contrast boost (helps with blurry webcam cards)
+python build_embeddings.py --kind unique_artwork --out index_out --cache image_cache --contrast 1.2
+
+# With 50% contrast boost (aggressive, for very blurry conditions)
+python build_embeddings.py --kind unique_artwork --out index_out --cache image_cache --contrast 1.5
+```
+
+Contrast enhancement sharpens card features (text, mana symbols, artwork edges) to improve matching accuracy when cards are blurry or at odd angles. The enhancement factor is applied during preprocessing:
+- `1.0` = no enhancement (default)
+- `1.2` = 20% boost (recommended starting point)
+- `1.5` = 50% boost (for challenging conditions)
+
 **Single-step process (legacy):**
 ```bash
 python build_mtg_faiss.py --kind unique_artwork --out index_out --cache image_cache

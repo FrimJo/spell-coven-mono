@@ -56,7 +56,6 @@ export class YOLOv8Detector implements CardDetector {
   async initialize(): Promise<void> {
     try {
       this.status = 'loading'
-      console.log('[YOLOv8] Loading model from:', this.config.modelPath)
 
       // Load ONNX model
       this.session = await ort.InferenceSession.create(
@@ -67,10 +66,8 @@ export class YOLOv8Detector implements CardDetector {
       )
 
       this.status = 'ready'
-      console.log('[YOLOv8] Model loaded successfully')
     } catch (error) {
       this.status = 'error'
-      console.error('[YOLOv8] Failed to load model:', error)
       throw error
     }
   }
@@ -105,18 +102,12 @@ export class YOLOv8Detector implements CardDetector {
 
       const inferenceTimeMs = performance.now() - startTime
 
-      console.log('[YOLOv8] Detection complete:', {
-        cards: cards.length,
-        inferenceTimeMs: Math.round(inferenceTimeMs),
-      })
-
       return {
         cards,
         inferenceTimeMs,
         rawDetectionCount: cards.length,
       }
     } catch (error) {
-      console.error('[YOLOv8] Detection failed:', error)
       throw error
     }
   }
@@ -132,7 +123,7 @@ export class YOLOv8Detector implements CardDetector {
     const canvas = document.createElement('canvas')
     canvas.width = inputSize
     canvas.height = inputSize
-    const ctx = canvas.getContext('2d')!
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!
 
     // Draw and resize image
     ctx.drawImage(sourceCanvas, 0, 0, inputSize, inputSize)

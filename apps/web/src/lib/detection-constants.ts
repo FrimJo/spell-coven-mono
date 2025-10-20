@@ -48,12 +48,12 @@ export const MIN_CARD_AREA = 0.01 // 1% of frame
 /**
  * Cropped card dimensions (pixels) - Must match CLIP model expectations
  * CRITICAL: These dimensions MUST match the Python embedding pipeline preprocessing
- * Python uses black padding to 336×336 before CLIP ViT-L/14@336px embedding
+ * Python uses black padding to 224×224 before CLIP ViT-B/32 embedding
  * Browser must use identical preprocessing for embedding space alignment
  * See: packages/mtg-image-db/build_mtg_faiss.py
  */
-export const CROPPED_CARD_WIDTH = 336
-export const CROPPED_CARD_HEIGHT = 336
+export const CROPPED_CARD_WIDTH = 224
+export const CROPPED_CARD_HEIGHT = 224
 
 /**
  * Computed aspect ratio range for validation

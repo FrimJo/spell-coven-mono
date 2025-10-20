@@ -22,6 +22,24 @@ This app provides a browser-based visual search over pre-generated MTG card art 
 
 **CLIP Model**: The model downloads automatically to the browser's cache on first use (~150MB quantized). No manual setup required!
 
+## Configuration
+
+### Contrast Enhancement for Blurry Cards
+
+To improve matching of blurry or low-contrast webcam cards, you can enable query-side contrast enhancement:
+
+```bash
+# With 20% contrast boost (recommended for typical webcam blur)
+VITE_QUERY_CONTRAST=1.2 pnpm --filter @repo/web dev
+
+# With 50% contrast boost (aggressive, for very blurry conditions)
+VITE_QUERY_CONTRAST=1.5 pnpm --filter @repo/web dev
+```
+
+**Important**: The frontend enhancement factor **must match** the database preprocessing factor. If you built the database with `--contrast 1.2`, set `VITE_QUERY_CONTRAST=1.2` in the frontend.
+
+See [`CONTRAST_ENHANCEMENT_FRONTEND.md`](./CONTRAST_ENHANCEMENT_FRONTEND.md) for detailed configuration and troubleshooting.
+
 ## Develop
 
 ```bash

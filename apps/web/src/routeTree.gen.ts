@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TestStandTogetherRouteImport } from './routes/test-stand-together'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PrevIndexRouteImport } from './routes/prev/index'
 import { Route as GameGameIdRouteImport } from './routes/game.$gameId'
 
+const TestStandTogetherRoute = TestStandTogetherRouteImport.update({
+  id: '/test-stand-together',
+  path: '/test-stand-together',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -31,36 +37,47 @@ const GameGameIdRoute = GameGameIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/test-stand-together': typeof TestStandTogetherRoute
   '/game/$gameId': typeof GameGameIdRoute
   '/prev': typeof PrevIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/test-stand-together': typeof TestStandTogetherRoute
   '/game/$gameId': typeof GameGameIdRoute
   '/prev': typeof PrevIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/test-stand-together': typeof TestStandTogetherRoute
   '/game/$gameId': typeof GameGameIdRoute
   '/prev/': typeof PrevIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/game/$gameId' | '/prev'
+  fullPaths: '/' | '/test-stand-together' | '/game/$gameId' | '/prev'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/game/$gameId' | '/prev'
-  id: '__root__' | '/' | '/game/$gameId' | '/prev/'
+  to: '/' | '/test-stand-together' | '/game/$gameId' | '/prev'
+  id: '__root__' | '/' | '/test-stand-together' | '/game/$gameId' | '/prev/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  TestStandTogetherRoute: typeof TestStandTogetherRoute
   GameGameIdRoute: typeof GameGameIdRoute
   PrevIndexRoute: typeof PrevIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/test-stand-together': {
+      id: '/test-stand-together'
+      path: '/test-stand-together'
+      fullPath: '/test-stand-together'
+      preLoaderRoute: typeof TestStandTogetherRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  TestStandTogetherRoute: TestStandTogetherRoute,
   GameGameIdRoute: GameGameIdRoute,
   PrevIndexRoute: PrevIndexRoute,
 }

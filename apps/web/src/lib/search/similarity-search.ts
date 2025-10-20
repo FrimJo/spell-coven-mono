@@ -8,8 +8,15 @@
  */
 
 import type { CardRecord, MetadataFile } from '../validation/contract-validator'
-import type { QueryEmbedding } from './clip-embedder'
 import type { EmbeddingDatabase } from './embeddings-loader'
+
+/**
+ * Query embedding from CLIP model
+ */
+export interface QueryEmbedding {
+  /** L2-normalized embedding vector */
+  vector: Float32Array
+}
 
 export interface SearchResult {
   /** Matched card metadata */

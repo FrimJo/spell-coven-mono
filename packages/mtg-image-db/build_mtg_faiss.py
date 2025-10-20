@@ -43,7 +43,7 @@ def load_bulk(kind: str) -> List[dict]:
 def face_image_urls(card: dict):
     out = []
     def pick_card_image(uris):
-        # Small (488×680 JPG) is optimal for ViT-L/14@336px - saves ~40GB vs PNG
+        # Small (488×680 JPG) is optimal for ViT-B/32 - saves ~40GB vs PNG
         # Falls back to larger sizes if small unavailable
         return uris.get("small") or uris.get("normal") or uris.get("large") or uris.get("png") or uris.get("border_crop")
 
@@ -120,9 +120,16 @@ def download_image(url: str, cache_dir: Path, retries: int = 3, timeout: int = 2
             time.sleep(0.8 * attempt)
     return None
 
-def load_image_rgb(path: Path, target_size: int = 336) -> Optional[Image.Image]:
+def load_image_rgb(path: Path, target_size: int = 224, enhance_contrast: float = 1.0) -> Optional[Image.Image]:
     try:
         img = Image.open(path).convert("RGB")
+        
+        # Enhance contrast if requested (helps with blurry cards)
+        if enhance_contrast > 1.0:
+            from PIL import ImageEnhance
+            enhancer = ImageEnhance.Contrast(img)
+            img = enhancer.enhance(enhance_contrast)
+        
         # Pad to square with black borders to preserve all card information
         # (card name, mana cost, text box, P/T are important for detection)
         w, h = img.size
@@ -151,7 +158,7 @@ class Embedder:
           self.device = "cuda"
         else:
           self.device = "cpu"
-        self.model, self.preprocess = clip.load("ViT-L/14@336px", device=self.device)  # 768-dim, 336px input
+        self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)  # 512-dim, 32px patch size - faster inference
         self.lock = threading.Lock()  # CLIP is thread-safe with a lock for transform
 
     def encode_images(self, pil_images: List[Image.Image]) -> np.ndarray:

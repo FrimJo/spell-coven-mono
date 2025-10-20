@@ -23,8 +23,4 @@ export { OWLViTDetector, type OWLViTConfig } from './owl-vit-detector'
 export { SlimSAMDetector } from './slimsam-detector'
 
 // Factory
-export {
-  createDetector,
-  createDefaultDetector,
-  getDefaultDetectorType,
-} from './factory'
+export { createDetector } from './factory'

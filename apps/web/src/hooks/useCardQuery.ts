@@ -2,6 +2,7 @@ import type { CardQueryState, UseCardQueryReturn } from '@/types/card-query'
 import { useCallback, useRef, useState } from 'react'
 import { embedFromCanvas, top1 } from '@/lib/clip-search'
 import { validateCanvas } from '@/types/card-query'
+import { generateOrientationCandidates } from '@/lib/detectors/geometry/orientation'
 
 export function useCardQuery(): UseCardQueryReturn {
   const [state, setState] = useState<CardQueryState>({
@@ -72,32 +73,65 @@ export function useCardQuery(): UseCardQueryReturn {
           return
         }
 
-        // Embed the canvas
-        console.log('[useCardQuery] Embedding canvas...')
-        const embedding = await embedFromCanvas(canvas).catch((err) => {
-          console.error('[useCardQuery] Embedding failed:', err)
-          throw new Error(`Failed to embed canvas: ${err.message}`)
-        })
-        console.log('[useCardQuery] Embedding complete:', {
-          embeddingLength: embedding.length,
-        })
+        // Generate 180° rotation (cards are almost always upside down)
+        console.log('[useCardQuery] Generating 180° rotation candidate...')
+        const rotated180 = generateOrientationCandidates(canvas)[2] // Index 2 is 180°
+        console.log('[useCardQuery] Generated 180° rotation candidate')
 
-        // Check if aborted after embedding
+        // Check if aborted
         if (abortController.signal.aborted) {
           return
         }
 
-        // Query the database
-        console.log('[useCardQuery] Querying database...')
-        const result = top1(embedding)
-        console.log('[useCardQuery] Query complete:', {
-          cardName: result.name,
-          score: result.score,
+        // Embed the 180° rotated canvas
+        console.log('[useCardQuery] Starting embedding...')
+        const { embedding, metrics: embeddingMetrics } = await embedFromCanvas(rotated180).catch((err) => {
+          throw new Error(`Failed to embed canvas: ${err.message}`)
         })
+        console.log('[useCardQuery] Embedding completed')
+
+        // Query the database
+        const searchStart = performance.now()
+        const result = top1(embedding, canvas)
+        const searchMs = performance.now() - searchStart
+
+        if (!result) {
+          throw new Error('No valid result from database search')
+        }
 
         // Check if aborted after query
         if (abortController.signal.aborted) {
           return
+        }
+
+        // Log performance summary
+        if ((canvas as any).__pipelineMetrics) {
+          const metrics = (canvas as any).__pipelineMetrics
+          const totalMs = metrics.detection + metrics.crop + embeddingMetrics.total + searchMs
+          
+          console.log('🎯 Pipeline Performance:', {
+            'Detection': `${metrics.detection.toFixed(0)}ms`,
+            'Crop & Warp': `${metrics.crop.toFixed(0)}ms`,
+            'Embedding': `${embeddingMetrics.total.toFixed(0)}ms`,
+            'Search': `${searchMs.toFixed(0)}ms`,
+            'Total': `${totalMs.toFixed(0)}ms`
+          })
+          
+          // Log detailed embedding breakdown if contrast enhancement is enabled
+          if (embeddingMetrics.contrast > 0) {
+            console.log('📊 Embedding Breakdown:', {
+              'Contrast Enhancement': `${embeddingMetrics.contrast.toFixed(0)}ms`,
+              'CLIP Inference': `${embeddingMetrics.inference.toFixed(0)}ms`,
+              'L2 Normalization': `${embeddingMetrics.normalization.toFixed(0)}ms`,
+              'Total Embedding': `${embeddingMetrics.total.toFixed(0)}ms`
+            })
+          } else {
+            console.log('📊 Embedding Breakdown:', {
+              'CLIP Inference': `${embeddingMetrics.inference.toFixed(0)}ms`,
+              'L2 Normalization': `${embeddingMetrics.normalization.toFixed(0)}ms`,
+              'Total Embedding': `${embeddingMetrics.total.toFixed(0)}ms`
+            })
+          }
         }
 
         // Set success state

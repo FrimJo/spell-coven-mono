@@ -89,7 +89,7 @@ function ScannerPage() {
     }
 
     // Check if the cropped canvas has actual image data
-    const ctx = canvas.getContext('2d')
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
     if (!ctx) {
       console.error('Could not get 2d context from cropped canvas')
       return

@@ -2,11 +2,36 @@
 
 **Overview**: Integrate Discord's API to provide chat messaging and webcam streaming infrastructure for Spell Coven's remote MTG play platform. This leverages Discord's existing voice channels, video streaming, and text chat capabilities as the backend communication layer.
 
+**Authentication Strategy**: Discord authentication is **required** for all users. Discord does not support guest/anonymous access, and since video streaming is core to the game experience, all players must authenticate via Discord OAuth2 before creating or joining games.
+
 **Implementation Strategy**: Split into 4 phases for incremental delivery and testing.
 
 ---
 
 ## Phase 1: Discord Authentication & Basic Connection
+
+### Minimal First Step (Phase 1a)
+
+**Goal**: Get Discord OAuth working with visual confirmation
+
+**Deliverables**:
+1. Discord OAuth modal component
+2. OAuth redirect to Discord
+3. Callback handler at `/auth/discord/callback`
+4. Display user's Discord profile (avatar + username) in header
+5. Gate "Create Game" / "Join Game" behind auth check
+
+**Success Metric**: User can click "Create Game", see Discord OAuth modal, authenticate, and see their Discord profile in the header.
+
+**Estimated Time**: 2-3 days
+
+**What's NOT Included** (deferred to Phase 1b):
+- Gateway WebSocket connection
+- Token refresh logic
+- Connection status indicators
+- Heartbeat mechanism
+
+---
 
 ### Feature Description for `/speckit.specify`
 
@@ -21,6 +46,10 @@
    - Request permissions: `identify`, `guilds`, `messages.read`
    - Handle OAuth callback and token exchange
    - Display user's Discord profile (username, avatar) in Spell Coven UI
+   - **Authentication Gate**: Intercept "Create Game" and "Join Game" actions to check auth status
+   - Show Discord OAuth modal if user is not authenticated
+   - Redirect to Discord OAuth page (full-page redirect, not popup for mobile compatibility)
+   - Handle callback at `/auth/discord/callback` route
 
 2. **Token Management**
    - Store Discord access tokens in localStorage with automatic refresh
@@ -41,7 +70,13 @@
 - Use `discord-api-types` for TypeScript types
 - Implement WebSocket connection manager with reconnection logic
 - Create React hooks: `useDiscordAuth()`, `useDiscordConnection()`, `useDiscordUser()`
-- Build UI components: DiscordLoginButton, DiscordUserProfile, ConnectionStatus
+- Build UI components: 
+  - `DiscordAuthModal`: Modal explaining Discord requirement with "Connect Discord" button
+  - `DiscordLoginButton`: Prominent button in header (uses Discord brand color #5865F2)
+  - `DiscordUserProfile`: Display avatar + username when authenticated
+  - `ConnectionStatus`: Show Gateway connection state
+- Create route handler: `/auth/discord/callback` for OAuth redirect
+- Update `LandingPage` component to gate Create/Join actions behind auth check
 
 **Success Criteria**:
 - Users can authenticate via Discord OAuth2 within 10 seconds
@@ -51,11 +86,13 @@
 - Connection status is clearly visible to users
 
 **Edge Cases**:
-- User denies OAuth permissions
-- Network failures during authentication
+- User denies OAuth permissions (show error message, allow retry)
+- User doesn't have Discord account (show message directing to Discord signup)
+- Network failures during authentication (show retry button)
 - Token refresh fails (requires re-authentication)
-- Discord API rate limits during connection
-- User revokes app permissions from Discord settings
+- Discord API rate limits during connection (implement exponential backoff)
+- User revokes app permissions from Discord settings (detect and prompt re-auth)
+- User clicks "Create Game" or "Join Game" without Discord auth (show auth modal)
 
 **Constitutional Alignment**:
 - ✓ Browser-First: All OAuth and WebSocket connections run client-side
@@ -303,14 +340,113 @@
 
 ---
 
+## UX Considerations & User Flow
+
+### Landing Page Updates
+
+**Hero Section Messaging**:
+- Update copy to emphasize Discord integration: "Play MTG remotely using Discord's voice and video infrastructure"
+- Add Discord logo/mention in feature highlights
+- Make "Sign In with Discord" button prominent (use Discord brand color #5865F2)
+
+**Header Sign In Button**:
+- Replace generic "Sign In" with "Sign In with Discord" 
+- Show Discord logo icon
+- When authenticated: Display user's Discord avatar + username instead
+
+### Authentication Flow
+
+**Trigger Points**:
+1. User clicks "Create Game" button → Check auth → Show modal if not authenticated
+2. User clicks "Join Game" button → Check auth → Show modal if not authenticated
+3. User clicks "Sign In with Discord" in header → Show modal
+
+**Discord Auth Modal Content**:
+```
+┌────────────────────────────────────────────┐
+│  🎮 Connect Discord to Play                │
+│                                            │
+│  Spell Coven uses Discord for:             │
+│  • Voice and video chat                    │
+│  • Text messaging                          │
+│  • Game room coordination                  │
+│                                            │
+│  [Connect with Discord]  [Cancel]          │
+│                                            │
+│  Don't have Discord? Sign up at           │
+│  discord.com                               │
+└────────────────────────────────────────────┘
+```
+
+**OAuth Flow**:
+1. User clicks "Connect with Discord"
+2. Full-page redirect to Discord OAuth (not popup - better mobile support)
+3. Discord shows permission screen (identify, guilds, messages.read)
+4. Redirect back to `/auth/discord/callback`
+5. Show loading state: "Connecting to Discord..."
+6. Exchange code for token, store in localStorage
+7. Redirect back to original action (create game or join game)
+
+**Authenticated State**:
+- Header shows Discord profile (avatar + username)
+- "Create Game" and "Join Game" work immediately
+- Connection status indicator shows Gateway state
+
+### Why This Approach?
+
+**Target Audience Alignment**:
+- MTG players are gamers who likely already use Discord
+- Discord is free and ubiquitous in gaming communities
+- Familiar OAuth flow reduces friction
+
+**Technical Benefits**:
+- No guest mode complexity
+- Consistent feature set for all users
+- Leverages Discord's proven infrastructure
+- No custom WebRTC signaling servers needed
+
+**User Experience Benefits**:
+- Clear value proposition (Discord provides voice/video)
+- No feature limitations or "upgrade to unlock" prompts
+- Familiar Discord branding builds trust
+- Mobile-friendly (full-page redirect, not popup)
+
+---
+
 ## Implementation Order Recommendation
 
-1. **Phase 1** (1-2 weeks): Foundation for all Discord features
-2. **Phase 2** (1 week): Immediate user value with text chat
-3. **Phase 3** (1-2 weeks): Game room coordination and voice
-4. **Phase 4** (2-3 weeks): Video streaming - **Research feasibility first**
+### Phase 1a: Discord Auth Gate (Week 1)
+**Priority: CRITICAL** - Blocks all other features
+- Discord OAuth modal component
+- Authentication check on Create/Join game actions
+- OAuth callback route handler
+- Token storage in localStorage
+- Discord profile display in header
+- Landing page messaging updates
 
-**Note**: Phase 4 has significant technical risk. Consider implementing custom WebRTC as a parallel track or fallback option.
+### Phase 1b: Gateway Connection (Week 1-2)
+- WebSocket connection to Discord Gateway
+- Heartbeat and reconnection logic
+- Connection status display
+
+### Phase 2: Text Chat (Week 2-3)
+- Channel selection and message display
+- Message sending with rate limiting
+- Game event embeds
+
+### Phase 3: Voice Channels (Week 3-4)
+- Voice channel management
+- Room creation and metadata
+- Player presence tracking
+
+### Phase 4: Video Streaming (Week 4-7)
+**Research feasibility first** - High technical risk
+- Discord RTC protocol investigation
+- Video streaming implementation
+- Card recognition integration
+- **Fallback**: Custom WebRTC if Discord video proves infeasible
+
+**Critical Path**: Phase 1a must be completed before any other work, as Discord authentication is required for all features.
 
 ---
 
@@ -339,8 +475,44 @@
 - Handle Discord rate limits to avoid account suspension
 - Document Discord's data retention and privacy policies for users
 
+### Discord Developer Portal Setup
+
+**Required Before Implementation**:
+
+1. **Create Discord Application**:
+   - Go to [Discord Developer Portal](https://discord.com/developers/applications)
+   - Click "New Application"
+   - Name: "Spell Coven" (or your preferred name)
+   - Note the **Application ID** (Client ID)
+
+2. **Configure OAuth2**:
+   - Navigate to OAuth2 → General
+   - Copy **Client Secret** (store securely in `.env`)
+   - Add Redirect URIs:
+     - Development: `http://localhost:3000/auth/discord/callback`
+     - Production: `https://yourdomain.com/auth/discord/callback`
+   - Select OAuth2 Scopes: `identify`, `guilds`, `messages.read`
+
+3. **Environment Variables**:
+   ```env
+   VITE_DISCORD_CLIENT_ID=your_client_id_here
+   DISCORD_CLIENT_SECRET=your_client_secret_here  # Backend only, never expose
+   ```
+
+4. **Bot Configuration** (for future phases):
+   - Navigate to Bot section
+   - Create bot user (needed for Phase 2+ features)
+   - Enable "Message Content Intent" for text chat
+   - Copy bot token (store securely)
+
+**Security Notes**:
+- Client ID is public (safe in frontend code)
+- Client Secret must NEVER be exposed in frontend
+- Token exchange should happen in backend or use PKCE flow for pure client-side
+- Add `.env` to `.gitignore`
+
 ### Self-Hosting Option
-- Users can create their own Discord bot and application
+- Users can create their own Discord application
 - Provide configuration UI for custom Discord app credentials
-- Document Discord Developer Portal setup process
-- Maintain fallback to custom WebRTC for users who prefer not to use Discord
+- Document Discord Developer Portal setup process in README
+- Support both shared app (default) and self-hosted app modes

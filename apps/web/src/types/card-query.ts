@@ -205,7 +205,7 @@ export function validateCanvas(
   }
 
   // Check context accessibility
-  const ctx = canvas.getContext('2d')
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
   if (!ctx) {
     return {
       isValid: false,

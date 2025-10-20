@@ -1,20 +1,9 @@
 /**
  * Detector configuration
  *
- * Central place to configure which detector to use.
- * Change ACTIVE_DETECTOR to switch between detection models.
+ * Detector type is now managed via URL search params in the route.
+ * See /game/$gameId route for configuration.
  *
  * @module detector-config
+ * @deprecated Use route search params instead: /game/abc?detector=owl-vit
  */
-
-import type { DetectorType } from './detectors'
-
-/**
- * Active detector type
- *
- * Change this value to switch between detectors:
- * - 'opencv': OpenCV edge detection (fast, no model download, lighting-sensitive)
- * - 'detr': DETR ResNet-50 (current default, ML-based, robust)
- * - 'owl-vit': OWL-ViT zero-shot detector (not yet implemented)
- */
-export const ACTIVE_DETECTOR: DetectorType = 'detr'

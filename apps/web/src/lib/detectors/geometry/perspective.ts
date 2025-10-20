@@ -132,26 +132,13 @@ export async function warpPerspective(
     tempCanvas.height = cardHeight
     cv.imshow(tempCanvas, warped)
     
-    // Log the SlimSAM output (card only, before padding)
-    tempCanvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob)
-        console.log('[Perspective] SlimSAM output (card only, before padding):', {
-          url,
-          dimensions: `${cardWidth}×${cardHeight}`,
-          blob,
-        })
-      }
-    }, 'image/png')
+    // Log the perspective-warped card (before padding to square)
+    // Warped card output ready
     
     // Center the card in the square canvas
     const pasteX = Math.floor((targetSize - cardWidth) / 2)
     const pasteY = Math.floor((targetSize - cardHeight) / 2)
     ctx.drawImage(tempCanvas, pasteX, pasteY)
-
-    console.log(
-      `[Perspective] Warped card to ${cardWidth}×${cardHeight}, padded to ${targetSize}×${targetSize} square`,
-    )
 
     return outputCanvas
   } finally {

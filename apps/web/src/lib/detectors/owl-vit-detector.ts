@@ -116,21 +116,9 @@ export class OWLViTDetector implements CardDetector {
 
     const startTime = performance.now()
 
-    // Log the frame OWL-ViT is analyzing
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob)
-        console.log('[OWL-ViT] Frame being analyzed:', {
-          url,
-          dimensions: `${canvas.width}x${canvas.height}`,
-          prompts: this.config.prompts,
-          blob,
-        })
-      }
-    }, 'image/png')
-
     try {
       // Run zero-shot detection with text prompts
+      const inferenceStart = performance.now()
       const detections: OWLViTDetection[] = await this.detector(
         canvas,
         this.config.prompts!,
@@ -139,45 +127,28 @@ export class OWLViTDetector implements CardDetector {
           percentage: true, // Return coordinates as percentages
         },
       )
-
-      // Log all raw OWL-ViT detections
-      console.log('[OWL-ViT] All raw detections (threshold=' + this.config.confidenceThreshold + '):', {
-        count: detections.length,
-        prompts: this.config.prompts,
-        detections: detections
-          .sort((a, b) => b.score - a.score)
-          .map((det) => ({
-            label: det.label,
-            score: det.score.toFixed(3),
-            box: det.box,
-            width: ((det.box.xmax - det.box.xmin) * canvasWidth).toFixed(1),
-            height: ((det.box.ymax - det.box.ymin) * canvasHeight).toFixed(1),
-            aspectRatio: (
-              (det.box.xmax - det.box.xmin) /
-              (det.box.ymax - det.box.ymin)
-            ).toFixed(2),
-            centerX: (((det.box.xmin + det.box.xmax) / 2) * canvasWidth).toFixed(1),
-            centerY: (((det.box.ymin + det.box.ymax) / 2) * canvasHeight).toFixed(1),
-          })),
-      })
+      const inferenceMs = performance.now() - inferenceStart
 
       // Filter and convert to DetectedCard format
+      const filterStart = performance.now()
       const cards = this.filterAndConvert(detections, canvasWidth, canvasHeight)
+      const filterMs = performance.now() - filterStart
 
-      const inferenceTimeMs = performance.now() - startTime
+      const totalMs = performance.now() - startTime
 
-      // Debug logging
-      if (detections.length > 0 || cards.length > 0) {
-        // Logging removed
-      }
+      console.log('[OWL-ViT] Detection timing:', {
+        inference: `${inferenceMs.toFixed(0)}ms`,
+        filter: `${filterMs.toFixed(0)}ms`,
+        total: `${totalMs.toFixed(0)}ms`,
+        detections: detections.length,
+      })
 
       return {
         cards,
-        inferenceTimeMs,
+        inferenceTimeMs: totalMs,
         rawDetectionCount: detections.length,
       }
     } catch (error) {
-      console.error('[OWLViTDetector] Detection error:', error)
       throw error
     }
   }

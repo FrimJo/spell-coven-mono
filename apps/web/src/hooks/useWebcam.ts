@@ -8,8 +8,6 @@ interface UseWebcamOptions {
   enableCardDetection?: boolean
   /** Detector type to use (opencv, detr, owl-vit) */
   detectorType?: DetectorType
-  /** Enable frame buffer for temporal optimization */
-  useFrameBuffer?: boolean
   /** Enable perspective warp for corner refinement */
   usePerspectiveWarp?: boolean
   /** Callback when a card is cropped */
@@ -77,7 +75,6 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
   const {
     enableCardDetection = false,
     detectorType,
-    useFrameBuffer = true,
     usePerspectiveWarp = true,
     onCrop: onCropProp,
     autoStart = false,
@@ -155,7 +152,6 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
           cropped: croppedRef.current,
           fullRes: fullResRef.current,
           detectorType,
-          useFrameBuffer,
           usePerspectiveWarp,
           onCrop: (canvas: HTMLCanvasElement) => {
             setHasCroppedImage(true)
@@ -246,7 +242,6 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     enableCardDetection,
     detectorType,
     onCrop,
-    useFrameBuffer,
     usePerspectiveWarp,
   ])
 

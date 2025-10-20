@@ -12,8 +12,7 @@ import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
 
 const defaultValues = {
-  detector: 'owl-vit' as const,
-  useFrameBuffer: true,
+  detector: 'owl-vit' as const, // YOLOv8 WASM loading fails - use OWL-ViT for now
   usePerspectiveWarp: true, // SlimSAM provides quads
 }
 
@@ -21,10 +20,6 @@ const gameSearchSchema = z.object({
   detector: z
     .enum(['opencv', 'detr', 'owl-vit', 'slimsam', 'yolov8'])
     .default(defaultValues.detector),
-  useFrameBuffer: z
-    .boolean()
-    .default(defaultValues.useFrameBuffer)
-    .describe('Enable temporal optimization (sharpest frame selection)'),
   usePerspectiveWarp: z
     .boolean()
     .default(defaultValues.usePerspectiveWarp)
@@ -41,7 +36,7 @@ export const Route = createFileRoute('/game/$gameId')({
 
 function GameRoomRoute() {
   const { gameId } = Route.useParams()
-  const { detector, useFrameBuffer, usePerspectiveWarp } = Route.useSearch()
+  const { detector, usePerspectiveWarp } = Route.useSearch()
   const navigate = useNavigate()
 
   const state = sessionStorage.loadGameState()
@@ -64,7 +59,6 @@ function GameRoomRoute() {
         playerName={playerName}
         onLeaveGame={handleLeaveGame}
         detectorType={detector as DetectorType | undefined}
-        useFrameBuffer={useFrameBuffer}
         usePerspectiveWarp={usePerspectiveWarp}
       />
     </ErrorBoundary>

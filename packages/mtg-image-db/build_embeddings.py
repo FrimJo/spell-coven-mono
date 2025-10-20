@@ -56,10 +56,10 @@ def _validate_cache_worker(args):
 
 def _load_image_worker(args):
     """Worker function for parallel image loading."""
-    idx, path, target_size = args
+    idx, path, target_size, enhance_contrast = args
     if path is None:
         return idx, None
-    return idx, load_image_rgb(path, target_size=target_size)
+    return idx, load_image_rgb(path, target_size=target_size, enhance_contrast=enhance_contrast)
 
 
 def build_embeddings_from_cache(
@@ -71,7 +71,8 @@ def build_embeddings_from_cache(
     target_size: int = 336,
     validate_cache: bool = True,
     hnsw_m: int = 32,
-    hnsw_ef_construction: int = 200
+    hnsw_ef_construction: int = 200,
+    enhance_contrast: float = 1.0
 ):
     """Build FAISS index from already-cached images."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -203,7 +204,7 @@ def build_embeddings_from_cache(
                     if path is None:
                         pbar.update(1)
                         continue
-                    future = executor.submit(_load_image_worker, (idx, path, target_size))
+                    future = executor.submit(_load_image_worker, (idx, path, target_size, enhance_contrast))
                     pending[future] = None
 
             refill_pending()
@@ -289,7 +290,8 @@ def build_embeddings_from_cache(
             "target_size": target_size,
             "hnsw_m": hnsw_m,
             "hnsw_ef_construction": hnsw_ef_construction,
-            "validate_cache": validate_cache
+            "validate_cache": validate_cache,
+            "enhance_contrast": enhance_contrast
         },
         "statistics": {
             "total_records": len(records),
@@ -351,6 +353,8 @@ def main():
                     help="HNSW M parameter (connectivity, default: 32). Higher = better recall, slower build.")
     ap.add_argument("--hnsw-ef-construction", type=int, default=200,
                     help="HNSW efConstruction parameter (build accuracy, default: 200). Higher = better quality, slower build.")
+    ap.add_argument("--contrast", type=float, default=1.0,
+                    help="Contrast enhancement factor (default: 1.0, no enhancement). Use 1.2 for 20% boost to help with blurry cards.")
     args = ap.parse_args()
     
     # Validate CLI arguments
@@ -365,7 +369,8 @@ def main():
         target_size=args.size,
         validate_cache=args.validate_cache,
         hnsw_m=args.hnsw_m,
-        hnsw_ef_construction=args.hnsw_ef_construction
+        hnsw_ef_construction=args.hnsw_ef_construction,
+        enhance_contrast=args.contrast
     )
 
 

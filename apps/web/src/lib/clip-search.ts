@@ -10,8 +10,18 @@ import { env, pipeline, ProgressInfo } from '@huggingface/transformers'
 const EMBEDDINGS_VERSION = import.meta.env.VITE_EMBEDDINGS_VERSION || 'v1.0'
 // Use import.meta.env.BASE_URL to handle GitHub Pages base path in production
 const BASE_PATH = import.meta.env.BASE_URL || '/'
-const EMB_URL = `${BASE_PATH}data/mtg-embeddings/${EMBEDDINGS_VERSION}/embeddings.i8bin`
+// Format: float32 (recommended, no quantization) or int8 (75% smaller, slight accuracy loss)
+const EMBEDDINGS_FORMAT = import.meta.env.VITE_EMBEDDINGS_FORMAT || 'float32'
+const EMB_EXT = EMBEDDINGS_FORMAT === 'float32' ? 'f32bin' : 'i8bin'
+const EMB_URL = `${BASE_PATH}data/mtg-embeddings/${EMBEDDINGS_VERSION}/embeddings.${EMB_EXT}`
 const META_URL = `${BASE_PATH}data/mtg-embeddings/${EMBEDDINGS_VERSION}/meta.json`
+
+// Contrast enhancement for query images to match database preprocessing
+// Set to 1.0 for no enhancement (default)
+// Set to 1.2 for 20% boost (recommended for blurry webcam cards)
+// Set to 1.5 for 50% boost (aggressive, for very blurry conditions)
+// Must match the --contrast value used when building the embeddings database
+const QUERY_CONTRAST_ENHANCEMENT = parseFloat(import.meta.env.VITE_QUERY_CONTRAST || '1.0')
 
 // Embedding dimension from the prototype
 const D = 768
@@ -59,6 +69,54 @@ function l2norm(x: Float32Array) {
   return x
 }
 
+/**
+ * Apply contrast enhancement to a canvas to match database preprocessing.
+ * This helps with blurry or low-contrast webcam cards by sharpening features.
+ * 
+ * @param canvas Source canvas to enhance
+ * @param factor Enhancement factor (1.0 = no change, 1.2 = 20% boost, 1.5 = 50% boost)
+ * @returns New canvas with enhanced contrast, or original if factor is 1.0
+ */
+function enhanceCanvasContrast(canvas: HTMLCanvasElement, factor: number): HTMLCanvasElement {
+  // No enhancement needed
+  if (factor <= 1.0) {
+    return canvas
+  }
+
+  // Create temporary canvas for processing
+  const tempCanvas = document.createElement('canvas')
+  tempCanvas.width = canvas.width
+  tempCanvas.height = canvas.height
+  const ctx = tempCanvas.getContext('2d')
+  if (!ctx) return canvas
+
+  // Draw original image
+  ctx.drawImage(canvas, 0, 0)
+
+  // Get image data
+  const imageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height)
+  const data = imageData.data
+
+  // Apply contrast enhancement using midpoint formula:
+  // new_value = (old_value - 128) * factor + 128
+  // This preserves the midpoint (128) while amplifying differences
+  const midpoint = 128
+  for (let i = 0; i < data.length; i += 4) {
+    // Skip alpha channel (i+3)
+    for (let j = 0; j < 3; j++) {
+      const value = data[i + j]
+      const enhanced = Math.round((value - midpoint) * factor + midpoint)
+      // Clamp to [0, 255]
+      data[i + j] = Math.max(0, Math.min(255, enhanced))
+    }
+  }
+
+  // Put enhanced image data back
+  ctx.putImageData(imageData, 0, 0)
+
+  return tempCanvas
+}
+
 // Convenience: load assets directly from the published package using Vite asset URLs.
 // This avoids copying files into public/ and works in dev/preview/build.
 export async function loadEmbeddingsAndMetaFromPackage() {
@@ -69,7 +127,6 @@ export async function loadEmbeddingsAndMetaFromPackage() {
   loadTask = (async () => {
     const metaUrl = META_URL as string
 
-    console.debug('[search] fetching package meta.json:', metaUrl)
     const metaRes = await fetch(metaUrl)
     if (!metaRes.ok) {
       const text = await metaRes.text().catch(() => '')
@@ -94,7 +151,6 @@ export async function loadEmbeddingsAndMetaFromPackage() {
     }
     const embUrl = EMB_URL as string
 
-    console.debug('[search] fetching package embeddings:', embUrl)
     const embRes = await fetch(embUrl)
     if (!embRes.ok) {
       throw new Error(
@@ -147,13 +203,35 @@ export async function loadEmbeddingsAndMetaFromPackage() {
       }
 
       // Dequantize based on metadata
-      if (metaObj.quantization.dtype === 'int8') {
+      if (metaObj.quantization.dtype === 'float32') {
+        // No quantization - embeddings are already normalized float32
+        db = new Float32Array(buf)
+      } else if (metaObj.quantization.dtype === 'int8') {
         const scaleFactor = metaObj.quantization.scale_factor
-        db = int8ToFloat32(new Int8Array(buf), scaleFactor)
-
-        console.debug(
-          `[search] Loaded meta.json v${metaObj.version}: ${meta.length} embeddings, int8 quantized (scale=${scaleFactor})`,
-        )
+        const dequantized = int8ToFloat32(new Int8Array(buf), scaleFactor)
+        
+        // CRITICAL: Re-normalize embeddings after dequantization
+        // Quantization to int8 destroys L2 normalization, so we must restore it
+        // Each embedding should have unit length (norm = 1.0) for cosine similarity
+        const N = meta.length
+        const D_local = dequantized.length / N
+        db = new Float32Array(dequantized.length)
+        
+        for (let i = 0; i < N; i++) {
+          const offset = i * D_local
+          // Calculate norm for this embedding
+          let norm = 0
+          for (let j = 0; j < D_local; j++) {
+            const val = dequantized[offset + j]
+            norm += val * val
+          }
+          norm = Math.sqrt(norm)
+          
+          // Normalize and store
+          for (let j = 0; j < D_local; j++) {
+            db[offset + j] = dequantized[offset + j] / norm
+          }
+        }
       } else {
         throw new Error(
           `Unsupported quantization dtype: ${metaObj.quantization.dtype}`,
@@ -182,14 +260,15 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
     env.allowLocalModels = false
 
     // Initialize pipeline with proper options
-    // CRITICAL: Must use CLIP ViT-L/14@336px to match backend embeddings (build_mtg_faiss.py)
+    // Using smaller CLIP model for faster browser inference (3-5x speedup)
     // Note: Using Xenova/ prefix for ONNX-converted model (required for transformers.js browser compatibility)
     let lastLogTime = 0
+    let lastLoggedPercent = -1
     extractor = await pipeline(
       'image-feature-extraction',
-      'Xenova/clip-vit-large-patch14-336',
+      'Xenova/clip-vit-base-patch32',
       {
-        dtype: 'fp32', // ViT-L/14 requires full precision for accuracy
+        dtype: 'fp16', // Use half precision to fit in browser memory
         progress_callback: (progress: ProgressInfo) => {
           // Handle different progress types
           let msg = progress.status
@@ -197,28 +276,30 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
             msg += ` ${progress.file}`
           }
           if ('progress' in progress && progress.progress !== undefined) {
-            msg += ` ${progress.progress}%`
+            // Round to nearest whole percentage
+            const wholePercent = Math.round(progress.progress)
+            // Only log if percentage changed
+            if (wholePercent !== lastLoggedPercent) {
+              lastLoggedPercent = wholePercent
+              msg += ` ${wholePercent}%`
+              opts?.onProgress?.(msg.trim())
+            }
           }
-
-          // Only log every second
-          const now = Date.now()
-          if (now - lastLogTime >= 1000) {
-            lastLogTime = now
-          }
-
-          opts?.onProgress?.(msg.trim())
         },
       },
     )
   } catch (e: unknown) {
-    console.error(
-      '[model] Failed to initialize transformers pipeline. This often indicates a network/CORS error fetching model files (JSON or WASM) which may return HTML instead of JSON. Original error:',
-      e,
-    )
-    console.error('[model] Error stack:', (e as Error).stack)
-
+    const errorMsg = (e as Error)?.message || String(e)
+    const isMemoryError = errorMsg.includes('330010576') || errorMsg.includes('memory') || errorMsg.includes('out of memory')
+    
+    if (isMemoryError) {
+      throw new Error(
+        'Not enough memory to load CLIP model. Try closing other tabs or refreshing the page. If the problem persists, your device may not have enough RAM.',
+      )
+    }
+    
     throw new Error(
-      `Model load failed (transformers). Check network requests to huggingface/CDN for non-200 or text/html responses. Original: ${(e as Error)?.message || e}`,
+      `Model load failed (transformers). Check network requests to huggingface/CDN for non-200 or text/html responses. Original: ${errorMsg}`,
     )
   }
 }
@@ -233,7 +314,14 @@ export function isModelReady(): boolean {
   return extractor !== null && meta !== null && db !== null
 }
 
-export async function embedFromCanvas(canvas: HTMLCanvasElement) {
+export type EmbeddingMetrics = {
+  contrast: number
+  inference: number
+  normalization: number
+  total: number
+}
+
+export async function embedFromCanvas(canvas: HTMLCanvasElement): Promise<{ embedding: Float32Array; metrics: EmbeddingMetrics }> {
   if (!extractor) {
     throw new Error('CLIP model not loaded. Please wait for initialization to complete.')
   }
@@ -241,30 +329,39 @@ export async function embedFromCanvas(canvas: HTMLCanvasElement) {
     throw new Error('Embeddings database not loaded. Please wait for initialization to complete.')
   }
 
-  // Validate preprocessing pipeline alignment (User Story 2)
-  // CRITICAL: Canvas must be square and 336×336 to match Python preprocessing
-  // See: packages/mtg-image-db/build_mtg_faiss.py
-
-  // Check if canvas is square
-  if (canvas.width !== canvas.height) {
-    console.warn(
-      `[search] ⚠️  Canvas should be square for optimal matching. ` +
-        `Got ${canvas.width}×${canvas.height}. Results may be inaccurate. ` +
-        `Expected: square dimensions matching Python preprocessing pipeline.`,
-    )
+  const totalStart = performance.now()
+  console.log('[embedFromCanvas] Starting inference on canvas', canvas.width, 'x', canvas.height)
+  
+  // Apply contrast enhancement if configured (must match database preprocessing)
+  let processedCanvas = canvas
+  let contrastDuration = 0
+  if (QUERY_CONTRAST_ENHANCEMENT > 1.0) {
+    console.log(`[embedFromCanvas] Applying contrast enhancement (factor: ${QUERY_CONTRAST_ENHANCEMENT})`)
+    const enhanceStart = performance.now()
+    processedCanvas = enhanceCanvasContrast(canvas, QUERY_CONTRAST_ENHANCEMENT)
+    contrastDuration = performance.now() - enhanceStart
+    console.log(`[embedFromCanvas] Contrast enhancement took ${contrastDuration.toFixed(0)}ms`)
   }
-
-  // Check if dimensions match Python target_size (336×336)
-  if (canvas.width !== 336 || canvas.height !== 336) {
-    console.warn(
-      `[search] ⚠️  Canvas dimensions should be 336×336 to match database preprocessing. ` +
-        `Got ${canvas.width}×${canvas.height}. ` +
-        `Database embeddings were generated from 336×336 square images.`,
-    )
+  
+  const inferenceStart = performance.now()
+  const out = await extractor(processedCanvas)
+  const inferenceDuration = performance.now() - inferenceStart
+  console.log(`[embedFromCanvas] Inference took ${inferenceDuration.toFixed(0)}ms`)
+  
+  const normStart = performance.now()
+  const embedding = l2norm(Float32Array.from(out.data))
+  const normDuration = performance.now() - normStart
+  console.log(`[embedFromCanvas] L2 normalization took ${normDuration.toFixed(0)}ms`)
+  
+  const totalDuration = performance.now() - totalStart
+  const metrics: EmbeddingMetrics = {
+    contrast: contrastDuration,
+    inference: inferenceDuration,
+    normalization: normDuration,
+    total: totalDuration,
   }
-
-  const out = await extractor(canvas)
-  return l2norm(Float32Array.from(out.data))
+  
+  return { embedding, metrics }
 }
 
 export function topK(query: Float32Array, K = 5) {
@@ -284,19 +381,101 @@ export function topK(query: Float32Array, K = 5) {
     .map((i) => ({ score: scores[i], ...(meta as CardMeta[])[i] }))
 }
 
-export function top1(query: Float32Array) {
-  if (!meta || !db) throw new Error('Embeddings not loaded')
-  const N = meta.length
-  let bestI = -1
-  let bestS = -Infinity as number
-  for (let i = 0; i < N; i++) {
-    let s = 0
-    const off = i * D
-    for (let j = 0; j < D; j++) s += query[j] * (db as Float32Array)[off + j]
-    if (s > bestS) {
-      bestS = s
-      bestI = i
+export function top1(q: Float32Array, canvas?: HTMLCanvasElement): CardMeta | null {
+  if (!db || !meta) throw new Error('Database not loaded')
+  
+  const n = meta.length
+  let best = -Infinity
+  let idx = -1
+  for (let i = 0; i < n; i++) {
+    let dot = 0
+    for (let d = 0; d < D; d++) dot += q[d] * db[i * D + d]
+    if (dot > best) {
+      best = dot
+      idx = i
     }
   }
-  return { score: bestS, ...(meta as CardMeta[])[bestI] }
+  
+  return idx >= 0 ? meta[idx] : null
+}
+
+/**
+ * Get database embedding for a specific card by name
+ * Useful for debugging and comparing browser embeddings with database embeddings
+ */
+export function getDatabaseEmbedding(cardName: string): {
+  embedding: Float32Array
+  metadata: CardMeta
+  index: number
+} | null {
+  if (!meta || !db) throw new Error('Embeddings not loaded')
+  
+  const normalizedSearch = cardName.toLowerCase().trim()
+  const index = meta.findIndex(m => m.name.toLowerCase() === normalizedSearch)
+  
+  if (index === -1) {
+    return null
+  }
+  
+  // Extract embedding from database
+  const embedding = new Float32Array(D)
+  const offset = index * D
+  for (let i = 0; i < D; i++) {
+    embedding[i] = db[offset + i]
+  }
+  
+  return {
+    embedding,
+    metadata: meta[index],
+    index,
+  }
+}
+
+/**
+ * Compare two embeddings and return detailed statistics
+ */
+export function compareEmbeddings(
+  embedding1: Float32Array,
+  embedding2: Float32Array,
+  label1 = 'Embedding 1',
+  label2 = 'Embedding 2',
+) {
+  if (embedding1.length !== embedding2.length) {
+    throw new Error(
+      `Embedding dimensions don't match: ${embedding1.length} vs ${embedding2.length}`,
+    )
+  }
+  
+  // Cosine similarity (dot product of normalized vectors)
+  let dotProduct = 0
+  for (let i = 0; i < embedding1.length; i++) {
+    dotProduct += embedding1[i] * embedding2[i]
+  }
+  
+  // L2 distance
+  let l2Distance = 0
+  for (let i = 0; i < embedding1.length; i++) {
+    const diff = embedding1[i] - embedding2[i]
+    l2Distance += diff * diff
+  }
+  l2Distance = Math.sqrt(l2Distance)
+  
+  // Element-wise statistics
+  const diffs = new Float32Array(embedding1.length)
+  for (let i = 0; i < embedding1.length; i++) {
+    diffs[i] = Math.abs(embedding1[i] - embedding2[i])
+  }
+  
+  const maxDiff = Math.max(...diffs)
+  const meanDiff = diffs.reduce((sum, v) => sum + v, 0) / diffs.length
+  
+  const comparison = {
+    cosineSimilarity: dotProduct,
+    l2Distance,
+    maxAbsDifference: maxDiff,
+    meanAbsDifference: meanDiff,
+    dimension: embedding1.length,
+  }
+  
+  return comparison
 }

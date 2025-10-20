@@ -124,14 +124,7 @@ export async function findSmallestContourContainingPoint(
     }
   }
 
-  console.log('[Contours] Found smallest contour containing click point:', {
-    point,
-    totalContours: contours.length,
-    contoursContainingPoint: contoursContainingPoint.length,
-    areas: contoursContainingPoint.map(c => Math.round(c.area)).sort((a, b) => a - b),
-    selectedArea: minArea_found === Infinity ? 'none' : Math.round(minArea_found),
-  })
-
+  // Found smallest contour containing click point
   return smallestContour
 }
 
@@ -160,9 +153,6 @@ export async function approximateToQuad(
 
     // Check if we got a quadrilateral (4 points)
     if (approx.rows !== 4) {
-      console.warn(
-        `[Contours] Polygon approximation resulted in ${approx.rows} points, expected 4`,
-      )
       return null
     }
 
@@ -265,7 +255,6 @@ export async function extractQuadFromMask(
     if (clickPoint) {
       // Use original mask to preserve distinct contours
       contoursSource = mask
-      console.log('[Contours] Using original mask (no erosion) to preserve card/playmat separation')
     } else {
       // Apply morphological erosion to tighten mask around card edges
       // This helps remove loose boundaries and background noise
@@ -285,7 +274,6 @@ export async function extractQuadFromMask(
     }
 
     if (contours.length === 0) {
-      console.warn('[Contours] No contours found in mask')
       return null
     }
 
@@ -297,7 +285,6 @@ export async function extractQuadFromMask(
       targetContour = await findSmallestContourContainingPoint(contours, clickPoint)
       
       if (!targetContour) {
-        console.warn('[Contours] No contour found containing click point, falling back to largest')
         targetContour = await findLargestContour(contours)
       }
     } else {
@@ -306,7 +293,6 @@ export async function extractQuadFromMask(
     }
 
     if (!targetContour) {
-      console.warn('[Contours] No valid contour found')
       // Cleanup
       for (const contour of contours) {
         contour.delete()
@@ -323,11 +309,6 @@ export async function extractQuadFromMask(
     for (const eps of epsilonValues) {
       points = await approximateToQuad(targetContour, eps)
       if (points) {
-        if (eps !== epsilon) {
-          console.log(
-            `[Contours] Quad approximation succeeded with epsilon=${eps} (initial=${epsilon})`,
-          )
-        }
         break
       }
     }
@@ -338,27 +319,14 @@ export async function extractQuadFromMask(
     }
 
     if (!points) {
-      console.warn(
-        '[Contours] Failed to approximate contour to quadrilateral after trying multiple epsilon values',
-      )
       return null
     }
 
     // Order points consistently
     const quad = orderQuadPoints(points)
 
-    console.log('[Contours] Successfully extracted quad:', {
-      topLeft: quad.topLeft,
-      topRight: quad.topRight,
-      bottomRight: quad.bottomRight,
-      bottomLeft: quad.bottomLeft,
-      width: Math.round(quad.topRight.x - quad.topLeft.x),
-      height: Math.round(quad.bottomLeft.y - quad.topLeft.y),
-    })
-
     return quad
   } catch (error) {
-    console.error('[Contours] Error extracting quad from mask:', error)
     return null
   }
 }

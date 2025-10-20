@@ -104,48 +104,10 @@ export class DETRDetector implements CardDetector {
 
     const startTime = performance.now()
 
-    // Log the frame DETR is analyzing
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob)
-        console.log('[DETR] Frame being analyzed:', {
-          url,
-          dimensions: `${canvas.width}x${canvas.height}`,
-          blob,
-          message: 'Right-click the URL above and "Open in new tab" to see what DETR sees',
-        })
-      }
-    }, 'image/png')
-
     // Run detection with very low threshold to see everything
     const detections: DetectionResult[] = await this.detector(canvas, {
       threshold: this.config.confidenceThreshold,
       percentage: true,
-    })
-
-    // Log all raw DETR detections for debugging
-    console.log('[DETR] All raw detections (threshold=' + this.config.confidenceThreshold + '):', {
-      count: detections.length,
-      detections: detections
-        .sort((a, b) => b.score - a.score) // Sort by confidence descending
-        .map((det) => ({
-          label: det.label,
-          score: det.score.toFixed(3),
-          box: {
-            xmin: det.box.xmin.toFixed(3),
-            ymin: det.box.ymin.toFixed(3),
-            xmax: det.box.xmax.toFixed(3),
-            ymax: det.box.ymax.toFixed(3),
-          },
-          width: ((det.box.xmax - det.box.xmin) * canvasWidth).toFixed(1),
-          height: ((det.box.ymax - det.box.ymin) * canvasHeight).toFixed(1),
-          aspectRatio: (
-            (det.box.xmax - det.box.xmin) /
-            (det.box.ymax - det.box.ymin)
-          ).toFixed(2),
-          centerX: (((det.box.xmin + det.box.xmax) / 2) * canvasWidth).toFixed(1),
-          centerY: (((det.box.ymin + det.box.ymax) / 2) * canvasHeight).toFixed(1),
-        })),
     })
 
     // Filter and convert to DetectedCard format
@@ -154,19 +116,6 @@ export class DETRDetector implements CardDetector {
       canvasWidth,
       canvasHeight,
     )
-
-    console.log('[DETR] Filtered cards:', {
-      count: cards.length,
-      filtered: cards.map((card) => ({
-        score: card.score.toFixed(3),
-        aspectRatio: card.aspectRatio.toFixed(2),
-      })),
-    })
-
-    // Log rejected detections
-    if (Object.keys(filterReasons).length > 0) {
-      console.log('[DETR] Rejected detections:', filterReasons)
-    }
 
     const inferenceTimeMs = performance.now() - startTime
 
@@ -217,30 +166,13 @@ export class DETRDetector implements CardDetector {
 
     // Accept ALL detections - no filtering
     // User will click on the specific region they want to extract
-    const cards = detections.map((det) => {
-      // Log if this is a "cell phone" detection (DETR often classifies cards as phones)
-      if (det.label.toLowerCase() === 'cell phone') {
-        console.log('[DETR] Found "cell phone" detection (likely a card):', {
-          score: det.score.toFixed(3),
-          box: det.box,
-          centerX: (((det.box.xmin + det.box.xmax) / 2) * canvasWidth).toFixed(1),
-          centerY: (((det.box.ymin + det.box.ymax) / 2) * canvasHeight).toFixed(1),
-        })
-      }
-
-      return {
-        box: det.box,
-        score: det.score,
-        aspectRatio:
-          (det.box.xmax - det.box.xmin) / (det.box.ymax - det.box.ymin),
-        polygon: this.boundingBoxToPolygon(det.box, canvasWidth, canvasHeight),
-      }
-    })
-
-    console.log('[DETR] Accepting all detections (no filtering):', {
-      total: cards.length,
-      cellPhones: detections.filter(d => d.label.toLowerCase() === 'cell phone').length,
-    })
+    const cards = detections.map((det) => ({
+      box: det.box,
+      score: det.score,
+      aspectRatio:
+        (det.box.xmax - det.box.xmin) / (det.box.ymax - det.box.ymin),
+      polygon: this.boundingBoxToPolygon(det.box, canvasWidth, canvasHeight),
+    }))
 
     return { cards, filterReasons }
   }

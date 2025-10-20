@@ -1,5 +1,5 @@
 import type { DetectorType } from '@/lib/detectors'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   CardQueryProvider,
   useCardQueryContext,
@@ -31,7 +31,6 @@ interface GameRoomProps {
   onLeaveGame: () => void
   isLobbyOwner?: boolean
   detectorType?: DetectorType
-  useFrameBuffer?: boolean
   usePerspectiveWarp?: boolean
 }
 
@@ -48,7 +47,6 @@ function GameRoomContent({
   onLeaveGame,
   isLobbyOwner = true,
   detectorType,
-  useFrameBuffer = true,
   usePerspectiveWarp = true,
 }: GameRoomProps) {
   const { query } = useCardQueryContext()
@@ -61,7 +59,6 @@ function GameRoomContent({
   ])
 
   const [isLoading, setIsLoading] = useState(true)
-  const hasInitialized = useRef(false)
 
   const handleLoadingComplete = () => {
     setIsLoading(false)
@@ -314,7 +311,6 @@ function GameRoomContent({
               onLifeChange={handleLifeChange}
               enableCardDetection={true}
               detectorType={detectorType}
-              useFrameBuffer={useFrameBuffer}
               usePerspectiveWarp={usePerspectiveWarp}
               onCardCrop={(canvas: HTMLCanvasElement) => {
                 query(canvas)
