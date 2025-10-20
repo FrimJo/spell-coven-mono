@@ -70,6 +70,34 @@ Spell Coven is designed for Magic: The Gathering players who want to play with t
 
 **Note**: On first load, the CLIP model (~150MB quantized) downloads directly to your browser's cache from Hugging Face CDN. Subsequent loads are instant.
 
+## Git LFS Setup
+
+This repository uses **Git LFS** to manage large binary files (embeddings, models, images). If you haven't already, set up Git LFS:
+
+1. **Install Git LFS:**
+   ```sh
+   brew install git-lfs  # macOS
+   # or for other systems, see https://git-lfs.github.com/
+   ```
+
+2. **Initialize Git LFS in the repository:**
+   ```sh
+   git lfs install
+   ```
+
+3. **Clone or pull with LFS files:**
+   ```sh
+   git clone <repo-url>
+   git lfs pull
+   ```
+
+Large files tracked by LFS include:
+- `*.i8bin` and `*.f32bin` - FAISS embedding indices
+- `*.onnx` - ML model files
+- Large images in `apps/web/public/data/mtg-embeddings/`
+
+Without Git LFS, these files will be replaced with pointer files and the application won't work correctly.
+
 ## What's inside?
 
 This Turborepo monorepo houses all applications and packages needed to drive the Spell Coven platform:
