@@ -41,7 +41,7 @@ const DEFAULT_CONFIGS: Record<DetectorType, Partial<DetectorConfig>> = {
     confidenceThreshold: 0.01, // Extremely low threshold to catch all possible detections
     detectionIntervalMs: DETECTION_INTERVAL_MS,
     device: 'auto',
-    dtype: 'fp32',
+    dtype: 'fp16',
   },
   slimsam: {
     modelId: 'Xenova/slimsam-77-uniform',
@@ -111,14 +111,6 @@ export function createDetector(
       // Try simple, generic prompts that might match better
       return new OWLViTDetector({
         ...finalConfig,
-        prompts: [
-          'a playing card', 
-          // 'a card',
-          // 'a game card',
-          // 'a rectangular object',
-          // 'a paper card',
-          // 'a trading card',
-        ],
       })
 
     case 'slimsam':

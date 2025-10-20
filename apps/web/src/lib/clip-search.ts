@@ -193,10 +193,13 @@ export async function loadEmbeddingsAndMetaFromPackage() {
       }
 
       // Validate shape matches buffer size
-      const expectedSize = metaObj.shape[0] * metaObj.shape[1]
+      // Calculate expected size in bytes based on data type
+      const numElements = metaObj.shape[0] * metaObj.shape[1]
+      const bytesPerElement = metaObj.quantization.dtype === 'int8' ? 1 : 4  // int8=1 byte, float32=4 bytes
+      const expectedSize = numElements * bytesPerElement
       if (buf.byteLength !== expectedSize) {
         throw new Error(
-          `Embedding file size mismatch: expected ${expectedSize} bytes, got ${buf.byteLength} bytes`,
+          `Embedding file size mismatch: expected ${expectedSize} bytes (${numElements} elements × ${bytesPerElement} bytes/${metaObj.quantization.dtype}), got ${buf.byteLength} bytes`,
         )
       }
 
@@ -267,18 +270,29 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
     // Models are downloaded directly to browser cache from Hugging Face CDN
     // See: https://xenova.github.io/transformers.js/environments
 
+    // Check for SharedArrayBuffer support (required for WASM workers)
+    const hasSharedArrayBuffer = typeof SharedArrayBuffer !== 'undefined'
+    console.log('[loadModel] SharedArrayBuffer available:', hasSharedArrayBuffer)
+    if (!hasSharedArrayBuffer) {
+      console.warn('[loadModel] ⚠️  SharedArrayBuffer not available. WASM workers may not work properly.')
+      console.warn('[loadModel] This can happen if: (1) Cross-Origin-Opener-Policy headers are not set, (2) Running in an iframe, or (3) Browser doesn\'t support it')
+    }
+
     // Enable browser caching - models download once, then cached in IndexedDB
     env.useBrowserCache = true
     env.allowRemoteModels = true
     env.allowLocalModels = false
 
+    // Disable proxy mode to avoid worker issues
+    if (env.backends.onnx?.wasm) {
+      env.backends.onnx.wasm.proxy = false
+      console.log('[loadModel] WASM proxy disabled to avoid worker issues')
+    }
+
     // Enable WebGPU support if available (falls back to WebGL/WASM)
     // WebGPU provides 2-5x speedup for inference compared to WASM
     const hasWebGPU = typeof navigator !== 'undefined' && 'gpu' in navigator
     if (hasWebGPU) {
-      if (env.backends.onnx?.wasm) {
-        env.backends.onnx.wasm.proxy = true
-      }
       console.log('[loadModel] WebGPU support enabled')
     } else {
       console.log('[loadModel] WebGPU not available, using WASM fallback')
@@ -287,6 +301,7 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
     // Initialize pipeline with proper options
     // Using smaller CLIP model for faster browser inference (3-5x speedup)
     // Note: Using Xenova/ prefix for ONNX-converted model (required for transformers.js browser compatibility)
+    console.log('[loadModel] Starting CLIP model download from Hugging Face...')
     let lastLoggedPercent = -1
     extractor = await pipeline(
       'image-feature-extraction',
@@ -312,16 +327,28 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
         },
       },
     )
+    console.log('[loadModel] ✅ CLIP model loaded successfully')
   } catch (e: unknown) {
     const errorMsg = (e as Error)?.message || String(e)
     const isMemoryError =
       errorMsg.includes('330010576') ||
       errorMsg.includes('memory') ||
       errorMsg.includes('out of memory')
+    const isWorkerError = errorMsg.includes('worker not ready') || errorMsg.includes('worker')
 
     if (isMemoryError) {
       throw new Error(
         'Not enough memory to load CLIP model. Try closing other tabs or refreshing the page. If the problem persists, your device may not have enough RAM.',
+      )
+    }
+
+    if (isWorkerError) {
+      console.error('[loadModel] Worker initialization failed. Diagnostics:')
+      console.error('  - SharedArrayBuffer:', typeof SharedArrayBuffer !== 'undefined')
+      console.error('  - Check CORS headers: Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy')
+      console.error('  - Check browser console for WASM worker errors')
+      throw new Error(
+        `WASM worker failed to initialize. This usually means: (1) CORS headers not set correctly, (2) Running in an iframe, or (3) Browser doesn't support SharedArrayBuffer. Original: ${errorMsg}`,
       )
     }
 
@@ -430,6 +457,30 @@ export async function embedFromCanvas(
     console.log(
       `[embedFromCanvas] Contrast enhancement took ${contrastDuration.toFixed(0)}ms`,
     )
+    // Log enhanced image blob
+    processedCanvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        console.log('[embedFromCanvas] 🖼️ Card after contrast enhancement:', {
+          url,
+          dimensions: `${processedCanvas.width}x${processedCanvas.height}`,
+          factor: QUERY_CONTRAST_ENHANCEMENT,
+          blob,
+        })
+      }
+    }, 'image/png')
+  } else {
+    // Log original image blob if no enhancement
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        console.log('[embedFromCanvas] 🖼️ Card before CLIP embedding (no enhancement):', {
+          url,
+          dimensions: `${canvas.width}x${canvas.height}`,
+          blob,
+        })
+      }
+    }, 'image/png')
   }
 
   const inferenceStart = performance.now()
@@ -453,6 +504,13 @@ export async function embedFromCanvas(
     normalization: normDuration,
     total: totalDuration,
   }
+
+  // Log embedding result
+  console.log('[embedFromCanvas] ✅ Embedding complete:', {
+    embeddingDim: embedding.length,
+    embeddingNorm: Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0)),
+    metrics,
+  })
 
   return { embedding, metrics }
 }

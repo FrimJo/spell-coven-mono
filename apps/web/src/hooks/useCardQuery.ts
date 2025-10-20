@@ -51,14 +51,17 @@ export function useCardQuery(): UseCardQueryReturn {
         return
       }
 
-      // Optional: Convert canvas to blob URL for debugging
-      if (import.meta.env.DEV) {
-        canvas.toBlob((blob) => {
-          if (blob) {
-            URL.createObjectURL(blob)
-          }
-        })
-      }
+      // Log original card image before processing
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob)
+          console.log('[useCardQuery] 🖼️ Card after OWL-ViT detection & crop (before rotation):', {
+            url,
+            dimensions: `${canvas.width}x${canvas.height}`,
+            blob,
+          })
+        }
+      }, 'image/png')
 
       // Set querying state
       setState({

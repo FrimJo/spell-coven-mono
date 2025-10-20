@@ -63,7 +63,7 @@ export class OWLViTDetector implements CardDetector {
   constructor(config: OWLViTConfig = {}) {
     this.config = {
       modelId: 'Xenova/owlvit-base-patch32',
-      prompts: ['Magic: The Gathering card', 'trading card', 'playing card', 'card', 'game card'],
+      prompts: ['a playing card', 'card'],
       confidenceThreshold: 0.05, // Lower threshold to catch more detections
       detectionIntervalMs: 500,
       ...config,
@@ -139,7 +139,27 @@ export class OWLViTDetector implements CardDetector {
       inference: `${inferenceMs.toFixed(0)}ms`,
       filter: `${filterMs.toFixed(0)}ms`,
       total: `${totalMs.toFixed(0)}ms`,
+      rawDetectionCount: detections.length,
+      filteredCardCount: cards.length,
     })
+
+    // Log raw detections for debugging
+    if (detections.length > 0) {
+      console.log('[OWL-ViT] Raw detections (top 5):', detections.slice(0, 5))
+      console.log(
+        '[OWL-ViT] All detection scores:',
+        detections.map((d) => ({ label: d.label, score: d.score })),
+      )
+    } else {
+      console.warn('[OWL-ViT] ⚠️ No detections found!', {
+        prompts: this.config.prompts,
+        threshold: this.config.confidenceThreshold,
+        model: this.config.modelId,
+      })
+      console.log(
+        '[OWL-ViT] 💡 Tiny model may have accuracy issues. Consider using base model with fp16 for 20-30% speedup instead.',
+      )
+    }
 
     return {
       cards,

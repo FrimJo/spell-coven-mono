@@ -175,11 +175,27 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
         })
 
         // Wait for CLIP model to be ready before completing
-        const { isModelReady } = await import('@/lib/clip-search')
+        const { isModelReady, loadModel } = await import('@/lib/clip-search')
         console.log('[useWebcam] Checking if CLIP model is ready...')
         
+        // If model not already loaded, load it with progress callback
+        if (!isModelReady()) {
+          console.log('[useWebcam] Loading CLIP model...')
+          await loadModel({
+            onProgress: (msg: string) => {
+              console.log(`[useWebcam] CLIP model loading: ${msg}`)
+              loadingEvents.emit({
+                step: 'clip-model',
+                progress: 50,
+                message: `Loading CLIP model: ${msg}`,
+              })
+            },
+          })
+        }
+        
+        // Poll with timeout as fallback in case model loading doesn't complete
         let attempts = 0
-        const maxAttempts = 100 // 20 seconds timeout
+        const maxAttempts = 300 // 60 seconds timeout
         while (!isModelReady() && attempts < maxAttempts) {
           if (attempts % 10 === 0) {
             console.log(`[useWebcam] Waiting for CLIP model... (${attempts}/${maxAttempts})`)
@@ -189,10 +205,15 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
         }
 
         if (!isModelReady()) {
-          console.error('[useWebcam] ❌ CLIP model not ready after waiting 20 seconds')
+          console.error('[useWebcam] ❌ CLIP model not ready after waiting 60 seconds')
           console.error('[useWebcam] This likely means the model failed to load. Check console for errors.')
         } else {
           console.log('[useWebcam] ✅ CLIP model is ready!')
+          loadingEvents.emit({
+            step: 'clip-model',
+            progress: 100,
+            message: 'CLIP model loaded successfully',
+          })
         }
 
         loadingEvents.emit({

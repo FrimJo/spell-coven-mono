@@ -2,34 +2,31 @@
 
 This directory contains versioned MTG card embeddings data used by the image search feature.
 
-## Current Version: v1.1
+## Current Version: v1.3
 
-**Build Date:** 2025-10-17
+**Build Date:** 2025-10-20
 **Total Cards:** 52,491 unique artworks
 **Embedding Model:** CLIP ViT-B/32 (Xenova/clip-vit-base-patch32)
-**Quantization:** int8 (scale factor: 127)
+**Format:** float32
+**Contrast Enhancement:** 1.5x
 
 ## Files
 
 Each version directory contains:
 
-- `meta.json` - Card metadata (names, sets, URLs) and quantization info (~27 MB)
-- `embeddings.i8bin` - Quantized embeddings in int8 format (~26 MB)
+- `meta.json` - Card metadata (names, sets, URLs) (~28 MB)
+- `embeddings.f32bin` - Embeddings in float32 format (~108 MB)
 - `build_manifest.json` - Build metadata and statistics
 
-## Updating to a New Version
+## Releasing a New Version
 
-When the MTG card database is updated:
+Once `make download`, `make embed`, and `make export` have been run in `packages/mtg-image-db`:
 
-1. **Build new embeddings** in `packages/mtg-image-db`:
+1. **Determine the new version number** based on the build manifest:
 
    ```bash
-   cd packages/mtg-image-db
-   python build_embeddings.py --kind unique_artwork --cache image_cache --out index_out --batch 256 --size 336 --hnsw-m 32 --hnsw-ef-construction 200
-   python export_for_browser.py --input-dir index_out --output-dir index_out
+   cat packages/mtg-image-db/index_out/build_manifest.json | grep -E '"total_cards"|"build_date"'
    ```
-
-   > Shortcut: `pnpm build` runs the legacy single-step pipeline targeting `index_out/`.
 
 2. **Create new version directory**:
 
@@ -37,27 +34,34 @@ When the MTG card database is updated:
    mkdir -p apps/web/public/data/mtg-embeddings/v{MAJOR.MINOR}
    ```
 
-3. **Copy the required files**:
+3. **Copy the required files from `index_out/`**:
 
    ```bash
    cp packages/mtg-image-db/index_out/meta.json \
-      packages/mtg-image-db/index_out/embeddings.i8bin \
+      packages/mtg-image-db/index_out/embeddings.f32bin \
       packages/mtg-image-db/index_out/build_manifest.json \
       apps/web/public/data/mtg-embeddings/v{MAJOR.MINOR}/
    ```
 
-4. **Update the version in environment files**:
+4. **Update this README** with new build info:
+   - Update `## Current Version: v{MAJOR.MINOR}`
+   - Update `**Build Date:**` from build_manifest.json
+   - Update `**Total Cards:**` from build_manifest.json
+
+5. **Update environment files** to use the new version:
 
    ```bash
    # Update both .env.development and .env.production
    echo "VITE_EMBEDDINGS_VERSION=v{MAJOR.MINOR}" > apps/web/.env.development
    echo "VITE_EMBEDDINGS_VERSION=v{MAJOR.MINOR}" > apps/web/.env.production
+   echo "VITE_EMBEDDINGS_FORMAT=float32" >> apps/web/.env.development
+   echo "VITE_EMBEDDINGS_FORMAT=float32" >> apps/web/.env.production
    ```
 
-5. **Commit the new files**:
+6. **Commit the new files**:
    ```bash
-   git add apps/web/public/data/mtg-embeddings/v{MAJOR.MINOR}/
-   git commit -m "chore: update MTG embeddings to v{MAJOR.MINOR}"
+   git add apps/web/public/data/mtg-embeddings/v{MAJOR.MINOR}/ apps/web/.env.development apps/web/.env.production apps/web/public/data/mtg-embeddings/README.md
+   git commit -m "chore: release MTG embeddings v{MAJOR.MINOR}"
    ```
 
 ## Why Version These Files?

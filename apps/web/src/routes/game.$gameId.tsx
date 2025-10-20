@@ -12,7 +12,7 @@ import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
 
 const defaultValues = {
-  detector: 'owl-vit' as const, // YOLOv8 WASM loading fails - use OWL-ViT for now
+  detector: 'opencv' as const, // YOLOv8 WASM loading fails - use OWL-ViT for now
   usePerspectiveWarp: true, // SlimSAM provides quads
 }
 

@@ -275,6 +275,11 @@ async function detectCards(clickPoint?: { x: number; y: number }) {
     )
 
     detectedCards = result.cards
+    console.log('[detectCards] Detection result:', {
+      cardsFound: detectedCards.length,
+      rawDetectionCount: result.rawDetectionCount,
+      inferenceTimeMs: result.inferenceTimeMs,
+    })
 
     // Track performance metrics
     performanceMetrics.inferenceTimeMs.push(result.inferenceTimeMs)
