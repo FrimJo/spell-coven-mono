@@ -22,7 +22,7 @@ export:
 	$(PYTHON) export_for_browser.py --input-dir index_out --output-dir index_out
 
 test:
-	$(PYTHON) test_perfect_match.py
+	conda run -n mtg-faiss-mps $(PYTHON) test_perfect_match.py
 
 query:
 	@echo "Usage: $(PYTHON) query_index.py <image_path> [--k N]"

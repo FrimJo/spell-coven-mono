@@ -8,16 +8,25 @@ cd packages/mtg-image-db
 pnpm test
 ```
 
+The test will:
+- **Automatically activate** the conda environment `mtg-faiss-mps` if needed
+- **Pick a random image** from the cache
+- **Verify perfect match** (score ≥ 0.99)
+
 ### Run test from root using turbo
 ```bash
 pnpm test
 ```
+
+The test will **automatically activate the conda environment** `mtg-faiss-mps` if needed.
 
 ### Run test with make
 ```bash
 cd packages/mtg-image-db
 make test
 ```
+
+The test will **automatically activate the conda environment** `mtg-faiss-mps` if needed.
 
 ## Test Details
 
@@ -27,6 +36,31 @@ The test script (`test_perfect_match.py`) verifies that:
 - ✅ Database search finds exact matches
 - ✅ Cosine similarity scoring is correct
 
+## Conda Environment
+
+The test **automatically activates** the conda environment `mtg-faiss-mps` if you're not already in it.
+
+### Setup conda environment (one-time)
+
+```bash
+cd packages/mtg-image-db
+make conda-mps  # or: make conda-cpu or make conda-gpu
+```
+
+### Run test without automatic conda activation
+
+If you want to run the test in your current environment (assuming you're already in the right conda env):
+
+```bash
+python3 test_perfect_match.py --skip-conda
+```
+
+### Use a different conda environment
+
+```bash
+python3 test_perfect_match.py --conda-env mtg-faiss-cpu
+```
+
 ## Prerequisites
 
 Before running tests, you need to build the index:
@@ -34,8 +68,11 @@ Before running tests, you need to build the index:
 ```bash
 cd packages/mtg-image-db
 
+# Create conda environment (one-time)
+make conda-mps  # or: make conda-cpu or make conda-gpu
+
 # Download images
-pnpm run build  # or: make download
+make download
 
 # Build embeddings
 make embed
