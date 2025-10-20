@@ -4,3 +4,4 @@ venv/
 index_out/
 index_out_v2/
 __pycache__/
+*.backup

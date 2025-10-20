@@ -1,4 +1,4 @@
-.PHONY: install build build-all download embed export query serve clean conda-cpu conda-gpu conda-mps install-cpu install-gpu install-mps
+.PHONY: install build build-all download embed embed-contrast embed-contrast-aggressive build-all-contrast build-all-contrast-aggressive export query serve clean conda-cpu conda-gpu conda-mps install-cpu install-gpu install-mps
 
 PYTHON ?= python
 PORT ?= 8000
@@ -16,14 +16,7 @@ download:
 	$(PYTHON) download_images.py --kind unique_artwork --cache image_cache
 
 embed:
-	$(PYTHON) build_embeddings.py --kind unique_artwork --out index_out --cache image_cache
-
-# Combined build (runs both steps)
-build-all: download embed
-
-# Legacy single-step build (kept for compatibility)
-build:
-	$(PYTHON) build_mtg_faiss.py --kind unique_artwork --out index_out --cache image_cache
+	$(PYTHON) build_embeddings.py --kind unique_artwork --out index_out --cache image_cache --contrast 1.5
 
 export:
 	$(PYTHON) export_for_browser.py --input-dir index_out --output-dir index_out
