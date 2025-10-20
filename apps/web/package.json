@@ -9,7 +9,9 @@
     "serve": "vite preview",
     "test": "vitest run",
     "format": "prettier --check . --ignore-path ./.prettierignore --ignore-path ./.gitignore --ignore-path ../../.gitignore",
+    "format:fix": "prettier --check . --ignore-path ./.prettierignore --ignore-path ./.gitignore --ignore-path ../../.gitignore --write",
     "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --max-warnings 0 --fix",
     "check-types": "tsc --noEmit",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui"
