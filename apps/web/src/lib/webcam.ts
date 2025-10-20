@@ -9,6 +9,7 @@ import { createDetector } from './detectors'
 import { refineBoundingBoxToCorners } from './detectors/geometry/bbox-refinement'
 import { warpCardToCanonical } from './detectors/geometry/perspective'
 import { loadingEvents } from './loading-events'
+import { warmModel } from './clip-search'
 
 // OpenCV removed - using DETR bounding boxes for cropping
 
@@ -767,6 +768,22 @@ export async function setupWebcam(args: {
   }
 
   overlayEl.addEventListener('click', clickHandler)
+
+  // Add mouse move listener to warm up the model when user hovers over the stream
+  // This eliminates the first-inference penalty (2-5x slower) by pre-compiling the model
+  let mouseWarmupHandler: ((evt: MouseEvent) => void) | null = null
+  mouseWarmupHandler = () => {
+    // Warm up the model on first mouse move
+    warmModel().catch((err) => {
+      console.warn('[Webcam] Model warmup failed:', err)
+    })
+    // Remove listener after first trigger to avoid repeated warmups
+    if (mouseWarmupHandler) {
+      overlayEl.removeEventListener('mousemove', mouseWarmupHandler)
+      mouseWarmupHandler = null
+    }
+  }
+  overlayEl.addEventListener('mousemove', mouseWarmupHandler)
 
   return {
     async startVideo(deviceId: string | null = null) {
