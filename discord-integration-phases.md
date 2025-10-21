@@ -4,30 +4,127 @@
 
 **Authentication Strategy**: Discord authentication is **required** for all users. Discord does not support guest/anonymous access, and since video streaming is core to the game experience, all players must authenticate via Discord OAuth2 before creating or joining games.
 
-**Implementation Strategy**: Split into 4 phases for incremental delivery and testing.
+**Implementation Strategy**: Split into 5 phases (0-4) for incremental delivery and testing.
+
+**Separation of Concerns (SoC) Principle**: Throughout all phases, maintain clear architectural boundaries:
+- **`@repo/discord-integration` package**: Pure Discord API logic (OAuth, WebSocket, REST client, no UI)
+- **`apps/web` components**: UI layer only (React components, hooks, no direct Discord API calls)
+- **Type definitions**: Shared in `@repo/discord-integration/types` for contract enforcement
+- **Configuration**: Environment variables for secrets, never hardcode credentials
+- **State management**: Discord state separate from game state, clear data flow
 
 ---
 
-## Phase 1: Discord Authentication & Basic Connection
+## Phase 0: Prerequisites & Setup
+
+**Goal**: Prepare Discord Developer Portal configuration and local development environment before any implementation begins.
+
+**Your Action Items**:
+
+1. **Create Discord Account** (if you don't have one):
+   - Visit [discord.com](https://discord.com)
+   - Sign up for a free account
+   - Verify your email address
+
+2. **Create Discord Application**:
+   - Go to [Discord Developer Portal](https://discord.com/developers/applications)
+   - Click "New Application"
+   - Name: "Spell Coven" (or your preferred name)
+   - **Save the Application ID (Client ID)** - you'll need this
+
+3. **Configure OAuth2 Settings**:
+   - Navigate to OAuth2 → General in your application
+   - **Skip the Client Secret** - not needed for PKCE flow
+   - Add Redirect URIs:
+     - Development: `http://localhost:3000/auth/discord/callback`
+     - Production: `https://yourdomain.com/auth/discord/callback` (update when you have a domain)
+   - Select OAuth2 Scopes: `identify`, `guilds`, `messages.read`
+
+4. **Create Bot User** (optional - for Phase 2+ if you add backend):
+   - Navigate to Bot section in your application
+   - Click "Add Bot"
+   - Enable "Message Content Intent" (required for text chat in Phase 2)
+   - **Copy and save the Bot Token** (keep this secure!)
+   - **Note**: Bot token only needed if you add a backend server later
+
+5. **Set Up Environment Variables**:
+   - Add to existing `apps/web/.env.development`:
+     ```env
+     VITE_DISCORD_CLIENT_ID=your_client_id_here
+     # Note: No CLIENT_SECRET needed - we use PKCE for client-side OAuth
+     # Note: BOT_TOKEN only needed if we add a backend later
+     ```
+   - **Safe to commit** - Client ID is public and contains no secrets
+   - Users can override with their own Client ID if self-hosting
+
+6. **Create Test Discord Server** (recommended):
+   - Create a private Discord server for testing
+   - Invite your bot to this server:
+     - Go to OAuth2 → URL Generator in Developer Portal
+     - Select scopes: `bot`, `applications.commands`
+     - Select bot permissions: `Send Messages`, `Read Message History`, `Manage Channels`
+     - Copy generated URL and open in browser
+     - Select your test server and authorize
+
+**Deliverables**:
+- Discord Application created with Client ID (Client Secret not needed for PKCE)
+- Bot user created with Bot Token (for future backend features)
+- `apps/web/.env.development` updated with Client ID
+- Test Discord server with bot invited (optional but recommended)
+
+**Security Checklist**:
+- ✓ Using PKCE flow - no Client Secret needed in browser
+- ✓ Bot Token is NOT in version control (only needed for backend)
+- ✓ Client ID is public and **safe to commit** to git
+- ✓ `.env.development` can be committed - contains no secrets
+
+**Estimated Time**: 30-60 minutes
+
+**Success Criteria**: You have all credentials ready and can proceed to Phase 1 implementation.
+
+**Package Dependencies**:
+- Install `discord-api-types` for TypeScript type definitions:
+  ```bash
+  pnpm add discord-api-types
+  ```
+- **Do NOT install `discord.js`** - it's for Node.js backends, not browsers
+- You'll implement Discord API calls using native browser APIs (fetch, WebSocket, crypto)
+
+**Documentation Resources**:
+- Use **Context7 MCP server** to get up-to-date documentation during implementation:
+  ```
+  1. Resolve library ID: /discordjs/discord-api-types
+  2. Fetch docs with specific topics like "OAuth2", "Gateway", "REST API"
+  3. Get current API patterns and type definitions
+  ```
+- Context7 provides the latest Discord API type definitions, usage examples, and best practices
+- Especially useful for OAuth2 flows, Gateway events, and REST endpoint types
+
+---
+
+## Phase 1: Discord Authentication & Basic Connection (PKCE)
 
 ### Minimal First Step (Phase 1a)
 
-**Goal**: Get Discord OAuth working with visual confirmation
+**Goal**: Get Discord OAuth working with PKCE (client-side only, no backend) and visual confirmation
+
+**Key Architecture Decision**: Using PKCE (Proof Key for Code Exchange) for secure client-side OAuth without requiring a backend or client secret.
 
 **Deliverables**:
-1. Discord OAuth modal component
-2. OAuth redirect to Discord
-3. Callback handler at `/auth/discord/callback`
-4. Display user's Discord profile (avatar + username) in header
-5. Gate "Create Game" / "Join Game" behind auth check
+1. Implement PKCE flow: generate `code_verifier` and `code_challenge`
+2. Discord OAuth modal component
+3. OAuth redirect to Discord with PKCE parameters
+4. Callback handler at `/auth/discord/callback` with PKCE verification
+5. Display user's Discord profile (avatar + username) in header
+6. Gate "Create Game" / "Join Game" behind auth check
 
-**Success Metric**: User can click "Create Game", see Discord OAuth modal, authenticate, and see their Discord profile in the header.
+**Success Metric**: User can click "Create Game", see Discord OAuth modal, authenticate via PKCE flow, and see their Discord profile in the header.
 
 **Estimated Time**: 2-3 days
 
 **What's NOT Included** (deferred to Phase 1b):
 - Gateway WebSocket connection
-- Token refresh logic
+- Token refresh logic (will also use PKCE when implemented)
 - Connection status indicators
 - Heartbeat mechanism
 
@@ -41,19 +138,24 @@
 
 **Core Capabilities**:
 
-1. **Discord OAuth2 Login Flow**
-   - Implement Discord OAuth2 authorization code flow in browser
+1. **Discord OAuth2 Login Flow (PKCE - Client-Side Only)**
+   - Implement Discord OAuth2 authorization code flow with PKCE in browser
+   - **PKCE (Proof Key for Code Exchange)**: Secure OAuth without client secret
+     - Generate `code_verifier` (random string) and `code_challenge` (SHA256 hash)
+     - Send `code_challenge` to Discord during authorization
+     - Send `code_verifier` during token exchange (proves you initiated the flow)
    - Request permissions: `identify`, `guilds`, `messages.read`
-   - Handle OAuth callback and token exchange
+   - Handle OAuth callback and token exchange (client-side only, no backend)
    - Display user's Discord profile (username, avatar) in Spell Coven UI
    - **Authentication Gate**: Intercept "Create Game" and "Join Game" actions to check auth status
    - Show Discord OAuth modal if user is not authenticated
    - Redirect to Discord OAuth page (full-page redirect, not popup for mobile compatibility)
    - Handle callback at `/auth/discord/callback` route
 
-2. **Token Management**
+2. **Token Management (Client-Side)**
    - Store Discord access tokens in localStorage with automatic refresh
    - Use short-lived access tokens (1-2 hours) with refresh token flow
+   - Refresh tokens client-side using PKCE (no backend needed)
    - Clear tokens on explicit logout
    - Implement strict Content Security Policy to mitigate XSS risks
    - Handle token expiration gracefully with automatic refresh
@@ -66,17 +168,38 @@
    - Receive and parse Discord Gateway events
 
 **Technical Requirements**:
-- Create `@repo/discord-integration` package for Discord API client
+
+**SoC: `@repo/discord-integration` package** (Pure API logic, no UI):
+- Create Discord OAuth client with PKCE: `DiscordOAuthClient` class
+  - Methods: `generatePKCE()`, `getAuthUrl()`, `exchangeCodeForToken()`, `refreshToken()`
+  - PKCE implementation: generate `code_verifier` and `code_challenge`
+  - No localStorage access - return tokens to caller
+  - **No client secret needed** - uses PKCE for security
+- Create WebSocket connection manager: `DiscordGatewayClient` class
+  - Methods: `connect()`, `disconnect()`, `send()`, event emitters
+  - Heartbeat and reconnection logic
+  - No React dependencies
 - Use `discord-api-types` for TypeScript types
-- Implement WebSocket connection manager with reconnection logic
-- Create React hooks: `useDiscordAuth()`, `useDiscordConnection()`, `useDiscordUser()`
-- Build UI components: 
+- Export types: `DiscordToken`, `DiscordUser`, `GatewayEvent`, `PKCEChallenge`
+
+**SoC: `apps/web` UI layer** (React components and hooks only):
+- Create React hooks (consume `@repo/discord-integration` API):
+  - `useDiscordAuth()`: Manages token storage in localStorage, calls OAuth client
+  - `useDiscordConnection()`: Manages Gateway connection lifecycle
+  - `useDiscordUser()`: Fetches and caches user profile
+- Build UI components (no direct Discord API calls):
   - `DiscordAuthModal`: Modal explaining Discord requirement with "Connect Discord" button
   - `DiscordLoginButton`: Prominent button in header (uses Discord brand color #5865F2)
   - `DiscordUserProfile`: Display avatar + username when authenticated
   - `ConnectionStatus`: Show Gateway connection state
 - Create route handler: `/auth/discord/callback` for OAuth redirect
 - Update `LandingPage` component to gate Create/Join actions behind auth check
+
+**SoC: Configuration**:
+- Environment variables in `apps/web/.env.development` (safe to commit - no secrets)
+- Config module: `apps/web/src/config/discord.ts` to read env vars
+- Type-safe config with validation
+- Users can override with `.env.local` for self-hosting
 
 **Success Criteria**:
 - Users can authenticate via Discord OAuth2 within 10 seconds
@@ -98,6 +221,16 @@
 - ✓ Browser-First: All OAuth and WebSocket connections run client-side
 - ✓ User-Centric: Familiar Discord login, clear connection status
 - ✓ Data Contracts: Define token storage schema and Gateway event types
+
+**Client-Side Limitations**:
+- ⚠ **Phase 2+ (Text Chat)**: Discord Gateway can receive messages, but sending messages requires REST API calls
+  - User OAuth tokens have limited permissions
+  - For full bot functionality (sending messages as bot), you'll need a backend with bot token
+  - **Workaround for Phase 1**: Users can only read messages, not send (or send as themselves with user token)
+- ⚠ **Phase 3+ (Voice/Video)**: Creating channels requires elevated permissions
+  - User tokens can join existing channels
+  - Creating new channels typically requires bot permissions
+  - **Workaround**: Users create channels manually in Discord, then select them in Spell Coven
 
 ---
 
@@ -138,12 +271,34 @@
    - Support custom embed colors and formatting for different event types
 
 **Technical Requirements**:
-- Extend `@repo/discord-integration` with message handling
-- Implement Discord REST API client for sending messages
-- Create React hooks: `useDiscordChannel()`, `useDiscordMessages()`, `useSendMessage()`
-- Build UI components: ChannelSelector, MessageList, MessageInput, MessageEmbed
-- Define message schema for game events with version field
-- Implement rate limit handling with exponential backoff
+
+**SoC: `@repo/discord-integration` package** (Pure API logic):
+- Extend with Discord REST API client: `DiscordRestClient` class
+  - Methods: `sendMessage()`, `getMessages()`, `getChannels()`, `createEmbed()`
+  - Rate limit handling with exponential backoff
+  - No React dependencies, returns promises
+- Message formatter: `formatDiscordMessage()` utility
+  - Handles Discord markdown parsing
+  - No UI rendering logic
+- Define message schema types: `GameEventMessage`, `CardLookupEmbed`
+  - Include version field for schema evolution
+
+**SoC: `apps/web` UI layer** (React components and hooks):
+- Create React hooks (consume REST client):
+  - `useDiscordChannel()`: Channel selection and metadata
+  - `useDiscordMessages()`: Real-time message subscription via Gateway
+  - `useSendMessage()`: Message sending with queue and retry logic
+- Build UI components (presentation only):
+  - `ChannelSelector`: Dropdown for channel selection
+  - `MessageList`: Scrollable message display with virtualization
+  - `MessageInput`: Text input with markdown preview
+  - `MessageEmbed`: Render game event embeds
+- No direct Discord API calls in components
+
+**SoC: Data Layer**:
+- Message cache in `apps/web/src/stores/messageStore.ts`
+- Separate from Discord API client
+- Clear cache invalidation strategy
 
 **Success Criteria**:
 - Messages appear in Spell Coven UI within 1 second of being sent in Discord
@@ -167,6 +322,12 @@
 - ✓ Browser-First: All message operations via client-side REST API calls
 - ✓ Data Contracts: Versioned schema for game event embeds
 - ✓ User-Centric: Real-time messaging with clear send status
+
+**Client-Side Implementation Note**:
+- Messages can be sent using user's OAuth token (messages appear as from the user)
+- No backend needed - REST API calls made directly from browser
+- User must have permission to send messages in the selected channel
+- Rate limits apply per-user (not per-bot)
 
 ---
 
@@ -214,12 +375,37 @@
    - Delete temporary channels or mark as archived
 
 **Technical Requirements**:
-- Extend `@repo/discord-integration` with voice channel management
-- Implement Discord Voice State tracking via Gateway events
-- Create React hooks: `useDiscordVoiceChannel()`, `useGameRoom()`, `useRoomMetadata()`
-- Build UI components: VoiceChannelSelector, RoomCreator, PlayerList, RoomMetadata
-- Define room metadata schema with semantic versioning
-- Implement channel creation/deletion via Discord REST API
+
+**SoC: `@repo/discord-integration` package** (Pure API logic):
+- Extend REST client with voice channel methods:
+  - `createVoiceChannel()`, `deleteChannel()`, `updateChannelTopic()`
+  - `getVoiceChannels()`, `getChannelMembers()`
+- Voice state tracker: `VoiceStateManager` class
+  - Subscribes to Gateway VOICE_STATE_UPDATE events
+  - Maintains voice state cache
+  - Emits events for UI consumption
+- Room metadata utilities:
+  - `encodeRoomMetadata()`, `decodeRoomMetadata()`, `validateRoomMetadata()`
+  - Schema validation with Zod or similar
+- Define types: `RoomMetadata`, `VoiceState`, `VoiceChannel`
+
+**SoC: `apps/web` UI layer** (React components and hooks):
+- Create React hooks (consume voice API):
+  - `useDiscordVoiceChannel()`: Voice channel selection and state
+  - `useGameRoom()`: Room lifecycle management
+  - `useRoomMetadata()`: Metadata CRUD operations
+  - `usePlayerPresence()`: Real-time player list updates
+- Build UI components (presentation only):
+  - `VoiceChannelSelector`: Dropdown with occupancy display
+  - `RoomCreator`: Form for room configuration
+  - `PlayerList`: Grid of player avatars with voice state indicators
+  - `RoomMetadata`: Display and edit room settings
+- No direct Discord API calls in components
+
+**SoC: State Management**:
+- Room state in `apps/web/src/stores/roomStore.ts`
+- Voice state in `apps/web/src/stores/voiceStore.ts`
+- Clear separation from Discord client state
 
 **Success Criteria**:
 - Users can create game room with Discord voice channel in <15 seconds
@@ -291,13 +477,37 @@
    - Optimize frame capture rate to balance recognition speed and performance
 
 **Technical Requirements**:
-- Extend `@repo/discord-integration` with RTC connection handling
-- Implement Discord Voice/Video protocol (UDP + WebSocket)
-- Use WebRTC MediaStream API for camera access
-- Create React hooks: `useDiscordVideo()`, `useVideoStream()`, `useRemoteStreams()`
-- Build UI components: CameraSelector, VideoGrid, StreamControls, QualityIndicator
-- Integrate with existing card recognition pipeline
-- Handle video codec negotiation (VP8/VP9/H.264)
+
+**SoC: `@repo/discord-integration` package** (Pure API logic):
+- Extend with RTC connection manager: `DiscordRtcClient` class
+  - Methods: `connect()`, `startVideo()`, `stopVideo()`, `setQuality()`
+  - Implements Discord Voice/Video protocol (UDP + WebSocket)
+  - No browser API dependencies (MediaStream passed as parameter)
+  - Event emitters for remote streams
+- Video codec negotiation utilities
+- Stream quality adapter: `VideoQualityAdapter` class
+  - Monitors bandwidth and adjusts quality
+  - No UI dependencies
+- Define types: `RtcConnection`, `VideoStream`, `StreamQuality`
+
+**SoC: `apps/web` UI layer** (React components and hooks):
+- Create React hooks (consume RTC client):
+  - `useDiscordVideo()`: RTC connection lifecycle
+  - `useVideoStream()`: Local camera access via MediaStream API
+  - `useRemoteStreams()`: Subscribe to remote video feeds
+  - `useStreamQuality()`: Quality monitoring and adjustment
+- Build UI components (presentation only):
+  - `CameraSelector`: Dropdown for camera device selection
+  - `VideoGrid`: Layout for multiple video feeds
+  - `StreamControls`: Start/stop video, mute, quality settings
+  - `QualityIndicator`: Bandwidth and stream health display
+- No direct Discord RTC protocol handling in components
+
+**SoC: Integration with Card Recognition**:
+- Card recognition pipeline in `apps/web/src/lib/card-recognition/`
+- Accepts video frames from any source (local or remote)
+- No coupling to Discord video implementation
+- Use adapter pattern: `VideoFrameAdapter` to extract frames from Discord streams
 
 **Success Criteria**:
 - Video stream starts within 10 seconds of user clicking "Start Video"
@@ -350,7 +560,7 @@
 - Make "Sign In with Discord" button prominent (use Discord brand color #5865F2)
 
 **Header Sign In Button**:
-- Replace generic "Sign In" with "Sign In with Discord" 
+- Replace generic "Sign In" with "Sign In with Discord"
 - Show Discord logo icon
 - When authenticated: Display user's Discord avatar + username instead
 
@@ -415,58 +625,163 @@
 
 ## Implementation Order Recommendation
 
+### Phase 0: Prerequisites (30-60 minutes)
+**Priority: CRITICAL** - Must be completed before any implementation
+- Create Discord account (if needed)
+- Create Discord application in Developer Portal
+- Configure OAuth2 settings and redirect URIs
+- Create bot user and enable required intents
+- Set up `.env.local` with all credentials
+- Create test Discord server (recommended)
+- **Deliverable**: All credentials ready, environment configured
+
 ### Phase 1a: Discord Auth Gate (Week 1)
 **Priority: CRITICAL** - Blocks all other features
+- **SoC**: Create `@repo/discord-integration` package structure
+- **SoC**: Implement `DiscordOAuthClient` (no UI dependencies)
+- **SoC**: Create React hooks that consume OAuth client
 - Discord OAuth modal component
 - Authentication check on Create/Join game actions
 - OAuth callback route handler
-- Token storage in localStorage
+- Token storage in localStorage (via hooks, not in client)
 - Discord profile display in header
 - Landing page messaging updates
 
 ### Phase 1b: Gateway Connection (Week 1-2)
+- **SoC**: Implement `DiscordGatewayClient` (no React dependencies)
+- **SoC**: Create hooks for Gateway connection management
 - WebSocket connection to Discord Gateway
 - Heartbeat and reconnection logic
 - Connection status display
 
 ### Phase 2: Text Chat (Week 2-3)
+- **SoC**: Implement `DiscordRestClient` for messaging
+- **SoC**: Create message store separate from Discord client
+- **SoC**: Build UI components that consume hooks only
 - Channel selection and message display
 - Message sending with rate limiting
 - Game event embeds
 
 ### Phase 3: Voice Channels (Week 3-4)
+- **SoC**: Extend REST client with voice channel methods
+- **SoC**: Implement `VoiceStateManager` for presence tracking
+- **SoC**: Create room and voice state stores
 - Voice channel management
 - Room creation and metadata
 - Player presence tracking
 
 ### Phase 4: Video Streaming (Week 4-7)
 **Research feasibility first** - High technical risk
+- **SoC**: Implement `DiscordRtcClient` (protocol only, no MediaStream)
+- **SoC**: Create adapter for card recognition integration
+- **SoC**: Build video UI components separate from RTC logic
 - Discord RTC protocol investigation
 - Video streaming implementation
 - Card recognition integration
 - **Fallback**: Custom WebRTC if Discord video proves infeasible
 
-**Critical Path**: Phase 1a must be completed before any other work, as Discord authentication is required for all features.
+**Critical Path**:
+1. Phase 0 must be completed before any implementation
+2. Phase 1a must be completed before any other development work
+3. Maintain SoC throughout all phases for testability and maintainability
 
 ---
 
 ## Cross-Phase Considerations
 
-### Package Structure
-- `@repo/discord-integration`: Core Discord API client, WebSocket manager, REST client
-- `apps/web`: UI components and React hooks for Discord features
-- Shared types in `@repo/discord-integration/types`
+### Package Structure (Enforcing SoC)
+
+**`@repo/discord-integration`** - Pure Discord API logic (no UI, no React):
+```
+@repo/discord-integration/
+├── src/
+│   ├── clients/
+│   │   ├── DiscordOAuthClient.ts      # OAuth flow (no localStorage)
+│   │   ├── DiscordGatewayClient.ts    # WebSocket connection (no React)
+│   │   ├── DiscordRestClient.ts       # REST API (no UI)
+│   │   └── DiscordRtcClient.ts        # RTC protocol (no MediaStream)
+│   ├── managers/
+│   │   ├── VoiceStateManager.ts       # Voice state tracking
+│   │   └── VideoQualityAdapter.ts     # Quality management
+│   ├── utils/
+│   │   ├── formatters.ts              # Message formatting
+│   │   └── validators.ts              # Schema validation
+│   ├── types/
+│   │   ├── auth.ts                    # DiscordToken, DiscordUser
+│   │   ├── gateway.ts                 # GatewayEvent, VoiceState
+│   │   ├── messages.ts                # Message, Embed schemas
+│   │   └── rooms.ts                   # RoomMetadata, VoiceChannel
+│   └── index.ts                       # Public API exports
+├── package.json
+└── tsconfig.json
+```
+
+**`apps/web`** - UI layer only (React components and hooks):
+```
+apps/web/src/
+├── config/
+│   └── discord.ts                     # Read env vars, type-safe config
+├── hooks/
+│   ├── useDiscordAuth.ts              # Consumes DiscordOAuthClient
+│   ├── useDiscordConnection.ts        # Consumes DiscordGatewayClient
+│   ├── useDiscordMessages.ts          # Consumes DiscordRestClient
+│   ├── useDiscordVideo.ts             # Consumes DiscordRtcClient
+│   └── useVideoStream.ts              # MediaStream API wrapper
+├── components/
+│   ├── discord/
+│   │   ├── DiscordAuthModal.tsx       # Presentation only
+│   │   ├── DiscordLoginButton.tsx     # Presentation only
+│   │   ├── MessageList.tsx            # Presentation only
+│   │   └── VideoGrid.tsx              # Presentation only
+│   └── ...
+├── stores/
+│   ├── messageStore.ts                # Message cache (separate from client)
+│   ├── roomStore.ts                   # Room state
+│   └── voiceStore.ts                  # Voice state
+└── lib/
+    └── card-recognition/
+        └── VideoFrameAdapter.ts       # Adapter for Discord streams
+```
+
+**Key SoC Principles**:
+- ✓ `@repo/discord-integration` has ZERO React dependencies
+- ✓ `@repo/discord-integration` has ZERO browser storage dependencies
+- ✓ UI components NEVER import Discord clients directly
+- ✓ Hooks are the ONLY bridge between UI and Discord API
+- ✓ State management is separate from API clients
+- ✓ Types are shared via `@repo/discord-integration/types`
 
 ### Data Contracts
 - **Discord Token Schema**: `{ accessToken: string, refreshToken: string, expiresAt: number, version: "1.0" }`
 - **Room Metadata Schema**: `{ version: "1.0", format: string, powerLevel: number, maxPlayers: number, createdAt: string }`
 - **Game Event Schema**: `{ version: "1.0", type: string, data: object, timestamp: string }`
 
-### Testing Strategy
-- Unit tests for Discord API client and WebSocket manager
+### Testing Strategy (Enabled by SoC)
+
+**Unit Tests** (Easy due to SoC):
+- `@repo/discord-integration` clients are pure functions/classes
+- No React dependencies = easy to test in isolation
+- Mock WebSocket and fetch for Gateway/REST clients
+- Test OAuth flow without browser environment
+- Test rate limiting logic independently
+
+**Integration Tests**:
+- Test hooks with mocked Discord clients
+- Test UI components with mocked hooks
 - Integration tests with Discord's staging environment (if available)
 - Manual testing with real Discord accounts and servers
-- Load testing for rate limit handling
+
+**Load Testing**:
+- Rate limit handling under high message volume
+- WebSocket reconnection under network failures
+- Video stream quality adaptation
+
+**Benefits of SoC for Testing**:
+- ✓ Can test Discord API logic without rendering React components
+- ✓ Can test UI components without real Discord connections
+- ✓ Can swap Discord implementation without changing UI
+- ✓ Faster test execution (no browser needed for API tests)
+- ✓ Easier to mock and stub dependencies
 
 ### Security Considerations
 - Implement Content Security Policy headers
@@ -475,7 +790,32 @@
 - Handle Discord rate limits to avoid account suspension
 - Document Discord's data retention and privacy policies for users
 
-### Discord Developer Portal Setup
+### Why PKCE? (Browser-First Architecture)
+
+**Problem**: Traditional OAuth requires a `client_secret` which must be kept secure. In a browser-only app, there's no secure place to store secrets.
+
+**Solution**: PKCE (Proof Key for Code Exchange) - RFC 7636
+- No client secret needed
+- Uses cryptographic challenge/response instead
+- Secure for public clients (browsers, mobile apps)
+- Supported by Discord OAuth2
+
+**How PKCE Works**:
+1. Generate random `code_verifier` (43-128 characters)
+2. Create `code_challenge` = SHA256(code_verifier)
+3. Send `code_challenge` to Discord during authorization
+4. Discord returns authorization code
+5. Exchange code + `code_verifier` for access token
+6. Discord verifies: SHA256(code_verifier) == code_challenge
+
+**Benefits for Spell Coven**:
+- ✓ No backend needed for OAuth
+- ✓ No secrets to manage or expose
+- ✓ Fully client-side authentication
+- ✓ Secure against authorization code interception
+- ✓ Aligns with browser-first architecture
+
+### Discord Developer Portal Setup (PKCE Configuration)
 
 **Required Before Implementation**:
 
@@ -485,31 +825,36 @@
    - Name: "Spell Coven" (or your preferred name)
    - Note the **Application ID** (Client ID)
 
-2. **Configure OAuth2**:
+2. **Configure OAuth2 for PKCE**:
    - Navigate to OAuth2 → General
-   - Copy **Client Secret** (store securely in `.env`)
+   - **Important**: You do NOT need to copy the Client Secret (not used with PKCE)
    - Add Redirect URIs:
      - Development: `http://localhost:3000/auth/discord/callback`
      - Production: `https://yourdomain.com/auth/discord/callback`
    - Select OAuth2 Scopes: `identify`, `guilds`, `messages.read`
+   - **No special PKCE configuration needed** - Discord supports it automatically
 
-3. **Environment Variables**:
+3. **Environment Variables** (Client ID only):
+   - Add to `apps/web/.env.development`:
    ```env
    VITE_DISCORD_CLIENT_ID=your_client_id_here
-   DISCORD_CLIENT_SECRET=your_client_secret_here  # Backend only, never expose
+   # No CLIENT_SECRET needed - using PKCE!
    ```
+   - Safe to commit - no secrets involved
 
 4. **Bot Configuration** (for future phases):
    - Navigate to Bot section
    - Create bot user (needed for Phase 2+ features)
    - Enable "Message Content Intent" for text chat
-   - Copy bot token (store securely)
+   - Copy bot token (store securely, only needed if you add backend later)
 
 **Security Notes**:
-- Client ID is public (safe in frontend code)
-- Client Secret must NEVER be exposed in frontend
-- Token exchange should happen in backend or use PKCE flow for pure client-side
-- Add `.env` to `.gitignore`
+- ✓ Client ID is public (safe in frontend code and git)
+- ✓ No client secret needed with PKCE
+- ✓ PKCE flow is secure for browser-only apps
+- ✓ Bot token only needed for backend features (Phase 2+)
+- ✓ `.env.development` can be committed (contains no secrets)
+- ✓ Users can override with `.env.local` for self-hosting (add to `.gitignore`)
 
 ### Self-Hosting Option
 - Users can create their own Discord application
