@@ -7,7 +7,7 @@
 import { env, pipeline, ProgressInfo } from '@huggingface/transformers'
 
 // Version of the embeddings data - configured via environment variable
-const EMBEDDINGS_VERSION = import.meta.env.VITE_EMBEDDINGS_VERSION || 'v1.0'
+const EMBEDDINGS_VERSION = import.meta.env.VITE_EMBEDDINGS_VERSION || 'v1.3'
 // Use import.meta.env.BASE_URL to handle GitHub Pages base path in production
 const BLOB_STORAGE_URL = import.meta.env.VITE_BLOB_STORAGE_URL || '/'
 // Format: float32 (recommended, no quantization) or int8 (75% smaller, slight accuracy loss)
