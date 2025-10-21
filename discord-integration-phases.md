@@ -38,7 +38,10 @@
    - Add Redirect URIs:
      - Development: `http://localhost:3000/auth/discord/callback`
      - Production: `https://yourdomain.com/auth/discord/callback` (update when you have a domain)
-   - Select OAuth2 Scopes: `identify`, `guilds`, `messages.read`
+   - **Select OAuth2 Scopes** (start with Phase 1, add more later):
+     - **Phase 1**: `identify`, `guilds`, `messages.read`
+     - **Phase 3+**: Add `rpc`, `rpc.voice.read` when implementing voice/video
+     - **Optional**: `rpc.activities.write` for "Playing Spell Coven" status
 
 4. **Create Bot User** (optional - for Phase 2+ if you add backend):
    - Navigate to Bot section in your application
@@ -144,7 +147,14 @@
      - Generate `code_verifier` (random string) and `code_challenge` (SHA256 hash)
      - Send `code_challenge` to Discord during authorization
      - Send `code_verifier` during token exchange (proves you initiated the flow)
-   - Request permissions: `identify`, `guilds`, `messages.read`
+   - **Request OAuth2 Scopes** (permissions):
+     - `identify` - Get user's Discord username, avatar, ID (required for login)
+     - `guilds` - See which Discord servers the user is in (needed for Phase 3 room creation)
+     - `messages.read` - Read messages in channels (needed for Phase 2 text chat)
+     - Additional scopes to add later:
+       - `rpc` - Voice/video connection (needed for Phase 4 video streaming)
+       - `rpc.voice.read` - Read voice state (needed for Phase 3 presence tracking)
+       - `rpc.activities.write` - Update user activity (optional, for "Playing Spell Coven" status)
    - Handle OAuth callback and token exchange (client-side only, no backend)
    - Display user's Discord profile (username, avatar) in Spell Coven UI
    - **Authentication Gate**: Intercept "Create Game" and "Join Game" actions to check auth status
