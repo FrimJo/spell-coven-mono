@@ -175,12 +175,23 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
         })
 
         // Wait for CLIP model to be ready before completing
-        const { isModelReady, loadModel } = await import('@/lib/clip-search')
+        const { isModelReady, loadModel, loadEmbeddingsAndMetaFromPackage } = await import('@/lib/clip-search')
         console.log('[useWebcam] Checking if CLIP model is ready...')
         
-        // If model not already loaded, load it with progress callback
+        // If model not already loaded, load both the model and embeddings database
         if (!isModelReady()) {
-          console.log('[useWebcam] Loading CLIP model...')
+          console.log('[useWebcam] Loading CLIP model and embeddings database...')
+          
+          // Load embeddings database (meta + db)
+          loadingEvents.emit({
+            step: 'clip-model',
+            progress: 25,
+            message: 'Loading embeddings database...',
+          })
+          await loadEmbeddingsAndMetaFromPackage()
+          console.log('[useWebcam] ✅ Embeddings database loaded')
+          
+          // Load CLIP model
           await loadModel({
             onProgress: (msg: string) => {
               console.log(`[useWebcam] CLIP model loading: ${msg}`)

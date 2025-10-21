@@ -135,6 +135,12 @@ export async function loadEmbeddingsAndMetaFromPackage() {
   }
   loadTask = (async () => {
     const metaUrl = META_URL as string
+    console.log('[loadEmbeddingsAndMetaFromPackage] Loading from:', {
+      BLOB_STORAGE_URL,
+      EMBEDDINGS_VERSION,
+      metaUrl,
+      embUrl: EMB_URL,
+    })
 
     const metaRes = await fetch(metaUrl)
     if (!metaRes.ok) {

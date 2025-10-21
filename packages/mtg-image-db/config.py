@@ -27,13 +27,16 @@ def load_env_file(env_path: Path) -> dict:
 
 
 def get_config():
-    """Get configuration from root .env.development file."""
-    # Find root .env.development (go up from packages/mtg-image-db)
+    """Get configuration from root .env.development and .env.development.local files."""
+    # Find root .env files (go up from packages/mtg-image-db)
     current_dir = Path(__file__).parent
-    root_env = current_dir.parent.parent / '.env.development'
+    root_dir = current_dir.parent.parent
+    root_env = root_dir / '.env.development'
+    root_env_local = root_dir / '.env.development.local'
     
-    # Load environment variables
+    # Load environment variables (local overrides development)
     env_vars = load_env_file(root_env)
+    env_vars.update(load_env_file(root_env_local))
     
     # Also check OS environment variables (they take precedence)
     env_vars.update(os.environ)
