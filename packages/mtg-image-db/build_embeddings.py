@@ -28,6 +28,7 @@ from build_mtg_faiss import (
     Embedder
 )
 from helpers import validate_image, validate_args, safe_percentage
+from config import get_query_contrast
 
 
 def _validate_cache_worker(args):
@@ -354,8 +355,8 @@ def main():
                     help="HNSW M parameter (connectivity, default: 32). Higher = better recall, slower build.")
     ap.add_argument("--hnsw-ef-construction", type=int, default=200,
                     help="HNSW efConstruction parameter (build accuracy, default: 200). Higher = better quality, slower build.")
-    ap.add_argument("--contrast", type=float, default=1.0,
-                    help="Contrast enhancement factor (default: 1.0, no enhancement). Use 1.2 for 20% boost to help with blurry cards.")
+    ap.add_argument("--contrast", type=float, default=get_query_contrast(),
+                    help="Contrast enhancement factor (default: loaded from .env.development VITE_QUERY_CONTRAST). Use 1.2 for 20% boost to help with blurry cards.")
     args = ap.parse_args()
     
     # Validate CLI arguments

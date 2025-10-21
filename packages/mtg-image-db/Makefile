@@ -1,4 +1,4 @@
-.PHONY: install build build-all download embed embed-contrast embed-contrast-aggressive build-all-contrast build-all-contrast-aggressive export test query serve clean conda-cpu conda-gpu conda-mps install-cpu install-gpu install-mps
+.PHONY: install build build-all download embed embed-contrast embed-contrast-aggressive build-all-contrast build-all-contrast-aggressive export deploy test query serve clean conda-cpu conda-gpu conda-mps install-cpu install-gpu install-mps
 
 PYTHON ?= python
 PORT ?= 8000
@@ -20,6 +20,14 @@ embed:
 
 export:
 	$(PYTHON) export_for_browser.py --input-dir index_out --output-dir index_out
+
+deploy:
+	@echo "Usage: make deploy MAJOR=1 MINOR=3" && \
+	echo "Example: make deploy MAJOR=1 MINOR=3" && \
+	echo "" && \
+	echo "This uploads exported files to Vercel Blob Storage in v{MAJOR}.{MINOR} folder" && \
+	echo "Requires: VITE_BLOB_STORAGE_URL and BLOB_READ_WRITE_TOKEN in .env files" && \
+	[ -n "$(MAJOR)" ] && [ -n "$(MINOR)" ] && $(PYTHON) deploy_to_blob.py --major $(MAJOR) --minor $(MINOR) --input-dir index_out || false
 
 test:
 	conda run -n mtg-faiss-mps $(PYTHON) test_perfect_match.py
