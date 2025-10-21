@@ -1,13 +1,16 @@
+import { useEffect, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useEffect, useRef } from 'react'
+
 import {
+  compareEmbeddings,
+  embedFromCanvas,
+  getDatabaseEmbedding,
   loadEmbeddingsAndMetaFromPackage,
   loadModel,
-  embedFromCanvas,
   topK,
-  getDatabaseEmbedding,
-  compareEmbeddings,
 } from '../lib/clip-search'
+
+const BLOB_STORAGE_URL = import.meta.env.VITE_BLOB_STORAGE_URL || '/'
 
 export const Route = createFileRoute('/test-stand-together')({
   component: TestStandTogether,
@@ -112,7 +115,10 @@ function TestStandTogether() {
         },
       })
 
-      setStatus({ message: '✓ CLIP model loaded successfully', type: 'success' })
+      setStatus({
+        message: '✓ CLIP model loaded successfully',
+        type: 'success',
+      })
       setModelLoaded(true)
     } catch (e) {
       setStatus({
@@ -140,27 +146,34 @@ function TestStandTogether() {
       setStatus({ message: 'Embedding image with CLIP...', type: 'loading' })
       const { embedding } = await embedFromCanvas(canvas)
       console.log('Browser embedding shape:', embedding.length)
-      
+
       // Compare with database embedding
       console.log('\n=== EMBEDDING COMPARISON ===')
       const dbResult = getDatabaseEmbedding('Stand Together')
       if (dbResult) {
         console.log('Database embedding found at index:', dbResult.index)
         console.log('Database metadata:', dbResult.metadata)
-        
-        const comparison = compareEmbeddings(
-          embedding,
-          dbResult.embedding
-        )
-        
+
+        const comparison = compareEmbeddings(embedding, dbResult.embedding)
+
         console.log('\n📊 Comparison Summary:')
-        console.log(`  Cosine Similarity: ${comparison.cosineSimilarity.toFixed(6)} (should be ~1.0 for identical)`)
-        console.log(`  L2 Distance: ${comparison.l2Distance.toFixed(6)} (should be ~0.0 for identical)`)
-        console.log(`  Max Difference: ${comparison.maxAbsDifference.toFixed(6)}`)
-        console.log(`  Mean Difference: ${comparison.meanAbsDifference.toFixed(6)}`)
-        
+        console.log(
+          `  Cosine Similarity: ${comparison.cosineSimilarity.toFixed(6)} (should be ~1.0 for identical)`,
+        )
+        console.log(
+          `  L2 Distance: ${comparison.l2Distance.toFixed(6)} (should be ~0.0 for identical)`,
+        )
+        console.log(
+          `  Max Difference: ${comparison.maxAbsDifference.toFixed(6)}`,
+        )
+        console.log(
+          `  Mean Difference: ${comparison.meanAbsDifference.toFixed(6)}`,
+        )
+
         if (comparison.cosineSimilarity < 0.95) {
-          console.warn('⚠️  Low similarity detected! Preprocessing mismatch likely.')
+          console.warn(
+            '⚠️  Low similarity detected! Preprocessing mismatch likely.',
+          )
         } else if (comparison.cosineSimilarity >= 0.99) {
           console.log('✅ Excellent alignment! Preprocessing is correct.')
         }
@@ -245,59 +258,59 @@ function TestStandTogether() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold text-green-400 mb-2">
+    <div className="min-h-screen bg-gray-950 p-8 text-white">
+      <div className="mx-auto max-w-7xl">
+        <h1 className="mb-2 text-4xl font-bold text-green-400">
           🧪 Stand Together Recognition Test
         </h1>
-        <p className="text-gray-400 mb-8">
+        <p className="mb-8 text-gray-400">
           Testing perspective-warped card recognition with the browser CLIP
           pipeline.
         </p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Input Image */}
-          <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
-            <h2 className="text-xl font-semibold mb-4">Input Image</h2>
+          <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+            <h2 className="mb-4 text-xl font-semibold">Input Image</h2>
             <img
               ref={imageRef}
-              src="/data/mtg-embeddings/stand_together.jpg"
+              src={`${BLOB_STORAGE_URL}mtg-embeddings/stand_together.jpg`}
               alt="Stand Together test image"
-              className="w-full border border-gray-700 rounded"
+              className="w-full rounded border border-gray-700"
               onLoad={(e) => preprocessImage(e.currentTarget)}
             />
-            <p className="text-sm text-gray-400 mt-2">
+            <p className="mt-2 text-sm text-gray-400">
               <strong>Source:</strong> Perspective-warped Stand Together (before
               padding)
             </p>
           </div>
 
           {/* Preprocessed Canvas */}
-          <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
-            <h2 className="text-xl font-semibold mb-4">
+          <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+            <h2 className="mb-4 text-xl font-semibold">
               Preprocessed Canvas (336×336)
             </h2>
             <canvas
               ref={canvasRef}
               width={336}
               height={336}
-              className="w-full border-2 border-green-500 rounded"
+              className="w-full rounded border-2 border-green-500"
             />
-            <p className="text-sm text-gray-400 mt-2">
+            <p className="mt-2 text-sm text-gray-400">
               <em>Black-padded and resized to match database preprocessing</em>
             </p>
           </div>
         </div>
 
         {/* Test Controls */}
-        <div className="bg-gray-900 rounded-lg p-6 border border-gray-800 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Test Controls</h2>
+        <div className="mb-8 rounded-lg border border-gray-800 bg-gray-900 p-6">
+          <h2 className="mb-4 text-xl font-semibold">Test Controls</h2>
 
-          <div className="flex flex-wrap gap-3 mb-4">
+          <div className="mb-4 flex flex-wrap gap-3">
             <button
               onClick={handleLoadEmbeddings}
               disabled={embeddingsLoaded}
-              className="bg-green-500 hover:bg-green-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-black disabled:text-gray-500 font-semibold px-6 py-3 rounded-lg transition-colors"
+              className="rounded-lg bg-green-500 px-6 py-3 font-semibold text-black transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-500"
             >
               1. Load Embeddings Database
             </button>
@@ -305,7 +318,7 @@ function TestStandTogether() {
             <button
               onClick={handleLoadModel}
               disabled={!embeddingsLoaded || modelLoaded}
-              className="bg-green-500 hover:bg-green-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-black disabled:text-gray-500 font-semibold px-6 py-3 rounded-lg transition-colors"
+              className="rounded-lg bg-green-500 px-6 py-3 font-semibold text-black transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-500"
             >
               2. Load CLIP Model
             </button>
@@ -313,7 +326,7 @@ function TestStandTogether() {
             <button
               onClick={handleRunTest}
               disabled={!modelLoaded}
-              className="bg-green-500 hover:bg-green-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-black disabled:text-gray-500 font-semibold px-6 py-3 rounded-lg transition-colors"
+              className="rounded-lg bg-green-500 px-6 py-3 font-semibold text-black transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-500"
             >
               3. Run Recognition Test
             </button>
@@ -321,7 +334,7 @@ function TestStandTogether() {
 
           {/* Status */}
           <div
-            className={`px-4 py-3 rounded font-mono text-sm ${getStatusColor()}`}
+            className={`rounded px-4 py-3 font-mono text-sm ${getStatusColor()}`}
           >
             {status.message}
           </div>
@@ -329,19 +342,19 @@ function TestStandTogether() {
 
         {/* Results */}
         {results.length > 0 && (
-          <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
-            <h3 className="text-xl font-semibold mb-4">Top 10 Matches</h3>
+          <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+            <h3 className="mb-4 text-xl font-semibold">Top 10 Matches</h3>
             <div className="space-y-2">
               {results.map((result) => (
                 <div
                   key={result.rank}
-                  className={`p-4 rounded ${
+                  className={`rounded p-4 ${
                     result.rank === 1
-                      ? 'bg-yellow-900/20 border-l-4 border-yellow-500'
-                      : 'bg-gray-800 border-l-4 border-green-500'
+                      ? 'border-l-4 border-yellow-500 bg-yellow-900/20'
+                      : 'border-l-4 border-green-500 bg-gray-800'
                   }`}
                 >
-                  <div className="flex justify-between items-center">
+                  <div className="flex items-center justify-between">
                     <div>
                       <strong className="text-gray-300">#{result.rank}</strong>{' '}
                       {result.name}{' '}
@@ -349,7 +362,7 @@ function TestStandTogether() {
                         [{result.set.toUpperCase()}]
                       </span>
                       {result.isCorrect && (
-                        <span className="ml-2 text-green-400 font-semibold">
+                        <span className="ml-2 font-semibold text-green-400">
                           ✓ CORRECT
                         </span>
                       )}

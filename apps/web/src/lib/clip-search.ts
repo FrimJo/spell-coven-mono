@@ -9,12 +9,12 @@ import { env, pipeline, ProgressInfo } from '@huggingface/transformers'
 // Version of the embeddings data - configured via environment variable
 const EMBEDDINGS_VERSION = import.meta.env.VITE_EMBEDDINGS_VERSION || 'v1.0'
 // Use import.meta.env.BASE_URL to handle GitHub Pages base path in production
-const BASE_PATH = import.meta.env.BASE_URL || '/'
+const BLOB_STORAGE_URL = import.meta.env.VITE_BLOB_STORAGE_URL || '/'
 // Format: float32 (recommended, no quantization) or int8 (75% smaller, slight accuracy loss)
 const EMBEDDINGS_FORMAT = import.meta.env.VITE_EMBEDDINGS_FORMAT || 'float32'
 const EMB_EXT = EMBEDDINGS_FORMAT === 'float32' ? 'f32bin' : 'i8bin'
-const EMB_URL = `${BASE_PATH}data/mtg-embeddings/${EMBEDDINGS_VERSION}/embeddings.${EMB_EXT}`
-const META_URL = `${BASE_PATH}data/mtg-embeddings/${EMBEDDINGS_VERSION}/meta.json`
+const EMB_URL = `${BLOB_STORAGE_URL}mtg-embeddings/${EMBEDDINGS_VERSION}/embeddings.${EMB_EXT}`
+const META_URL = `${BLOB_STORAGE_URL}mtg-embeddings/${EMBEDDINGS_VERSION}/meta.json`
 
 // Contrast enhancement for query images to match database preprocessing
 // Set to 1.0 for no enhancement (default)
@@ -195,7 +195,7 @@ export async function loadEmbeddingsAndMetaFromPackage() {
       // Validate shape matches buffer size
       // Calculate expected size in bytes based on data type
       const numElements = metaObj.shape[0] * metaObj.shape[1]
-      const bytesPerElement = metaObj.quantization.dtype === 'int8' ? 1 : 4  // int8=1 byte, float32=4 bytes
+      const bytesPerElement = metaObj.quantization.dtype === 'int8' ? 1 : 4 // int8=1 byte, float32=4 bytes
       const expectedSize = numElements * bytesPerElement
       if (buf.byteLength !== expectedSize) {
         throw new Error(
@@ -272,10 +272,17 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
 
     // Check for SharedArrayBuffer support (required for WASM workers)
     const hasSharedArrayBuffer = typeof SharedArrayBuffer !== 'undefined'
-    console.log('[loadModel] SharedArrayBuffer available:', hasSharedArrayBuffer)
+    console.log(
+      '[loadModel] SharedArrayBuffer available:',
+      hasSharedArrayBuffer,
+    )
     if (!hasSharedArrayBuffer) {
-      console.warn('[loadModel] ⚠️  SharedArrayBuffer not available. WASM workers may not work properly.')
-      console.warn('[loadModel] This can happen if: (1) Cross-Origin-Opener-Policy headers are not set, (2) Running in an iframe, or (3) Browser doesn\'t support it')
+      console.warn(
+        '[loadModel] ⚠️  SharedArrayBuffer not available. WASM workers may not work properly.',
+      )
+      console.warn(
+        "[loadModel] This can happen if: (1) Cross-Origin-Opener-Policy headers are not set, (2) Running in an iframe, or (3) Browser doesn't support it",
+      )
     }
 
     // Enable browser caching - models download once, then cached in IndexedDB
@@ -334,7 +341,8 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
       errorMsg.includes('330010576') ||
       errorMsg.includes('memory') ||
       errorMsg.includes('out of memory')
-    const isWorkerError = errorMsg.includes('worker not ready') || errorMsg.includes('worker')
+    const isWorkerError =
+      errorMsg.includes('worker not ready') || errorMsg.includes('worker')
 
     if (isMemoryError) {
       throw new Error(
@@ -344,8 +352,13 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
 
     if (isWorkerError) {
       console.error('[loadModel] Worker initialization failed. Diagnostics:')
-      console.error('  - SharedArrayBuffer:', typeof SharedArrayBuffer !== 'undefined')
-      console.error('  - Check CORS headers: Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy')
+      console.error(
+        '  - SharedArrayBuffer:',
+        typeof SharedArrayBuffer !== 'undefined',
+      )
+      console.error(
+        '  - Check CORS headers: Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy',
+      )
       console.error('  - Check browser console for WASM worker errors')
       throw new Error(
         `WASM worker failed to initialize. This usually means: (1) CORS headers not set correctly, (2) Running in an iframe, or (3) Browser doesn't support SharedArrayBuffer. Original: ${errorMsg}`,
@@ -474,11 +487,14 @@ export async function embedFromCanvas(
     canvas.toBlob((blob) => {
       if (blob) {
         const url = URL.createObjectURL(blob)
-        console.log('[embedFromCanvas] 🖼️ Card before CLIP embedding (no enhancement):', {
-          url,
-          dimensions: `${canvas.width}x${canvas.height}`,
-          blob,
-        })
+        console.log(
+          '[embedFromCanvas] 🖼️ Card before CLIP embedding (no enhancement):',
+          {
+            url,
+            dimensions: `${canvas.width}x${canvas.height}`,
+            blob,
+          },
+        )
       }
     }, 'image/png')
   }
@@ -508,7 +524,9 @@ export async function embedFromCanvas(
   // Log embedding result
   console.log('[embedFromCanvas] ✅ Embedding complete:', {
     embeddingDim: embedding.length,
-    embeddingNorm: Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0)),
+    embeddingNorm: Math.sqrt(
+      embedding.reduce((sum, val) => sum + val * val, 0),
+    ),
     metrics,
   })
 
