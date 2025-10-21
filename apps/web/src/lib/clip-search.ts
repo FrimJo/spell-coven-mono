@@ -9,12 +9,14 @@ import { env, pipeline, ProgressInfo } from '@huggingface/transformers'
 // Version of the embeddings data - configured via environment variable
 const EMBEDDINGS_VERSION = import.meta.env.VITE_EMBEDDINGS_VERSION || 'v1.3'
 // Use import.meta.env.BASE_URL to handle GitHub Pages base path in production
-const BLOB_STORAGE_URL = import.meta.env.VITE_BLOB_STORAGE_URL || '/'
+const BLOB_STORAGE_URL =
+  import.meta.env.VITE_BLOB_STORAGE_URL || 'mtg-embeddings/'
+
 // Format: float32 (recommended, no quantization) or int8 (75% smaller, slight accuracy loss)
 const EMBEDDINGS_FORMAT = import.meta.env.VITE_EMBEDDINGS_FORMAT || 'float32'
 const EMB_EXT = EMBEDDINGS_FORMAT === 'float32' ? 'f32bin' : 'i8bin'
-const EMB_URL = `${BLOB_STORAGE_URL}mtg-embeddings/${EMBEDDINGS_VERSION}/embeddings.${EMB_EXT}`
-const META_URL = `${BLOB_STORAGE_URL}mtg-embeddings/${EMBEDDINGS_VERSION}/meta.json`
+const EMB_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/embeddings.${EMB_EXT}`
+const META_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/meta.json`
 
 // Contrast enhancement for query images to match database preprocessing
 // Set to 1.0 for no enhancement (default)
