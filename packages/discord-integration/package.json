@@ -1,0 +1,25 @@
+{
+  "name": "@repo/discord-integration",
+  "version": "1.0.0",
+  "description": "Discord API integration for Spell Coven - Pure Discord API logic with zero React dependencies",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types/index.ts",
+    "./clients": "./src/clients/index.ts"
+  },
+  "scripts": {
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "discord-api-types": "^0.37.97",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "vitest": "^1.6.0",
+    "typescript": "^5.5.3"
+  }
+}
