@@ -12,6 +12,9 @@ import {
 } from '@repo/ui/components/dialog'
 import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
+import { DiscordAuthModal } from './discord/DiscordAuthModal'
+import { DiscordUserProfile } from './discord/DiscordUserProfile'
+import { useDiscordAuth } from '../hooks/useDiscordAuth'
 
 interface LandingPageProps {
   onCreateGame: (playerName: string) => void
@@ -19,11 +22,29 @@ interface LandingPageProps {
 }
 
 export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
+  const { isAuthenticated } = useDiscordAuth()
   const [createName, setCreateName] = useState('')
   const [joinName, setJoinName] = useState('')
   const [joinGameId, setJoinGameId] = useState('')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [joinDialogOpen, setJoinDialogOpen] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+
+  const handleCreateClick = () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true)
+      return
+    }
+    setCreateDialogOpen(true)
+  }
+
+  const handleJoinClick = () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true)
+      return
+    }
+    setJoinDialogOpen(true)
+  }
 
   const handleCreate = () => {
     if (createName.trim()) {
@@ -69,12 +90,17 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
               >
                 How It Works
               </a>
-              <Button
-                variant="outline"
-                className="border-purple-500/50 text-purple-300 hover:bg-purple-500/10"
-              >
-                Sign In
-              </Button>
+              {isAuthenticated ? (
+                <DiscordUserProfile />
+              ) : (
+                <Button
+                  variant="outline"
+                  className="border-purple-500/50 text-purple-300 hover:bg-purple-500/10"
+                  onClick={() => setShowAuthModal(true)}
+                >
+                  Sign In with Discord
+                </Button>
+              )}
             </nav>
           </div>
         </header>
@@ -111,6 +137,7 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
                   <Button
                     size="lg"
                     className="min-w-[200px] gap-2 bg-purple-600 text-white hover:bg-purple-700"
+                    onClick={handleCreateClick}
                   >
                     <Plus className="h-5 w-5" />
                     Create Game
@@ -153,6 +180,7 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
                     size="lg"
                     variant="outline"
                     className="min-w-[200px] gap-2 border-slate-700 text-slate-300 hover:bg-slate-800"
+                    onClick={handleJoinClick}
                   >
                     <Play className="h-5 w-5" />
                     Join Game
@@ -316,6 +344,9 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
           </div>
         </footer>
       </div>
+
+      {/* Discord Auth Modal */}
+      <DiscordAuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   )
 }
