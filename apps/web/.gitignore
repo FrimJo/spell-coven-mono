@@ -23,3 +23,5 @@ public/index_out/
 
 test-results/
 .playwright-storage/*.demo.ts
+
+certificates/
