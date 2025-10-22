@@ -58,12 +58,9 @@ export class YOLOv8Detector implements CardDetector {
       this.status = 'loading'
 
       // Load ONNX model
-      this.session = await ort.InferenceSession.create(
-        this.config.modelPath!,
-        {
-          executionProviders: ['wasm'],
-        },
-      )
+      this.session = await ort.InferenceSession.create(this.config.modelPath!, {
+        executionProviders: ['wasm'],
+      })
 
       this.status = 'ready'
     } catch (error) {
@@ -93,11 +90,7 @@ export class YOLOv8Detector implements CardDetector {
 
     // Process output
     const rawOutput = outputs['output0'].data as Float32Array
-    const cards = this.processOutput(
-      rawOutput,
-      canvasWidth,
-      canvasHeight,
-    )
+    const cards = this.processOutput(rawOutput, canvasWidth, canvasHeight)
 
     const inferenceTimeMs = performance.now() - startTime
 

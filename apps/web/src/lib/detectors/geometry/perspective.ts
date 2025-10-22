@@ -73,7 +73,7 @@ export async function computeHomography(
 
 /**
  * Apply perspective warp to produce canonical card image with proper aspect ratio
- * 
+ *
  * Matches Python preprocessing:
  * 1. Warp card to maintain MTG aspect ratio (63:88)
  * 2. Pad to square with black borders
@@ -93,12 +93,12 @@ export async function warpPerspective(
 
   // MTG card aspect ratio: 63mm × 88mm (width:height)
   const MTG_ASPECT_RATIO = 63 / 88 // ≈ 0.716
-  
+
   // Calculate card dimensions that fill the target size while maintaining aspect ratio
   // The card should fill the height, with padding on the sides
   const cardHeight = targetSize
   const cardWidth = Math.round(cardHeight * MTG_ASPECT_RATIO)
-  
+
   // Compute homography matrix for the card dimensions
   const matrixData = await computeHomography(quad, cardWidth, cardHeight)
 
@@ -114,27 +114,35 @@ export async function warpPerspective(
     // Apply perspective transformation to get card with correct aspect ratio
     // The homography maps the quad corners to (0,0), (width,0), (width,height), (0,height)
     // This should make the card fill the entire output canvas
-    cv.warpPerspective(src, warped, M, warpSize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(0, 0, 0, 255))
+    cv.warpPerspective(
+      src,
+      warped,
+      M,
+      warpSize,
+      cv.INTER_LINEAR,
+      cv.BORDER_CONSTANT,
+      new cv.Scalar(0, 0, 0, 255),
+    )
 
     // Create square canvas with black background (matching Python preprocessing)
     const outputCanvas = document.createElement('canvas')
     outputCanvas.width = targetSize
     outputCanvas.height = targetSize
     const ctx = outputCanvas.getContext('2d')!
-    
+
     // Fill with black
     ctx.fillStyle = 'black'
     ctx.fillRect(0, 0, targetSize, targetSize)
-    
+
     // Create temporary canvas for the warped card
     const tempCanvas = document.createElement('canvas')
     tempCanvas.width = cardWidth
     tempCanvas.height = cardHeight
     cv.imshow(tempCanvas, warped)
-    
+
     // Log the perspective-warped card (before padding to square)
     // Warped card output ready
-    
+
     // Center the card in the square canvas
     const pasteX = Math.floor((targetSize - cardWidth) / 2)
     const pasteY = Math.floor((targetSize - cardHeight) / 2)

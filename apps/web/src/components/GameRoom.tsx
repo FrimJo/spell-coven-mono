@@ -111,13 +111,13 @@ function GameRoomContent({
               // Parse progress from message (e.g., "progress onnx/model.onnx 45.5%")
               const percentMatch = msg.match(/(\d+(?:\.\d+)?)\s*%/)
               let progress = 25 // Default start
-              
+
               if (percentMatch) {
                 const downloadPercent = parseFloat(percentMatch[1])
                 // Map download progress (0-100%) to loading range (25-40%)
                 progress = 25 + (downloadPercent / 100) * 15
               }
-              
+
               loadingEvents.emit({
                 step: 'clip-model',
                 progress: Math.min(progress, 40),
@@ -147,9 +147,14 @@ function GameRoomContent({
 
         try {
           await loadOpenCV()
-          console.log('[GameRoom] OpenCV loaded successfully during initialization')
+          console.log(
+            '[GameRoom] OpenCV loaded successfully during initialization',
+          )
         } catch (err) {
-          console.error('[GameRoom] Failed to load OpenCV during initialization:', err)
+          console.error(
+            '[GameRoom] Failed to load OpenCV during initialization:',
+            err,
+          )
           // Continue anyway - OpenCV will be lazy-loaded when needed
         }
 

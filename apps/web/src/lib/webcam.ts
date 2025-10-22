@@ -4,12 +4,12 @@
 import type { DetectedCard } from '@/types/card-query'
 
 import type { CardDetector, DetectorType } from './detectors'
+import { warmModel } from './clip-search'
 import { CROPPED_CARD_HEIGHT, CROPPED_CARD_WIDTH } from './detection-constants'
 import { createDetector } from './detectors'
 import { refineBoundingBoxToCorners } from './detectors/geometry/bbox-refinement'
 import { warpCardToCanonical } from './detectors/geometry/perspective'
 import { loadingEvents } from './loading-events'
-import { warmModel } from './clip-search'
 
 // OpenCV removed - using DETR bounding boxes for cropping
 
@@ -638,11 +638,14 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
         croppedCanvas.toBlob((blob) => {
           if (blob) {
             const url = URL.createObjectURL(blob)
-            console.log('[Webcam] Query image for database (after OpenCV warp):', {
-              url,
-              dimensions: `${croppedCanvas.width}x${croppedCanvas.height}`,
-              blob,
-            })
+            console.log(
+              '[Webcam] Query image for database (after OpenCV warp):',
+              {
+                url,
+                dimensions: `${croppedCanvas.width}x${croppedCanvas.height}`,
+                blob,
+              },
+            )
             setTimeout(() => URL.revokeObjectURL(url), 1000)
           }
         }, 'image/png')
@@ -760,7 +763,10 @@ export async function setupWebcam(args: {
         if (ok && typeof args.onCrop === 'function') {
           // 3. Embedding and search happen in onCrop callback
           // Store metrics start time for callback to use
-          const canvasWithMetrics = croppedCanvas as HTMLCanvasElement & { __metricsStart?: number; __pipelineMetrics?: typeof metrics }
+          const canvasWithMetrics = croppedCanvas as HTMLCanvasElement & {
+            __metricsStart?: number
+            __pipelineMetrics?: typeof metrics
+          }
           canvasWithMetrics.__metricsStart = performance.now()
           canvasWithMetrics.__pipelineMetrics = metrics
           args.onCrop(croppedCanvas)

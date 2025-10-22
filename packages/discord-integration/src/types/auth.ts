@@ -23,7 +23,7 @@ export const DiscordUserSchema = z.object({
   version: z.literal('1.0'),
   id: z.string().regex(/^\d+$/), // Snowflake ID
   username: z.string().min(1).max(32),
-  discriminator: z.string().regex(/^\d{4}$/), // Legacy, may be "0" for new usernames
+  discriminator: z.string(), // "0" for new usernames, "####" for legacy
   avatar: z.string().nullable(), // Avatar hash or null
   avatarUrl: z.string().url().optional(), // Computed from avatar hash
   bot: z.boolean().optional(),

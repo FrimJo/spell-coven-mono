@@ -1,6 +1,7 @@
-import { formatUserDisplayName, getAvatarUrl } from '@repo/discord-integration';
-import { useDiscordAuth } from '../../hooks/useDiscordAuth';
-import { useDiscordUser } from '../../hooks/useDiscordUser';
+import { formatUserDisplayName, getAvatarUrl } from '@repo/discord-integration'
+
+import { useDiscordAuth } from '../../hooks/useDiscordAuth'
+import { useDiscordUser } from '../../hooks/useDiscordUser'
 
 /**
  * Discord User Profile Component
@@ -8,11 +9,11 @@ import { useDiscordUser } from '../../hooks/useDiscordUser';
  */
 
 export function DiscordUserProfile() {
-  const { isAuthenticated, logout } = useDiscordAuth();
-  const { user, isLoading } = useDiscordUser();
+  const { isAuthenticated, logout } = useDiscordAuth()
+  const { user, isLoading } = useDiscordUser()
 
   if (!isAuthenticated || !user) {
-    return null;
+    return null
   }
 
   if (isLoading) {
@@ -21,19 +22,25 @@ export function DiscordUserProfile() {
         <div className="h-8 w-8 animate-pulse rounded-full bg-gray-300 dark:bg-gray-700" />
         <div className="h-4 w-24 animate-pulse rounded bg-gray-300 dark:bg-gray-700" />
       </div>
-    );
+    )
   }
 
-  const displayName = formatUserDisplayName(user);
-  const avatarUrl = getAvatarUrl(user, 64);
+  const displayName = formatUserDisplayName(user)
+  const avatarUrl = getAvatarUrl(user, 64)
 
   return (
     <div className="group relative flex items-center space-x-3">
       {/* Avatar */}
-      <img src={avatarUrl} alt={displayName} className="h-8 w-8 rounded-full ring-2 ring-gray-200 dark:ring-gray-700" />
+      <img
+        src={avatarUrl}
+        alt={displayName}
+        className="h-8 w-8 rounded-full ring-2 ring-gray-200 dark:ring-gray-700"
+      />
 
       {/* Username */}
-      <span className="text-sm font-medium text-gray-900 dark:text-white">{displayName}</span>
+      <span className="text-sm font-medium text-gray-900 dark:text-white">
+        {displayName}
+      </span>
 
       {/* Dropdown menu (on hover) */}
       <div className="invisible absolute right-0 top-full z-10 mt-2 w-48 rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 group-hover:visible dark:bg-gray-800">
@@ -42,7 +49,12 @@ export function DiscordUserProfile() {
           className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
         >
           <span className="flex items-center">
-            <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="mr-2 h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -55,5 +67,5 @@ export function DiscordUserProfile() {
         </button>
       </div>
     </div>
-  );
+  )
 }

@@ -228,7 +228,7 @@ export class SlimSAMDetector implements CardDetector {
         [point.x - gridRadius, point.y + gridRadius], // Bottom-left
         [point.x + gridRadius, point.y + gridRadius], // Bottom-right
       ]
-      
+
       // Add negative points far from the card
       const margin = Math.min(canvasWidth, canvasHeight) * 0.1 // 10% margin
       const negativePoints = [
@@ -237,11 +237,11 @@ export class SlimSAMDetector implements CardDetector {
         [margin, canvasHeight - margin], // Bottom-left corner
         [canvasWidth - margin, canvasHeight - margin], // Bottom-right corner
       ]
-      
+
       // Combine all points
       const allPoints = [...positivePoints, ...negativePoints]
       const allLabels = [1, 1, 1, 1, 1, 0, 0, 0, 0] // 5 positive, 4 negative
-      
+
       console.log('[SlimSAM] Using point prompts with negative edges:', {
         click: point,
         negativePoints,
@@ -326,7 +326,7 @@ export class SlimSAMDetector implements CardDetector {
             debugCanvas.height = canvasHeight
             const debugCtx = debugCanvas.getContext('2d')!
             debugCtx.drawImage(canvas, 0, 0)
-            
+
             // Draw the quad corners and edges
             debugCtx.strokeStyle = '#00ff00'
             debugCtx.lineWidth = 3
@@ -337,7 +337,7 @@ export class SlimSAMDetector implements CardDetector {
             debugCtx.lineTo(quad.bottomLeft.x, quad.bottomLeft.y)
             debugCtx.closePath()
             debugCtx.stroke()
-            
+
             // Draw corner circles
             debugCtx.fillStyle = '#ff0000'
             const drawCorner = (x: number, y: number, label: string) => {
@@ -353,16 +353,19 @@ export class SlimSAMDetector implements CardDetector {
             drawCorner(quad.topRight.x, quad.topRight.y, 'TR')
             drawCorner(quad.bottomRight.x, quad.bottomRight.y, 'BR')
             drawCorner(quad.bottomLeft.x, quad.bottomLeft.y, 'BL')
-            
+
             // Log the quad visualization
             debugCanvas.toBlob((blob) => {
               if (blob) {
                 const url = URL.createObjectURL(blob)
-                console.log('[SlimSAM] Detected quad corners (GREEN=edges, RED=corners):', {
-                  url,
-                  quad,
-                  blob,
-                })
+                console.log(
+                  '[SlimSAM] Detected quad corners (GREEN=edges, RED=corners):',
+                  {
+                    url,
+                    quad,
+                    blob,
+                  },
+                )
               }
             }, 'image/png')
 

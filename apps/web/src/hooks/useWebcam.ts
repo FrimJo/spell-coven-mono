@@ -1,7 +1,7 @@
 import type { DetectorType } from '@/lib/detectors'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { setupWebcam } from '@/lib/webcam'
 import { loadingEvents } from '@/lib/loading-events'
+import { setupWebcam } from '@/lib/webcam'
 
 interface UseWebcamOptions {
   /** Enable card detection */
@@ -175,13 +175,16 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
         })
 
         // Wait for CLIP model to be ready before completing
-        const { isModelReady, loadModel, loadEmbeddingsAndMetaFromPackage } = await import('@/lib/clip-search')
+        const { isModelReady, loadModel, loadEmbeddingsAndMetaFromPackage } =
+          await import('@/lib/clip-search')
         console.log('[useWebcam] Checking if CLIP model is ready...')
-        
+
         // If model not already loaded, load both the model and embeddings database
         if (!isModelReady()) {
-          console.log('[useWebcam] Loading CLIP model and embeddings database...')
-          
+          console.log(
+            '[useWebcam] Loading CLIP model and embeddings database...',
+          )
+
           // Load embeddings database (meta + db)
           loadingEvents.emit({
             step: 'clip-model',
@@ -190,7 +193,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
           })
           await loadEmbeddingsAndMetaFromPackage()
           console.log('[useWebcam] ✅ Embeddings database loaded')
-          
+
           // Load CLIP model
           await loadModel({
             onProgress: (msg: string) => {
@@ -203,21 +206,27 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
             },
           })
         }
-        
+
         // Poll with timeout as fallback in case model loading doesn't complete
         let attempts = 0
         const maxAttempts = 300 // 60 seconds timeout
         while (!isModelReady() && attempts < maxAttempts) {
           if (attempts % 10 === 0) {
-            console.log(`[useWebcam] Waiting for CLIP model... (${attempts}/${maxAttempts})`)
+            console.log(
+              `[useWebcam] Waiting for CLIP model... (${attempts}/${maxAttempts})`,
+            )
           }
           await new Promise((resolve) => setTimeout(resolve, 200))
           attempts++
         }
 
         if (!isModelReady()) {
-          console.error('[useWebcam] ❌ CLIP model not ready after waiting 60 seconds')
-          console.error('[useWebcam] This likely means the model failed to load. Check console for errors.')
+          console.error(
+            '[useWebcam] ❌ CLIP model not ready after waiting 60 seconds',
+          )
+          console.error(
+            '[useWebcam] This likely means the model failed to load. Check console for errors.',
+          )
         } else {
           console.log('[useWebcam] ✅ CLIP model is ready!')
           loadingEvents.emit({
@@ -270,12 +279,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     return () => {
       mounted = false
     }
-  }, [
-    enableCardDetection,
-    detectorType,
-    onCrop,
-    usePerspectiveWarp,
-  ])
+  }, [enableCardDetection, detectorType, onCrop, usePerspectiveWarp])
 
   const startVideo = async (deviceId?: string | null) => {
     if (enableCardDetection) {
@@ -336,7 +340,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     }
     const devices = await navigator.mediaDevices.enumerateDevices()
     const cameras = devices.filter((d) => d.kind === 'videoinput')
-    
+
     // In development mode, add mock video file as a camera option
     if (import.meta.env.DEV) {
       const mockCamera: MediaDeviceInfo = {
@@ -353,7 +357,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
       }
       cameras.unshift(mockCamera) // Add at the beginning
     }
-    
+
     return cameras
   }
 

@@ -112,11 +112,7 @@ export class OpenCVDetector implements CardDetector {
     }
   }
 
-  async detect(
-    canvas: HTMLCanvasElement,
-    canvasWidth: number,
-    canvasHeight: number,
-  ): Promise<DetectionOutput> {
+  async detect(canvas: HTMLCanvasElement): Promise<DetectionOutput> {
     const startTime = performance.now()
 
     try {
@@ -182,7 +178,9 @@ export class OpenCVDetector implements CardDetector {
 
       console.log('[OpenCV] Contours found:', this.contours.size())
       if (this.contours.size() === 0) {
-        console.log('[OpenCV] No contours found - edge detection may have failed')
+        console.log(
+          '[OpenCV] No contours found - edge detection may have failed',
+        )
       }
 
       // Process contours to find card-like rectangles
@@ -200,7 +198,9 @@ export class OpenCVDetector implements CardDetector {
 
         // Filter by minimum area
         if (area < (this.config.minCardArea || 500)) {
-          console.log(`[OpenCV] Contour ${i}: area=${area.toFixed(0)} < min=${this.config.minCardArea || 500}`)
+          console.log(
+            `[OpenCV] Contour ${i}: area=${area.toFixed(0)} < min=${this.config.minCardArea || 500}`,
+          )
           continue
         }
 
@@ -242,7 +242,9 @@ export class OpenCVDetector implements CardDetector {
           const percentageOfCanvas = (area / canvasArea) * 100
           // Any quadrilateral > 0.1% of canvas gets score 1.0
           const score = Math.min(percentageOfCanvas / 0.1, 1.0)
-          console.log(`[OpenCV] Contour ${i}: area=${area.toFixed(0)}, %canvas=${percentageOfCanvas.toFixed(3)}, score=${score.toFixed(3)}, points=${points.length}`)
+          console.log(
+            `[OpenCV] Contour ${i}: area=${area.toFixed(0)}, %canvas=${percentageOfCanvas.toFixed(3)}, score=${score.toFixed(3)}, points=${points.length}`,
+          )
 
           rawDetections.push({
             box: normalizedBox,
@@ -254,10 +256,14 @@ export class OpenCVDetector implements CardDetector {
         approx.delete()
       }
 
-      console.log(`[OpenCV] Raw detections: ${rawDetections.length}, filtered by area and quadrilateral shape`)
+      console.log(
+        `[OpenCV] Raw detections: ${rawDetections.length}, filtered by area and quadrilateral shape`,
+      )
 
       // Filter by confidence threshold (very low - accept any quadrilateral)
-      console.log(`[OpenCV] Filtering ${rawDetections.length} detections with threshold=${this.config.confidenceThreshold || 0.01}`)
+      console.log(
+        `[OpenCV] Filtering ${rawDetections.length} detections with threshold=${this.config.confidenceThreshold || 0.01}`,
+      )
       let cards = rawDetections
         .filter((d) => d.score >= (this.config.confidenceThreshold || 0.01))
         .map((d) => ({
@@ -270,8 +276,8 @@ export class OpenCVDetector implements CardDetector {
       if (this.clickPoint && cards.length > 0) {
         // Calculate distance from click point to each detection's center
         const cardsWithDistance = cards.map((card) => {
-          const centerX = (card.box.xmin + card.box.xmax) / 2 * canvas.width
-          const centerY = (card.box.ymin + card.box.ymax) / 2 * canvas.height
+          const centerX = ((card.box.xmin + card.box.xmax) / 2) * canvas.width
+          const centerY = ((card.box.ymin + card.box.ymax) / 2) * canvas.height
           const dx = centerX - this.clickPoint!.x
           const dy = centerY - this.clickPoint!.y
           const distance = Math.sqrt(dx * dx + dy * dy)

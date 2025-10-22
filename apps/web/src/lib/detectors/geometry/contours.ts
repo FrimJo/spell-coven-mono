@@ -102,18 +102,18 @@ export async function findSmallestContourContainingPoint(
   let smallestContour: Mat | null = null
 
   const contoursContainingPoint: Array<{ contour: Mat; area: number }> = []
-  
+
   for (const contour of contours) {
     const area = cv.contourArea(contour)
-    
+
     // Skip contours that are too small (noise)
     if (area < minArea) {
       continue
     }
-    
+
     // Check if point is inside this contour
     const distance = cv.pointPolygonTest(contour, cvPoint, false)
-    
+
     // distance >= 0 means point is inside or on the contour
     if (distance >= 0) {
       contoursContainingPoint.push({ contour, area })
@@ -247,7 +247,7 @@ export async function extractQuadFromMask(
   epsilon: number = 0.02,
 ): Promise<CardQuad | null> {
   const cv = await loadOpenCV()
-  
+
   try {
     // When we have a click point, skip erosion to preserve separate contours
     // Erosion can merge the card with the playmat
@@ -264,10 +264,10 @@ export async function extractQuadFromMask(
       kernel.delete()
       contoursSource = erodedMask
     }
-    
+
     // Find all contours
     const contours = await maskToContours(contoursSource)
-    
+
     // Clean up eroded mask if we created one
     if (contoursSource !== mask) {
       contoursSource.delete()
@@ -279,11 +279,14 @@ export async function extractQuadFromMask(
 
     // Get the appropriate contour based on whether we have a click point
     let targetContour: Mat | null = null
-    
+
     if (clickPoint) {
       // Find smallest contour containing the click point (more precise for cards on playmats)
-      targetContour = await findSmallestContourContainingPoint(contours, clickPoint)
-      
+      targetContour = await findSmallestContourContainingPoint(
+        contours,
+        clickPoint,
+      )
+
       if (!targetContour) {
         targetContour = await findLargestContour(contours)
       }
@@ -303,7 +306,7 @@ export async function extractQuadFromMask(
     // Try multiple epsilon values if initial approximation fails
     // Start with provided epsilon, then try progressively higher values
     // Higher epsilon = more aggressive simplification
-    const epsilonValues = [epsilon, 0.03, 0.04, 0.05, 0.06, 0.08, 0.10, 0.12]
+    const epsilonValues = [epsilon, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.12]
     let points: Point[] | null = null
 
     for (const eps of epsilonValues) {

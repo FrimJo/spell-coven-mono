@@ -12,9 +12,10 @@ import {
 } from '@repo/ui/components/dialog'
 import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
+
+import { useDiscordAuth } from '../hooks/useDiscordAuth'
 import { DiscordAuthModal } from './discord/DiscordAuthModal'
 import { DiscordUserProfile } from './discord/DiscordUserProfile'
-import { useDiscordAuth } from '../hooks/useDiscordAuth'
 
 interface LandingPageProps {
   onCreateGame: (playerName: string) => void
@@ -346,7 +347,10 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
       </div>
 
       {/* Discord Auth Modal */}
-      <DiscordAuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <DiscordAuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
     </div>
   )
 }

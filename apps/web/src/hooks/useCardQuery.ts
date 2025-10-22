@@ -1,8 +1,8 @@
 import type { CardQueryState, UseCardQueryReturn } from '@/types/card-query'
 import { useCallback, useRef, useState } from 'react'
 import { embedFromCanvas, top1 } from '@/lib/clip-search'
-import { validateCanvas } from '@/types/card-query'
 import { generateOrientationCandidates } from '@/lib/detectors/geometry/orientation'
+import { validateCanvas } from '@/types/card-query'
 
 export function useCardQuery(): UseCardQueryReturn {
   const [state, setState] = useState<CardQueryState>({
@@ -55,11 +55,14 @@ export function useCardQuery(): UseCardQueryReturn {
       canvas.toBlob((blob) => {
         if (blob) {
           const url = URL.createObjectURL(blob)
-          console.log('[useCardQuery] 🖼️ Card after OWL-ViT detection & crop (before rotation):', {
-            url,
-            dimensions: `${canvas.width}x${canvas.height}`,
-            blob,
-          })
+          console.log(
+            '[useCardQuery] 🖼️ Card after OWL-ViT detection & crop (before rotation):',
+            {
+              url,
+              dimensions: `${canvas.width}x${canvas.height}`,
+              blob,
+            },
+          )
         }
       }, 'image/png')
 
@@ -88,7 +91,9 @@ export function useCardQuery(): UseCardQueryReturn {
 
         // Embed the 180° rotated canvas
         console.log('[useCardQuery] Starting embedding...')
-        const { embedding, metrics: embeddingMetrics } = await embedFromCanvas(rotated180).catch((err) => {
+        const { embedding, metrics: embeddingMetrics } = await embedFromCanvas(
+          rotated180,
+        ).catch((err) => {
           throw new Error(`Failed to embed canvas: ${err.message}`)
         })
         console.log('[useCardQuery] Embedding completed')
@@ -104,7 +109,11 @@ export function useCardQuery(): UseCardQueryReturn {
           throw err
         }
         const searchMs = performance.now() - searchStart
-        console.log('[useCardQuery] Database search completed in', searchMs.toFixed(0), 'ms')
+        console.log(
+          '[useCardQuery] Database search completed in',
+          searchMs.toFixed(0),
+          'ms',
+        )
         console.log('[useCardQuery] Search result:', result)
 
         if (!result) {
@@ -117,32 +126,35 @@ export function useCardQuery(): UseCardQueryReturn {
         }
 
         // Log performance summary
-        const canvasWithMetrics = canvas as HTMLCanvasElement & { __pipelineMetrics?: { detection: number; crop: number } }
+        const canvasWithMetrics = canvas as HTMLCanvasElement & {
+          __pipelineMetrics?: { detection: number; crop: number }
+        }
         if (canvasWithMetrics.__pipelineMetrics) {
           const metrics = canvasWithMetrics.__pipelineMetrics
-          const totalMs = metrics.detection + metrics.crop + embeddingMetrics.total + searchMs
-          
+          const totalMs =
+            metrics.detection + metrics.crop + embeddingMetrics.total + searchMs
+
           console.log('🎯 Pipeline Performance:', {
-            'Detection': `${metrics.detection.toFixed(0)}ms`,
+            Detection: `${metrics.detection.toFixed(0)}ms`,
             'Crop & Warp': `${metrics.crop.toFixed(0)}ms`,
-            'Embedding': `${embeddingMetrics.total.toFixed(0)}ms`,
-            'Search': `${searchMs.toFixed(0)}ms`,
-            'Total': `${totalMs.toFixed(0)}ms`
+            Embedding: `${embeddingMetrics.total.toFixed(0)}ms`,
+            Search: `${searchMs.toFixed(0)}ms`,
+            Total: `${totalMs.toFixed(0)}ms`,
           })
-          
+
           // Log detailed embedding breakdown if contrast enhancement is enabled
           if (embeddingMetrics.contrast > 0) {
             console.log('📊 Embedding Breakdown:', {
               'Contrast Enhancement': `${embeddingMetrics.contrast.toFixed(0)}ms`,
               'CLIP Inference': `${embeddingMetrics.inference.toFixed(0)}ms`,
               'L2 Normalization': `${embeddingMetrics.normalization.toFixed(0)}ms`,
-              'Total Embedding': `${embeddingMetrics.total.toFixed(0)}ms`
+              'Total Embedding': `${embeddingMetrics.total.toFixed(0)}ms`,
             })
           } else {
             console.log('📊 Embedding Breakdown:', {
               'CLIP Inference': `${embeddingMetrics.inference.toFixed(0)}ms`,
               'L2 Normalization': `${embeddingMetrics.normalization.toFixed(0)}ms`,
-              'Total Embedding': `${embeddingMetrics.total.toFixed(0)}ms`
+              'Total Embedding': `${embeddingMetrics.total.toFixed(0)}ms`,
             })
           }
         }

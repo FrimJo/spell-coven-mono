@@ -1,4 +1,4 @@
-import { useDiscordAuth } from '../../hooks/useDiscordAuth';
+import { useDiscordAuth } from '../../hooks/useDiscordAuth'
 
 /**
  * Discord Login Button
@@ -6,18 +6,21 @@ import { useDiscordAuth } from '../../hooks/useDiscordAuth';
  */
 
 export interface DiscordLoginButtonProps {
-  className?: string;
-  size?: 'sm' | 'md' | 'lg';
+  className?: string
+  size?: 'sm' | 'md' | 'lg'
 }
 
-export function DiscordLoginButton({ className = '', size = 'md' }: DiscordLoginButtonProps) {
-  const { login, isLoading } = useDiscordAuth();
+export function DiscordLoginButton({
+  className = '',
+  size = 'md',
+}: DiscordLoginButtonProps) {
+  const { login, isLoading } = useDiscordAuth()
 
   const sizeClasses = {
     sm: 'px-3 py-1.5 text-sm',
     md: 'px-4 py-2 text-base',
     lg: 'px-6 py-3 text-lg',
-  };
+  }
 
   return (
     <button
@@ -27,8 +30,19 @@ export function DiscordLoginButton({ className = '', size = 'md' }: DiscordLogin
     >
       {isLoading ? (
         <>
-          <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <svg
+            className="mr-2 h-4 w-4 animate-spin"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
             <path
               className="opacity-75"
               fill="currentColor"
@@ -46,5 +60,5 @@ export function DiscordLoginButton({ className = '', size = 'md' }: DiscordLogin
         </>
       )}
     </button>
-  );
+  )
 }

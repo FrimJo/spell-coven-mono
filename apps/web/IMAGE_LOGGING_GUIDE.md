@@ -5,74 +5,89 @@ This document describes the image blob logging added to track cards through the 
 ## Complete Card Flow with Logging
 
 ### Stage 1: OWL-ViT Detection & Crop
+
 **File**: `src/lib/webcam.ts` (lines 413-436)
 **When**: After user clicks on a card, OWL-ViT detects it and crops it
 
 **Logs**:
+
 ```javascript
 // 1. Extracted card region (before resize)
 console.log('[Webcam] Extracted card region (before resize):', {
   url: 'blob:http://localhost:3000/...',
   dimensions: '640x896',
-  blob: Blob
+  blob: Blob,
 })
 
 // 2. Final query image (336×336 with black padding)
 console.log('[Webcam] Query image for database (336×336):', {
   url: 'blob:http://localhost:3000/...',
   dimensions: '336x336',
-  blob: Blob
+  blob: Blob,
 })
 ```
 
-**What you see**: 
+**What you see**:
+
 - Raw card crop from OWL-ViT detection
 - Card resized to 336×336 with black padding (if needed to preserve aspect ratio)
 
 ---
 
 ### Stage 2: Canvas Passed to useCardQuery
+
 **File**: `src/hooks/useCardQuery.ts` (lines 54-64)
 **When**: Right after validation, before any rotation
 
 **Log**:
+
 ```javascript
-console.log('[useCardQuery] 🖼️ Card after OWL-ViT detection & crop (before rotation):', {
-  url: 'blob:http://localhost:3000/...',
-  dimensions: '336x336',
-  blob: Blob
-})
+console.log(
+  '[useCardQuery] 🖼️ Card after OWL-ViT detection & crop (before rotation):',
+  {
+    url: 'blob:http://localhost:3000/...',
+    dimensions: '336x336',
+    blob: Blob,
+  },
+)
 ```
 
-**What you see**: 
+**What you see**:
+
 - The 336×336 card image as it enters the query pipeline
 - This is the "canonical" card image before any transformations
 
 ---
 
 ### Stage 3: Contrast Enhancement (Optional)
+
 **File**: `src/lib/clip-search.ts` (lines 434-456)
 **When**: If `VITE_QUERY_CONTRAST > 1.0`, before CLIP inference
 
 **Logs**:
+
 ```javascript
 // With contrast enhancement enabled
 console.log('[embedFromCanvas] 🖼️ Card after contrast enhancement:', {
   url: 'blob:http://localhost:3000/...',
   dimensions: '336x336',
   factor: 1.2,
-  blob: Blob
+  blob: Blob,
 })
 
 // Without contrast enhancement
-console.log('[embedFromCanvas] 🖼️ Card before CLIP embedding (no enhancement):', {
-  url: 'blob:http://localhost:3000/...',
-  dimensions: '336x336',
-  blob: Blob
-})
+console.log(
+  '[embedFromCanvas] 🖼️ Card before CLIP embedding (no enhancement):',
+  {
+    url: 'blob:http://localhost:3000/...',
+    dimensions: '336x336',
+    blob: Blob,
+  },
+)
 ```
 
-**What you see**: 
+**What you see**:
+
 - Card with contrast enhancement applied (if enabled)
 - Shows the exact image being sent to CLIP model
 - Useful for debugging blurry card detection
@@ -80,10 +95,12 @@ console.log('[embedFromCanvas] 🖼️ Card before CLIP embedding (no enhancemen
 ---
 
 ### Stage 4: CLIP Embedding Complete
+
 **File**: `src/lib/clip-search.ts` (lines 481-486)
 **When**: After CLIP inference and L2 normalization
 
 **Log**:
+
 ```javascript
 console.log('[embedFromCanvas] ✅ Embedding complete:', {
   embeddingDim: 768,
@@ -92,12 +109,13 @@ console.log('[embedFromCanvas] ✅ Embedding complete:', {
     contrast: 18,
     inference: 2150,
     normalization: 5,
-    total: 2173
-  }
+    total: 2173,
+  },
 })
 ```
 
-**What you see**: 
+**What you see**:
+
 - Embedding dimension (768 for ViT-L/14@336px)
 - Embedding norm (should be ~1.0 for L2-normalized vectors)
 - Timing breakdown of the embedding pipeline
@@ -148,21 +166,25 @@ console.log('[embedFromCanvas] ✅ Embedding complete:', {
 ## Debugging Tips
 
 ### Card looks wrong at Stage 2?
+
 - Check OWL-ViT detection accuracy
 - Verify card is fully visible in frame
 - Try clicking closer to card center
 
 ### Card looks blurry at Stage 3?
+
 - Enable contrast enhancement: `VITE_QUERY_CONTRAST=1.2 pnpm dev`
 - Check webcam focus/lighting
 - Try different camera angle
 
 ### Embedding norm not ~1.0?
+
 - Check if L2 normalization is working
 - Verify embedding dimension matches database (should be 768)
 - Check for NaN or Infinity values
 
 ### Search returns wrong card?
+
 - Compare embedding norm with expected ~1.0
 - Check if contrast enhancement matches database build
 - Verify database was built with same CLIP model
@@ -181,12 +203,14 @@ metrics: {
 ```
 
 **Expected ranges**:
+
 - **Contrast**: 10-20ms (if enabled)
 - **Inference**: 1500-3000ms (depends on browser/GPU)
 - **Normalization**: 1-10ms
 - **Total**: 1500-3000ms
 
 If inference is >5000ms, check:
+
 - Browser CPU throttling
 - Other tabs using GPU
 - Model cache status

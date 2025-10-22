@@ -1,6 +1,6 @@
 /**
  * Loading event system for tracking game room initialization progress
- * 
+ *
  * Provides a centralized event emitter for tracking:
  * - Card embeddings loading
  * - CLIP model download
@@ -9,7 +9,7 @@
  * - Game room setup
  */
 
-export type LoadingStep = 
+export type LoadingStep =
   | 'embeddings'
   | 'clip-model'
   | 'opencv'
@@ -31,12 +31,12 @@ class LoadingEventEmitter {
   subscribe(listener: LoadingListener): () => void {
     this.listeners.push(listener)
     return () => {
-      this.listeners = this.listeners.filter(l => l !== listener)
+      this.listeners = this.listeners.filter((l) => l !== listener)
     }
   }
 
   emit(event: LoadingEvent): void {
-    this.listeners.forEach(listener => listener(event))
+    this.listeners.forEach((listener) => listener(event))
   }
 
   clear(): void {
