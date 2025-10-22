@@ -1,6 +1,6 @@
 # Tasks: Discord API Integration for Remote MTG Play
 
-**Input**: Design documents from `/specs/013-discord-api-integration/`  
+**Input**: Design documents from `/specs/013-discord-api-integration/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/, quickstart.md
 
 **Tests**: Tests are OPTIONAL and not included per constitution (tests optional unless explicitly requested).
@@ -20,33 +20,33 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Create `packages/discord-integration/` directory structure
-- [ ] T002 Initialize package.json with discord-api-types, zod
-- [ ] T003 [P] Create tsconfig.json extending base config
-- [ ] T004 [P] Create README.md documenting SoC principles
-- [ ] T005 [P] Create directories: `src/{clients,managers,utils,types}/`
-- [ ] T006 [P] Create `src/index.ts` for exports
-- [ ] T007 Add `@repo/discord-integration` to `apps/web/package.json`
-- [ ] T008 [P] Add `VITE_DISCORD_CLIENT_ID` to `apps/web/.env.development`
-- [ ] T009 [P] Update `pnpm-workspace.yaml` if needed
+- [x] T001 Create `packages/discord-integration/` directory structure
+- [x] T002 Initialize package.json with discord-api-types, zod
+- [x] T003 [P] Create tsconfig.json extending base config
+- [x] T004 [P] Create README.md documenting SoC principles
+- [x] T005 [P] Create directories: `src/{clients,managers,utils,types}/`
+- [x] T006 [P] Create `src/index.ts` for exports
+- [x] T007 Add `@repo/discord-integration` to `apps/web/package.json`
+- [x] T008 [P] Add `VITE_DISCORD_CLIENT_ID` to `apps/web/.env.development`
+- [x] T009 [P] Update `pnpm-workspace.yaml` if needed
 
 ---
 
 ## Phase 2: Foundational (BLOCKS ALL USER STORIES)
 
-- [ ] T010 [P] Define DiscordToken schema in `types/auth.ts`
-- [ ] T011 [P] Define DiscordUser schema in `types/auth.ts`
-- [ ] T012 [P] Define PKCEChallenge type in `types/auth.ts`
-- [ ] T013 [P] Define GatewayEvent types in `types/gateway.ts`
-- [ ] T014 [P] Define VoiceState schema in `types/gateway.ts`
-- [ ] T015 [P] Define DiscordChannel schema in `types/messages.ts`
-- [ ] T016 [P] Define DiscordMessage schema in `types/messages.ts`
-- [ ] T017 [P] Define RoomMetadata schema in `types/rooms.ts`
-- [ ] T018 [P] Define GameRoom schema in `types/rooms.ts`
-- [ ] T019 [P] Create validation utilities in `utils/validators.ts`
-- [ ] T020 [P] Create message formatters in `utils/formatters.ts`
-- [ ] T021 [P] Create Discord config in `apps/web/src/config/discord.ts`
-- [ ] T022 Export all types from `src/index.ts`
+- [x] T010 [P] Define DiscordToken schema in `types/auth.ts`
+- [x] T011 [P] Define DiscordUser schema in `types/auth.ts`
+- [x] T012 [P] Define PKCEChallenge type in `types/auth.ts`
+- [x] T013 [P] Define GatewayEvent types in `types/gateway.ts`
+- [x] T014 [P] Define VoiceState schema in `types/gateway.ts`
+- [x] T015 [P] Define DiscordChannel schema in `types/messages.ts`
+- [x] T016 [P] Define DiscordMessage schema in `types/messages.ts`
+- [x] T017 [P] Define RoomMetadata schema in `types/rooms.ts`
+- [x] T018 [P] Define GameRoom schema in `types/rooms.ts`
+- [x] T019 [P] Create validation utilities in `utils/validators.ts`
+- [x] T020 [P] Create message formatters in `utils/formatters.ts`
+- [x] T021 [P] Create Discord config in `apps/web/src/config/discord.ts`
+- [x] T022 Export all types from `src/index.ts`
 
 ---
 
@@ -56,29 +56,29 @@
 
 **Test**: Create game, complete OAuth, verify profile appears
 
-- [ ] T023 [P] [US1] Implement DiscordOAuthClient in `clients/DiscordOAuthClient.ts`
-- [ ] T024 [P] [US1] Implement generatePKCE() using crypto.subtle
-- [ ] T025 [P] [US1] Implement getAuthUrl() with PKCE parameters
-- [ ] T026 [P] [US1] Implement exchangeCodeForToken()
-- [ ] T027 [P] [US1] Implement refreshToken()
-- [ ] T028 [P] [US1] Implement fetchUser()
-- [ ] T029 [US1] Add OAuthError handling
-- [ ] T030 [US1] Export DiscordOAuthClient
-- [ ] T031 [P] [US1] Create useDiscordAuth() in `apps/web/src/hooks/useDiscordAuth.ts`
-- [ ] T032 [US1] Implement token storage in localStorage
-- [ ] T033 [US1] Implement auto token refresh (5 min buffer)
-- [ ] T034 [US1] Implement logout function
-- [ ] T035 [P] [US1] Create useDiscordUser() in `hooks/useDiscordUser.ts`
-- [ ] T036 [P] [US1] Create DiscordAuthModal in `components/discord/DiscordAuthModal.tsx`
-- [ ] T037 [P] [US1] Create DiscordLoginButton in `components/discord/DiscordLoginButton.tsx`
-- [ ] T038 [P] [US1] Create DiscordUserProfile in `components/discord/DiscordUserProfile.tsx`
-- [ ] T039 [US1] Update LandingPage to intercept Create/Join Game
-- [ ] T040 [US1] Show DiscordAuthModal when unauthenticated
-- [ ] T041 [US1] Update header with DiscordUserProfile
-- [ ] T042 [US1] Create callback route in `routes/auth/discord/callback.tsx`
-- [ ] T043 [US1] Implement code exchange in callback
-- [ ] T044 [US1] Handle OAuth errors with retry
-- [ ] T045 [US1] Redirect after successful auth
+- [x] T023 [P] [US1] Implement DiscordOAuthClient in `clients/DiscordOAuthClient.ts`
+- [x] T024 [P] [US1] Implement generatePKCE() using crypto.subtle
+- [x] T025 [P] [US1] Implement getAuthUrl() with PKCE parameters
+- [x] T026 [P] [US1] Implement exchangeCodeForToken()
+- [x] T027 [P] [US1] Implement refreshToken()
+- [x] T028 [P] [US1] Implement fetchUser()
+- [x] T029 [US1] Add OAuthError handling
+- [x] T030 [US1] Export DiscordOAuthClient
+- [x] T031 [P] [US1] Create useDiscordAuth() in `apps/web/src/hooks/useDiscordAuth.ts`
+- [x] T032 [US1] Implement token storage in localStorage
+- [x] T033 [US1] Implement auto token refresh (5 min buffer)
+- [x] T034 [US1] Implement logout function
+- [x] T035 [P] [US1] Create useDiscordUser() in `hooks/useDiscordUser.ts`
+- [x] T036 [P] [US1] Create DiscordAuthModal in `components/discord/DiscordAuthModal.tsx`
+- [x] T037 [P] [US1] Create DiscordLoginButton in `components/discord/DiscordLoginButton.tsx`
+- [x] T038 [P] [US1] Create DiscordUserProfile in `components/discord/DiscordUserProfile.tsx`
+- [x] T039 [US1] Update LandingPage to intercept Create/Join Game
+- [x] T040 [US1] Show DiscordAuthModal when unauthenticated
+- [x] T041 [US1] Update header with DiscordUserProfile
+- [x] T042 [US1] Create callback route in `routes/auth/discord/callback.tsx`
+- [x] T043 [US1] Implement code exchange in callback
+- [x] T044 [US1] Handle OAuth errors with retry
+- [x] T045 [US1] Redirect after successful auth
 
 ---
 
