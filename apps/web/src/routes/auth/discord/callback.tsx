@@ -3,7 +3,6 @@ import { discordClient, STORAGE_KEY } from '@/lib/discord-client'
 import {
   createFileRoute,
   ErrorComponentProps,
-  redirect,
   useNavigate,
 } from '@tanstack/react-router'
 import z from 'zod'

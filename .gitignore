@@ -36,3 +36,5 @@ yarn-error.log*
 # Only ignore user-specific cache/state files
 .windsurf/cascade/
 .windsurf/.windsurfstate
+
+.prettiercache

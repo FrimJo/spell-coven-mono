@@ -1,10 +1,15 @@
-import type { DiscordToken, DiscordUser, PKCEChallenge, OAuthErrorResponse } from '../types/auth.js'
-import { 
-  DiscordTokenSchema, 
+import type {
+  DiscordToken,
+  DiscordUser,
+  OAuthErrorResponse,
+  PKCEChallenge,
+} from '../types/auth.js'
+import {
   DiscordTokenResponseSchema,
-  DiscordUserSchema,
+  DiscordTokenSchema,
   DiscordUserResponseSchema,
-  OAuthErrorResponseSchema 
+  DiscordUserSchema,
+  OAuthErrorResponseSchema,
 } from '../types/auth.js'
 
 /**
@@ -17,11 +22,11 @@ import {
  */
 
 export interface DiscordOAuthClientConfig {
-  clientId: string;
-  redirectUri: string;
-  scopes: string[];
-  storage: Storage; // Storage provider for PKCE (e.g., localStorage, sessionStorage)
-  pkceStorageKey?: string; // Optional custom storage key (defaults to 'discord_pkce')
+  clientId: string
+  redirectUri: string
+  scopes: string[]
+  storage: Storage // Storage provider for PKCE (e.g., localStorage, sessionStorage)
+  pkceStorageKey?: string // Optional custom storage key (defaults to 'discord_pkce')
 }
 
 export class OAuthError extends Error {
@@ -129,10 +134,12 @@ export class DiscordOAuthClient {
       return pkce
     } catch (err) {
       this.storage.removeItem(this.pkceStorageKey)
-      throw new OAuthError(
+      const error = new OAuthError(
         'Invalid PKCE challenge format.',
         'pkce_invalid',
       )
+      error.cause = err
+      throw error
     }
   }
 
@@ -358,7 +365,9 @@ export class DiscordOAuthClient {
    * Parse OAuth error response
    * @private
    */
-  private async parseOAuthError(response: Response): Promise<OAuthErrorResponse> {
+  private async parseOAuthError(
+    response: Response,
+  ): Promise<OAuthErrorResponse> {
     try {
       const data = await response.json()
       return OAuthErrorResponseSchema.parse(data)

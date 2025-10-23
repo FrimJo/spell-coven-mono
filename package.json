@@ -9,10 +9,12 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "test": "turbo run test",
     "lint": "turbo run lint",
     "format": "turbo run format --continue -- --cache --cache-location .cache/.prettiercache",
-    "check-types": "turbo run check-types",
-    "test": "turbo run test"
+    "lint:fix": "turbo run lint -- --fix",
+    "format:fix": "turbo run format -- --write",
+    "check-types": "turbo run check-types"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",

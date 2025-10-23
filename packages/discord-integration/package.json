@@ -12,7 +12,11 @@
   "scripts": {
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "type-check": "tsc --noEmit"
+    "format": "prettier --check . --ignore-path ./.prettierignore --ignore-path ./.gitignore --ignore-path ../../.gitignore",
+    "format:fix": "prettier --check . --ignore-path ./.prettierignore --ignore-path ./.gitignore --ignore-path ../../.gitignore --write",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --max-warnings 0 --fix",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "discord-api-types": "^0.37.97",
@@ -27,6 +31,7 @@
     "@types/node": "^20.14.10",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "vitest": "^1.6.0",
+    "eslint": "^9.34.0",
     "typescript": "^5.5.3"
   },
   "prettier": "@repo/prettier-config"
