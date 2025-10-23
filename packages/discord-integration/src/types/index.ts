@@ -1,13 +1,52 @@
 // Type exports for @repo/discord-integration
 
 // Auth types
-export * from './auth.js';
+export type {
+  DiscordToken,
+  DiscordUser,
+  PKCEChallenge,
+  OAuthErrorResponse,
+  DiscordTokenResponse,
+  DiscordUserResponse,
+} from './auth'
+export {
+  DiscordTokenSchema,
+  DiscordUserSchema,
+  PKCEChallengeSchema,
+  OAuthErrorResponseSchema,
+  DiscordTokenResponseSchema,
+  DiscordUserResponseSchema,
+} from './auth'
 
 // Gateway types
-export * from './gateway.js';
+export type {
+  GatewayEvent,
+  VoiceState,
+  GatewayConnection,
+  GatewayEventType,
+  RtcConnection,
+  StreamQuality,
+  VideoStream,
+} from './gateway'
+export {
+  GatewayEventSchema,
+  VoiceStateSchema,
+  GatewayConnectionSchema,
+  GatewayEventTypeSchema,
+  RtcConnectionSchema,
+  StreamQualitySchema,
+  VideoStreamSchema,
+} from './gateway'
 
 // Message types
-export * from './messages.js';
+export type { DiscordChannel, DiscordMessage, GameEventEmbed } from './messages'
+export {
+  DiscordChannelSchema,
+  DiscordMessageSchema,
+  GameEventEmbedSchema,
+  EmbedColors,
+} from './messages'
 
 // Room types
-export * from './rooms.js';
+export type { RoomMetadata, GameRoom } from './rooms'
+export { RoomMetadataSchema, GameRoomSchema } from './rooms'

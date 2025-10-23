@@ -16,6 +16,22 @@ export const DiscordTokenSchema = z.object({
 export type DiscordToken = z.infer<typeof DiscordTokenSchema>;
 
 /**
+ * Discord API User Response Schema
+ * Raw response from Discord /users/@me endpoint
+ */
+export const DiscordUserResponseSchema = z.object({
+  id: z.string().regex(/^\d+$/), // Snowflake ID
+  username: z.string().min(1).max(32),
+  discriminator: z.string(), // "0" for new usernames, "####" for legacy
+  avatar: z.string().nullable(), // Avatar hash or null
+  bot: z.boolean().optional(),
+  system: z.boolean().optional(),
+  flags: z.number().int().optional(),
+});
+
+export type DiscordUserResponse = z.infer<typeof DiscordUserResponseSchema>;
+
+/**
  * Discord User Profile Schema (v1.0)
  * Fetched from Discord API after authentication
  */
@@ -46,11 +62,26 @@ export const PKCEChallengeSchema = z.object({
 export type PKCEChallenge = z.infer<typeof PKCEChallengeSchema>;
 
 /**
- * OAuth Error Response
+ * Discord API Token Response Schema
+ * Raw response from Discord OAuth2 token endpoint
  */
-export const OAuthErrorSchema = z.object({
+export const DiscordTokenResponseSchema = z.object({
+  access_token: z.string().min(1),
+  refresh_token: z.string().min(1),
+  expires_in: z.number().int().positive(), // Seconds
+  scope: z.string(), // Space-separated scopes
+  token_type: z.literal('Bearer'),
+});
+
+export type DiscordTokenResponse = z.infer<typeof DiscordTokenResponseSchema>;
+
+/**
+ * OAuth Error Response Schema
+ * Raw error response from Discord OAuth2 endpoints
+ */
+export const OAuthErrorResponseSchema = z.object({
   error: z.string(),
   error_description: z.string().optional(),
 });
 
-export type OAuthError = z.infer<typeof OAuthErrorSchema>;
+export type OAuthErrorResponse = z.infer<typeof OAuthErrorResponseSchema>;
