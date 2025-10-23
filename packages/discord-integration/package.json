@@ -4,9 +4,10 @@
   "description": "Discord API integration for Spell Coven - Pure Discord API logic with zero React dependencies",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
     "./types": "./src/types/index.ts",
-    "./clients": "./src/clients/index.ts"
+    "./clients": "./src/clients/index.ts",
+    "./managers": "./src/managers/index.ts",
+    "./utils": "./src/utils/index.ts"
   },
   "scripts": {
     "test": "vitest",
@@ -18,13 +19,15 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "@repo/eslint-config": "workspace:*",
     "@repo/prettier-config": "workspace:*",
     "@repo/tailwind-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^20.14.10",
+    "prettier-plugin-tailwindcss": "^0.6.11",
     "vitest": "^1.6.0",
     "typescript": "^5.5.3"
   },
-    "prettier": "@repo/prettier-config"
+  "prettier": "@repo/prettier-config"
 }

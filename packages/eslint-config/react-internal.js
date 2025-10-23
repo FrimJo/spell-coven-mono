@@ -5,6 +5,7 @@ import pluginReactHooks from "eslint-plugin-react-hooks";
 import pluginReact from "eslint-plugin-react";
 import globals from "globals";
 import { config as baseConfig } from "./base.js";
+import pluginQuery from '@tanstack/eslint-plugin-query'
 
 /**
  * A custom ESLint configuration for libraries that use React.
@@ -16,6 +17,7 @@ export const config = [
   eslintConfigPrettier,
   ...tseslint.configs.recommended,
   pluginReact.configs.flat.recommended,
+  ...pluginQuery.configs['flat/recommended'],
   {
     languageOptions: {
       ...pluginReact.configs.flat.recommended.languageOptions,

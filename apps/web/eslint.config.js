@@ -1,14 +1,10 @@
-import pluginQuery from '@tanstack/eslint-plugin-query'
 import reactCompiler from 'eslint-plugin-react-compiler'
 
-import { config as baseConfig } from '@repo/eslint-config/base'
 import { config as reactConfig } from '@repo/eslint-config/react-internal'
 
 /** @type {import('typescript-eslint').Config} */
 export default [
-  ...baseConfig,
   ...reactConfig,
-  ...pluginQuery.configs['flat/recommended'],
   { ignores: ['public/**', 'public/mockServiceWorker.js', '**/*.demo.ts'] },
   {
     files: ['**/*.ts', '**/*.tsx'],
