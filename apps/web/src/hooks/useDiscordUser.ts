@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import type { DiscordUser } from '@repo/discord-integration'
-import { DiscordOAuthClient } from '@repo/discord-integration'
+import type { DiscordUser } from '@repo/discord-integration/types'
 
-import {
-  DISCORD_CLIENT_ID,
-  DISCORD_REDIRECT_URI,
-  DISCORD_SCOPES,
-} from '../config/discord'
+import { discordClient } from '../lib/discord-client'
 import { useDiscordAuth } from './useDiscordAuth'
 
 /**
@@ -35,13 +30,7 @@ export function useDiscordUser(): UseDiscordUserReturn {
       setIsLoading(true)
       setError(null)
 
-      const client = new DiscordOAuthClient({
-        clientId: DISCORD_CLIENT_ID,
-        redirectUri: DISCORD_REDIRECT_URI,
-        scopes: DISCORD_SCOPES,
-      })
-
-      const fetchedUser = await client.fetchUser(token.accessToken)
+      const fetchedUser = await discordClient.fetchUser(token.accessToken)
       setUser(fetchedUser)
     } catch (err) {
       console.error('Failed to fetch Discord user:', err)

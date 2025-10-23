@@ -15,6 +15,7 @@ import { Label } from '@repo/ui/components/label'
 
 import { useDiscordAuth } from '../hooks/useDiscordAuth'
 import { DiscordAuthModal } from './discord/DiscordAuthModal'
+import { ConnectionStatus } from './discord/ConnectionStatus'
 import { DiscordUserProfile } from './discord/DiscordUserProfile'
 
 interface LandingPageProps {
@@ -92,7 +93,10 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
                 How It Works
               </a>
               {isAuthenticated ? (
-                <DiscordUserProfile />
+                <div className="flex items-center space-x-4">
+                  <ConnectionStatus />
+                  <DiscordUserProfile />
+                </div>
               ) : (
                 <Button
                   variant="outline"
