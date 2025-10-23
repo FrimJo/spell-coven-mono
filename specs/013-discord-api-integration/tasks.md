@@ -88,23 +88,23 @@
 
 **Test**: Authenticate, observe indicator, simulate network interruption
 
-- [ ] T046 [P] [US2] Implement DiscordGatewayClient in `clients/DiscordGatewayClient.ts`
-- [ ] T047 [P] [US2] Implement connect() for WebSocket
-- [ ] T048 [P] [US2] Implement heartbeat mechanism
-- [ ] T049 [P] [US2] Implement disconnect()
-- [ ] T050 [P] [US2] Implement reconnection with exponential backoff
-- [ ] T051 [P] [US2] Implement event emitters for state changes
-- [ ] T052 [P] [US2] Implement Gateway event parsing
-- [ ] T053 [US2] Add GatewayConnection state management
-- [ ] T054 [US2] Export DiscordGatewayClient
-- [ ] T055 [US2] Create useDiscordConnection() in `hooks/useDiscordConnection.ts`
-- [ ] T056 [US2] Implement Gateway lifecycle management
-- [ ] T057 [US2] Subscribe to connection state changes
-- [ ] T058 [US2] Trigger connection on auth, disconnect on logout
-- [ ] T059 [US2] Create ConnectionStatus in `components/discord/ConnectionStatus.tsx`
-- [ ] T060 [US2] Display states: Connected, Reconnecting, Error
-- [ ] T061 [US2] Add manual retry button
-- [ ] T062 [US2] Integrate ConnectionStatus into header
+- [x] T046 [P] [US2] Implement DiscordGatewayClient in `clients/DiscordGatewayClient.ts`
+- [x] T047 [P] [US2] Implement connect() for WebSocket
+- [x] T048 [P] [US2] Implement heartbeat mechanism
+- [x] T049 [P] [US2] Implement disconnect()
+- [x] T050 [P] [US2] Implement reconnection with exponential backoff
+- [x] T051 [P] [US2] Implement event emitters for state changes
+- [x] T052 [P] [US2] Implement Gateway event parsing
+- [x] T053 [US2] Add GatewayConnection state management
+- [x] T054 [US2] Export DiscordGatewayClient
+- [x] T055 [US2] Create useDiscordConnection() in `hooks/useDiscordConnection.ts`
+- [x] T056 [US2] Implement Gateway lifecycle management
+- [x] T057 [US2] Subscribe to connection state changes
+- [x] T058 [US2] Trigger connection on auth, disconnect on logout
+- [x] T059 [US2] Create ConnectionStatus in `components/discord/ConnectionStatus.tsx`
+- [x] T060 [US2] Display states: Connected, Reconnecting, Error
+- [x] T061 [US2] Add manual retry button
+- [x] T062 [US2] Integrate ConnectionStatus into header
 
 ---
 

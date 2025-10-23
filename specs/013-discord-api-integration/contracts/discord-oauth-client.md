@@ -1,7 +1,7 @@
 # Contract: DiscordOAuthClient
 
-**Package**: `@repo/discord-integration`  
-**Version**: 1.0  
+**Package**: `@repo/discord-integration`
+**Version**: 1.0
 **Purpose**: OAuth2 authentication with PKCE for Discord API access
 
 ## Interface
@@ -192,7 +192,7 @@ interface OAuthError extends Error {
 ## Usage Example
 
 ```typescript
-import { DiscordOAuthClient } from '@repo/discord-integration';
+import { DiscordOAuthClient } from '@repo/discord-integration/clients';
 
 const client = new DiscordOAuthClient({
   clientId: process.env.VITE_DISCORD_CLIENT_ID,
@@ -220,7 +220,7 @@ try {
   const token = await client.exchangeCodeForToken(code, codeVerifier, redirectUri);
   // Store token in localStorage
   localStorage.setItem('discord_token', JSON.stringify(token));
-  
+
   // Fetch user profile
   const user = await client.fetchUser(token.accessToken);
   console.log('Authenticated as:', user.username);
