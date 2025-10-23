@@ -1,5 +1,5 @@
-import type { DiscordUser, GameEventEmbed } from '../types/index.js';
-import { EmbedColors } from '../types/messages.js';
+import type { DiscordUser, GameEventEmbed } from '../types/index.js'
+import { EmbedColors } from '../types/messages.js'
 
 /**
  * Message formatting utilities
@@ -13,10 +13,10 @@ import { EmbedColors } from '../types/messages.js';
 export function formatUserDisplayName(user: DiscordUser): string {
   if (user.discriminator === '0' || user.discriminator === '0000') {
     // New username system (no discriminator)
-    return `@${user.username}`;
+    return `@${user.username}`
   }
   // Legacy username system
-  return `${user.username}#${user.discriminator}`;
+  return `${user.username}#${user.discriminator}`
 }
 
 /**
@@ -27,12 +27,15 @@ export function formatUserDisplayName(user: DiscordUser): string {
  */
 export function getAvatarUrl(user: DiscordUser, size = 128): string {
   if (user.avatar) {
-    const extension = user.avatar.startsWith('a_') ? 'gif' : 'png';
-    return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${extension}?size=${size}`;
+    const extension = user.avatar.startsWith('a_') ? 'gif' : 'png'
+    return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${extension}?size=${size}`
   }
   // Default avatar (based on discriminator or user ID)
-  const defaultAvatarIndex = user.discriminator !== '0' ? parseInt(user.discriminator, 10) % 5 : parseInt(user.id, 10) % 5;
-  return `https://cdn.discordapp.com/embed/avatars/${defaultAvatarIndex}.png`;
+  const defaultAvatarIndex =
+    user.discriminator !== '0'
+      ? parseInt(user.discriminator, 10) % 5
+      : parseInt(user.id, 10) % 5
+  return `https://cdn.discordapp.com/embed/avatars/${defaultAvatarIndex}.png`
 }
 
 /**
@@ -41,10 +44,14 @@ export function getAvatarUrl(user: DiscordUser, size = 128): string {
  * @param style Discord timestamp style (t, T, d, D, f, F, R)
  * @returns Discord timestamp string
  */
-export function formatDiscordTimestamp(date: Date | string, style: 't' | 'T' | 'd' | 'D' | 'f' | 'F' | 'R' = 'f'): string {
-  const timestamp = typeof date === 'string' ? new Date(date).getTime() : date.getTime();
-  const unixSeconds = Math.floor(timestamp / 1000);
-  return `<t:${unixSeconds}:${style}>`;
+export function formatDiscordTimestamp(
+  date: Date | string,
+  style: 't' | 'T' | 'd' | 'D' | 'f' | 'F' | 'R' = 'f',
+): string {
+  const timestamp =
+    typeof date === 'string' ? new Date(date).getTime() : date.getTime()
+  const unixSeconds = Math.floor(timestamp / 1000)
+  return `<t:${unixSeconds}:${style}>`
 }
 
 /**
@@ -52,50 +59,63 @@ export function formatDiscordTimestamp(date: Date | string, style: 't' | 'T' | '
  * @param embed Game event embed data
  * @returns Discord API embed object
  */
-export function formatGameEventEmbed(embed: GameEventEmbed): Record<string, unknown> {
+export function formatGameEventEmbed(
+  embed: GameEventEmbed,
+): Record<string, unknown> {
   const baseEmbed = {
     timestamp: embed.timestamp,
     color: embed.color,
-  };
+  }
 
   switch (embed.type) {
     case 'card_lookup': {
-      const data = embed.data as { cardName: string; manaCost?: string; oracleText?: string; imageUrl?: string };
+      const data = embed.data as {
+        cardName: string
+        manaCost?: string
+        oracleText?: string
+        imageUrl?: string
+      }
       return {
         ...baseEmbed,
         title: data.cardName,
         description: data.oracleText,
-        fields: data.manaCost ? [{ name: 'Mana Cost', value: data.manaCost, inline: true }] : [],
+        fields: data.manaCost
+          ? [{ name: 'Mana Cost', value: data.manaCost, inline: true }]
+          : [],
         thumbnail: data.imageUrl ? { url: data.imageUrl } : undefined,
         color: embed.color ?? EmbedColors.CARD_LOOKUP,
-      };
+      }
     }
 
     case 'life_total': {
-      const data = embed.data as { playerName: string; oldLife: number; newLife: number };
-      const delta = data.newLife - data.oldLife;
-      const deltaStr = delta > 0 ? `+${delta}` : `${delta}`;
-      const color = delta > 0 ? EmbedColors.LIFE_GAIN : EmbedColors.LIFE_LOSS;
+      const data = embed.data as {
+        playerName: string
+        oldLife: number
+        newLife: number
+      }
+      const delta = data.newLife - data.oldLife
+      const deltaStr = delta > 0 ? `+${delta}` : `${delta}`
+      const color = delta > 0 ? EmbedColors.LIFE_GAIN : EmbedColors.LIFE_LOSS
       return {
         ...baseEmbed,
         title: '❤️ Life Total Change',
         description: `**${data.playerName}**: ${data.oldLife} → ${data.newLife} (${deltaStr})`,
         color: embed.color ?? color,
-      };
+      }
     }
 
     case 'turn_change': {
-      const data = embed.data as { turnNumber: number; activePlayer: string };
+      const data = embed.data as { turnNumber: number; activePlayer: string }
       return {
         ...baseEmbed,
         title: '🔄 Turn Change',
         description: `**Turn ${data.turnNumber}**: ${data.activePlayer}'s turn`,
         color: embed.color ?? EmbedColors.TURN_CHANGE,
-      };
+      }
     }
 
     default:
-      return baseEmbed;
+      return baseEmbed
   }
 }
 
@@ -106,17 +126,17 @@ export function formatGameEventEmbed(embed: GameEventEmbed): Record<string, unkn
  */
 export function sanitizeMessageContent(text: string): string {
   // Remove @everyone and @here mentions
-  let sanitized = text.replace(/@(everyone|here)/g, '@\u200b$1');
+  let sanitized = text.replace(/@(everyone|here)/g, '@\u200b$1')
 
   // Escape Discord markdown (optional - Discord handles this)
   // sanitized = sanitized.replace(/([*_~`|])/g, '\\$1');
 
   // Trim to Discord's 2000 character limit
   if (sanitized.length > 2000) {
-    sanitized = sanitized.substring(0, 1997) + '...';
+    sanitized = sanitized.substring(0, 1997) + '...'
   }
 
-  return sanitized;
+  return sanitized
 }
 
 /**
@@ -125,7 +145,7 @@ export function sanitizeMessageContent(text: string): string {
  * @returns JSON string for channel topic
  */
 export function formatRoomMetadata(metadata: unknown): string {
-  return JSON.stringify(metadata);
+  return JSON.stringify(metadata)
 }
 
 /**
@@ -134,12 +154,12 @@ export function formatRoomMetadata(metadata: unknown): string {
  * @returns Parsed metadata object or null
  */
 export function parseRoomMetadata(topic: string | undefined): unknown | null {
-  if (!topic) return null;
+  if (!topic) return null
 
   try {
-    return JSON.parse(topic);
+    return JSON.parse(topic)
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -149,13 +169,13 @@ export function parseRoomMetadata(topic: string | undefined): unknown | null {
  * @returns Formatted string (e.g., "1.5 MB")
  */
 export function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) return '0 Bytes'
 
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
 
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
 }
 
 /**
@@ -164,15 +184,15 @@ export function formatBytes(bytes: number): string {
  * @returns Formatted string (e.g., "2m 30s")
  */
 export function formatDuration(ms: number): string {
-  const seconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
+  const seconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
 
   if (hours > 0) {
-    return `${hours}h ${minutes % 60}m`;
+    return `${hours}h ${minutes % 60}m`
   }
   if (minutes > 0) {
-    return `${minutes}m ${seconds % 60}s`;
+    return `${minutes}m ${seconds % 60}s`
   }
-  return `${seconds}s`;
+  return `${seconds}s`
 }

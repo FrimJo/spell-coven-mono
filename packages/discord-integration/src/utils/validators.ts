@@ -1,17 +1,18 @@
-import { z } from 'zod';
+import { z } from 'zod'
+
 import {
-  DiscordTokenSchema,
-  DiscordUserSchema,
-  GatewayConnectionSchema,
   DiscordChannelSchema,
   DiscordMessageSchema,
+  DiscordTokenSchema,
+  DiscordUserSchema,
   GameEventEmbedSchema,
-  RoomMetadataSchema,
   GameRoomSchema,
-  VoiceStateSchema,
-  VideoStreamSchema,
+  GatewayConnectionSchema,
+  RoomMetadataSchema,
   RtcConnectionSchema,
-} from '../types/index.js';
+  VideoStreamSchema,
+  VoiceStateSchema,
+} from '../types/index.js'
 
 /**
  * Validation utilities for Discord data contracts
@@ -22,7 +23,7 @@ import {
  * @throws {z.ZodError} if validation fails
  */
 export function validateToken(data: unknown) {
-  return DiscordTokenSchema.parse(data);
+  return DiscordTokenSchema.parse(data)
 }
 
 /**
@@ -30,7 +31,7 @@ export function validateToken(data: unknown) {
  * @throws {z.ZodError} if validation fails
  */
 export function validateUser(data: unknown) {
-  return DiscordUserSchema.parse(data);
+  return DiscordUserSchema.parse(data)
 }
 
 /**
@@ -38,7 +39,7 @@ export function validateUser(data: unknown) {
  * @throws {z.ZodError} if validation fails
  */
 export function validateGatewayConnection(data: unknown) {
-  return GatewayConnectionSchema.parse(data);
+  return GatewayConnectionSchema.parse(data)
 }
 
 /**
@@ -46,7 +47,7 @@ export function validateGatewayConnection(data: unknown) {
  * @throws {z.ZodError} if validation fails
  */
 export function validateChannel(data: unknown) {
-  return DiscordChannelSchema.parse(data);
+  return DiscordChannelSchema.parse(data)
 }
 
 /**
@@ -54,7 +55,7 @@ export function validateChannel(data: unknown) {
  * @throws {z.ZodError} if validation fails
  */
 export function validateMessage(data: unknown) {
-  return DiscordMessageSchema.parse(data);
+  return DiscordMessageSchema.parse(data)
 }
 
 /**
@@ -62,7 +63,7 @@ export function validateMessage(data: unknown) {
  * @throws {z.ZodError} if validation fails
  */
 export function validateGameEventEmbed(data: unknown) {
-  return GameEventEmbedSchema.parse(data);
+  return GameEventEmbedSchema.parse(data)
 }
 
 /**
@@ -70,7 +71,7 @@ export function validateGameEventEmbed(data: unknown) {
  * @throws {z.ZodError} if validation fails
  */
 export function validateRoomMetadata(data: unknown) {
-  return RoomMetadataSchema.parse(data);
+  return RoomMetadataSchema.parse(data)
 }
 
 /**
@@ -78,7 +79,7 @@ export function validateRoomMetadata(data: unknown) {
  * @throws {z.ZodError} if validation fails
  */
 export function validateGameRoom(data: unknown) {
-  return GameRoomSchema.parse(data);
+  return GameRoomSchema.parse(data)
 }
 
 /**
@@ -86,7 +87,7 @@ export function validateGameRoom(data: unknown) {
  * @throws {z.ZodError} if validation fails
  */
 export function validateVoiceState(data: unknown) {
-  return VoiceStateSchema.parse(data);
+  return VoiceStateSchema.parse(data)
 }
 
 /**
@@ -94,7 +95,7 @@ export function validateVoiceState(data: unknown) {
  * @throws {z.ZodError} if validation fails
  */
 export function validateVideoStream(data: unknown) {
-  return VideoStreamSchema.parse(data);
+  return VideoStreamSchema.parse(data)
 }
 
 /**
@@ -102,7 +103,7 @@ export function validateVideoStream(data: unknown) {
  * @throws {z.ZodError} if validation fails
  */
 export function validateRtcConnection(data: unknown) {
-  return RtcConnectionSchema.parse(data);
+  return RtcConnectionSchema.parse(data)
 }
 
 /**
@@ -110,12 +111,12 @@ export function validateRtcConnection(data: unknown) {
  * Returns null if validation fails
  */
 export function safeParse<T>(schema: z.ZodSchema<T>, data: unknown): T | null {
-  const result = schema.safeParse(data);
+  const result = schema.safeParse(data)
   if (!result.success) {
-    console.error('Validation failed:', result.error.errors);
-    return null;
+    console.error('Validation failed:', result.error.errors)
+    return null
   }
-  return result.data;
+  return result.data
 }
 
 /**
@@ -124,8 +125,11 @@ export function safeParse<T>(schema: z.ZodSchema<T>, data: unknown): T | null {
  * @param bufferMs Buffer time in milliseconds (default: 5 minutes)
  * @returns true if token needs refresh
  */
-export function isTokenExpired(token: { expiresAt: number }, bufferMs = 5 * 60 * 1000): boolean {
-  return Date.now() + bufferMs >= token.expiresAt;
+export function isTokenExpired(
+  token: { expiresAt: number },
+  bufferMs = 5 * 60 * 1000,
+): boolean {
+  return Date.now() + bufferMs >= token.expiresAt
 }
 
 /**
@@ -134,7 +138,7 @@ export function isTokenExpired(token: { expiresAt: number }, bufferMs = 5 * 60 *
  * @returns true if metadata fits in channel topic (< 1024 bytes)
  */
 export function isMetadataSizeValid(metadata: unknown): boolean {
-  const json = JSON.stringify(metadata);
-  const bytes = new TextEncoder().encode(json).length;
-  return bytes < 1024;
+  const json = JSON.stringify(metadata)
+  const bytes = new TextEncoder().encode(json).length
+  return bytes < 1024
 }

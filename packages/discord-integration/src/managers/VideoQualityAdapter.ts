@@ -5,6 +5,6 @@
 
 export class VideoQualityAdapter {
   constructor() {
-    throw new Error('VideoQualityAdapter not yet implemented');
+    throw new Error('VideoQualityAdapter not yet implemented')
   }
 }

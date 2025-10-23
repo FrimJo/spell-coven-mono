@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 /**
  * Discord OAuth2 Token Schema (v1.0)
@@ -11,9 +11,9 @@ export const DiscordTokenSchema = z.object({
   expiresAt: z.number().int().positive(), // Unix timestamp (ms)
   scopes: z.array(z.string()),
   tokenType: z.literal('Bearer'),
-});
+})
 
-export type DiscordToken = z.infer<typeof DiscordTokenSchema>;
+export type DiscordToken = z.infer<typeof DiscordTokenSchema>
 
 /**
  * Discord API User Response Schema
@@ -27,9 +27,9 @@ export const DiscordUserResponseSchema = z.object({
   bot: z.boolean().optional(),
   system: z.boolean().optional(),
   flags: z.number().int().optional(),
-});
+})
 
-export type DiscordUserResponse = z.infer<typeof DiscordUserResponseSchema>;
+export type DiscordUserResponse = z.infer<typeof DiscordUserResponseSchema>
 
 /**
  * Discord User Profile Schema (v1.0)
@@ -45,9 +45,9 @@ export const DiscordUserSchema = z.object({
   bot: z.boolean().optional(),
   system: z.boolean().optional(),
   flags: z.number().int().optional(),
-});
+})
 
-export type DiscordUser = z.infer<typeof DiscordUserSchema>;
+export type DiscordUser = z.infer<typeof DiscordUserSchema>
 
 /**
  * PKCE Challenge for OAuth2 (RFC 7636)
@@ -57,9 +57,9 @@ export const PKCEChallengeSchema = z.object({
   codeVerifier: z.string().min(43).max(128), // Random string
   codeChallenge: z.string(), // Base64URL(SHA256(codeVerifier))
   codeChallengeMethod: z.literal('S256'),
-});
+})
 
-export type PKCEChallenge = z.infer<typeof PKCEChallengeSchema>;
+export type PKCEChallenge = z.infer<typeof PKCEChallengeSchema>
 
 /**
  * Discord API Token Response Schema
@@ -71,9 +71,9 @@ export const DiscordTokenResponseSchema = z.object({
   expires_in: z.number().int().positive(), // Seconds
   scope: z.string(), // Space-separated scopes
   token_type: z.literal('Bearer'),
-});
+})
 
-export type DiscordTokenResponse = z.infer<typeof DiscordTokenResponseSchema>;
+export type DiscordTokenResponse = z.infer<typeof DiscordTokenResponseSchema>
 
 /**
  * OAuth Error Response Schema
@@ -82,6 +82,6 @@ export type DiscordTokenResponse = z.infer<typeof DiscordTokenResponseSchema>;
 export const OAuthErrorResponseSchema = z.object({
   error: z.string(),
   error_description: z.string().optional(),
-});
+})
 
-export type OAuthErrorResponse = z.infer<typeof OAuthErrorResponseSchema>;
+export type OAuthErrorResponse = z.infer<typeof OAuthErrorResponseSchema>

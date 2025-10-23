@@ -53,11 +53,7 @@ export function ConnectionStatus() {
         color: 'bg-yellow-500',
         text: 'Connecting...',
         icon: (
-          <svg
-            className="h-4 w-4 animate-spin"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
+          <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle
               className="opacity-25"
               cx="12"
@@ -82,11 +78,7 @@ export function ConnectionStatus() {
         color: 'bg-yellow-500',
         text: `Reconnecting... (${connectionState.reconnectAttempts}/5)`,
         icon: (
-          <svg
-            className="h-4 w-4 animate-spin"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
+          <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle
               className="opacity-25"
               cx="12"

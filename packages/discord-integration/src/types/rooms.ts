@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 /**
  * Room Metadata Schema (v1.0)
@@ -11,9 +11,9 @@ export const RoomMetadataSchema = z.object({
   maxPlayers: z.number().int().min(2).max(4),
   createdAt: z.string().datetime(), // ISO 8601
   customSettings: z.record(z.unknown()).optional(), // Extensible
-});
+})
 
-export type RoomMetadata = z.infer<typeof RoomMetadataSchema>;
+export type RoomMetadata = z.infer<typeof RoomMetadataSchema>
 
 /**
  * Game Room Schema (v1.0)
@@ -30,6 +30,6 @@ export const GameRoomSchema = z.object({
   createdAt: z.string().datetime(), // ISO 8601
   startedAt: z.string().datetime().optional(),
   completedAt: z.string().datetime().optional(),
-});
+})
 
-export type GameRoom = z.infer<typeof GameRoomSchema>;
+export type GameRoom = z.infer<typeof GameRoomSchema>

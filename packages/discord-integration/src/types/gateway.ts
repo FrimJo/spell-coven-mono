@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 /**
  * Gateway Connection State Schema (v1.0)
@@ -6,16 +6,22 @@ import { z } from 'zod';
  */
 export const GatewayConnectionSchema = z.object({
   version: z.literal('1.0'),
-  state: z.enum(['disconnected', 'connecting', 'connected', 'reconnecting', 'error']),
+  state: z.enum([
+    'disconnected',
+    'connecting',
+    'connected',
+    'reconnecting',
+    'error',
+  ]),
   sessionId: z.string().optional(),
   sequence: z.number().int().nonnegative().optional(), // Last event sequence number
   heartbeatInterval: z.number().int().positive().optional(), // Milliseconds
   lastHeartbeatAck: z.number().int().optional(), // Timestamp
   reconnectAttempts: z.number().int().nonnegative().default(0),
   url: z.string().url().optional(), // Gateway URL from Discord
-});
+})
 
-export type GatewayConnection = z.infer<typeof GatewayConnectionSchema>;
+export type GatewayConnection = z.infer<typeof GatewayConnectionSchema>
 
 /**
  * Gateway Event Types
@@ -30,9 +36,9 @@ export const GatewayEventTypeSchema = z.enum([
   'CHANNEL_CREATE',
   'CHANNEL_UPDATE',
   'CHANNEL_DELETE',
-]);
+])
 
-export type GatewayEventType = z.infer<typeof GatewayEventTypeSchema>;
+export type GatewayEventType = z.infer<typeof GatewayEventTypeSchema>
 
 /**
  * Gateway Event Payload
@@ -43,9 +49,9 @@ export const GatewayEventSchema = z.object({
   d: z.unknown(), // Event data (varies by type)
   s: z.number().int().nullable(), // Sequence number
   t: z.string().nullable(), // Event type
-});
+})
 
-export type GatewayEvent = z.infer<typeof GatewayEventSchema>;
+export type GatewayEvent = z.infer<typeof GatewayEventSchema>
 
 /**
  * Voice State Schema (v1.0)
@@ -63,9 +69,9 @@ export const VoiceStateSchema = z.object({
   speaking: z.boolean().optional(), // Computed from audio activity
   videoStreaming: z.boolean().optional(), // True if streaming video
   sessionId: z.string(),
-});
+})
 
-export type VoiceState = z.infer<typeof VoiceStateSchema>;
+export type VoiceState = z.infer<typeof VoiceStateSchema>
 
 /**
  * Video Stream Schema (v1.0)
@@ -87,9 +93,9 @@ export const VideoStreamSchema = z.object({
     latency: z.number().int().nonnegative(), // milliseconds
     jitter: z.number().int().nonnegative(), // milliseconds
   }),
-});
+})
 
-export type VideoStream = z.infer<typeof VideoStreamSchema>;
+export type VideoStream = z.infer<typeof VideoStreamSchema>
 
 /**
  * RTC Connection Schema (v1.0)
@@ -97,7 +103,13 @@ export type VideoStream = z.infer<typeof VideoStreamSchema>;
  */
 export const RtcConnectionSchema = z.object({
   version: z.literal('1.0'),
-  state: z.enum(['disconnected', 'connecting', 'connected', 'reconnecting', 'error']),
+  state: z.enum([
+    'disconnected',
+    'connecting',
+    'connected',
+    'reconnecting',
+    'error',
+  ]),
   channelId: z.string().regex(/^\d+$/),
   udpEndpoint: z
     .object({
@@ -112,12 +124,12 @@ export const RtcConnectionSchema = z.object({
     framerate: z.number().int().positive(),
     bitrate: z.number().int().positive(),
   }),
-});
+})
 
-export type RtcConnection = z.infer<typeof RtcConnectionSchema>;
+export type RtcConnection = z.infer<typeof RtcConnectionSchema>
 
 /**
  * Stream Quality Type
  */
-export const StreamQualitySchema = z.enum(['480p', '720p', '1080p']);
-export type StreamQuality = z.infer<typeof StreamQualitySchema>;
+export const StreamQualitySchema = z.enum(['480p', '720p', '1080p'])
+export type StreamQuality = z.infer<typeof StreamQualitySchema>

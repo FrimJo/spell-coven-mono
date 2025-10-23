@@ -5,6 +5,6 @@
 
 export class VoiceStateManager {
   constructor() {
-    throw new Error('VoiceStateManager not yet implemented');
+    throw new Error('VoiceStateManager not yet implemented')
   }
 }

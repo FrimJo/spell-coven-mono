@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 /**
  * Discord Channel Schema (v1.0)
@@ -14,9 +14,9 @@ export const DiscordChannelSchema = z.object({
   position: z.number().int().nonnegative().optional(),
   permissions: z.number().int().optional(), // Bitfield of user permissions
   occupancy: z.number().int().nonnegative().optional(), // Voice channel only
-});
+})
 
-export type DiscordChannel = z.infer<typeof DiscordChannelSchema>;
+export type DiscordChannel = z.infer<typeof DiscordChannelSchema>
 
 /**
  * Discord Message Schema (v1.0)
@@ -32,9 +32,9 @@ export const DiscordMessageSchema = z.object({
   editedTimestamp: z.string().datetime().optional(),
   embeds: z.array(z.lazy(() => GameEventEmbedSchema)).optional(),
   type: z.enum(['default', 'reply', 'system']).default('default'),
-});
+})
 
-export type DiscordMessage = z.infer<typeof DiscordMessageSchema>;
+export type DiscordMessage = z.infer<typeof DiscordMessageSchema>
 
 /**
  * Game Event Embed Schema (v1.0)
@@ -65,9 +65,9 @@ export const GameEventEmbedSchema = z.object({
       activePlayer: z.string(),
     }),
   ]),
-});
+})
 
-export type GameEventEmbed = z.infer<typeof GameEventEmbedSchema>;
+export type GameEventEmbed = z.infer<typeof GameEventEmbedSchema>
 
 /**
  * Embed Color Constants
@@ -77,4 +77,4 @@ export const EmbedColors = {
   LIFE_GAIN: 0x57f287, // Green
   LIFE_LOSS: 0xed4245, // Red
   TURN_CHANGE: 0xfee75c, // Yellow
-} as const;
+} as const

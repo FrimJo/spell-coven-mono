@@ -5,6 +5,6 @@
 
 export class DiscordRestClient {
   constructor(_accessToken: string) {
-    throw new Error('DiscordRestClient not yet implemented');
+    throw new Error('DiscordRestClient not yet implemented')
   }
 }
