@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { discordClient, STORAGE_KEY } from '@/lib/discord-client'
+import { getDiscordClient, STORAGE_KEY } from '@/lib/discord-client'
 import {
   createFileRoute,
   ErrorComponentProps,
@@ -25,14 +25,15 @@ export const Route = createFileRoute('/auth/discord/callback')({
       )
 
     try {
+      const client = getDiscordClient()
       // Exchange code for token (client retrieves and clears stored PKCE)
-      const newToken = await discordClient.exchangeCodeForToken(search.code)
+      const newToken = await client.exchangeCodeForToken(search.code)
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newToken))
     } catch (err) {
       throw new Error('OAuth callback failed: ' + err)
     } finally {
       // Always clean up PKCE
-      discordClient.clearStoredPKCE()
+      getDiscordClient().clearStoredPKCE()
     }
   },
   component: DiscordCallbackPage,
@@ -46,7 +47,7 @@ function DiscordCallbackPage() {
   useEffect(() => {
     setTimeout(() => {
       navigate({ to: '/' })
-    }, 1000)
+    }, 800)
   }, [navigate])
 
   return (

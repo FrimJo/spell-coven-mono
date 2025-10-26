@@ -13,10 +13,10 @@ export default defineConfig(() => {
 
     plugins: [
       viteTsConfigPaths({ projects: ['./tsconfig.json'] }),
-      tanstackStart(),
       mkcert({ savePath: './certificates' }),
       tailwindcss(),
-      viteReact(),
+      tanstackStart({ spa: { enabled: true } }),
+      viteReact(), // Must come after tanstackStart()
     ],
     resolve: {
       alias: {

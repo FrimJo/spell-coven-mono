@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import type { DiscordUser } from '@repo/discord-integration/types'
 
-import { discordClient } from '../lib/discord-client'
+import { getDiscordClient } from '../lib/discord-client'
 import { useDiscordAuth } from './useDiscordAuth'
 
 /**
@@ -30,7 +30,7 @@ export function useDiscordUser(): UseDiscordUserReturn {
       setIsLoading(true)
       setError(null)
 
-      const fetchedUser = await discordClient.fetchUser(token.accessToken)
+      const fetchedUser = await getDiscordClient().fetchUser(token.accessToken)
       setUser(fetchedUser)
     } catch (err) {
       console.error('Failed to fetch Discord user:', err)

@@ -1,3 +1,5 @@
+import { createClientOnlyFn } from '@tanstack/react-start'
+
 import { DiscordOAuthClient } from '@repo/discord-integration/clients'
 
 import {
@@ -9,12 +11,22 @@ import {
 export const STORAGE_KEY = 'discord_token'
 
 /**
- * Shared Discord OAuth Client instance
+ * Lazy-initialized Discord OAuth Client instance
  * Used across all hooks and components for Discord API interactions
+ *
+ * Uses createClientOnlyFn to ensure it only runs on the client where localStorage is available
  */
-export const discordClient = new DiscordOAuthClient({
-  clientId: DISCORD_CLIENT_ID,
-  redirectUri: DISCORD_REDIRECT_URI,
-  scopes: DISCORD_SCOPES,
-  storage: localStorage,
+let _discordClient: DiscordOAuthClient | null = null
+
+export const getDiscordClient = createClientOnlyFn((): DiscordOAuthClient => {
+  if (!_discordClient) {
+    _discordClient = new DiscordOAuthClient({
+      clientId: DISCORD_CLIENT_ID,
+      redirectUri: DISCORD_REDIRECT_URI,
+      scopes: DISCORD_SCOPES,
+      storage: localStorage,
+    })
+  }
+
+  return _discordClient
 })

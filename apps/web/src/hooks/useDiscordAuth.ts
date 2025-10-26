@@ -5,7 +5,7 @@ import { DiscordTokenSchema } from '@repo/discord-integration/types'
 import { isTokenExpired } from '@repo/discord-integration/utils'
 
 import { TOKEN_REFRESH_BUFFER_MS } from '../config/discord'
-import { discordClient, STORAGE_KEY } from '../lib/discord-client'
+import { getDiscordClient, STORAGE_KEY } from '../lib/discord-client'
 
 /**
  * Discord Authentication Hook
@@ -36,7 +36,7 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
   // Silent token refresh
   const refreshTokenSilently = useCallback(async (refreshToken: string) => {
     try {
-      const newToken = await discordClient.refreshToken(refreshToken)
+      const newToken = await getDiscordClient().refreshToken(refreshToken)
       setToken(newToken)
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newToken))
       setError(null)
@@ -107,11 +107,12 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
       setIsLoading(true)
       setError(null)
 
+      const client = getDiscordClient()
       // Generate PKCE and store it (client handles storage)
-      const codeChallenge = await discordClient.generateAndStorePKCE()
+      const codeChallenge = await client.generateAndStorePKCE()
 
       // Redirect to Discord OAuth
-      const authUrl = discordClient.getAuthUrl(codeChallenge)
+      const authUrl = client.getAuthUrl(codeChallenge)
       window.location.href = authUrl
     } catch (err) {
       console.error('Login failed:', err)
@@ -125,15 +126,16 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
     try {
       setIsLoading(true)
 
+      const client = getDiscordClient()
       if (token) {
         // Revoke token on Discord's side
-        await discordClient.revokeToken(token.accessToken)
+        await client.revokeToken(token.accessToken)
       }
 
       // Clear local state
       setToken(null)
       localStorage.removeItem(STORAGE_KEY)
-      discordClient.clearStoredPKCE()
+      client.clearStoredPKCE()
       setError(null)
     } catch (err) {
       console.error('Logout failed:', err)
