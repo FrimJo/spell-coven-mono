@@ -1,13 +1,14 @@
 <!--
 Sync Impact Report:
-- Version change: 1.0.0 → 1.1.0
-- Modified principles: Development Workflow
-- Added sections: Continuous Verification (type checking, linting, Context7 usage)
+- Version change: 1.1.0 → 1.2.0
+- Modified principles: Browser-First Architecture (WebRTC section)
+- Added sections: Third-party services for room management, chat, voice, and video
 - Templates requiring updates:
-  ⏳ plan-template.md (may need review for continuous verification practices)
-  ⏳ tasks-template.md (may need review for continuous verification practices)
+  ⏳ plan-template.md (may need review for third-party service integration)
+  ⏳ tasks-template.md (may need review for third-party service integration)
 - Follow-up TODOs: None
 - Previous changes:
+  - 1.1.0 (2025-10-14): Added Continuous Verification section
   - 1.0.0 (2025-10-13): Initial creation with all core principles
 -->
 
@@ -20,11 +21,12 @@ Sync Impact Report:
 All features MUST run entirely in the browser without backend dependencies for core functionality. This principle ensures accessibility, privacy, and offline capability.
 
 **Rules:**
-- Core features (card recognition, video chat, game tools) MUST work client-side
-- Heavy computation MUST use browser-native APIs (WebGL, WebGPU, WebRTC, Web Workers)
+- Core features (card recognition, game tools) MUST work client-side
+- Heavy computation MUST use browser-native APIs (WebGL, WebGPU, Web Workers)
 - Models and data MUST be optimized for browser delivery (quantization, compression, CDN caching)
-- Backend services are OPTIONAL and used only for matchmaking, room coordination, or social features
-- Self-hosting MUST remain viable without cloud dependencies
+- Backend services are OPTIONAL and used only for social features (room management, chat, voice, video)
+- Third-party services MAY be used for room coordination, chat, voice, and video communication
+- Self-hosting MUST remain viable for core gameplay without third-party dependencies
 
 **Rationale:** Spell Coven competes with SpellTable by offering privacy-focused, open-source remote MTG play. Browser-first architecture eliminates installation friction, enables offline use after initial load, and allows self-hosting without infrastructure costs.
 
@@ -122,12 +124,14 @@ Development MUST prioritize transparency, extensibility, and community contribut
 - Metadata MUST be co-located with embeddings for atomic loading
 - Export process MUST validate artifact integrity before shipping
 
-### WebRTC and Real-Time Features
+### Social Features and Communication
 
-- Video/audio MUST use peer-to-peer WebRTC (no media servers for core functionality)
-- Signaling MAY use lightweight backend (optional)
-- Room state MUST support offline-first with eventual consistency
+- Room management, chat, voice, and video MAY use third-party services
+- Third-party service integration MUST be optional (core gameplay works without it)
+- Third-party services MUST NOT access card recognition data or game state
+- Self-hosted alternatives SHOULD be documented for privacy-conscious users
 - Network failures MUST degrade gracefully (continue local game state)
+- Game state MUST remain client-side and not depend on third-party service availability
 
 ## Data Contracts and Versioning
 
@@ -223,4 +227,4 @@ Any violation of simplicity principles (e.g., adding architectural layers, intro
 - Code reviews MUST check for unjustified complexity
 - Specifications MUST align with user-centric prioritization
 
-**Version**: 1.1.0 | **Ratified**: 2025-10-13 | **Last Amended**: 2025-10-14
+**Version**: 1.2.0 | **Ratified**: 2025-10-13 | **Last Amended**: 2025-10-26
