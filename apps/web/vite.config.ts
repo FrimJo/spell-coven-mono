@@ -1,6 +1,6 @@
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
-import { tanstackRouter } from '@tanstack/router-plugin/vite'
+import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import mkcert from 'vite-plugin-mkcert'
@@ -12,11 +12,8 @@ export default defineConfig(() => {
     base: '/',
 
     plugins: [
-      tanstackRouter({
-        routesDirectory: './src/routes',
-        generatedRouteTree: './src/routeTree.gen.ts',
-      }),
       viteTsConfigPaths({ projects: ['./tsconfig.json'] }),
+      tanstackStart(),
       mkcert({ savePath: './certificates' }),
       tailwindcss(),
       viteReact(),

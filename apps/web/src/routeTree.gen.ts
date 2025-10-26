@@ -10,18 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as PrevIndexRouteImport } from './routes/prev/index'
 import { Route as GameGameIdRouteImport } from './routes/game.$gameId'
 import { Route as AuthDiscordCallbackRouteImport } from './routes/auth/discord/callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrevIndexRoute = PrevIndexRouteImport.update({
-  id: '/prev/',
-  path: '/prev/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GameGameIdRoute = GameGameIdRouteImport.update({
@@ -38,34 +32,30 @@ const AuthDiscordCallbackRoute = AuthDiscordCallbackRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/prev': typeof PrevIndexRoute
   '/auth/discord/callback': typeof AuthDiscordCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/prev': typeof PrevIndexRoute
   '/auth/discord/callback': typeof AuthDiscordCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/prev/': typeof PrevIndexRoute
   '/auth/discord/callback': typeof AuthDiscordCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/game/$gameId' | '/prev' | '/auth/discord/callback'
+  fullPaths: '/' | '/game/$gameId' | '/auth/discord/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/game/$gameId' | '/prev' | '/auth/discord/callback'
-  id: '__root__' | '/' | '/game/$gameId' | '/prev/' | '/auth/discord/callback'
+  to: '/' | '/game/$gameId' | '/auth/discord/callback'
+  id: '__root__' | '/' | '/game/$gameId' | '/auth/discord/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   GameGameIdRoute: typeof GameGameIdRoute
-  PrevIndexRoute: typeof PrevIndexRoute
   AuthDiscordCallbackRoute: typeof AuthDiscordCallbackRoute
 }
 
@@ -76,13 +66,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/prev/': {
-      id: '/prev/'
-      path: '/prev'
-      fullPath: '/prev'
-      preLoaderRoute: typeof PrevIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/game/$gameId': {
@@ -105,9 +88,17 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   GameGameIdRoute: GameGameIdRoute,
-  PrevIndexRoute: PrevIndexRoute,
   AuthDiscordCallbackRoute: AuthDiscordCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
