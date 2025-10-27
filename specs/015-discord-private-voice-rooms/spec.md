@@ -1,21 +1,21 @@
 # Discord “Private Voice Room via Shareable Link” — Implementation Spec (Stateless, No DB)
 
-**Version:** 1.0  
-**Audience:** LLM/engineer implementing the backend + frontend glue  
-**Goal:** The room creator joins a private voice channel (a “room”) and can share a web link `/game/{channelId}?t={token}` that lets friends authenticate and join the same voice room. No database persistence is required.
+**Version:** 1.0
+**Audience:** LLM/engineer implementing the backend + frontend glue
+**Goal:** The room creator joins a private voice channel (a “room”) and can share a web link `/game/{roomId}?t={token}` that lets friends authenticate and join the same voice room. No database persistence is required.
 
 ## Context / Constraints
 - Web app already exists; users can authenticate with Discord using **OAuth2 + PKCE**.
-- There is a server-side component (your backend) and a gateway service that can create Discord resources via bot token and announce updates to web clients over WS.
-- Rooms are currently created as **Discord voice channels**. Users are redirected to `/game/{channelId}` after creation.
+- There is a server-side component and a gateway service that can create Discord resources via bot token and announce updates to web clients over WS.
+- Rooms are currently created as **Discord voice channels**. Users are redirected to `/game/{roomId}` after creation.
 - **No DB**: We will not store room mappings. Instead we use **signed, expiring tokens** embedded in the shareable URL.
 
 ## High-Level Approach
 - When a creator makes a room, create **(1) a temporary role** and **(2) a private voice channel** gated by that role.
 - Generate a **short-lived signed token** that encodes the binding `{guild_id, channel_id, role_id, creator_id, iat, exp, constraints...}`.
-- The shareable URL becomes:  
-  `/game/{channelId}?t={signedToken}`
-- On arrival, friends authenticate with Discord (PKCE), the backend **verifies token + invariants**, ensures guild membership (using the user OAuth token with `guilds.join`), **assigns the room role**, and returns a **Discord deep link** to open the voice channel.
+- The shareable URL becomes:
+  `/game/{roomId}?t={signedToken}`
+- On arrival, friends authenticate with Discord (PKCE), the backend **verifies token + invariants**, ensures guild membership (using the user OAuth token with `guilds.join`), **assigns the room role**, and returns **voice session credentials** for the in-app client to join the channel without leaving the web experience.
 
 ## Non-Goals
 - Forcing the user’s Discord client to join voice automatically (not possible via HTTP API).
@@ -54,18 +54,18 @@
 ## End-to-End Flow
 
 ### A) Room Creation (Creator)
-1. **User authenticates** via OAuth2 + PKCE (you already have this).
+1. **User authenticates** via OAuth2 + PKCE (exists already).
 2. Backend **creates a Room Role** in the guild.
 3. Backend **creates a Voice Channel** with permission overwrites:
    - `@everyone` → deny `VIEW_CHANNEL`, `CONNECT`
    - `room_role` → allow `VIEW_CHANNEL`, `CONNECT`, `SPEAK`, `STREAM`
    - (Optional) `creator_id` → allow same as role (convenience)
 4. Backend **generates Signed Token** with fields above (`exp` short, e.g., 30 minutes).
-5. Backend **redirects** creator to `/game/{channelId}?t={token}` and also **displays** the shareable link for copying.
-6. Creator opens **Discord deep link** (present a button): `https://discord.com/channels/{guild_id}/{channel_id}` to enter the voice room.
+5. Backend **redirects** creator to `/game/{roomId}?t={token}` and also **displays** the shareable link for copying.
+6. Creator clicks **Join Room** inside the web app, which uses the returned voice session credentials to connect to the Discord voice channel through the embedded client.
 
 ### B) Friend Follows the Link
-1. Friend visits `/game/{channelId}?t={token}`.
+1. Friend visits `/game/{roomId}?t={token}`.
 2. Frontend prompts Discord sign-in (PKCE) if not already authorized.
 3. Backend **verifies token** and checks invariants (see Security Model).
 4. If friend is **not** a guild member, backend calls **Add Guild Member** using:
@@ -74,12 +74,8 @@
 5. Backend **assigns the Room Role**:
    - `PUT /guilds/{guild_id}/members/{user_id}/roles/{role_id}`
 6. Backend returns a response to client with:
-   - **Deep link** to open the voice channel: `https://discord.com/channels/{guild_id}/{channel_id}`
-   - Optional: “Open in Discord” button and a text note if capacity reached/room locked.
-
-### C) Optional Private Text Thread (Coordination)
-- You may also create a **private text thread** in a parent text channel for chat/resource sharing around the call.
-- Voice access remains governed by the voice channel + role. The thread can be used for status, links, controls.
+   - **Voice session payload** (e.g., `{ guildId, channelId, endpoint, sessionId, token }`) for the embedded Discord voice adapter
+   - Channel metadata for UI (name, seat counts, lock status)
 
 ---
 
@@ -132,12 +128,12 @@
 
 > All endpoints use API v10; `Authorization: Bot <bot_token>`
 
-- **Create Role**  
-  `POST /guilds/{guild_id}/roles`  
+- **Create Role**
+  `POST /guilds/{guild_id}/roles`
   Body: `{ "name": "room-<shortId>" }`
 
-- **Create Voice Channel**  
-  `POST /guilds/{guild_id}/channels`  
+- **Create Voice Channel**
+  `POST /guilds/{guild_id}/channels`
   Body (simplified):
   ```json
   {
@@ -163,23 +159,24 @@
   }
   ```
 
-- **Add Guild Member** (user must have authorized your app with `guilds.join`)  
-  `PUT /guilds/{guild_id}/members/{user_id}`  
+- **Add Guild Member** (user must have authorized your app with `guilds.join`)
+  `PUT /guilds/{guild_id}/members/{user_id}`
   Body: `{ "access_token": "<user_access_token>" }`
 
-- **Grant Role to Member**  
+- **Grant Role to Member**
   `PUT /guilds/{guild_id}/members/{user_id}/roles/{role_id}`
 
-- **Deep Link to Channel** (open in Discord)  
-  `https://discord.com/channels/{guild_id}/{channel_id}`
+- **Voice Gateway Connect** (establish in-app session)
+  - `GET /guilds/{guild_id}/voice-channels/{channel_id}/join-payload`
+  - Returns `{ endpoint, session_id, token, guild_id, channel_id, user_id }`
 
-> Note: Invites (`POST /channels/{channel_id}/invites`) are optional; they help if users aren’t in the guild yet, but **invites do not bypass channel overwrites**. Role assignment is still required for private access.
+> Note: Invites (`POST /channels/{channel_id}/invites`) remain optional for out-of-band access but are no longer part of the primary flow.
 
 ---
 
 ## Frontend Contract
 
-### `/game/{channelId}` Page
+### `/game/{roomId}` Page
 - If query `t` missing → show error (“Invite token required”).
 - If not authenticated → trigger Discord OAuth2 PKCE → return to same URL.
 - Call backend join endpoint: `POST /api/rooms/join` with `{ channelId, token: t }` (no trust in `channelId` beyond UX).
@@ -310,8 +307,8 @@ return {
   - Add role to member.
   - Fetch channel + role + voice member counts.
 - Frontend:
-  - `/game/{channelId}` page reads `t`, ensures login, calls `/api/rooms/join`.
-  - Renders “Open in Discord” deep link button on success.
+  - `/game/{roomId}` page reads `t`, ensures login, calls `/api/rooms/join`.
+  - Uses the returned voice session payload to connect the embedded voice client (no external navigation).
 
 ---
 
@@ -321,7 +318,7 @@ sequenceDiagram
     participant Friend
     participant WebApp
     participant DiscordAPI as Discord API
-    Friend->>WebApp: GET /game/{channelId}?t={token}
+    Friend->>WebApp: GET /game/{roomId}?t={token}
     WebApp-->>Friend: Redirect to Discord OAuth (if not logged in)
     Friend->>WebApp: POST /api/rooms/join { channelId, token }
     WebApp->>WebApp: Verify token & invariants
@@ -330,8 +327,8 @@ sequenceDiagram
         WebApp->>DiscordAPI: PUT /guilds/{g}/members/{u} (guilds.join)
     end
     WebApp->>DiscordAPI: PUT /guilds/{g}/members/{u}/roles/{role}
-    WebApp-->>Friend: { deepLink: https://discord.com/channels/g/c }
-    Friend->>DiscordAPI: Open deep link in Discord client
+    WebApp-->>Friend: { voiceSession: { endpoint, sessionId, token } }
+    Friend->>DiscordAPI: Establish voice connection via embedded client
 ```
 
 ---
@@ -359,8 +356,8 @@ sequenceDiagram
 ---
 
 ## Deliverables
-- Endpoint: `POST /api/rooms/create` → redirects creator to `/game/{channelId}?t=...`
+- Endpoint: `POST /api/rooms/create` → redirects creator to `/game/{roomId}?t=...`
 - Endpoint: `POST /api/rooms/join` → returns deep link JSON
-- Frontend page: `/game/{channelId}` (reads `t`, handles auth, calls join)
+- Frontend page: `/game/{roomId}` (reads `t`, handles auth, calls join)
 
 **This spec is self-contained and avoids DB persistence while remaining secure and user-friendly.**
