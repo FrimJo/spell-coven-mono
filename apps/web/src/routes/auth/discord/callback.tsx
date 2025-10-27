@@ -1,5 +1,9 @@
 import { useEffect } from 'react'
-import { getDiscordClient, STORAGE_KEY } from '@/lib/discord-client'
+import {
+  clearStoredDiscordToken,
+  getDiscordClient,
+  setStoredDiscordToken,
+} from '@/lib/discord-client'
 import {
   createFileRoute,
   ErrorComponentProps,
@@ -25,11 +29,13 @@ export const Route = createFileRoute('/auth/discord/callback')({
       )
 
     try {
-      const client = getDiscordClient()
       // Exchange code for token (client retrieves and clears stored PKCE)
-      const newToken = await client.exchangeCodeForToken(search.code)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newToken))
+      const newToken = await getDiscordClient().exchangeCodeForToken(
+        search.code,
+      )
+      setStoredDiscordToken(newToken)
     } catch (err) {
+      clearStoredDiscordToken()
       throw new Error('OAuth callback failed: ' + err)
     } finally {
       // Always clean up PKCE

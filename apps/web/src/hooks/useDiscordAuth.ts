@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { DiscordToken } from '@repo/discord-integration/types'
-import { DiscordTokenSchema } from '@repo/discord-integration/types'
-import { isTokenExpired } from '@repo/discord-integration/utils'
 
 import { TOKEN_REFRESH_BUFFER_MS } from '../config/discord'
-import { getDiscordClient, STORAGE_KEY } from '../lib/discord-client'
+import {
+  clearStoredDiscordToken,
+  ensureValidDiscordToken,
+  getDiscordClient,
+  refreshDiscordToken,
+} from '../lib/discord-client'
 
 /**
  * Discord Authentication Hook
@@ -36,41 +39,50 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
   // Silent token refresh
   const refreshTokenSilently = useCallback(async (refreshToken: string) => {
     try {
-      const newToken = await getDiscordClient().refreshToken(refreshToken)
+      const newToken = await refreshDiscordToken(refreshToken)
       setToken(newToken)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newToken))
       setError(null)
     } catch (err) {
       console.error('Token refresh failed:', err)
       setError(err as Error)
       // Clear invalid token
       setToken(null)
-      localStorage.removeItem(STORAGE_KEY)
+      clearStoredDiscordToken()
     }
   }, [])
 
   // Load token from localStorage on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        const parsedToken = DiscordTokenSchema.parse(JSON.parse(stored))
+    let cancelled = false
 
-        // Check if token is expired
-        if (isTokenExpired(parsedToken, 0)) {
-          // Token expired, try to refresh
-          refreshTokenSilently(parsedToken.refreshToken)
-        } else {
-          setToken(parsedToken)
+    const loadToken = async () => {
+      try {
+        const existing = await ensureValidDiscordToken()
+        if (!cancelled) {
+          setToken(existing)
+        }
+      } catch (err) {
+        console.error('Failed to load Discord token:', err)
+        if (!cancelled) {
+          clearStoredDiscordToken()
+          setToken(null)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
         }
       }
-    } catch (err) {
-      console.error('Failed to load token from localStorage:', err)
-      localStorage.removeItem(STORAGE_KEY)
-    } finally {
-      setIsLoading(false)
     }
-  }, [refreshTokenSilently])
+
+    loadToken()
+
+    return () => {
+      cancelled = true
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current)
+      }
+    }
+  }, [])
 
   // Setup automatic token refresh
   useEffect(() => {
@@ -126,22 +138,21 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
     try {
       setIsLoading(true)
 
-      const client = getDiscordClient()
       if (token) {
         // Revoke token on Discord's side
-        await client.revokeToken(token.accessToken)
+        await getDiscordClient().revokeToken(token.accessToken)
       }
 
       // Clear local state
       setToken(null)
-      localStorage.removeItem(STORAGE_KEY)
-      client.clearStoredPKCE()
+      clearStoredDiscordToken()
+      getDiscordClient().clearStoredPKCE()
       setError(null)
     } catch (err) {
       console.error('Logout failed:', err)
       // Still clear local state even if revocation fails
       setToken(null)
-      localStorage.removeItem(STORAGE_KEY)
+      clearStoredDiscordToken()
       setError(err as Error)
     } finally {
       setIsLoading(false)

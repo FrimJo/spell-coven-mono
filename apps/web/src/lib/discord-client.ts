@@ -1,6 +1,9 @@
 import { createClientOnlyFn } from '@tanstack/react-start'
 
+import type { DiscordToken } from '@repo/discord-integration/types'
 import { DiscordOAuthClient } from '@repo/discord-integration/clients'
+import { DiscordTokenSchema } from '@repo/discord-integration/types'
+import { isTokenExpired } from '@repo/discord-integration/utils'
 
 import {
   DISCORD_CLIENT_ID,
@@ -30,3 +33,84 @@ export const getDiscordClient = createClientOnlyFn((): DiscordOAuthClient => {
 
   return _discordClient
 })
+
+const getStorage = createClientOnlyFn((): Storage => {
+  return window.localStorage
+})
+
+export function getStoredDiscordToken(): DiscordToken | null {
+  const storage = getStorage()
+  if (!storage) return null
+
+  const raw = storage.getItem(STORAGE_KEY)
+  if (!raw) return null
+
+  try {
+    return DiscordTokenSchema.parse(JSON.parse(raw))
+  } catch (error) {
+    console.error('Failed to parse stored Discord token:', error)
+    storage.removeItem(STORAGE_KEY)
+    return null
+  }
+}
+
+export function setStoredDiscordToken(token: DiscordToken): void {
+  const storage = getStorage()
+  storage.setItem(STORAGE_KEY, JSON.stringify(token))
+}
+
+export function clearStoredDiscordToken(): void {
+  const storage = getStorage()
+  storage.removeItem(STORAGE_KEY)
+}
+
+export async function refreshDiscordToken(
+  refreshToken: string,
+): Promise<DiscordToken> {
+  const client = getDiscordClient()
+  const newToken = await client.refreshToken(refreshToken)
+
+  setStoredDiscordToken(newToken)
+
+  return newToken
+}
+
+export async function ensureValidDiscordToken(): Promise<DiscordToken | null> {
+  const token = getStoredDiscordToken()
+  if (!token) return null
+
+  if (!isTokenExpired(token, 0)) {
+    return token
+  }
+
+  try {
+    return await refreshDiscordToken(token.refreshToken)
+  } catch (error) {
+    console.error('Failed to refresh Discord token:', error)
+    clearStoredDiscordToken()
+    return null
+  }
+}
+
+export interface AuthContext {
+  accessToken: string
+  userId: string
+}
+
+export async function requireDiscordAuth(
+  onUnauthenticated: () => never,
+): Promise<AuthContext> {
+  const token = await ensureValidDiscordToken()
+
+  if (!token) {
+    return onUnauthenticated()
+  }
+
+  const client = getDiscordClient()
+  const user = await client.fetchUser(token.accessToken)
+
+  return {
+    accessToken: token.accessToken,
+    userId: user.id,
+  }
+}

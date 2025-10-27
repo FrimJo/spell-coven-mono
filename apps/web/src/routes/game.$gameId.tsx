@@ -1,6 +1,7 @@
 import type { DetectorType } from '@/lib/detectors'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
+import { requireDiscordAuth } from '@/lib/discord-client'
 import { sessionStorage } from '@/lib/session-storage'
 import { checkRoomExists, ensureUserInGuild } from '@/server/discord-rooms'
 import {
@@ -29,12 +30,9 @@ const gameSearchSchema = z.object({
 })
 
 export const Route = createFileRoute('/game/$gameId')({
-  // Verify Discord room exists before loading the game
-  // Uses server-only function - no HTTP request needed!
   beforeLoad: async ({ params }) => {
     const { gameId } = params
 
-    // Call server function directly (like Next.js server components)
     const result = await checkRoomExists({ data: { channelId: gameId } })
 
     if (!result.exists) {
@@ -49,12 +47,26 @@ export const Route = createFileRoute('/game/$gameId')({
       })
     }
 
-    await ensureUserInGuild({ data: { accessToken: '', userId: '' } })
-
     // Room exists and is valid
     return {
       roomName: result.channel?.name || 'Game Room',
     }
+  },
+  loader: async () => {
+    const auth = await requireDiscordAuth(() => {
+      throw redirect({
+        to: '/',
+        search: {
+          error: 'You must sign in with Discord before joining a game.',
+        },
+      })
+    })
+
+    await ensureUserInGuild({
+      data: { accessToken: auth.accessToken, userId: auth.userId },
+    })
+
+    return { auth }
   },
   component: GameRoomRoute,
   validateSearch: zodValidator(gameSearchSchema),
