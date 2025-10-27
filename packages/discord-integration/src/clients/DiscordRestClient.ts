@@ -13,6 +13,7 @@ import type {
   CreateVoiceChannelRequest,
   DiscordErrorResponse,
   GuildChannelListResponse,
+  GuildMember,
   MessageResponse,
   SendMessageRequest,
 } from '../types/rest-schemas.js'
@@ -70,6 +71,22 @@ export class DiscordRestClient {
   // ============================================================================
 
   /**
+   * Ensure a user is in a guild
+   */
+  async ensureUserInGuild(
+    guildId: string,
+    userId: string,
+    request: { access_token: string },
+  ) {
+    const response = await this.request<GuildMember>(
+      'PUT',
+      `/guilds/${guildId}/members/${userId}`,
+      request,
+    )
+    return response
+  }
+
+  /**
    * Create a voice channel in a guild
    */
   async createVoiceChannel(
@@ -78,8 +95,7 @@ export class DiscordRestClient {
     auditLogReason?: string,
   ): Promise<ChannelResponse> {
     // Validate request
-    const validatedRequest =
-      CreateVoiceChannelRequestSchema.parse(request)
+    const validatedRequest = CreateVoiceChannelRequestSchema.parse(request)
 
     const response = await this.request<ChannelResponse>(
       'POST',
@@ -204,8 +220,7 @@ export class DiscordRestClient {
         // Handle other errors
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
-          const discordError =
-            DiscordErrorResponseSchema.safeParse(errorData)
+          const discordError = DiscordErrorResponseSchema.safeParse(errorData)
 
           const error = new DiscordRestError(
             discordError.success
@@ -230,7 +245,6 @@ export class DiscordRestClient {
           throw error
         }
 
-        // Success - parse and return response
         if (response.status === 204) {
           return {} as T
         }

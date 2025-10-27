@@ -60,6 +60,7 @@ export type {
   GuildChannelListResponse,
   DiscordErrorResponse,
   RateLimitResponse,
+  GuildMember,
 } from './rest-schemas'
 export {
   CreateVoiceChannelRequestSchema,
@@ -69,6 +70,7 @@ export {
   GuildChannelListResponseSchema,
   DiscordErrorResponseSchema,
   RateLimitResponseSchema,
+  GuildMemberSchema,
 } from './rest-schemas'
 
 // RTC types

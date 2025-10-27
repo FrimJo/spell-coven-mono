@@ -1,4 +1,5 @@
 import { createServerFn, createServerOnlyFn } from '@tanstack/react-start'
+
 import { DiscordRestClient } from '@repo/discord-integration/clients'
 
 const getSecrets = createServerOnlyFn(() => {
@@ -67,6 +68,26 @@ interface ListRoomsResult {
   name: string
   createdAt: string
 }
+
+export const ensureUserInGuild = createServerFn({ method: 'POST' })
+  .inputValidator((data: { userId: string; accessToken: string }) => data)
+  .handler(async ({ data: { userId, accessToken } }) => {
+    try {
+      const client = getDiscordClient()
+      const { guildId } = getSecrets()
+
+      await client.ensureUserInGuild(userId, guildId, {
+        access_token: accessToken,
+      })
+      return { inGuild: true }
+    } catch (error) {
+      console.error('[Discord] Error checking room:', error)
+      return {
+        inGuild: false,
+        error: 'Internal server error',
+      }
+    }
+  })
 
 /**
  * Check if a Discord voice channel exists

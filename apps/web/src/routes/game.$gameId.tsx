@@ -2,7 +2,7 @@ import type { DetectorType } from '@/lib/detectors'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
 import { sessionStorage } from '@/lib/session-storage'
-import { checkRoomExists } from '@/server/discord-rooms'
+import { checkRoomExists, ensureUserInGuild } from '@/server/discord-rooms'
 import {
   createFileRoute,
   redirect,
@@ -48,6 +48,8 @@ export const Route = createFileRoute('/game/$gameId')({
         },
       })
     }
+
+    await ensureUserInGuild({ data: { accessToken: '', userId: '' } })
 
     // Room exists and is valid
     return {

@@ -24,6 +24,19 @@ export type CreateVoiceChannelRequest = z.infer<
   typeof CreateVoiceChannelRequestSchema
 >
 
+export const GuildMemberSchema = z.object({
+  user: z.unknown(),
+  nick: z.string(),
+  roles: z.array(z.string()),
+  joined_at: z.string(),
+  premium_since: z.string(),
+  deaf: z.boolean(),
+  mute: z.boolean(),
+  pending: z.boolean(),
+})
+
+export type GuildMember = z.infer<typeof GuildMemberSchema>
+
 export const ChannelResponseSchema = z.object({
   id: z.string(),
   type: z.number(),
