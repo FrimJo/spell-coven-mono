@@ -140,5 +140,5 @@ export function isTokenExpired(
 export function isMetadataSizeValid(metadata: unknown): boolean {
   const json = JSON.stringify(metadata)
   const bytes = new TextEncoder().encode(json).length
-  return bytes < 1024
+  return bytes <= 1024
 }
