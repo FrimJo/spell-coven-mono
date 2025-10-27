@@ -18,11 +18,12 @@ import { DiscordAuthModal } from './discord/DiscordAuthModal'
 import { DiscordUserProfile } from './discord/DiscordUserProfile'
 
 interface LandingPageProps {
-  onCreateGame: (playerName: string) => void
+  onCreateGame: (playerName: string) => void | Promise<void>
   onJoinGame: (playerName: string, gameId: string) => void
+  isCreatingGame?: boolean
 }
 
-export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
+export function LandingPage({ onCreateGame, onJoinGame, isCreatingGame }: LandingPageProps) {
   const { isAuthenticated } = useDiscordAuth()
   const [createName, setCreateName] = useState('')
   const [joinName, setJoinName] = useState('')
@@ -169,10 +170,10 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
                     </div>
                     <Button
                       onClick={handleCreate}
-                      disabled={!createName.trim()}
+                      disabled={!createName.trim() || isCreatingGame}
                       className="w-full bg-purple-600 text-white hover:bg-purple-700"
                     >
-                      Create Game Room
+                      {isCreatingGame ? 'Creating Discord Room...' : 'Create Game Room'}
                     </Button>
                   </div>
                 </DialogContent>
