@@ -47,6 +47,9 @@ importers:
       '@huggingface/transformers':
         specifier: ^3.7.5
         version: 3.7.6
+      '@repo/discord-gateway-worker':
+        specifier: workspace:*
+        version: link:../../packages/discord-gateway-worker
       '@repo/discord-integration':
         specifier: workspace:*
         version: link:../../packages/discord-integration
@@ -201,6 +204,9 @@ importers:
 
   packages/discord-gateway-worker:
     dependencies:
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
       discord-api-types:
         specifier: ^0.37.97
         version: 0.37.120
@@ -223,6 +229,12 @@ importers:
       dotenv-cli:
         specifier: ^7.4.2
         version: 7.4.4
+      eslint:
+        specifier: ^9.34.0
+        version: 9.38.0(jiti@2.6.1)
+      prettier:
+        specifier: 'catalog:'
+        version: 3.6.2
       tsup:
         specifier: ^8.1.0
         version: 8.5.0(jiti@2.6.1)(postcss@8.5.6)(tsx@4.20.6)(typescript@5.9.2)

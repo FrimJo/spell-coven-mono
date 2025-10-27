@@ -35,7 +35,7 @@ export const Route = createFileRoute('/game/$gameId')({
     const { gameId } = params
 
     // Call server function directly (like Next.js server components)
-    const result = await checkRoomExists(gameId)
+    const result = await checkRoomExists({ data: { channelId: gameId } })
 
     if (!result.exists) {
       console.warn(

@@ -19,6 +19,7 @@
   "dependencies": {
     "@huggingface/transformers": "^3.7.5",
     "@repo/discord-integration": "workspace:*",
+    "@repo/discord-gateway-worker": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/react-devtools": "^0.7.0",

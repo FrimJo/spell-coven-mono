@@ -23,7 +23,11 @@ interface LandingPageProps {
   isCreatingGame?: boolean
 }
 
-export function LandingPage({ onCreateGame, onJoinGame, isCreatingGame }: LandingPageProps) {
+export function LandingPage({
+  onCreateGame,
+  onJoinGame,
+  isCreatingGame,
+}: LandingPageProps) {
   const { isAuthenticated } = useDiscordAuth()
   const [createName, setCreateName] = useState('')
   const [joinName, setJoinName] = useState('')
@@ -173,7 +177,9 @@ export function LandingPage({ onCreateGame, onJoinGame, isCreatingGame }: Landin
                       disabled={!createName.trim() || isCreatingGame}
                       className="w-full bg-purple-600 text-white hover:bg-purple-700"
                     >
-                      {isCreatingGame ? 'Creating Discord Room...' : 'Create Game Room'}
+                      {isCreatingGame
+                        ? 'Creating Discord Room...'
+                        : 'Create Game Room'}
                     </Button>
                   </div>
                 </DialogContent>

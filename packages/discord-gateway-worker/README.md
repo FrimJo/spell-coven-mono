@@ -72,21 +72,22 @@ HUB_ENDPOINT=http://localhost:3000/api/internal/events
 LOG_LEVEL=info
 ```
 
-**Note**: 
+**Note**:
+
 - `.env.*.local` files are gitignored and should contain secrets
 - `.env.local` is NOT loaded in test mode (by convention)
 - Use `.env.example` as a template
 
 ### Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DISCORD_BOT_TOKEN` | Yes | Discord bot token from Developer Portal |
-| `PRIMARY_GUILD_ID` | Yes | Discord guild (server) ID to monitor |
-| `HUB_ENDPOINT` | Yes | TanStack Start internal events endpoint URL |
-| `HUB_SECRET` | Yes | Shared secret for HMAC signature verification |
-| `LOG_LEVEL` | No | Logging level (debug, info, warn, error) |
-| `PORT` | No | Health check server port (default: 3001) |
+| Variable            | Required | Description                                   |
+| ------------------- | -------- | --------------------------------------------- |
+| `DISCORD_BOT_TOKEN` | Yes      | Discord bot token from Developer Portal       |
+| `PRIMARY_GUILD_ID`  | Yes      | Discord guild (server) ID to monitor          |
+| `HUB_ENDPOINT`      | Yes      | TanStack Start internal events endpoint URL   |
+| `HUB_SECRET`        | Yes      | Shared secret for HMAC signature verification |
+| `LOG_LEVEL`         | No       | Logging level (debug, info, warn, error)      |
+| `PORT`              | No       | Health check server port (default: 3001)      |
 
 ## Usage
 
@@ -115,6 +116,7 @@ curl http://localhost:3001/health
 ```
 
 **Response (healthy)**:
+
 ```json
 {
   "status": "ok",
@@ -124,6 +126,7 @@ curl http://localhost:3001/health
 ```
 
 **Response (unhealthy)**:
+
 ```json
 {
   "status": "unhealthy",
@@ -144,12 +147,12 @@ curl http://localhost:3001/health
 
 The worker forwards these Discord events to TanStack Start:
 
-| Discord Event | Internal Event | Description |
-|---------------|----------------|-------------|
-| `CHANNEL_CREATE` | `room.created` | Voice channel created |
-| `CHANNEL_DELETE` | `room.deleted` | Voice channel deleted |
+| Discord Event        | Internal Event | Description               |
+| -------------------- | -------------- | ------------------------- |
+| `CHANNEL_CREATE`     | `room.created` | Voice channel created     |
+| `CHANNEL_DELETE`     | `room.deleted` | Voice channel deleted     |
 | `VOICE_STATE_UPDATE` | `voice.joined` | User joined voice channel |
-| `VOICE_STATE_UPDATE` | `voice.left` | User left voice channel |
+| `VOICE_STATE_UPDATE` | `voice.left`   | User left voice channel   |
 
 ## Reconnection Strategy
 
@@ -223,6 +226,7 @@ Monitor these metrics for production:
 **Symptom**: `Failed to connect to Discord`
 
 **Solutions**:
+
 1. Verify `DISCORD_BOT_TOKEN` is correct
 2. Check bot has required intents enabled (GUILDS, GUILD_VOICE_STATES)
 3. Verify internet connectivity
@@ -233,6 +237,7 @@ Monitor these metrics for production:
 **Symptom**: Worker connected but events not reaching backend
 
 **Solutions**:
+
 1. Verify `HUB_ENDPOINT` is correct and accessible
 2. Check `HUB_SECRET` matches in both services
 3. Verify `PRIMARY_GUILD_ID` is correct
@@ -243,6 +248,7 @@ Monitor these metrics for production:
 **Symptom**: Worker repeatedly disconnecting and reconnecting
 
 **Solutions**:
+
 1. Check network stability
 2. Verify bot token hasn't been regenerated
 3. Check Discord API rate limits

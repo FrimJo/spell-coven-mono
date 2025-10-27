@@ -4,6 +4,7 @@ import type {
   RESTPostAPIGuildChannelResult,
 } from 'discord-api-types/v10'
 import { createServerFn, createServerOnlyFn } from '@tanstack/react-start'
+import { Routes } from 'discord-api-types/v10'
 
 const getSecrets = createServerOnlyFn(() => {
   const botToken = process.env.DISCORD_BOT_TOKEN
@@ -53,12 +54,11 @@ interface ListRoomsResult {
 
 /**
  * Check if a Discord voice channel exists
- * Server-only function that can be called directly from loaders/beforeLoad
+ * Server function that can be called directly from loaders/beforeLoad
  */
-export const checkRoomExists = createServerOnlyFn(
-  async (channelId: string): Promise<RoomCheckResult> => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Routes } = require('discord-api-types/v10')
+export const checkRoomExists = createServerFn({ method: 'POST' })
+  .inputValidator((data: { channelId: string }) => data)
+  .handler(async ({ data: { channelId } }): Promise<RoomCheckResult> => {
     try {
       const { botToken } = getSecrets()
 
@@ -111,8 +111,7 @@ export const checkRoomExists = createServerOnlyFn(
         error: 'Internal server error',
       }
     }
-  },
-)
+  })
 
 /**
  * Create a Discord voice channel
@@ -121,8 +120,6 @@ export const checkRoomExists = createServerOnlyFn(
 export const createRoom = createServerFn({ method: 'POST' })
   .inputValidator((data: CreateRoomOptions) => data)
   .handler(async ({ data: options }): Promise<CreateRoomResult> => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Routes } = require('discord-api-types/v10')
     const { botToken, guildId } = getSecrets()
 
     const body: RESTPostAPIGuildChannelJSONBody = {
@@ -131,7 +128,7 @@ export const createRoom = createServerFn({ method: 'POST' })
       ...(options?.parentId && { parent_id: options.parentId }),
       ...(options?.userLimit && { user_limit: options.userLimit }),
     }
-
+    console.log({ botToken })
     const response = await fetch(
       `https://discord.com/api/v10${Routes.guildChannels(guildId)}`,
       {
@@ -172,8 +169,6 @@ export const createRoom = createServerFn({ method: 'POST' })
 export const deleteRoom = createServerFn({ method: 'POST' })
   .inputValidator((data: { channelId: string }) => data)
   .handler(async ({ data: { channelId } }): Promise<DeleteRoomResult> => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Routes } = require('discord-api-types/v10')
     const { botToken } = getSecrets()
 
     const response = await fetch(
@@ -208,8 +203,6 @@ export const deleteRoom = createServerFn({ method: 'POST' })
 export const listRooms = createServerFn({ method: 'POST' })
   .inputValidator((data: { onlyGameRooms?: boolean }) => data)
   .handler(async ({ data: options }): Promise<ListRoomsResult[]> => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Routes } = require('discord-api-types/v10')
     const { onlyGameRooms = false } = options || {}
     const { botToken, guildId } = getSecrets()
 

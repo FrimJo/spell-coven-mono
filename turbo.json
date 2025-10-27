@@ -9,7 +9,9 @@
     "HUB_SECRET",
     "JWT_ISSUER",
     "JWT_AUDIENCE",
-    "JWT_PUBLIC_JWK_URL"
+    "JWT_PUBLIC_JWK_URL",
+    "HUB_ENDPOINT",
+    "PORT"
   ],
   "tasks": {
     "build": {
