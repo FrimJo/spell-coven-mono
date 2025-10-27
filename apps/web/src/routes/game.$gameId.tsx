@@ -2,8 +2,10 @@ import type { DetectorType } from '@/lib/detectors'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
 import { sessionStorage } from '@/lib/session-storage'
+import { checkRoomExists } from '@/server/discord-rooms'
 import {
   createFileRoute,
+  redirect,
   stripSearchParams,
   useNavigate,
 } from '@tanstack/react-router'
@@ -27,6 +29,31 @@ const gameSearchSchema = z.object({
 })
 
 export const Route = createFileRoute('/game/$gameId')({
+  // Verify Discord room exists before loading the game
+  // Uses server-only function - no HTTP request needed!
+  beforeLoad: async ({ params }) => {
+    const { gameId } = params
+
+    // Call server function directly (like Next.js server components)
+    const result = await checkRoomExists(gameId)
+
+    if (!result.exists) {
+      console.warn(
+        `[Game] Room ${gameId} does not exist: ${result.error || 'Unknown reason'}`,
+      )
+      throw redirect({
+        to: '/',
+        search: {
+          error: result.error || 'Game room not found',
+        },
+      })
+    }
+
+    // Room exists and is valid
+    return {
+      roomName: result.channel?.name || 'Game Room',
+    }
+  },
   component: GameRoomRoute,
   validateSearch: zodValidator(gameSearchSchema),
   search: {

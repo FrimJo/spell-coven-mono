@@ -31,9 +31,9 @@
     "@tanstack/zod-adapter": "^1.133.3",
     "@techstark/opencv-js": "4.11.0-release.1",
     "cross-fetch": "^4.1.0",
+    "discord-api-types": "^0.37.97",
     "jose": "^5.9.6",
     "lucide-react": "^0.487.0",
-    "ws": "^8.18.0",
     "onnxruntime-web": "^1.23.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -42,6 +42,7 @@
     "tailwindcss": "^4.0.6",
     "vite-plugin-mkcert": "^1.17.9",
     "vite-tsconfig-paths": "^5.1.4",
+    "ws": "^8.18.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {
@@ -58,6 +59,7 @@
     "@types/react-dom": "^19.0.3",
     "@types/ws": "^8.5.12",
     "@vitejs/plugin-react": "^4.3.4",
+    "dotenv-cli": "^7.4.2",
     "eslint": "^9.34.0",
     "eslint-plugin-react-compiler": "19.1.0-rc.2",
     "jsdom": "^26.0.0",
@@ -67,8 +69,7 @@
     "typescript": "catalog:",
     "vite": "^7.1.7",
     "vitest": "^3.0.5",
-    "web-vitals": "^4.2.4",
-    "dotenv-cli": "^7.4.2"
+    "web-vitals": "^4.2.4"
   },
   "prettier": "@repo/prettier-config"
 }
