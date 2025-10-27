@@ -98,7 +98,6 @@ export function LandingPage({
               </a>
               {isAuthenticated ? (
                 <div className="flex items-center space-x-4">
-                  {/* <ConnectionStatus /> To be implemented using gateway in the cloud */}
                   <DiscordUserProfile />
                 </div>
               ) : (

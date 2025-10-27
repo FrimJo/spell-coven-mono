@@ -9,5 +9,7 @@ export type {
   GatewayEventData,
 } from './DiscordGatewayClient'
 
-export { DiscordRestClient } from './DiscordRestClient'
+export { DiscordRestClient, DiscordRestError } from './DiscordRestClient'
+export type { DiscordRestClientConfig } from './DiscordRestClient'
+
 export { DiscordRtcClient } from './DiscordRtcClient'

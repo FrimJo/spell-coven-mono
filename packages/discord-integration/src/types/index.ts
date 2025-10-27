@@ -50,3 +50,51 @@ export {
 // Room types
 export type { RoomMetadata, GameRoom } from './rooms'
 export { RoomMetadataSchema, GameRoomSchema } from './rooms'
+
+// REST API schemas
+export type {
+  CreateVoiceChannelRequest,
+  ChannelResponse,
+  SendMessageRequest,
+  MessageResponse,
+  GuildChannelListResponse,
+  DiscordErrorResponse,
+  RateLimitResponse,
+} from './rest-schemas'
+export {
+  CreateVoiceChannelRequestSchema,
+  ChannelResponseSchema,
+  SendMessageRequestSchema,
+  MessageResponseSchema,
+  GuildChannelListResponseSchema,
+  DiscordErrorResponseSchema,
+  RateLimitResponseSchema,
+} from './rest-schemas'
+
+// RTC types
+export type {
+  RtcConnectionState,
+  RtcIceConnectionState,
+  AudioStreamConfig,
+  VideoStreamConfig,
+  MediaStreamInfo,
+  VoiceServerUpdate,
+  VoiceStateUpdate,
+  VoiceIdentifyPayload,
+  VoiceSelectProtocolPayload,
+  VoiceReadyPayload,
+  VoiceSessionDescriptionPayload,
+  VoiceSpeakingPayload,
+  VoiceHelloPayload,
+  RtpHeader,
+  RtpPacket,
+  EncryptionMode,
+  EncryptionConfig,
+  DiscordRtcClientConfig,
+} from './rtc-types'
+export {
+  VoiceServerUpdateSchema,
+  VoiceStateUpdateSchema,
+  VoiceOpcode,
+  SpeakingFlags,
+} from './rtc-types'
