@@ -1,7 +1,16 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
-  "globalEnv": ["BASE_URL", "DEV"],
+  "globalEnv": [
+    "BASE_URL",
+    "DEV",
+    "DISCORD_BOT_TOKEN",
+    "PRIMARY_GUILD_ID",
+    "HUB_SECRET",
+    "JWT_ISSUER",
+    "JWT_AUDIENCE",
+    "JWT_PUBLIC_JWK_URL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

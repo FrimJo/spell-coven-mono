@@ -23,13 +23,13 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create Gateway Worker package structure at packages/discord-gateway-worker/
-- [ ] T002 Initialize Gateway Worker package.json with dependencies (ws, discord-api-types, node:crypto, node:fetch)
-- [ ] T003 [P] Create TanStack Start server utilities directory at apps/web/app/server/
-- [ ] T004 [P] Add jose dependency to apps/web/package.json for JWT verification
-- [ ] T005 [P] Create TypeScript types file at packages/discord-gateway-worker/src/types.ts
-- [ ] T006 [P] Create environment configuration template at packages/discord-gateway-worker/.env.example
-- [ ] T007 [P] Create environment configuration template at apps/web/.env.example (add Discord vars)
+- [X] T001 Create Gateway Worker package structure at packages/discord-gateway-worker/
+- [X] T002 Initialize Gateway Worker package.json with dependencies (ws, discord-api-types, node:crypto, node:fetch)
+- [X] T003 [P] Create TanStack Start server utilities directory at apps/web/app/server/
+- [X] T004 [P] Add jose dependency to apps/web/package.json for JWT verification
+- [X] T005 [P] Create TypeScript types file at packages/discord-gateway-worker/src/types.ts
+- [X] T006 [P] Create environment configuration template at packages/discord-gateway-worker/.env.example
+- [X] T007 [P] Create environment configuration template at apps/web/.env.example (add Discord vars)
 
 ---
 
@@ -39,19 +39,19 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T008 Implement HMAC signature generation in packages/discord-gateway-worker/src/hmac.ts
-- [ ] T009 Implement HMAC signature verification in apps/web/app/server/hmac.ts
-- [ ] T010 [P] Implement JWT verification using JWKS in apps/web/app/server/jwt.ts
-- [ ] T011 [P] Create WebSocket manager with registry in apps/web/app/server/ws-manager.ts
-- [ ] T012 [P] Create Discord REST API helpers in apps/web/app/server/discord.ts
-- [ ] T013 [P] Implement message envelope schema with Zod in packages/discord-gateway-worker/src/types.ts
-- [ ] T014 [P] Create event payload schemas (RoomCreated, RoomDeleted, VoiceJoined, VoiceLeft) in packages/discord-gateway-worker/src/types.ts
-- [ ] T015 Implement Discord Gateway client connection logic in packages/discord-gateway-worker/src/gateway.ts
-- [ ] T016 Implement heartbeat mechanism with watchdog in packages/discord-gateway-worker/src/gateway.ts
-- [ ] T017 Implement session resume capability in packages/discord-gateway-worker/src/gateway.ts
-- [ ] T018 Implement exponential backoff reconnection in packages/discord-gateway-worker/src/gateway.ts
-- [ ] T019 Implement hub client for posting events in packages/discord-gateway-worker/src/hub-client.ts
-- [ ] T020 Create Gateway Worker entry point with health check endpoint in packages/discord-gateway-worker/src/index.ts
+- [X] T008 Implement HMAC signature generation in packages/discord-gateway-worker/src/hmac.ts
+- [X] T009 Implement HMAC signature verification in apps/web/app/server/hmac.ts
+- [X] T010 [P] Implement JWT verification using JWKS in apps/web/app/server/jwt.ts
+- [X] T011 [P] Create WebSocket manager with registry in apps/web/app/server/ws-manager.ts
+- [X] T012 [P] Create Discord REST API helpers in apps/web/app/server/discord.ts
+- [X] T013 [P] Implement message envelope schema with Zod in packages/discord-gateway-worker/src/types.ts
+- [X] T014 [P] Create event payload schemas (RoomCreated, RoomDeleted, VoiceJoined, VoiceLeft) in packages/discord-gateway-worker/src/types.ts
+- [X] T015 Implement Discord Gateway client connection logic in packages/discord-gateway-worker/src/gateway.ts
+- [X] T016 Implement heartbeat mechanism with watchdog in packages/discord-gateway-worker/src/gateway.ts
+- [X] T017 Implement session resume capability in packages/discord-gateway-worker/src/gateway.ts
+- [X] T018 Implement exponential backoff reconnection in packages/discord-gateway-worker/src/gateway.ts
+- [X] T019 Implement hub client for posting events in packages/discord-gateway-worker/src/hub-client.ts
+- [X] T020 Create Gateway Worker entry point with health check endpoint in packages/discord-gateway-worker/src/index.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -69,16 +69,16 @@
 
 ### Implementation for User Story 1
 
-- [ ] T021 [P] [US1] Create CreateRoomRequest schema with Zod in apps/web/app/server/schemas.ts
-- [ ] T022 [P] [US1] Create CreateRoomResponse schema with Zod in apps/web/app/server/schemas.ts
-- [ ] T023 [US1] Implement POST /api/create-room route in apps/web/app/routes/api/create-room.ts
-- [ ] T024 [US1] Add JWT verification middleware to create-room route
-- [ ] T025 [US1] Implement Discord createVoiceChannel REST API call in create-room route
-- [ ] T026 [US1] Broadcast room.created event to WebSocket clients in create-room route
-- [ ] T027 [US1] Add error handling and validation to create-room route
-- [ ] T028 [US1] Add logging for room creation operations
-- [ ] T029 [US1] Configure CHANNEL_CREATE event forwarding in packages/discord-gateway-worker/src/gateway.ts
-- [ ] T030 [US1] Add room.created event broadcasting in packages/discord-gateway-worker/src/hub-client.ts
+- [X] T021 [P] [US1] Create CreateRoomRequest schema with Zod in apps/web/app/server/schemas.ts
+- [X] T022 [P] [US1] Create CreateRoomResponse schema with Zod in apps/web/app/server/schemas.ts
+- [X] T023 [US1] Implement POST /api/create-room route in apps/web/app/routes/api/create-room.ts
+- [X] T024 [US1] Add JWT verification middleware to create-room route
+- [X] T025 [US1] Implement Discord createVoiceChannel REST API call in create-room route
+- [X] T026 [US1] Broadcast room.created event to WebSocket clients in create-room route
+- [X] T027 [US1] Add error handling and validation to create-room route
+- [X] T028 [US1] Add logging for room creation operations
+- [X] T029 [US1] Configure CHANNEL_CREATE event forwarding in packages/discord-gateway-worker/src/gateway.ts
+- [X] T030 [US1] Add room.created event broadcasting in packages/discord-gateway-worker/src/hub-client.ts
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - players can create voice channels
 
@@ -96,15 +96,15 @@
 
 ### Implementation for User Story 2
 
-- [ ] T031 [P] [US2] Create DeleteRoomResponse schema with Zod in apps/web/app/server/schemas.ts
-- [ ] T032 [US2] Implement DELETE /api/end-room/$channelId route in apps/web/app/routes/api/end-room.$channelId.ts
-- [ ] T033 [US2] Add JWT verification middleware to end-room route
-- [ ] T034 [US2] Implement Discord deleteChannel REST API call in end-room route
-- [ ] T035 [US2] Broadcast room.deleted event to WebSocket clients in end-room route
-- [ ] T036 [US2] Add error handling for non-existent channels and permission errors
-- [ ] T037 [US2] Add logging for room deletion operations
-- [ ] T038 [US2] Configure CHANNEL_DELETE event forwarding in packages/discord-gateway-worker/src/gateway.ts
-- [ ] T039 [US2] Add room.deleted event broadcasting in packages/discord-gateway-worker/src/hub-client.ts
+- [X] T031 [P] [US2] Create DeleteRoomResponse schema with Zod in apps/web/app/server/schemas.ts
+- [X] T032 [US2] Implement DELETE /api/end-room/$channelId route in apps/web/app/routes/api/end-room.$channelId.ts
+- [X] T033 [US2] Add JWT verification middleware to end-room route
+- [X] T034 [US2] Implement Discord deleteChannel REST API call in end-room route
+- [X] T035 [US2] Broadcast room.deleted event to WebSocket clients in end-room route
+- [X] T036 [US2] Add error handling for non-existent channels and permission errors
+- [X] T037 [US2] Add logging for room deletion operations
+- [X] T038 [US2] Configure CHANNEL_DELETE event forwarding in packages/discord-gateway-worker/src/gateway.ts
+- [X] T039 [US2] Add room.deleted event broadcasting in packages/discord-gateway-worker/src/hub-client.ts
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - full room lifecycle management
 
@@ -123,19 +123,19 @@
 
 ### Implementation for User Story 3
 
-- [ ] T040 [P] [US3] Create WSAuthMessage schema with Zod in apps/web/app/server/schemas.ts
-- [ ] T041 [P] [US3] Create VoiceState schema with Zod in apps/web/app/server/schemas.ts
-- [ ] T042 [US3] Implement WebSocket endpoint at apps/web/app/routes/api/ws.ts
-- [ ] T043 [US3] Add WebSocket authentication handler in ws route
-- [ ] T044 [US3] Implement WebSocket connection registration in ws-manager
-- [ ] T045 [US3] Implement WebSocket disconnection cleanup in ws-manager
-- [ ] T046 [US3] Add backpressure handling (close clients with large bufferedAmount) in ws-manager
-- [ ] T047 [US3] Implement WebSocket auto-reconnect logic documentation in quickstart.md
-- [ ] T048 [US3] Configure VOICE_STATE_UPDATE event subscription in packages/discord-gateway-worker/src/gateway.ts
-- [ ] T049 [US3] Implement voice.joined event detection and forwarding in packages/discord-gateway-worker/src/gateway.ts
-- [ ] T050 [US3] Implement voice.left event detection and forwarding in packages/discord-gateway-worker/src/gateway.ts
-- [ ] T051 [US3] Filter events to PRIMARY_GUILD_ID only in packages/discord-gateway-worker/src/gateway.ts
-- [ ] T052 [US3] Add logging for voice state change events
+- [X] T040 [P] [US3] Create WSAuthMessage schema with Zod in apps/web/app/server/schemas.ts
+- [X] T041 [P] [US3] Create VoiceState schema with Zod in apps/web/app/server/schemas.ts
+- [X] T042 [US3] Implement WebSocket endpoint at apps/web/app/routes/api/ws.ts
+- [X] T043 [US3] Add WebSocket authentication handler in ws route
+- [X] T044 [US3] Implement WebSocket connection registration in ws-manager
+- [X] T045 [US3] Implement WebSocket disconnection cleanup in ws-manager
+- [X] T046 [US3] Add backpressure handling (close clients with large bufferedAmount) in ws-manager
+- [X] T047 [US3] Implement WebSocket auto-reconnect logic documentation in quickstart.md
+- [X] T048 [US3] Configure VOICE_STATE_UPDATE event subscription in packages/discord-gateway-worker/src/gateway.ts
+- [X] T049 [US3] Implement voice.joined event detection and forwarding in packages/discord-gateway-worker/src/gateway.ts
+- [X] T050 [US3] Implement voice.left event detection and forwarding in packages/discord-gateway-worker/src/gateway.ts
+- [X] T051 [US3] Filter events to PRIMARY_GUILD_ID only in packages/discord-gateway-worker/src/gateway.ts
+- [X] T052 [US3] Add logging for voice state change events
 
 **Checkpoint**: All core real-time features now functional - players can see who joins/leaves voice channels
 
@@ -221,13 +221,13 @@
 
 ### Implementation
 
-- [ ] T084 [P] Create InternalEvent schema with Zod in apps/web/app/server/schemas.ts
-- [ ] T085 Implement POST /api/internal/events route in apps/web/app/routes/api/internal/events.ts
-- [ ] T086 Add HMAC signature verification to internal events route
-- [ ] T087 Add timestamp verification (reject >60s) for replay protection
-- [ ] T088 Implement event broadcasting to WebSocket clients in internal events route
-- [ ] T089 Add error handling for invalid signatures and malformed payloads
-- [ ] T090 Add logging for all internal event posts and verification failures
+- [X] T084 [P] Create InternalEvent schema with Zod in apps/web/app/server/schemas.ts
+- [X] T085 Implement POST /api/internal/events route in apps/web/app/routes/api/internal/events.ts
+- [X] T086 Add HMAC signature verification to internal events route
+- [X] T087 Add timestamp verification (reject >60s) for replay protection
+- [X] T088 Implement event broadcasting to WebSocket clients in internal events route
+- [X] T089 Add error handling for invalid signatures and malformed payloads
+- [X] T090 Add logging for all internal event posts and verification failures
 
 **Checkpoint**: Secure internal communication established between Gateway Worker and TanStack Start
 
@@ -237,20 +237,20 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T091 [P] Add comprehensive logging configuration (LOG_LEVEL env var) to Gateway Worker
-- [ ] T092 [P] Add comprehensive logging configuration (LOG_LEVEL env var) to TanStack Start
-- [ ] T093 [P] Create deployment documentation in packages/discord-gateway-worker/README.md
-- [ ] T094 [P] Create API documentation in apps/web/docs/discord-api.md
-- [ ] T095 [P] Update quickstart.md with complete local development setup instructions
-- [ ] T096 [P] Add health check endpoint documentation to Gateway Worker README
-- [ ] T097 [P] Document environment variables in both .env.example files
-- [ ] T098 [P] Add CORS configuration to TanStack Start for WEB_ORIGIN
-- [ ] T099 [P] Add rate limiting considerations documentation
-- [ ] T100 [P] Document multi-guild expansion path in Future Enhancements section
-- [ ] T101 Validate quickstart.md instructions end-to-end
-- [ ] T102 Code review and refactoring for consistency
-- [ ] T103 Security audit (bot token exposure, HMAC verification, JWT validation)
-- [ ] T104 Performance validation (WebSocket latency <100ms, REST API <500ms)
+- [X] T091 [P] Add comprehensive logging configuration (LOG_LEVEL env var) to Gateway Worker
+- [X] T092 [P] Add comprehensive logging configuration (LOG_LEVEL env var) to TanStack Start
+- [X] T093 [P] Create deployment documentation in packages/discord-gateway-worker/README.md
+- [X] T094 [P] Create API documentation in apps/web/docs/discord-api.md
+- [X] T095 [P] Update quickstart.md with complete local development setup instructions
+- [X] T096 [P] Add health check endpoint documentation to Gateway Worker README
+- [X] T097 [P] Document environment variables in both .env.example files
+- [X] T098 [P] Add CORS configuration to TanStack Start for WEB_ORIGIN
+- [X] T099 [P] Add rate limiting considerations documentation
+- [X] T100 [P] Document multi-guild expansion path in Future Enhancements section
+- [X] T101 Validate quickstart.md instructions end-to-end
+- [X] T102 Code review and refactoring for consistency
+- [X] T103 Security audit (bot token exposure, HMAC verification, JWT validation)
+- [X] T104 Performance validation (WebSocket latency <100ms, REST API <500ms)
 
 ---
 
