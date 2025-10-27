@@ -12,10 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GameGameIdRouteImport } from './routes/game.$gameId'
 import { Route as ApiWsRouteImport } from './routes/api/ws'
-import { Route as ApiCreateRoomRouteImport } from './routes/api/create-room'
 import { Route as AuthDiscordCallbackRouteImport } from './routes/auth/discord/callback'
 import { Route as ApiInternalEventsRouteImport } from './routes/api/internal/events'
-import { Route as ApiEndRoomChannelIdRouteImport } from './routes/api/end-room.$channelId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -32,11 +30,6 @@ const ApiWsRoute = ApiWsRouteImport.update({
   path: '/api/ws',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiCreateRoomRoute = ApiCreateRoomRouteImport.update({
-  id: '/api/create-room',
-  path: '/api/create-room',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthDiscordCallbackRoute = AuthDiscordCallbackRouteImport.update({
   id: '/auth/discord/callback',
   path: '/auth/discord/callback',
@@ -47,37 +40,26 @@ const ApiInternalEventsRoute = ApiInternalEventsRouteImport.update({
   path: '/api/internal/events',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiEndRoomChannelIdRoute = ApiEndRoomChannelIdRouteImport.update({
-  id: '/api/end-room/$channelId',
-  path: '/api/end-room/$channelId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/api/create-room': typeof ApiCreateRoomRoute
   '/api/ws': typeof ApiWsRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/api/end-room/$channelId': typeof ApiEndRoomChannelIdRoute
   '/api/internal/events': typeof ApiInternalEventsRoute
   '/auth/discord/callback': typeof AuthDiscordCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/api/create-room': typeof ApiCreateRoomRoute
   '/api/ws': typeof ApiWsRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/api/end-room/$channelId': typeof ApiEndRoomChannelIdRoute
   '/api/internal/events': typeof ApiInternalEventsRoute
   '/auth/discord/callback': typeof AuthDiscordCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/api/create-room': typeof ApiCreateRoomRoute
   '/api/ws': typeof ApiWsRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/api/end-room/$channelId': typeof ApiEndRoomChannelIdRoute
   '/api/internal/events': typeof ApiInternalEventsRoute
   '/auth/discord/callback': typeof AuthDiscordCallbackRoute
 }
@@ -85,38 +67,30 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/api/create-room'
     | '/api/ws'
     | '/game/$gameId'
-    | '/api/end-room/$channelId'
     | '/api/internal/events'
     | '/auth/discord/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/api/create-room'
     | '/api/ws'
     | '/game/$gameId'
-    | '/api/end-room/$channelId'
     | '/api/internal/events'
     | '/auth/discord/callback'
   id:
     | '__root__'
     | '/'
-    | '/api/create-room'
     | '/api/ws'
     | '/game/$gameId'
-    | '/api/end-room/$channelId'
     | '/api/internal/events'
     | '/auth/discord/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ApiCreateRoomRoute: typeof ApiCreateRoomRoute
   ApiWsRoute: typeof ApiWsRoute
   GameGameIdRoute: typeof GameGameIdRoute
-  ApiEndRoomChannelIdRoute: typeof ApiEndRoomChannelIdRoute
   ApiInternalEventsRoute: typeof ApiInternalEventsRoute
   AuthDiscordCallbackRoute: typeof AuthDiscordCallbackRoute
 }
@@ -144,13 +118,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/create-room': {
-      id: '/api/create-room'
-      path: '/api/create-room'
-      fullPath: '/api/create-room'
-      preLoaderRoute: typeof ApiCreateRoomRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/auth/discord/callback': {
       id: '/auth/discord/callback'
       path: '/auth/discord/callback'
@@ -165,22 +132,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/end-room/$channelId': {
-      id: '/api/end-room/$channelId'
-      path: '/api/end-room/$channelId'
-      fullPath: '/api/end-room/$channelId'
-      preLoaderRoute: typeof ApiEndRoomChannelIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ApiCreateRoomRoute: ApiCreateRoomRoute,
   ApiWsRoute: ApiWsRoute,
   GameGameIdRoute: GameGameIdRoute,
-  ApiEndRoomChannelIdRoute: ApiEndRoomChannelIdRoute,
   ApiInternalEventsRoute: ApiInternalEventsRoute,
   AuthDiscordCallbackRoute: AuthDiscordCallbackRoute,
 }

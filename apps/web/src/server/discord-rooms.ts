@@ -1,10 +1,5 @@
-import type {
-  RESTGetAPIChannelResult,
-  RESTPostAPIGuildChannelJSONBody,
-  RESTPostAPIGuildChannelResult,
-} from 'discord-api-types/v10'
 import { createServerFn, createServerOnlyFn } from '@tanstack/react-start'
-import { Routes } from 'discord-api-types/v10'
+import { DiscordRestClient } from '@repo/discord-integration/clients'
 
 const getSecrets = createServerOnlyFn(() => {
   const botToken = process.env.DISCORD_BOT_TOKEN
@@ -18,6 +13,27 @@ const getSecrets = createServerOnlyFn(() => {
   }
 
   return { botToken, guildId }
+})
+
+// Create a singleton Discord REST client
+let discordClient: DiscordRestClient | null = null
+
+const getDiscordClient = createServerOnlyFn(() => {
+  if (!discordClient) {
+    const { botToken } = getSecrets()
+    discordClient = new DiscordRestClient({
+      botToken,
+      onRateLimit: (retryAfter, isGlobal) => {
+        console.warn(
+          `[Discord] Rate limited for ${retryAfter}s (global: ${isGlobal})`,
+        )
+      },
+      onError: (error) => {
+        console.error('[Discord] API error:', error.message)
+      },
+    })
+  }
+  return discordClient
 })
 
 interface RoomCheckResult {
@@ -60,33 +76,16 @@ export const checkRoomExists = createServerFn({ method: 'POST' })
   .inputValidator((data: { channelId: string }) => data)
   .handler(async ({ data: { channelId } }): Promise<RoomCheckResult> => {
     try {
-      const { botToken } = getSecrets()
+      const client = getDiscordClient()
+      const { guildId } = getSecrets()
 
-      // Fetch channel from Discord API
-      const response = await fetch(
-        `https://discord.com/api/v10${Routes.channel(channelId)}`,
-        {
-          headers: {
-            Authorization: `Bot ${botToken}`,
-          },
-        },
-      )
+      // Get all channels and find the specific one
+      const channels = await client.getChannels(guildId)
+      const channel = channels.find((ch) => ch.id === channelId)
 
-      if (response.status === 404) {
+      if (!channel) {
         return { exists: false }
       }
-
-      if (!response.ok) {
-        console.error(
-          `[Discord] Failed to fetch channel ${channelId}: ${response.status}`,
-        )
-        return {
-          exists: false,
-          error: 'Failed to fetch channel from Discord',
-        }
-      }
-
-      const channel = (await response.json()) as RESTGetAPIChannelResult
 
       // Check if it's a voice channel (type 2)
       if (channel.type !== 2) {
@@ -120,36 +119,18 @@ export const checkRoomExists = createServerFn({ method: 'POST' })
 export const createRoom = createServerFn({ method: 'POST' })
   .inputValidator((data: CreateRoomOptions) => data)
   .handler(async ({ data: options }): Promise<CreateRoomResult> => {
-    const { botToken, guildId } = getSecrets()
+    const client = getDiscordClient()
+    const { guildId } = getSecrets()
 
-    const body: RESTPostAPIGuildChannelJSONBody = {
-      name: options?.name || 'Voice Channel',
-      type: 2, // Voice channel
-      ...(options?.parentId && { parent_id: options.parentId }),
-      ...(options?.userLimit && { user_limit: options.userLimit }),
-    }
-    console.log({ botToken })
-    const response = await fetch(
-      `https://discord.com/api/v10${Routes.guildChannels(guildId)}`,
+    const channel = await client.createVoiceChannel(
+      guildId,
       {
-        method: 'POST',
-        headers: {
-          Authorization: `Bot ${botToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
+        name: options?.name || 'Voice Channel',
+        parent_id: options?.parentId,
+        user_limit: options?.userLimit,
       },
+      'Created by Spell Coven app',
     )
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      console.error('[Discord] Failed to create channel:', errorData)
-      throw new Error(
-        errorData.message || `Failed to create channel: ${response.status}`,
-      )
-    }
-
-    const channel = (await response.json()) as RESTPostAPIGuildChannelResult
 
     console.log(
       `[Discord] Created voice channel: ${channel.name} (${channel.id})`,
@@ -169,25 +150,9 @@ export const createRoom = createServerFn({ method: 'POST' })
 export const deleteRoom = createServerFn({ method: 'POST' })
   .inputValidator((data: { channelId: string }) => data)
   .handler(async ({ data: { channelId } }): Promise<DeleteRoomResult> => {
-    const { botToken } = getSecrets()
+    const client = getDiscordClient()
 
-    const response = await fetch(
-      `https://discord.com/api/v10${Routes.channel(channelId)}`,
-      {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bot ${botToken}`,
-        },
-      },
-    )
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      console.error('[Discord] Failed to delete channel:', errorData)
-      throw new Error(
-        errorData.message || `Failed to delete channel: ${response.status}`,
-      )
-    }
+    await client.deleteChannel(channelId, 'Deleted by Spell Coven app')
 
     console.log(`[Discord] Deleted voice channel: ${channelId}`)
 
@@ -204,22 +169,10 @@ export const listRooms = createServerFn({ method: 'POST' })
   .inputValidator((data: { onlyGameRooms?: boolean }) => data)
   .handler(async ({ data: options }): Promise<ListRoomsResult[]> => {
     const { onlyGameRooms = false } = options || {}
-    const { botToken, guildId } = getSecrets()
+    const client = getDiscordClient()
+    const { guildId } = getSecrets()
 
-    const response = await fetch(
-      `https://discord.com/api/v10${Routes.guildChannels(guildId)}`,
-      {
-        headers: {
-          Authorization: `Bot ${botToken}`,
-        },
-      },
-    )
-
-    if (!response.ok) {
-      throw new Error(`Failed to list channels: ${response.status}`)
-    }
-
-    const channels = (await response.json()) as RESTGetAPIChannelResult[]
+    const channels = await client.getChannels(guildId)
 
     // Filter to only voice channels (type 2)
     let voiceChannels = channels.filter((channel) => channel.type === 2)
