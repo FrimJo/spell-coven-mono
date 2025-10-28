@@ -63,6 +63,11 @@ const getBotUserId = createServerOnlyFn(() => {
   return botUserId
 })
 
+const isPrivateRoomsEnabled = createServerOnlyFn(() => {
+  const raw = process.env.ENABLE_PRIVATE_ROOMS
+  return typeof raw === 'string' && raw.toLowerCase() === 'true'
+})
+
 let discordClient: DiscordRestClient | null = null
 
 const getDiscordClient = createServerOnlyFn(() => {
@@ -90,6 +95,28 @@ function normalizeShareBase(base: string): string {
 function buildShareUrl(base: string, channelId: string, token: string): string {
   const normalizedBase = normalizeShareBase(base)
   return `${normalizedBase}/game/${channelId}?t=${encodeURIComponent(token)}`
+}
+
+function createDisabledInvite(options: {
+  expiresInSeconds: number
+  maxSeats?: number
+}): {
+  token: string
+  issuedAt: number
+  expiresAt: number
+  maxSeats?: number
+} {
+  const issuedAt = Math.floor(Date.now() / 1000)
+  const ttl = Math.max(60, Math.floor(options.expiresInSeconds))
+  const expiresAt = issuedAt + ttl
+  const token = randomUUID()
+
+  return {
+    token,
+    issuedAt,
+    expiresAt,
+    maxSeats: options.maxSeats,
+  }
 }
 
 function buildDeepLink(guildId: string, channelId: string): string {
@@ -220,7 +247,7 @@ export const createRoom = createServerFn({ method: 'POST' })
     const request = data
     const client = getDiscordClient()
     const { guildId } = getSecrets()
-    const botUserId = getBotUserId()
+    const privateRoomsEnabled = isPrivateRoomsEnabled()
 
     const role = await client.createRole(
       guildId,
@@ -233,12 +260,16 @@ export const createRoom = createServerFn({ method: 'POST' })
       'Spell Coven: create private voice room role',
     )
 
-    const permissionOverwrites = buildRoomPermissionOverwrites({
-      guildId,
-      roleId: role.id,
-      botUserId,
-      creatorId: request.includeCreatorOverwrite ? request.creatorId : undefined,
-    })
+    const permissionOverwrites = privateRoomsEnabled
+      ? buildRoomPermissionOverwrites({
+          guildId,
+          roleId: role.id,
+          botUserId: getBotUserId(),
+          creatorId: request.includeCreatorOverwrite
+            ? request.creatorId
+            : undefined,
+        })
+      : undefined
 
     const roomName = ensureRoomName(request.name)
 
@@ -255,15 +286,20 @@ export const createRoom = createServerFn({ method: 'POST' })
 
     const maxSeats = request.maxSeats ?? request.userLimit
 
-    const invite = await createRoomInviteToken({
-      guildId,
-      channelId: channel.id,
-      roleId: role.id,
-      creatorId: request.creatorId,
-      expiresInSeconds: request.tokenTtlSeconds,
-      maxSeats,
-      roomName: channel.name ?? roomName,
-    })
+    const invite = privateRoomsEnabled
+      ? await createRoomInviteToken({
+          guildId,
+          channelId: channel.id,
+          roleId: role.id,
+          creatorId: request.creatorId,
+          expiresInSeconds: request.tokenTtlSeconds,
+          maxSeats,
+          roomName: channel.name ?? roomName,
+        })
+      : createDisabledInvite({
+          expiresInSeconds: request.tokenTtlSeconds,
+          maxSeats,
+        })
 
     const response = {
       room: mapChannelToSummary(channel, guildId, role.id, permissionOverwrites),
@@ -284,6 +320,9 @@ export const refreshRoomInvite = createServerFn({ method: 'POST' })
     RefreshRoomInviteRequestSchema.parse(data),
   )
   .handler(async ({ data }): Promise<RefreshRoomInviteResponse> => {
+    if (!isPrivateRoomsEnabled()) {
+      throw new Error('Private room invites are disabled')
+    }
     const client = getDiscordClient()
     const { guildId } = getSecrets()
 
