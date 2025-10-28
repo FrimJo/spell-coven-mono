@@ -82,8 +82,10 @@ function validateCreatorInviteState(data: unknown): CreatorInviteState | null {
 
   try {
     // Validate that shareUrl is an absolute URL
-    // eslint-disable-next-line no-new
-    new URL(invite.shareUrl!)
+    const parsedShareUrl = new URL(invite.shareUrl!)
+    if (!parsedShareUrl.href) {
+      return null
+    }
     // Validate Discord deep link shape
     if (!invite.deepLink!.startsWith('https://discord.com/channels/')) {
       return null
