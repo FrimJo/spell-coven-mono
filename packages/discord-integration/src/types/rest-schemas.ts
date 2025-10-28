@@ -5,16 +5,25 @@
 
 import { z } from 'zod'
 
+const SnowflakeSchema = z.string().regex(/^\d+$/)
+
 // ============================================================================
 // Channel Schemas
 // ============================================================================
 
+export const PermissionOverwriteSchema = z.object({
+  id: SnowflakeSchema,
+  type: z.union([z.literal(0), z.literal(1)]),
+  allow: z.string().regex(/^\d+$/),
+  deny: z.string().regex(/^\d+$/),
+})
+
 export const CreateVoiceChannelRequestSchema = z.object({
   name: z.string().min(1).max(100),
-  parent_id: z.string().regex(/^\d+$/).optional(),
+  parent_id: SnowflakeSchema.optional(),
   user_limit: z.number().int().min(0).max(99).optional(),
   position: z.number().int().optional(),
-  permission_overwrites: z.array(z.unknown()).optional(),
+  permission_overwrites: z.array(PermissionOverwriteSchema).optional(),
   rtc_region: z.string().optional(),
   video_quality_mode: z.number().int().min(1).max(2).optional(), // 1 = auto, 2 = 720p
   bitrate: z.number().int().min(8000).max(96000).optional(),
@@ -24,25 +33,57 @@ export type CreateVoiceChannelRequest = z.infer<
   typeof CreateVoiceChannelRequestSchema
 >
 
+export const UserSchema = z.object({
+  id: SnowflakeSchema,
+  username: z.string(),
+  discriminator: z.string(),
+  avatar: z.string().nullable(),
+})
+
 export const GuildMemberSchema = z.object({
-  user: z.unknown(),
-  nick: z.string(),
-  roles: z.array(z.string()),
+  user: UserSchema.optional(),
+  nick: z.string().nullable().optional(),
+  avatar: z.string().nullable().optional(),
+  roles: z.array(SnowflakeSchema),
   joined_at: z.string(),
-  premium_since: z.string(),
-  deaf: z.boolean(),
-  mute: z.boolean(),
-  pending: z.boolean(),
+  premium_since: z.string().nullable().optional(),
+  deaf: z.boolean().optional(),
+  mute: z.boolean().optional(),
+  pending: z.boolean().optional(),
+  communication_disabled_until: z.string().nullable().optional(),
 })
 
 export type GuildMember = z.infer<typeof GuildMemberSchema>
 
+export const RoleSchema = z.object({
+  id: SnowflakeSchema,
+  name: z.string().min(1).max(100),
+  color: z.number().int().min(0).max(0xffffff),
+  hoist: z.boolean(),
+  icon: z.string().nullable().optional(),
+  unicode_emoji: z.string().nullable().optional(),
+  position: z.number().int(),
+  permissions: z.string().regex(/^\d+$/),
+  managed: z.boolean(),
+  mentionable: z.boolean(),
+  flags: z.number().int().optional(),
+  tags: z
+    .object({
+      bot_id: SnowflakeSchema.optional(),
+      integration_id: SnowflakeSchema.optional(),
+      premium_subscriber: z.null().optional(),
+    })
+    .optional(),
+})
+
+export type Role = z.infer<typeof RoleSchema>
+
 export const ChannelResponseSchema = z.object({
-  id: z.string(),
+  id: SnowflakeSchema,
   type: z.number(),
-  guild_id: z.string().optional(),
+  guild_id: SnowflakeSchema.optional(),
   position: z.number().optional(),
-  permission_overwrites: z.array(z.unknown()).optional(),
+  permission_overwrites: z.array(PermissionOverwriteSchema).optional(),
   name: z.string(),
   topic: z.string().nullable().optional(),
   nsfw: z.boolean().optional(),
@@ -68,6 +109,20 @@ export const ChannelResponseSchema = z.object({
 })
 
 export type ChannelResponse = z.infer<typeof ChannelResponseSchema>
+
+export const VoiceStateSchema = z.object({
+  guild_id: SnowflakeSchema,
+  channel_id: SnowflakeSchema.nullable(),
+  user_id: SnowflakeSchema,
+  session_id: z.string(),
+  deaf: z.boolean().optional(),
+  mute: z.boolean().optional(),
+  self_deaf: z.boolean().optional(),
+  self_mute: z.boolean().optional(),
+  suppress: z.boolean().optional(),
+})
+
+export type VoiceState = z.infer<typeof VoiceStateSchema>
 
 // ============================================================================
 // Message Schemas
@@ -131,6 +186,40 @@ export const GuildChannelListResponseSchema = z.array(ChannelResponseSchema)
 
 export type GuildChannelListResponse = z.infer<
   typeof GuildChannelListResponseSchema
+>
+
+export const GuildRoleListResponseSchema = z.array(RoleSchema)
+
+export type GuildRoleListResponse = z.infer<typeof GuildRoleListResponseSchema>
+
+export const CreateRoleRequestSchema = z.object({
+  name: z.string().min(1).max(100),
+  permissions: z.string().regex(/^\d+$/).optional(),
+  color: z.number().int().min(0).max(0xffffff).optional(),
+  hoist: z.boolean().optional(),
+  mentionable: z.boolean().optional(),
+  icon: z.string().nullable().optional(),
+  unicode_emoji: z.string().nullable().optional(),
+})
+
+export type CreateRoleRequest = z.infer<typeof CreateRoleRequestSchema>
+
+export const AddGuildMemberRequestSchema = z.object({
+  access_token: z.string(),
+  nick: z.string().max(32).optional(),
+  roles: z.array(SnowflakeSchema).optional(),
+  mute: z.boolean().optional(),
+  deaf: z.boolean().optional(),
+})
+
+export type AddGuildMemberRequest = z.infer<typeof AddGuildMemberRequestSchema>
+
+export const GuildVoiceStateSnapshotSchema = z.object({
+  voice_states: z.array(VoiceStateSchema),
+})
+
+export type GuildVoiceStateSnapshot = z.infer<
+  typeof GuildVoiceStateSnapshotSchema
 >
 
 // ============================================================================
