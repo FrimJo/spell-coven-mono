@@ -1,6 +1,6 @@
 # Research: Discord Gateway Service
 
-**Phase**: 0 (Research & Technical Decisions)  
+**Phase**: 0 (Research & Technical Decisions)
 **Date**: 2025-10-26
 
 ## Overview
@@ -107,7 +107,7 @@ The implementation follows the comprehensive [spell-coven-gateway-realtime-guide
 - **Third-party library**: Considered but prefer direct implementation for control
 - **Audio-only**: Rejected because video streaming is essential for board state viewing
 
-**Implementation**: 
+**Implementation**:
 - UDP connection with Opus encoding for audio (48kHz)
 - VP8 codec for video (primary, with VP9/H.264 fallbacks)
 - xsalsa20_poly1305 encryption for both audio and video
@@ -209,7 +209,7 @@ const intents = (1 << 0) | (1 << 7); // GUILDS + GUILD_VOICE_STATES
 - **Refresh**: Client responsibility (not backend)
 
 ### CORS Policy
-- **Origin**: Restricted to `WEB_ORIGIN` environment variable
+- **Origin**: Restricted to `VITE_BASE_URL` environment variable
 - **Credentials**: Not required (JWT in Authorization header)
 - **Methods**: POST, DELETE, GET (WebSocket upgrade)
 

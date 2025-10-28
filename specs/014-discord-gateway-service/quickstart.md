@@ -1,6 +1,6 @@
 # Quick Start: Discord Gateway Service
 
-**Version**: 1.0.0  
+**Version**: 1.0.0
 **Last Updated**: 2025-10-26
 
 ## Overview
@@ -97,7 +97,7 @@ JWT_AUDIENCE=spell-coven-web
 JWT_PUBLIC_JWK_URL=https://your-auth.example.com/.well-known/jwks.json
 
 # CORS
-WEB_ORIGIN=http://localhost:3000
+VITE_BASE_URL=http://localhost:3000
 ```
 
 ---

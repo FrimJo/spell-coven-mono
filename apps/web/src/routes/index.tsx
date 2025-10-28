@@ -1,5 +1,5 @@
 import type { CreatorInviteState } from '@/lib/session-storage'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { LandingPage } from '@/components/LandingPage'
 import { useDiscordUser } from '@/hooks/useDiscordUser'
@@ -7,10 +7,16 @@ import { sessionStorage } from '@/lib/session-storage'
 import { createRoom, refreshRoomInvite } from '@/server/discord-rooms'
 import { useMutation } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useServerFn } from '@tanstack/react-start'
+import { createClientOnlyFn, useServerFn } from '@tanstack/react-start'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
+
+const getBaseUrl = createClientOnlyFn(() => {
+  const baseUrl = process.env.VITE_BASE_URL
+  if (baseUrl == null) throw new Error('VITE_BASE_URL is not defined')
+  return baseUrl
+})
 
 const landingSearchSchema = z.object({
   error: z.string().optional(),
@@ -60,7 +66,7 @@ function LandingPageRoute() {
           maxSeats: 4,
           tokenTtlSeconds: 30 * 60,
           includeCreatorOverwrite: true,
-          shareUrlBase: window.location.origin,
+          shareUrlBase: getBaseUrl(),
         },
       })
 

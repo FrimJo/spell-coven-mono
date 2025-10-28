@@ -1,7 +1,7 @@
 # Feature 014: Discord Gateway Service
 
-**Status**: Planning Complete  
-**Branch**: `014-discord-gateway-service`  
+**Status**: Planning Complete
+**Branch**: `014-discord-gateway-service`
 **Version**: 1.0.0
 
 ## Overview
@@ -153,7 +153,7 @@ HUB_SECRET=change-me
 JWT_ISSUER=https://your-auth.example.com
 JWT_AUDIENCE=spell-coven-web
 JWT_PUBLIC_JWK_URL=https://your-auth.example.com/.well-known/jwks.json
-WEB_ORIGIN=https://your-web.app
+VITE_BASE_URL=https://your-web.app
 ```
 
 ## Quick Start
