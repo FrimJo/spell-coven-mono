@@ -63,6 +63,7 @@ function LandingPageRoute() {
           userLimit: 4,
           maxSeats: 4,
           tokenTtlSeconds: 30 * 60,
+          includeCreatorOverwrite: true,
           shareUrlBase: window.location.origin,
         },
       })
@@ -116,6 +117,7 @@ function LandingPageRoute() {
           creatorId: inviteState.creatorId,
           shareUrlBase: window.location.origin,
           maxSeats: inviteState.maxSeats,
+          tokenTtlSeconds: 30 * 60,
         },
       })
 

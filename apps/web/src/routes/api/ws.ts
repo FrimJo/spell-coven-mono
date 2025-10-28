@@ -1,4 +1,4 @@
-import type { WebSocket } from 'ws'
+import type { Data as WebSocketData, WebSocket } from 'ws'
 import { verifyJWT } from '@/server/jwt'
 import { WSAuthMessageSchema } from '@/server/schemas'
 import { wsManager } from '@/server/ws-manager'
@@ -63,9 +63,10 @@ export function handleWebSocketConnection(ws: WebSocket): void {
   }, 30000)
 
   // Handle messages
-  ws.on('message', async (data) => {
+  ws.on('message', async (data: WebSocketData) => {
     try {
-      const message = JSON.parse(data.toString())
+      const raw = typeof data === 'string' ? data : data.toString()
+      const message = JSON.parse(raw)
 
       // Handle authentication
       if (!authenticated) {
@@ -155,7 +156,7 @@ export function handleWebSocketConnection(ws: WebSocket): void {
   })
 
   // Handle close
-  ws.on('close', (code, reason) => {
+  ws.on('close', (code: number, reason: Buffer) => {
     clearTimeout(authTimeout)
     console.log(
       `[WS] Connection closed (code: ${code}, reason: ${reason.toString()})`,
@@ -163,7 +164,7 @@ export function handleWebSocketConnection(ws: WebSocket): void {
   })
 
   // Handle error
-  ws.on('error', (error) => {
+  ws.on('error', (error: Error) => {
     console.error('[WS] WebSocket error:', error)
   })
 }

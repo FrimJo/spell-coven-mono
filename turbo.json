@@ -5,13 +5,15 @@
     "BASE_URL",
     "DEV",
     "DISCORD_BOT_TOKEN",
+    "DISCORD_BOT_USER_ID",
     "PRIMARY_GUILD_ID",
     "HUB_SECRET",
     "JWT_ISSUER",
     "JWT_AUDIENCE",
     "JWT_PUBLIC_JWK_URL",
     "HUB_ENDPOINT",
-    "PORT"
+    "PORT",
+    "ROOM_TOKEN_SECRET"
   ],
   "tasks": {
     "build": {

@@ -54,8 +54,9 @@ export function mapDiscordError(
 
   const discordCode = error.code
   const status = error.status
-  const domainCode =
-    (discordCode !== undefined && ERROR_CODE_MAP[discordCode]) ?? fallback
+  const mappedCode =
+    discordCode !== undefined ? ERROR_CODE_MAP[discordCode] : undefined
+  const domainCode = mappedCode ?? fallback
 
   const retry =
     status === 429 ||

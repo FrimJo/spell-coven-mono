@@ -1,6 +1,6 @@
 import reactCompiler from 'eslint-plugin-react-compiler'
 
-import { config as reactConfig } from '@repo/eslint-config/react-internal'
+import { config as reactConfig } from '../../packages/eslint-config/react-internal.js'
 
 /** @type {import('typescript-eslint').Config} */
 export default [
