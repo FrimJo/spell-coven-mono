@@ -61,7 +61,7 @@
 
 **Goal**: Enable players to create Discord voice channels for game sessions via REST API
 
-**Independent Test**: 
+**Independent Test**:
 1. Start Gateway Worker and TanStack Start backend
 2. Call POST /api/create-room with valid JWT
 3. Verify channel created in Discord guild
@@ -244,7 +244,7 @@
 - [X] T095 [P] Update quickstart.md with complete local development setup instructions
 - [X] T096 [P] Add health check endpoint documentation to Gateway Worker README
 - [X] T097 [P] Document environment variables in both .env.example files
-- [X] T098 [P] Add CORS configuration to TanStack Start for WEB_ORIGIN
+- [X] T098 [P] Add CORS configuration to TanStack Start for VITE_BASE_URL
 - [X] T099 [P] Add rate limiting considerations documentation
 - [X] T100 [P] Document multi-guild expansion path in Future Enhancements section
 - [X] T101 Validate quickstart.md instructions end-to-end

@@ -2,7 +2,7 @@
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
   "globalEnv": [
-    "BASE_URL",
+    "VITE_BASE_URL",
     "DEV",
     "DISCORD_BOT_TOKEN",
     "DISCORD_BOT_USER_ID",

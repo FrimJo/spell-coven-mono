@@ -220,7 +220,7 @@ interface JWTClaims {
 - Bot token MUST never be exposed to browser
 - Internal webhooks MUST use HMAC + timestamp verification
 - JWT verification MUST use JWKS (no hardcoded secrets)
-- CORS MUST restrict to configured WEB_ORIGIN
+- CORS MUST restrict to configured VITE_BASE_URL
 - Reject HMAC signatures with >60s clock skew
 
 ### NFR2: Reliability
@@ -275,7 +275,7 @@ HUB_SECRET=change-me
 JWT_ISSUER=https://your-auth.example.com
 JWT_AUDIENCE=spell-coven-web
 JWT_PUBLIC_JWK_URL=https://your-auth.example.com/.well-known/jwks.json
-WEB_ORIGIN=https://your-web.app
+VITE_BASE_URL=https://your-web.app
 LOG_LEVEL=INFO
 MAX_API_RETRIES=3
 MAX_WS_RECONNECT_ATTEMPTS=5
