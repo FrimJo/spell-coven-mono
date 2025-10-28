@@ -82,12 +82,12 @@ function validateCreatorInviteState(data: unknown): CreatorInviteState | null {
 
   try {
     // Validate that shareUrl is an absolute URL
-    const parsedShareUrl = new URL(invite.shareUrl!)
-    if (!parsedShareUrl.href) {
+    const parsedShareUrl = invite.shareUrl ? new URL(invite.shareUrl) : null
+    if (!parsedShareUrl?.href) {
       return null
     }
     // Validate Discord deep link shape
-    if (!invite.deepLink!.startsWith('https://discord.com/channels/')) {
+    if (!invite.deepLink?.startsWith('https://discord.com/channels/')) {
       return null
     }
   } catch {
@@ -119,10 +119,7 @@ export const sessionStorage = {
   },
 
   saveCreatorInviteState(state: CreatorInviteState): void {
-    window.sessionStorage.setItem(
-      CREATOR_INVITE_KEY,
-      JSON.stringify(state),
-    )
+    window.sessionStorage.setItem(CREATOR_INVITE_KEY, JSON.stringify(state))
   },
 
   loadCreatorInviteState(): CreatorInviteState | null {
