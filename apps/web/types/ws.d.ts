@@ -1,5 +1,8 @@
 declare module 'ws' {
-  type WebSocketData = string | ArrayBuffer | ArrayBufferView | Buffer | Buffer[];
+  import type { IncomingMessage } from 'http'
+  import type { Duplex } from 'stream'
+
+  type WebSocketData = string | ArrayBuffer | ArrayBufferView | Buffer | Buffer[]
 
   interface WebSocketInstance {
     readonly readyState: number;
@@ -17,8 +20,26 @@ declare module 'ws' {
     new (url: string, protocols?: string | string[]): WebSocketInstance;
   }
 
-  export type Data = WebSocketData;
-  export type WebSocket = WebSocketInstance;
-  const WebSocket: WebSocketConstructor;
-  export default WebSocket;
+  interface WebSocketServerOptions {
+    noServer?: boolean
+    server?: unknown
+    port?: number
+  }
+
+  class WebSocketServerClass {
+    constructor(options?: WebSocketServerOptions)
+    handleUpgrade(
+      request: IncomingMessage,
+      socket: Duplex,
+      head: Buffer,
+      callback: (ws: WebSocketInstance) => void,
+    ): void
+    close(): void
+  }
+
+  export type Data = WebSocketData
+  export type WebSocket = WebSocketInstance
+  const WebSocket: WebSocketConstructor
+  export default WebSocket
+  export { WebSocketServerClass as WebSocketServer }
 }
