@@ -4,8 +4,13 @@ import { createServerFn, createServerOnlyFn } from '@tanstack/react-start'
 
 import { DiscordRestClient } from '@repo/discord-integration/clients'
 import type { ChannelResponse } from '@repo/discord-integration/types'
-import type { PermissionOverwrite } from '@repo/discord-integration/utils'
-import { buildRoomPermissionOverwrites } from '@repo/discord-integration/utils'
+import {
+  buildCreatorAllowOverwrite,
+  buildEveryoneDenyOverwrite,
+  buildRoleAllowOverwrite,
+  buildRoomPermissionOverwrites,
+  type PermissionOverwrite,
+} from '@repo/discord-integration/utils'
 
 import {
   CreateRoomRequestSchema,
@@ -39,6 +44,65 @@ interface ListRoomsResult {
 
 const DISCORD_DEEP_LINK_BASE = 'https://discord.com/channels'
 
+function isRoomTokenConfigured(): boolean {
+  const secret = process.env.ROOM_TOKEN_SECRET
+  return typeof secret === 'string' && secret.length > 0
+}
+
+function buildInviteFallback(options: {
+  channelId: string
+  shareUrlBase: string
+  maxSeats?: number
+  tokenTtlSeconds: number
+}) {
+  const issuedAt = Math.floor(Date.now() / 1000)
+  const expiresAt = issuedAt + Math.max(60, Math.floor(options.tokenTtlSeconds))
+  const token = randomUUID().replace(/-/g, '')
+
+  return {
+    token,
+    issuedAt,
+    expiresAt,
+    shareUrl: buildShareUrl(options.shareUrlBase, options.channelId, token),
+    maxSeats:
+      typeof options.maxSeats === 'number' && options.maxSeats > 0
+        ? Math.floor(options.maxSeats)
+        : undefined,
+  }
+}
+
+function buildPermissionOverwrites({
+  guildId,
+  roleId,
+  botUserId,
+  creatorId,
+}: {
+  guildId: string
+  roleId: string
+  botUserId: string | null
+  creatorId?: string
+}): PermissionOverwrite[] {
+  if (botUserId) {
+    return buildRoomPermissionOverwrites({
+      guildId,
+      roleId,
+      botUserId,
+      creatorId,
+    })
+  }
+
+  const overwrites: PermissionOverwrite[] = [
+    buildEveryoneDenyOverwrite(guildId),
+    buildRoleAllowOverwrite(roleId),
+  ]
+
+  if (creatorId) {
+    overwrites.push(buildCreatorAllowOverwrite(creatorId))
+  }
+
+  return overwrites
+}
+
 const getSecrets = createServerOnlyFn(() => {
   const botToken = process.env.DISCORD_BOT_TOKEN
   const guildId = process.env.PRIMARY_GUILD_ID
@@ -57,7 +121,7 @@ const getBotUserId = createServerOnlyFn(() => {
   const botUserId = process.env.DISCORD_BOT_USER_ID
 
   if (!botUserId?.length) {
-    throw new Error('DISCORD_BOT_USER_ID environment variable is not defined')
+    return null
   }
 
   return botUserId
@@ -233,7 +297,7 @@ export const createRoom = createServerFn({ method: 'POST' })
       'Spell Coven: create private voice room role',
     )
 
-    const permissionOverwrites = buildRoomPermissionOverwrites({
+    const permissionOverwrites = buildPermissionOverwrites({
       guildId,
       roleId: role.id,
       botUserId,
@@ -255,15 +319,24 @@ export const createRoom = createServerFn({ method: 'POST' })
 
     const maxSeats = request.maxSeats ?? request.userLimit
 
-    const invite = await createRoomInviteToken({
-      guildId,
-      channelId: channel.id,
-      roleId: role.id,
-      creatorId: request.creatorId,
-      expiresInSeconds: request.tokenTtlSeconds,
-      maxSeats,
-      roomName: channel.name ?? roomName,
-    })
+    const shouldGenerateInvite = isRoomTokenConfigured()
+
+    const invite = shouldGenerateInvite
+      ? await createRoomInviteToken({
+          guildId,
+          channelId: channel.id,
+          roleId: role.id,
+          creatorId: request.creatorId,
+          expiresInSeconds: request.tokenTtlSeconds,
+          maxSeats,
+          roomName: channel.name ?? roomName,
+        })
+      : buildInviteFallback({
+          channelId: channel.id,
+          shareUrlBase: request.shareUrlBase,
+          maxSeats,
+          tokenTtlSeconds: request.tokenTtlSeconds,
+        })
 
     const response = {
       room: mapChannelToSummary(channel, guildId, role.id, permissionOverwrites),
@@ -290,15 +363,24 @@ export const refreshRoomInvite = createServerFn({ method: 'POST' })
     const channel = await client.getChannel(data.channelId)
     const resolvedGuildId = channel.guild_id ?? guildId
 
-    const invite = await createRoomInviteToken({
-      guildId: resolvedGuildId,
-      channelId: data.channelId,
-      roleId: data.roleId,
-      creatorId: data.creatorId,
-      expiresInSeconds: data.tokenTtlSeconds,
-      maxSeats: data.maxSeats,
-      roomName: channel.name,
-    })
+    const shouldGenerateInvite = isRoomTokenConfigured()
+
+    const invite = shouldGenerateInvite
+      ? await createRoomInviteToken({
+          guildId: resolvedGuildId,
+          channelId: data.channelId,
+          roleId: data.roleId,
+          creatorId: data.creatorId,
+          expiresInSeconds: data.tokenTtlSeconds,
+          maxSeats: data.maxSeats,
+          roomName: channel.name,
+        })
+      : buildInviteFallback({
+          channelId: data.channelId,
+          shareUrlBase: data.shareUrlBase,
+          maxSeats: data.maxSeats,
+          tokenTtlSeconds: data.tokenTtlSeconds,
+        })
 
     const permissionOverwrites = mapPermissionOverwrites(
       channel.permission_overwrites as PermissionOverwrite[] | undefined,

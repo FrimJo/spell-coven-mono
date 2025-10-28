@@ -6,7 +6,7 @@ import { createRoom, refreshRoomInvite } from '@/server/discord-rooms'
 import { useDiscordUser } from '@/hooks/useDiscordUser'
 import { useMutation } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useServerFn } from '@tanstack/react-start'
+import { createClientOnlyFn, useServerFn } from '@tanstack/react-start'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
@@ -20,13 +20,23 @@ export const Route = createFileRoute('/')({
   validateSearch: zodValidator(landingSearchSchema),
 })
 
+const loadStoredInviteState = createClientOnlyFn(
+  (): CreatorInviteState | null => {
+    if (typeof window === 'undefined') {
+      return null
+    }
+
+    return sessionStorage.loadCreatorInviteState()
+  },
+)
+
 function LandingPageRoute() {
   const navigate = useNavigate()
   const search = Route.useSearch()
   const [error, setError] = useState<string | null>(search.error || null)
   const { user } = useDiscordUser()
   const [inviteState, setInviteState] = useState<CreatorInviteState | null>(() =>
-    sessionStorage.loadCreatorInviteState(),
+    loadStoredInviteState() ?? null,
   )
 
   const privateRoomsEnabled = useMemo(() => {
