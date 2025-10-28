@@ -90,12 +90,15 @@ export class DiscordRestClient {
     guildId: string,
     userId: string,
     request: { access_token: string },
-  ) {
-    const response = await this.request<GuildMember>(
+  ): Promise<GuildMember | null> {
+    const response = await this.request<GuildMember | undefined>(
       'PUT',
       `/guilds/${guildId}/members/${userId}`,
       request,
     )
+    if (!response) {
+      return null
+    }
     return GuildMemberSchema.parse(response)
   }
 
@@ -251,15 +254,13 @@ export class DiscordRestClient {
     guildId: string,
     roleId: string,
     auditLogReason?: string,
-  ): Promise<Role> {
-    const response = await this.request<Role>(
+  ): Promise<void> {
+    await this.request<void>(
       'DELETE',
       `/guilds/${guildId}/roles/${roleId}`,
       undefined,
       auditLogReason,
     )
-
-    return RoleSchema.parse(response)
   }
 
   /**
@@ -270,15 +271,19 @@ export class DiscordRestClient {
     userId: string,
     request: AddGuildMemberRequest,
     auditLogReason?: string,
-  ): Promise<GuildMember> {
+  ): Promise<GuildMember | null> {
     const validatedRequest = AddGuildMemberRequestSchema.parse(request)
 
-    const response = await this.request<GuildMember>(
+    const response = await this.request<GuildMember | undefined>(
       'PUT',
       `/guilds/${guildId}/members/${userId}`,
       validatedRequest,
       auditLogReason,
     )
+
+    if (!response) {
+      return null
+    }
 
     return GuildMemberSchema.parse(response)
   }
@@ -435,7 +440,7 @@ export class DiscordRestClient {
         }
 
         if (response.status === 204) {
-          return {} as T
+          return undefined as T
         }
 
         return await response.json()
