@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { LandingPage } from '@/components/LandingPage'
 import { sessionStorage, type CreatorInviteState } from '@/lib/session-storage'
@@ -25,9 +25,18 @@ function LandingPageRoute() {
   const search = Route.useSearch()
   const [error, setError] = useState<string | null>(search.error || null)
   const { user } = useDiscordUser()
-  const [inviteState, setInviteState] = useState<CreatorInviteState | null>(() =>
-    sessionStorage.loadCreatorInviteState(),
-  )
+  const [inviteState, setInviteState] = useState<CreatorInviteState | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const storedInvite = sessionStorage.loadCreatorInviteState()
+    if (storedInvite) {
+      setInviteState(storedInvite)
+    }
+  }, [])
 
   const privateRoomsEnabled = useMemo(() => {
     const raw = import.meta.env.VITE_ENABLE_PRIVATE_ROOMS
