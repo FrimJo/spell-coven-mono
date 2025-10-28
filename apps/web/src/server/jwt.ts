@@ -1,4 +1,8 @@
-import { createPublicKey, createVerify } from 'node:crypto'
+import {
+  createPublicKey,
+  createVerify,
+  type JsonWebKey as NodeJsonWebKey,
+} from 'node:crypto'
 
 export interface JWTPayload {
   [key: string]: unknown
@@ -32,7 +36,7 @@ interface ParsedJwt {
 }
 
 const JWKS_CACHE_TTL_MS = 5 * 60 * 1000
-const jwksCache = new Map<string, { keys: JsonWebKey[]; expiresAt: number }>()
+const jwksCache = new Map<string, { keys: NodeJsonWebKey[]; expiresAt: number }>()
 
 function base64UrlDecode(input: string): Buffer {
   const normalized = input.replace(/-/g, '+').replace(/_/g, '/')
@@ -65,7 +69,7 @@ function parseJwt(token: string): ParsedJwt {
   }
 }
 
-async function fetchJwks(url: string): Promise<JsonWebKey[]> {
+async function fetchJwks(url: string): Promise<NodeJsonWebKey[]> {
   const now = Date.now()
   const cached = jwksCache.get(url)
   if (cached && cached.expiresAt > now) {
@@ -77,7 +81,7 @@ async function fetchJwks(url: string): Promise<JsonWebKey[]> {
     throw new Error(`Failed to fetch JWKS: ${response.status}`)
   }
 
-  const body = (await response.json()) as { keys?: JsonWebKey[] }
+  const body = (await response.json()) as { keys?: NodeJsonWebKey[] }
   if (!body.keys || !Array.isArray(body.keys)) {
     throw new Error('Invalid JWKS response')
   }
@@ -87,9 +91,9 @@ async function fetchJwks(url: string): Promise<JsonWebKey[]> {
 }
 
 function selectJwk(
-  keys: JsonWebKey[],
+  keys: NodeJsonWebKey[],
   header: ParsedJwt['header'],
-): JsonWebKey | undefined {
+): NodeJsonWebKey | undefined {
   if (header.kid) {
     const match = keys.find(
       (key) => (key as { kid?: string }).kid === header.kid,
@@ -102,7 +106,15 @@ function selectJwk(
   return keys[0]
 }
 
+const SUPPORTED_RSA_ALGORITHMS = new Set(['RS256', 'RS384', 'RS512'])
+
 function getVerifyAlgorithm(alg: string): string {
+  if (!SUPPORTED_RSA_ALGORITHMS.has(alg)) {
+    throw new Error(
+      `Unsupported JWT algorithm: ${alg}. Only RS256/RS384/RS512 are supported.`,
+    )
+  }
+
   switch (alg) {
     case 'RS256':
       return 'RSA-SHA256'
@@ -110,12 +122,6 @@ function getVerifyAlgorithm(alg: string): string {
       return 'RSA-SHA384'
     case 'RS512':
       return 'RSA-SHA512'
-    case 'ES256':
-      return 'sha256'
-    case 'ES384':
-      return 'sha384'
-    case 'ES512':
-      return 'sha512'
     default:
       throw new Error(`Unsupported JWT algorithm: ${alg}`)
   }
@@ -125,8 +131,11 @@ function verifySignature(
   alg: string,
   signingInput: string,
   signature: Uint8Array,
-  jwk: JsonWebKey,
+  jwk: NodeJsonWebKey,
 ): boolean {
+  if (jwk.kty !== 'RSA') {
+    throw new Error(`Unsupported JWKS key type: ${jwk.kty ?? 'unknown'}`)
+  }
   const keyObject = createPublicKey({ key: jwk, format: 'jwk' })
   const verifier = createVerify(getVerifyAlgorithm(alg))
   verifier.update(signingInput)
