@@ -1,27 +1,7 @@
 import WebSocket from 'ws'
 
-type GatewayWebSocket = {
-  readonly readyState: number
-  on(event: 'open', listener: () => void): GatewayWebSocket
-  on(event: 'message', listener: (data: WebSocketData) => void): GatewayWebSocket
-  on(
-    event: 'close',
-    listener: (code: number, reason: Buffer) => void,
-  ): GatewayWebSocket
-  on(event: 'error', listener: (error: Error) => void): GatewayWebSocket
-  removeAllListeners(): void
-  close(code?: number, reason?: string): void
-  send(data: string): void
-}
-
 type WebSocketData = string | ArrayBuffer | ArrayBufferView | Buffer | Buffer[]
 
-interface GatewayWebSocketConstructor {
-  readonly OPEN: number
-  new (url: string): GatewayWebSocket
-}
-
-const GatewayWebSocketImpl = WebSocket as unknown as GatewayWebSocketConstructor
 
 import type { ConnectionState, GatewayConfig, GatewaySession } from './types.js'
 
@@ -52,7 +32,7 @@ const INTENTS = (1 << 0) | (1 << 7) // GUILDS + GUILD_VOICE_STATES
  */
 export class DiscordGatewayClient {
   private config: GatewayConfig
-  private ws: GatewayWebSocket | null = null
+  private ws: WebSocket | null = null
   private state: ConnectionState = 'DISCONNECTED'
   private session: GatewaySession = {
     sessionId: null,
@@ -87,7 +67,7 @@ export class DiscordGatewayClient {
 
     const gatewayUrl =
       this.session.resumeUrl || 'wss://gateway.discord.gg/?v=10&encoding=json'
-    this.ws = new GatewayWebSocketImpl(gatewayUrl)
+    this.ws = new WebSocket(gatewayUrl)
 
     this.ws.on('open', () => this.handleOpen())
     this.ws.on('message', (data) => this.handleMessage(data))
@@ -372,7 +352,7 @@ export class DiscordGatewayClient {
   // ============================================================================
 
   private send(payload: unknown): void {
-    if (!this.ws || this.ws.readyState !== GatewayWebSocketImpl.OPEN) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       console.warn('[Gateway] Cannot send, WebSocket not open')
       return
     }

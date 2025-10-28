@@ -38,9 +38,7 @@ function base64UrlDecode(input: string): Buffer {
   const normalized = input.replace(/-/g, '+').replace(/_/g, '/')
   const padding = normalized.length % 4
   const padded =
-    padding === 0
-      ? normalized
-      : normalized + '='.repeat((4 - padding) % 4)
+    padding === 0 ? normalized : normalized + '='.repeat((4 - padding) % 4)
   return Buffer.from(padded, 'base64')
 }
 
@@ -88,7 +86,10 @@ async function fetchJwks(url: string): Promise<JsonWebKey[]> {
   return body.keys
 }
 
-function selectJwk(keys: JsonWebKey[], header: ParsedJwt['header']): JsonWebKey | undefined {
+function selectJwk(
+  keys: JsonWebKey[],
+  header: ParsedJwt['header'],
+): JsonWebKey | undefined {
   if (header.kid) {
     const match = keys.find(
       (key) => (key as { kid?: string }).kid === header.kid,
@@ -145,7 +146,9 @@ function validateAudience(aud: unknown, expected: string): boolean {
   return false
 }
 
-function assertClaims(payload: Record<string, unknown>): asserts payload is JWTClaims {
+function assertClaims(
+  payload: Record<string, unknown>,
+): asserts payload is JWTClaims {
   if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
     throw new Error('Missing required claim: sub')
   }
@@ -193,7 +196,14 @@ export async function verifyJWT(
       throw new Error('Unable to find matching JWKS key')
     }
 
-    if (!verifySignature(parsed.header.alg, parsed.signingInput, parsed.signature, jwk)) {
+    if (
+      !verifySignature(
+        parsed.header.alg,
+        parsed.signingInput,
+        parsed.signature,
+        jwk,
+      )
+    ) {
       throw new Error('JWT signature verification failed')
     }
 
