@@ -1,21 +1,100 @@
 import { z } from 'zod'
 
+const SnowflakeRegex = /^\d+$/
+
+export const SnowflakeSchema = z
+  .string()
+  .regex(SnowflakeRegex, 'Expected Discord snowflake ID')
+
+export const DiscordPermissionOverwriteSchema = z.object({
+  id: SnowflakeSchema,
+  type: z.union([z.literal(0), z.literal(1)]),
+  allow: z.string().regex(SnowflakeRegex),
+  deny: z.string().regex(SnowflakeRegex),
+})
+
+export const DiscordRoleSummarySchema = z.object({
+  id: SnowflakeSchema,
+  name: z.string().min(1).max(100),
+  position: z.number().int(),
+  permissions: z.string().regex(SnowflakeRegex),
+  managed: z.boolean(),
+})
+
+export const DiscordChannelSummarySchema = z.object({
+  id: SnowflakeSchema,
+  guildId: SnowflakeSchema,
+  name: z.string().min(1).max(100),
+  type: z.number().int(),
+  parentId: SnowflakeSchema.nullable().optional(),
+  permissionOverwrites: z
+    .array(DiscordPermissionOverwriteSchema)
+    .optional(),
+  rtcRegion: z.string().nullable().optional(),
+  userLimit: z.number().int().min(0).max(99).optional(),
+})
+
+export const DiscordVoiceStateSchema = z.object({
+  guild_id: SnowflakeSchema,
+  channel_id: SnowflakeSchema.nullable(),
+  user_id: SnowflakeSchema,
+  session_id: z.string().optional(),
+})
+
+export const RoomTokenErrorCodeSchema = z.enum([
+  'TOKEN_INVALID',
+  'TOKEN_EXPIRED',
+  'ROOM_FULL',
+])
+
+export type RoomTokenErrorCode = z.infer<typeof RoomTokenErrorCodeSchema>
+
+export const RoomInviteClaimsSchema = z.object({
+  v: z.literal(1),
+  purpose: z.literal('voice-room'),
+  guild_id: SnowflakeSchema,
+  channel_id: SnowflakeSchema,
+  role_id: SnowflakeSchema,
+  creator_id: SnowflakeSchema,
+  max_seats: z.number().int().positive().optional(),
+  room_name: z.string().min(1).max(100).optional(),
+  jti: z.string().min(4).max(128).optional(),
+  iat: z.number().int(),
+  exp: z.number().int(),
+})
+
+export type RoomInviteClaims = z.infer<typeof RoomInviteClaimsSchema>
+
+export const RoomInviteMetadataSchema = z.object({
+  token: z.string().min(16),
+  issuedAt: z.number().int(),
+  expiresAt: z.number().int(),
+})
+
+export const DiscordDeepLinkSchema = z
+  .string()
+  .url()
+  .refine(
+    (value) => value.startsWith('https://discord.com/channels/'),
+    'Expected Discord deep link',
+  )
+
 // ============================================================================
 // HTTP Request/Response Schemas
 // ============================================================================
 
 export const CreateRoomRequestSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  parentId: z.string().regex(/^\d+$/).optional(),
+  parentId: SnowflakeSchema.optional(),
   userLimit: z.number().int().min(0).max(99).default(4),
 })
 
 export type CreateRoomRequest = z.infer<typeof CreateRoomRequestSchema>
 
 export const CreateRoomResponseSchema = z.object({
-  channelId: z.string().regex(/^\d+$/),
+  channelId: SnowflakeSchema,
   name: z.string(),
-  guildId: z.string().regex(/^\d+$/),
+  guildId: SnowflakeSchema,
 })
 
 export type CreateRoomResponse = z.infer<typeof CreateRoomResponseSchema>
@@ -38,9 +117,9 @@ export const WSAuthMessageSchema = z.object({
 export type WSAuthMessage = z.infer<typeof WSAuthMessageSchema>
 
 export const VoiceStateSchema = z.object({
-  guildId: z.string().regex(/^\d+$/),
-  channelId: z.string().regex(/^\d+$/).nullable(),
-  userId: z.string().regex(/^\d+$/),
+  guildId: SnowflakeSchema,
+  channelId: SnowflakeSchema.nullable(),
+  userId: SnowflakeSchema,
   sessionId: z.string().optional(),
   deaf: z.boolean().optional(),
   mute: z.boolean().optional(),
