@@ -1,6 +1,43 @@
+import { randomUUID } from 'node:crypto'
+
 import { createServerFn, createServerOnlyFn } from '@tanstack/react-start'
 
 import { DiscordRestClient } from '@repo/discord-integration/clients'
+import type { ChannelResponse } from '@repo/discord-integration/types'
+import type { PermissionOverwrite } from '@repo/discord-integration/utils'
+import { buildRoomPermissionOverwrites } from '@repo/discord-integration/utils'
+
+import {
+  CreateRoomRequestSchema,
+  CreateRoomResponseSchema,
+  DeleteRoomResponseSchema,
+  RefreshRoomInviteRequestSchema,
+  RefreshRoomInviteResponseSchema,
+  type CreateRoomRequest,
+  type CreateRoomResponse,
+  type RefreshRoomInviteRequest,
+  type RefreshRoomInviteResponse,
+  type RoomSummary,
+} from './schemas'
+import { createRoomInviteToken } from './room-tokens'
+
+interface RoomCheckResult {
+  exists: boolean
+  channel?: {
+    id: string
+    name: string
+    type: number
+  }
+  error?: string
+}
+
+interface ListRoomsResult {
+  id: string
+  name: string
+  createdAt: string
+}
+
+const DISCORD_DEEP_LINK_BASE = 'https://discord.com/channels'
 
 const getSecrets = createServerOnlyFn(() => {
   const botToken = process.env.DISCORD_BOT_TOKEN
@@ -16,7 +53,16 @@ const getSecrets = createServerOnlyFn(() => {
   return { botToken, guildId }
 })
 
-// Create a singleton Discord REST client
+const getBotUserId = createServerOnlyFn(() => {
+  const botUserId = process.env.DISCORD_BOT_USER_ID
+
+  if (!botUserId?.length) {
+    throw new Error('DISCORD_BOT_USER_ID environment variable is not defined')
+  }
+
+  return botUserId
+})
+
 let discordClient: DiscordRestClient | null = null
 
 const getDiscordClient = createServerOnlyFn(() => {
@@ -37,36 +83,75 @@ const getDiscordClient = createServerOnlyFn(() => {
   return discordClient
 })
 
-interface RoomCheckResult {
-  exists: boolean
-  channel?: {
-    id: string
-    name: string
-    type: number
+function normalizeShareBase(base: string): string {
+  return base.endsWith('/') ? base.slice(0, -1) : base
+}
+
+function buildShareUrl(base: string, channelId: string, token: string): string {
+  const normalizedBase = normalizeShareBase(base)
+  return `${normalizedBase}/game/${channelId}?t=${encodeURIComponent(token)}`
+}
+
+function buildDeepLink(guildId: string, channelId: string): string {
+  return `${DISCORD_DEEP_LINK_BASE}/${guildId}/${channelId}`
+}
+
+function ensureRoomName(name?: string): string {
+  const fallback = 'Private Voice Room'
+  if (!name) return fallback
+
+  const trimmed = name.trim()
+  if (!trimmed.length) {
+    return fallback
   }
-  error?: string
+
+  return trimmed.slice(0, 100)
 }
 
-interface CreateRoomOptions {
-  name?: string
-  parentId?: string
-  userLimit?: number
+function createRoleName(): string {
+  return `room-${randomUUID().slice(0, 8)}`
 }
 
-interface CreateRoomResult {
-  channelId: string
-  name: string
-  guildId: string
+function mapPermissionOverwrites(
+  overwrites: PermissionOverwrite[] | undefined,
+): PermissionOverwrite[] {
+  if (!overwrites?.length) {
+    return []
+  }
+
+  return overwrites.map((overwrite) => ({
+    id: overwrite.id,
+    type: overwrite.type,
+    allow: overwrite.allow,
+    deny: overwrite.deny,
+  }))
 }
 
-interface DeleteRoomResult {
-  ok: boolean
-}
+function mapChannelToSummary(
+  channel: ChannelResponse,
+  guildId: string,
+  roleId: string,
+  fallbackOverwrites: PermissionOverwrite[] | undefined,
+): RoomSummary {
+  const permissionOverwrites = mapPermissionOverwrites(
+    channel.permission_overwrites as PermissionOverwrite[] | undefined,
+  )
 
-interface ListRoomsResult {
-  id: string
-  name: string
-  createdAt: string
+  const overwrites =
+    permissionOverwrites.length > 0
+      ? permissionOverwrites
+      : mapPermissionOverwrites(fallbackOverwrites)
+
+  return {
+    guildId,
+    channelId: channel.id,
+    roleId,
+    name: channel.name,
+    userLimit:
+      typeof channel.user_limit === 'number' ? channel.user_limit : undefined,
+    permissionOverwrites: overwrites,
+    deepLink: buildDeepLink(guildId, channel.id),
+  }
 }
 
 export const ensureUserInGuild = createServerFn({ method: 'POST' })
@@ -89,10 +174,6 @@ export const ensureUserInGuild = createServerFn({ method: 'POST' })
     }
   })
 
-/**
- * Check if a Discord voice channel exists
- * Server function that can be called directly from loaders/beforeLoad
- */
 export const checkRoomExists = createServerFn({ method: 'POST' })
   .inputValidator((data: { channelId: string }) => data)
   .handler(async ({ data: { channelId } }): Promise<RoomCheckResult> => {
@@ -100,7 +181,6 @@ export const checkRoomExists = createServerFn({ method: 'POST' })
       const client = getDiscordClient()
       const { guildId } = getSecrets()
 
-      // Get all channels and find the specific one
       const channels = await client.getChannels(guildId)
       const channel = channels.find((ch) => ch.id === channelId)
 
@@ -108,7 +188,6 @@ export const checkRoomExists = createServerFn({ method: 'POST' })
         return { exists: false }
       }
 
-      // Check if it's a voice channel (type 2)
       if (channel.type !== 2) {
         return {
           exists: false,
@@ -133,59 +212,129 @@ export const checkRoomExists = createServerFn({ method: 'POST' })
     }
   })
 
-/**
- * Create a Discord voice channel
- * Server-only function that can be called directly from mutations
- */
 export const createRoom = createServerFn({ method: 'POST' })
-  .inputValidator((data: CreateRoomOptions) => data)
-  .handler(async ({ data: options }): Promise<CreateRoomResult> => {
+  .inputValidator((data: CreateRoomRequest) =>
+    CreateRoomRequestSchema.parse(data),
+  )
+  .handler(async ({ data }): Promise<CreateRoomResponse> => {
+    const request = data
     const client = getDiscordClient()
     const { guildId } = getSecrets()
+    const botUserId = getBotUserId()
+
+    const role = await client.createRole(
+      guildId,
+      {
+        name: createRoleName(),
+        permissions: '0',
+        mentionable: false,
+        hoist: false,
+      },
+      'Spell Coven: create private voice room role',
+    )
+
+    const permissionOverwrites = buildRoomPermissionOverwrites({
+      guildId,
+      roleId: role.id,
+      botUserId,
+      creatorId: request.includeCreatorOverwrite ? request.creatorId : undefined,
+    })
+
+    const roomName = ensureRoomName(request.name)
 
     const channel = await client.createVoiceChannel(
       guildId,
       {
-        name: options?.name || 'Voice Channel',
-        parent_id: options?.parentId,
-        user_limit: options?.userLimit,
+        name: roomName,
+        parent_id: request.parentId,
+        user_limit: request.userLimit,
+        permission_overwrites: permissionOverwrites,
       },
-      'Created by Spell Coven app',
+      'Spell Coven: create private voice room channel',
     )
 
-    console.log(
-      `[Discord] Created voice channel: ${channel.name} (${channel.id})`,
-    )
+    const maxSeats = request.maxSeats ?? request.userLimit
 
-    return {
-      channelId: channel.id,
-      name: channel.name || 'Voice Channel',
+    const invite = await createRoomInviteToken({
       guildId,
+      channelId: channel.id,
+      roleId: role.id,
+      creatorId: request.creatorId,
+      expiresInSeconds: request.tokenTtlSeconds,
+      maxSeats,
+      roomName: channel.name ?? roomName,
+    })
+
+    const response = {
+      room: mapChannelToSummary(channel, guildId, role.id, permissionOverwrites),
+      invite: {
+        token: invite.token,
+        issuedAt: invite.issuedAt,
+        expiresAt: invite.expiresAt,
+        shareUrl: buildShareUrl(request.shareUrlBase, channel.id, invite.token),
+        maxSeats: maxSeats ?? undefined,
+      },
     }
+
+    return CreateRoomResponseSchema.parse(response)
   })
 
-/**
- * Delete a Discord voice channel
- * Server-only function that can be called directly from mutations
- */
+export const refreshRoomInvite = createServerFn({ method: 'POST' })
+  .inputValidator((data: RefreshRoomInviteRequest) =>
+    RefreshRoomInviteRequestSchema.parse(data),
+  )
+  .handler(async ({ data }): Promise<RefreshRoomInviteResponse> => {
+    const client = getDiscordClient()
+    const { guildId } = getSecrets()
+
+    const channel = await client.getChannel(data.channelId)
+    const resolvedGuildId = channel.guild_id ?? guildId
+
+    const invite = await createRoomInviteToken({
+      guildId: resolvedGuildId,
+      channelId: data.channelId,
+      roleId: data.roleId,
+      creatorId: data.creatorId,
+      expiresInSeconds: data.tokenTtlSeconds,
+      maxSeats: data.maxSeats,
+      roomName: channel.name,
+    })
+
+    const permissionOverwrites = mapPermissionOverwrites(
+      channel.permission_overwrites as PermissionOverwrite[] | undefined,
+    )
+
+    const response = {
+      room: mapChannelToSummary(
+        channel,
+        resolvedGuildId,
+        data.roleId,
+        permissionOverwrites,
+      ),
+      invite: {
+        token: invite.token,
+        issuedAt: invite.issuedAt,
+        expiresAt: invite.expiresAt,
+        shareUrl: buildShareUrl(data.shareUrlBase, data.channelId, invite.token),
+        maxSeats: data.maxSeats,
+      },
+    }
+
+    return RefreshRoomInviteResponseSchema.parse(response)
+  })
+
 export const deleteRoom = createServerFn({ method: 'POST' })
   .inputValidator((data: { channelId: string }) => data)
-  .handler(async ({ data: { channelId } }): Promise<DeleteRoomResult> => {
+  .handler(async ({ data: { channelId } }) => {
     const client = getDiscordClient()
 
     await client.deleteChannel(channelId, 'Deleted by Spell Coven app')
 
     console.log(`[Discord] Deleted voice channel: ${channelId}`)
 
-    return { ok: true }
+    return DeleteRoomResponseSchema.parse({ ok: true })
   })
 
-/**
- * List all voice channels in the guild
- * Server-only function for cleanup operations
- *
- * @param onlyGameRooms - If true, only return rooms created by our app (with 🎮 prefix)
- */
 export const listRooms = createServerFn({ method: 'POST' })
   .inputValidator((data: { onlyGameRooms?: boolean }) => data)
   .handler(async ({ data: options }): Promise<ListRoomsResult[]> => {
@@ -195,99 +344,17 @@ export const listRooms = createServerFn({ method: 'POST' })
 
     const channels = await client.getChannels(guildId)
 
-    // Filter to only voice channels (type 2)
     let voiceChannels = channels.filter((channel) => channel.type === 2)
 
-    // Optionally filter to only our game rooms (identified by 🎮 prefix)
     if (onlyGameRooms) {
       voiceChannels = voiceChannels.filter((channel) =>
-        channel.name?.startsWith('🎮'),
+        channel.name?.startsWith('🎮 '),
       )
     }
 
     return voiceChannels.map((channel) => ({
       id: channel.id,
       name: channel.name || 'Voice Channel',
-      createdAt: new Date(
-        Number(BigInt(channel.id) >> 22n) + 1420070400000,
-      ).toISOString(),
+      createdAt: new Date().toISOString(),
     }))
-  })
-
-/**
- * Clean up old/empty voice channels
- * Server-only function for scheduled cleanup
- *
- * Deletes rooms that are:
- * - Created more than X hours ago AND have no recent activity
- * - OR created more than X hours ago (if activity tracking unavailable)
- */
-export const cleanupOldRooms = createServerFn({ method: 'POST' })
-  .inputValidator(
-    (data: {
-      inactiveForHours?: number
-      createdBeforeHours?: number
-      dryRun?: boolean
-    }) => data,
-  )
-  .handler(async ({ data: options }) => {
-    const {
-      inactiveForHours: _inactiveForHours = 24, // TODO: Use when activity tracking is implemented
-      createdBeforeHours = 48,
-      dryRun = false,
-    } = options || {}
-
-    // Only list our game rooms (with 🎮 prefix)
-    const rooms = await listRooms({ data: { onlyGameRooms: true } })
-    const now = Date.now()
-    const createdCutoff = now - createdBeforeHours * 60 * 60 * 1000
-    // const inactiveCutoff = now - _inactiveForHours * 60 * 60 * 1000 // TODO: Use when activity tracking is implemented
-
-    // Filter rooms that should be deleted
-    const oldRooms = rooms.filter((room) => {
-      const createdAt = new Date(room.createdAt).getTime()
-
-      // Room must be at least X hours old
-      if (createdAt > createdCutoff) {
-        return false
-      }
-
-      // If room is old enough, it's a candidate for deletion
-      // TODO: In future, also check if (lastActivity < inactiveCutoff) using Gateway Worker data
-      return true
-    })
-
-    console.log(
-      `[Cleanup] Found ${oldRooms.length} game rooms (🎮) created before ${createdBeforeHours} hours ago`,
-    )
-
-    if (dryRun) {
-      return {
-        deleted: 0,
-        wouldDelete: oldRooms.length,
-        rooms: oldRooms,
-      }
-    }
-
-    const deleted: string[] = []
-    const failed: Array<{ id: string; error: string }> = []
-
-    for (const room of oldRooms) {
-      try {
-        await deleteRoom({ data: { channelId: room.id } })
-        deleted.push(room.id)
-        console.log(`[Cleanup] Deleted room: ${room.name} (${room.id})`)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error'
-        failed.push({ id: room.id, error: message })
-        console.error(`[Cleanup] Failed to delete room ${room.id}:`, message)
-      }
-    }
-
-    return {
-      deleted: deleted.length,
-      failed: failed.length,
-      deletedRooms: deleted,
-      failedRooms: failed,
-    }
   })
