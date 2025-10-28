@@ -1,9 +1,10 @@
+import type { CreatorInviteState } from '@/lib/session-storage'
 import { useMemo, useState } from 'react'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { LandingPage } from '@/components/LandingPage'
-import { sessionStorage, type CreatorInviteState } from '@/lib/session-storage'
-import { createRoom, refreshRoomInvite } from '@/server/discord-rooms'
 import { useDiscordUser } from '@/hooks/useDiscordUser'
+import { sessionStorage } from '@/lib/session-storage'
+import { createRoom, refreshRoomInvite } from '@/server/discord-rooms'
 import { useMutation } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
@@ -25,14 +26,9 @@ function LandingPageRoute() {
   const search = Route.useSearch()
   const [error, setError] = useState<string | null>(search.error || null)
   const { user } = useDiscordUser()
-  const [inviteState, setInviteState] = useState<CreatorInviteState | null>(() =>
-    sessionStorage.loadCreatorInviteState(),
+  const [inviteState, setInviteState] = useState<CreatorInviteState | null>(
+    () => sessionStorage.loadCreatorInviteState(),
   )
-
-  const privateRoomsEnabled = useMemo(() => {
-    const raw = import.meta.env.VITE_ENABLE_PRIVATE_ROOMS
-    return typeof raw === 'string' && raw.toLowerCase() === 'true'
-  }, [])
 
   const createRoomFn = useServerFn(createRoom)
   const createRoomMutation = useMutation({
@@ -71,23 +67,21 @@ function LandingPageRoute() {
       // Use Discord channel ID as game ID
       const gameId = result.room.channelId
 
-      if (privateRoomsEnabled) {
-        const nextInvite: CreatorInviteState = {
-          channelId: result.room.channelId,
-          roleId: result.room.roleId,
-          guildId: result.room.guildId,
-          creatorId: user.id,
-          token: result.invite.token,
-          issuedAt: result.invite.issuedAt,
-          expiresAt: result.invite.expiresAt,
-          shareUrl: result.invite.shareUrl,
-          deepLink: result.room.deepLink,
-          maxSeats: result.invite.maxSeats,
-        }
-
-        sessionStorage.saveCreatorInviteState(nextInvite)
-        setInviteState(nextInvite)
+      const nextInvite: CreatorInviteState = {
+        channelId: result.room.channelId,
+        roleId: result.room.roleId,
+        guildId: result.room.guildId,
+        creatorId: user.id,
+        token: result.invite.token,
+        issuedAt: result.invite.issuedAt,
+        expiresAt: result.invite.expiresAt,
+        shareUrl: result.invite.shareUrl,
+        deepLink: result.room.deepLink,
+        maxSeats: result.invite.maxSeats,
       }
+
+      sessionStorage.saveCreatorInviteState(nextInvite)
+      setInviteState(nextInvite)
 
       sessionStorage.saveGameState({
         gameId,
@@ -105,7 +99,7 @@ function LandingPageRoute() {
   }
 
   const handleRefreshInvite = async () => {
-    if (!privateRoomsEnabled || !inviteState) return
+    if (!inviteState) return
 
     setError(null)
 
@@ -160,7 +154,9 @@ function LandingPageRoute() {
       )}
       onReset={() => window.location.reload()}
     >
-      {(error || createRoomMutation.error || refreshRoomInviteMutation.error) && (
+      {(error ||
+        createRoomMutation.error ||
+        refreshRoomInviteMutation.error) && (
         <div className="fixed right-4 top-4 z-50 max-w-md rounded-lg bg-red-500/90 p-4 text-white shadow-lg">
           <p className="font-semibold">Error</p>
           <p className="text-sm">
@@ -177,7 +173,6 @@ function LandingPageRoute() {
         inviteState={inviteState}
         onRefreshInvite={handleRefreshInvite}
         isRefreshingInvite={refreshRoomInviteMutation.isPending}
-        privateRoomsEnabled={privateRoomsEnabled}
       />
     </ErrorBoundary>
   )
