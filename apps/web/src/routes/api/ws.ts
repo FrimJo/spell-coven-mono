@@ -1,4 +1,4 @@
-import type { WebSocket, Data as WebSocketData } from 'ws'
+import type { WebSocket } from 'ws'
 import { verifyJWT } from '@/server/jwt'
 import { WSAuthMessageSchema } from '@/server/schemas'
 import { wsManager } from '@/server/ws-manager'
@@ -31,11 +31,10 @@ export const Route = createFileRoute('/api/ws')({
           return new Response('Expected WebSocket upgrade', { status: 426 })
         }
 
-        // WebSocket upgrade handling needs to be done at the server level
-        // This is a placeholder - actual implementation requires Vite server integration
-        return new Response('WebSocket endpoint - requires server-side setup', {
-          status: 501,
-        })
+        // Upgrade handling is performed by the Vite/TanStack Start server hook
+        // (see vite.config.ts). If we reach this point the handshake was not
+        // processed, so instruct the client to retry with a proper upgrade.
+        return new Response('WebSocket upgrade required', { status: 426 })
       },
     },
   },
