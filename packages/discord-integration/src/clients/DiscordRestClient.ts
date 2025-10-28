@@ -9,22 +9,35 @@
  */
 
 import type {
+  AddGuildMemberRequest,
   ChannelResponse,
+  CreateRoleRequest,
   CreateVoiceChannelRequest,
   DiscordErrorResponse,
   GuildChannelListResponse,
   GuildMember,
+  GuildRoleListResponse,
+  GuildVoiceStateSnapshot,
   MessageResponse,
+  Role,
   SendMessageRequest,
+  VoiceState,
 } from '../types/rest-schemas.js'
 import {
+  AddGuildMemberRequestSchema,
   ChannelResponseSchema,
+  CreateRoleRequestSchema,
   CreateVoiceChannelRequestSchema,
   DiscordErrorResponseSchema,
   GuildChannelListResponseSchema,
+  GuildRoleListResponseSchema,
+  GuildVoiceStateSnapshotSchema,
+  GuildMemberSchema,
   MessageResponseSchema,
   RateLimitResponseSchema,
+  RoleSchema,
   SendMessageRequestSchema,
+  VoiceStateSchema,
 } from '../types/rest-schemas.js'
 
 const DISCORD_API_BASE = 'https://discord.com/api/v10'
@@ -83,7 +96,7 @@ export class DiscordRestClient {
       `/guilds/${guildId}/members/${userId}`,
       request,
     )
-    return response
+    return GuildMemberSchema.parse(response)
   }
 
   /**
@@ -108,6 +121,78 @@ export class DiscordRestClient {
     )
 
     return ChannelResponseSchema.parse(response)
+  }
+
+  /**
+   * Fetch a channel by ID
+   */
+  async getChannel(channelId: string): Promise<ChannelResponse> {
+    const response = await this.request<ChannelResponse>(
+      'GET',
+      `/channels/${channelId}`,
+    )
+
+    return ChannelResponseSchema.parse(response)
+  }
+
+  /**
+   * Fetch a guild role by ID
+   */
+  async getGuildRole(guildId: string, roleId: string): Promise<Role> {
+    const response = await this.request<GuildRoleListResponse>(
+      'GET',
+      `/guilds/${guildId}/roles`,
+    )
+
+    const roles = GuildRoleListResponseSchema.parse(response)
+    const role = roles.find((entry) => entry.id === roleId)
+
+    if (!role) {
+      throw new DiscordRestError(
+        `Role ${roleId} not found in guild ${guildId}`,
+        10011,
+        404,
+      )
+    }
+
+    return role
+  }
+
+  /**
+   * Fetch a guild member by ID
+   */
+  async getGuildMember(guildId: string, userId: string): Promise<GuildMember> {
+    const response = await this.request<GuildMember>(
+      'GET',
+      `/guilds/${guildId}/members/${userId}`,
+    )
+
+    return GuildMemberSchema.parse(response)
+  }
+
+  /**
+   * Snapshot current voice states for a guild
+   */
+  async getVoiceStateSnapshot(
+    guildId: string,
+    channelId?: string,
+  ): Promise<VoiceState[]> {
+    const response = await this.request<GuildVoiceStateSnapshot>(
+      'GET',
+      `/guilds/${guildId}/voice-states`,
+    )
+
+    const snapshot = GuildVoiceStateSnapshotSchema.parse(response)
+
+    const states = snapshot.voice_states.map((state) =>
+      VoiceStateSchema.parse(state),
+    )
+
+    if (channelId) {
+      return states.filter((state) => state.channel_id === channelId)
+    }
+
+    return states
   }
 
   /**
@@ -137,6 +222,110 @@ export class DiscordRestClient {
     )
 
     return GuildChannelListResponseSchema.parse(response)
+  }
+
+  /**
+   * Create a role in a guild
+   */
+  async createRole(
+    guildId: string,
+    request: CreateRoleRequest,
+    auditLogReason?: string,
+  ): Promise<Role> {
+    const validatedRequest = CreateRoleRequestSchema.parse(request)
+
+    const response = await this.request<Role>(
+      'POST',
+      `/guilds/${guildId}/roles`,
+      validatedRequest,
+      auditLogReason,
+    )
+
+    return RoleSchema.parse(response)
+  }
+
+  /**
+   * Delete a role in a guild
+   */
+  async deleteRole(
+    guildId: string,
+    roleId: string,
+    auditLogReason?: string,
+  ): Promise<Role> {
+    const response = await this.request<Role>(
+      'DELETE',
+      `/guilds/${guildId}/roles/${roleId}`,
+      undefined,
+      auditLogReason,
+    )
+
+    return RoleSchema.parse(response)
+  }
+
+  /**
+   * Add (or update) a guild member using an OAuth token
+   */
+  async addGuildMember(
+    guildId: string,
+    userId: string,
+    request: AddGuildMemberRequest,
+    auditLogReason?: string,
+  ): Promise<GuildMember> {
+    const validatedRequest = AddGuildMemberRequestSchema.parse(request)
+
+    const response = await this.request<GuildMember>(
+      'PUT',
+      `/guilds/${guildId}/members/${userId}`,
+      validatedRequest,
+      auditLogReason,
+    )
+
+    return GuildMemberSchema.parse(response)
+  }
+
+  /**
+   * Add a role to a guild member
+   */
+  async addMemberRole(
+    guildId: string,
+    userId: string,
+    roleId: string,
+    auditLogReason?: string,
+  ): Promise<void> {
+    await this.request<void>(
+      'PUT',
+      `/guilds/${guildId}/members/${userId}/roles/${roleId}`,
+      undefined,
+      auditLogReason,
+    )
+  }
+
+  /**
+   * Remove a role from a guild member
+   */
+  async removeMemberRole(
+    guildId: string,
+    userId: string,
+    roleId: string,
+    auditLogReason?: string,
+  ): Promise<void> {
+    await this.request<void>(
+      'DELETE',
+      `/guilds/${guildId}/members/${userId}/roles/${roleId}`,
+      undefined,
+      auditLogReason,
+    )
+  }
+
+  /**
+   * Count active voice connections for a channel
+   */
+  async countVoiceChannelMembers(
+    guildId: string,
+    channelId: string,
+  ): Promise<number> {
+    const voiceStates = await this.getVoiceStateSnapshot(guildId, channelId)
+    return voiceStates.length
   }
 
   // ============================================================================

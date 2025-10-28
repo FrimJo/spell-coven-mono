@@ -12,4 +12,12 @@ export type {
 export { DiscordRestClient, DiscordRestError } from './DiscordRestClient'
 export type { DiscordRestClientConfig } from './DiscordRestClient'
 
+export type {
+  AddGuildMemberRequest,
+  CreateRoleRequest,
+  GuildVoiceStateSnapshot,
+  Role,
+  VoiceState,
+} from '../types/rest-schemas'
+
 export { DiscordRtcClient } from './DiscordRtcClient'

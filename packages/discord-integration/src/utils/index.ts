@@ -26,3 +26,16 @@ export {
   parseRoomMetadata,
   sanitizeMessageContent,
 } from './formatters'
+
+export {
+  buildBotAllowOverwrite,
+  buildCreatorAllowOverwrite,
+  buildEveryoneDenyOverwrite,
+  buildRoleAllowOverwrite,
+  buildRoomPermissionOverwrites,
+} from './permission-builders'
+
+export type { PermissionOverwrite } from './permission-builders'
+
+export { mapDiscordError } from './error-map'
+export type { DiscordDomainErrorCode, DiscordErrorMapping } from './error-map'

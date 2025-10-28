@@ -6,6 +6,21 @@ interface GameState {
 
 const GAME_STATE_KEY = 'spell-coven:game-state'
 
+export interface CreatorInviteState {
+  channelId: string
+  roleId: string
+  guildId: string
+  creatorId: string
+  token: string
+  issuedAt: number
+  expiresAt: number
+  shareUrl: string
+  deepLink: string
+  maxSeats?: number
+}
+
+const CREATOR_INVITE_KEY = 'spell-coven:creator-invite'
+
 function validateGameState(data: unknown): GameState | null {
   if (!data || typeof data !== 'object') return null
 
@@ -30,6 +45,56 @@ function validateGameState(data: unknown): GameState | null {
   return state as GameState
 }
 
+function validateCreatorInviteState(data: unknown): CreatorInviteState | null {
+  if (!data || typeof data !== 'object') return null
+
+  const invite = data as Partial<CreatorInviteState>
+
+  const requiredStrings: Array<keyof CreatorInviteState> = [
+    'channelId',
+    'roleId',
+    'guildId',
+    'creatorId',
+    'token',
+    'shareUrl',
+    'deepLink',
+  ]
+
+  for (const key of requiredStrings) {
+    if (!invite[key] || typeof invite[key] !== 'string') {
+      return null
+    }
+  }
+
+  if (
+    typeof invite.issuedAt !== 'number' ||
+    typeof invite.expiresAt !== 'number'
+  ) {
+    return null
+  }
+
+  if (
+    typeof invite.maxSeats !== 'undefined' &&
+    (typeof invite.maxSeats !== 'number' || invite.maxSeats <= 0)
+  ) {
+    return null
+  }
+
+  try {
+    // Validate that shareUrl is an absolute URL
+    // eslint-disable-next-line no-new
+    new URL(invite.shareUrl!)
+    // Validate Discord deep link shape
+    if (!invite.deepLink!.startsWith('https://discord.com/channels/')) {
+      return null
+    }
+  } catch {
+    return null
+  }
+
+  return invite as CreatorInviteState
+}
+
 export const sessionStorage = {
   saveGameState(state: GameState): void {
     window.sessionStorage.setItem(GAME_STATE_KEY, JSON.stringify(state))
@@ -49,5 +114,28 @@ export const sessionStorage = {
 
   clearGameState(): void {
     window.sessionStorage.removeItem(GAME_STATE_KEY)
+  },
+
+  saveCreatorInviteState(state: CreatorInviteState): void {
+    window.sessionStorage.setItem(
+      CREATOR_INVITE_KEY,
+      JSON.stringify(state),
+    )
+  },
+
+  loadCreatorInviteState(): CreatorInviteState | null {
+    const data = window.sessionStorage.getItem(CREATOR_INVITE_KEY)
+    if (!data) return null
+
+    try {
+      const parsed = JSON.parse(data)
+      return validateCreatorInviteState(parsed)
+    } catch {
+      return null
+    }
+  },
+
+  clearCreatorInviteState(): void {
+    window.sessionStorage.removeItem(CREATOR_INVITE_KEY)
   },
 }

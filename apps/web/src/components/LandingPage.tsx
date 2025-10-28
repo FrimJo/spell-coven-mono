@@ -14,19 +14,29 @@ import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
 
 import { useDiscordAuth } from '../hooks/useDiscordAuth'
+import type { CreatorInviteState } from '../lib/session-storage'
 import { DiscordAuthModal } from './discord/DiscordAuthModal'
 import { DiscordUserProfile } from './discord/DiscordUserProfile'
+import { RoomInvitePanel } from './discord/RoomInvitePanel'
 
 interface LandingPageProps {
   onCreateGame: (playerName: string) => void | Promise<void>
   onJoinGame: (playerName: string, gameId: string) => void
   isCreatingGame?: boolean
+  inviteState: CreatorInviteState | null
+  onRefreshInvite: () => void | Promise<void>
+  isRefreshingInvite?: boolean
+  privateRoomsEnabled: boolean
 }
 
 export function LandingPage({
   onCreateGame,
   onJoinGame,
   isCreatingGame,
+  inviteState,
+  onRefreshInvite,
+  isRefreshingInvite,
+  privateRoomsEnabled,
 }: LandingPageProps) {
   const { isAuthenticated } = useDiscordAuth()
   const [createName, setCreateName] = useState('')
@@ -122,6 +132,16 @@ export function LandingPage({
                 No downloads. No setup. Just play.
               </span>
             </div>
+
+            {privateRoomsEnabled && inviteState && (
+              <div className="mx-auto w-full max-w-3xl text-left">
+                <RoomInvitePanel
+                  invite={inviteState}
+                  onRefreshInvite={onRefreshInvite}
+                  isRefreshingInvite={isRefreshingInvite}
+                />
+              </div>
+            )}
 
             <h1 className="text-5xl text-white md:text-7xl">
               Play Magic: The Gathering
