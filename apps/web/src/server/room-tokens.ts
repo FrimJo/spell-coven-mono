@@ -1,12 +1,19 @@
-import { randomUUID } from 'node:crypto'
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 
 import { createServerOnlyFn } from '@tanstack/react-start'
-import { jwtVerify, SignJWT } from 'jose'
+
 import {
   RoomInviteClaimsSchema,
   type RoomInviteClaims,
   type RoomTokenErrorCode,
 } from './schemas'
+
+type JwtPayload = Record<string, unknown>
+
+type JwtHeader = {
+  alg: string
+  typ?: string
+}
 
 const encoder = new TextEncoder()
 
@@ -63,6 +70,77 @@ export interface VerifyRoomInviteTokenOptions {
   currentSeatCount?: number
 }
 
+function base64UrlEncode(data: string | Uint8Array): string {
+  const buffer = typeof data === 'string' ? Buffer.from(data) : Buffer.from(data)
+  return buffer
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+}
+
+function base64UrlDecode(value: string): Buffer {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/')
+  const padding = normalized.length % 4
+  const padded =
+    padding === 0 ? normalized : normalized + '='.repeat((4 - padding) % 4)
+  return Buffer.from(padded, 'base64')
+}
+
+function toBuffer(secret: Uint8Array | string): Buffer {
+  return typeof secret === 'string' ? Buffer.from(secret) : Buffer.from(secret)
+}
+
+function createJwtToken(
+  header: JwtHeader,
+  payload: JwtPayload,
+  secret: Uint8Array | string,
+): string {
+  const encodedHeader = base64UrlEncode(JSON.stringify(header))
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload))
+  const signingInput = `${encodedHeader}.${encodedPayload}`
+
+  const signature = createHmac('sha256', toBuffer(secret))
+    .update(signingInput)
+    .digest()
+
+  return `${signingInput}.${base64UrlEncode(signature)}`
+}
+
+function verifyHs256Token(
+  token: string,
+  secret: Uint8Array | string,
+): { header: JwtHeader; payload: JwtPayload } {
+  const parts = token.split('.')
+  if (parts.length !== 3) {
+    throw new RoomTokenError('Invite token verification failed', 'TOKEN_INVALID')
+  }
+
+  const [encodedHeader, encodedPayload, encodedSignature] = parts
+  const header = JSON.parse(base64UrlDecode(encodedHeader).toString('utf-8')) as JwtHeader
+  const payload = JSON.parse(
+    base64UrlDecode(encodedPayload).toString('utf-8'),
+  ) as JwtPayload
+
+  if (header.alg !== 'HS256') {
+    throw new RoomTokenError('Invite token verification failed', 'TOKEN_INVALID')
+  }
+
+  const expectedSignature = createHmac('sha256', toBuffer(secret))
+    .update(`${encodedHeader}.${encodedPayload}`)
+    .digest()
+  const actualSignature = base64UrlDecode(encodedSignature)
+
+  if (
+    expectedSignature.length !== actualSignature.length ||
+    !timingSafeEqual(expectedSignature, actualSignature)
+  ) {
+    throw new RoomTokenError('Invite token verification failed', 'TOKEN_INVALID')
+  }
+
+  return { header, payload }
+}
+
 export async function createRoomInviteToken(
   input: CreateRoomInviteTokenInput,
 ): Promise<CreateRoomInviteTokenResult> {
@@ -87,21 +165,11 @@ export async function createRoomInviteToken(
     exp: expiresAt,
   }
 
-  const token = await new SignJWT({
-    v: claims.v,
-    purpose: claims.purpose,
-    guild_id: claims.guild_id,
-    channel_id: claims.channel_id,
-    role_id: claims.role_id,
-    creator_id: claims.creator_id,
-    max_seats: claims.max_seats,
-    room_name: claims.room_name,
-    jti: claims.jti,
-  })
-    .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
-    .setIssuedAt(issuedAt)
-    .setExpirationTime(expiresAt)
-    .sign(secret)
+  const token = createJwtToken(
+    { alg: 'HS256', typ: 'JWT' },
+    claims,
+    secret,
+  )
 
   return { token, issuedAt, expiresAt, claims }
 }
@@ -114,9 +182,7 @@ export async function verifyRoomInviteToken(
   const expectedPurpose = options.expectedPurpose ?? RoomTokenPurpose
 
   try {
-    const { payload } = await jwtVerify(token, secret, {
-      algorithms: ['HS256'],
-    })
+    const { payload } = verifyHs256Token(token, secret)
 
     const claims = RoomInviteClaimsSchema.parse({
       ...payload,

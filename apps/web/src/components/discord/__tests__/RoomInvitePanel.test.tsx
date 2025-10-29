@@ -1,3 +1,5 @@
+import '@testing-library/jest-dom/vitest'
+
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 
@@ -19,19 +21,30 @@ const invite: CreatorInviteState = {
 }
 
 describe('RoomInvitePanel', () => {
-  const originalClipboard = navigator.clipboard
+  const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    'clipboard',
+  )
+  let clipboardWriteText: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     vi.useRealTimers()
-    // @ts-expect-error clipboard is writable in test environment
-    navigator.clipboard = {
-      writeText: vi.fn().mockResolvedValue(undefined),
-    }
+    clipboardWriteText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: clipboardWriteText as unknown as Clipboard['writeText'],
+      },
+    })
   })
 
   afterEach(() => {
     vi.clearAllMocks()
-    navigator.clipboard = originalClipboard
+    if (originalClipboardDescriptor) {
+      Object.defineProperty(navigator, 'clipboard', originalClipboardDescriptor)
+    } else {
+      delete (navigator as { clipboard?: Clipboard }).clipboard
+    }
   })
 
   it('renders invite information', () => {
@@ -60,7 +73,7 @@ describe('RoomInvitePanel', () => {
     fireEvent.click(screen.getByRole('button', { name: /Copy Link/i }))
 
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(invite.shareUrl)
+      expect(clipboardWriteText).toHaveBeenCalledWith(invite.shareUrl)
     })
     expect(
       screen.getByText(/Invite link copied to clipboard/i),

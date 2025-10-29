@@ -82,10 +82,15 @@ describe('permission-builders', () => {
     })
 
     expect(overwrites).toHaveLength(4)
-    expect(overwrites[0].id).toBe('1')
-    expect(overwrites[1].id).toBe('2')
-    expect(overwrites[2].id).toBe('3')
-    expect(overwrites[3].id).toBe('4')
+    const guildOverwrite = overwrites[0]!
+    const roleOverwrite = overwrites[1]!
+    const botOverwrite = overwrites[2]!
+    const creatorOverwrite = overwrites[3]!
+
+    expect(guildOverwrite.id).toBe('1')
+    expect(roleOverwrite.id).toBe('2')
+    expect(botOverwrite.id).toBe('3')
+    expect(creatorOverwrite.id).toBe('4')
   })
 
   it('omits creator overwrite when not provided', () => {

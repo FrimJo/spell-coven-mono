@@ -1,5 +1,8 @@
 import WebSocket from 'ws'
 
+type WebSocketData = string | ArrayBuffer | ArrayBufferView | Buffer | Buffer[]
+
+
 import type { ConnectionState, GatewayConfig, GatewaySession } from './types.js'
 
 /**
@@ -113,7 +116,7 @@ export class DiscordGatewayClient {
     console.log('[Gateway] WebSocket connection opened')
   }
 
-  private handleMessage(data: WebSocket.Data): void {
+  private handleMessage(data: WebSocketData): void {
     try {
       const payload = JSON.parse(data.toString())
       const { op, t, s, d } = payload

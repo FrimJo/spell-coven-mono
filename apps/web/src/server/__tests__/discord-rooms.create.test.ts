@@ -95,6 +95,7 @@ describe('discord-rooms create/refresh', () => {
         userLimit: 4,
         maxSeats: 4,
         tokenTtlSeconds: 900,
+        includeCreatorOverwrite: true,
         shareUrlBase: 'https://app.example.com',
       },
     })
@@ -116,6 +117,8 @@ describe('discord-rooms create/refresh', () => {
         creatorId: '444444444444444444',
         name: 'Refreshable Room',
         userLimit: 4,
+        tokenTtlSeconds: 30 * 60,
+        includeCreatorOverwrite: true,
         shareUrlBase: 'https://app.example.com',
       },
     })

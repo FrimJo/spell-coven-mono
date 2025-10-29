@@ -1,95 +1,66 @@
-import { z } from 'zod'
+const DISCORD_ID_REGEX = /^\d+$/
 
-// ============================================================================
-// Message Envelope
-// ============================================================================
+type DiscordSnowflake = string
 
-export const MessageEnvelopeSchema = z.object({
-  v: z.literal(1), // Protocol version
-  type: z.enum(['event', 'ack', 'error']),
-  event: z.string().optional(),
-  payload: z.unknown(),
-  ts: z.number().int().positive(), // Unix timestamp (ms)
-})
+type VoiceEventName = 'room.created' | 'room.deleted' | 'voice.joined' | 'voice.left'
 
-export type MessageEnvelope = z.infer<typeof MessageEnvelopeSchema>
+type BaseEventPayload = {
+  guildId: DiscordSnowflake
+}
 
-// ============================================================================
-// Event Payloads
-// ============================================================================
+export interface MessageEnvelope {
+  v: 1
+  type: 'event' | 'ack' | 'error'
+  event?: string
+  payload: unknown
+  ts: number
+}
 
-export const RoomCreatedPayloadSchema = z.object({
-  channelId: z.string().regex(/^\d+$/),
-  name: z.string(),
-  guildId: z.string().regex(/^\d+$/),
-  parentId: z.string().regex(/^\d+$/).optional(),
-  userLimit: z.number().int().min(0).max(99),
-})
+export interface RoomCreatedPayload extends BaseEventPayload {
+  channelId: DiscordSnowflake
+  name: string
+  parentId?: DiscordSnowflake
+  userLimit: number
+}
 
-export type RoomCreatedPayload = z.infer<typeof RoomCreatedPayloadSchema>
+export interface RoomDeletedPayload extends BaseEventPayload {
+  channelId: DiscordSnowflake
+}
 
-export const RoomDeletedPayloadSchema = z.object({
-  channelId: z.string().regex(/^\d+$/),
-  guildId: z.string().regex(/^\d+$/),
-})
+export interface VoiceJoinedPayload extends BaseEventPayload {
+  channelId: DiscordSnowflake
+  userId: DiscordSnowflake
+}
 
-export type RoomDeletedPayload = z.infer<typeof RoomDeletedPayloadSchema>
+export interface VoiceLeftPayload extends BaseEventPayload {
+  channelId: DiscordSnowflake | null
+  userId: DiscordSnowflake
+}
 
-export const VoiceJoinedPayloadSchema = z.object({
-  guildId: z.string().regex(/^\d+$/),
-  channelId: z.string().regex(/^\d+$/),
-  userId: z.string().regex(/^\d+$/),
-})
+export type InternalEventPayload =
+  | RoomCreatedPayload
+  | RoomDeletedPayload
+  | VoiceJoinedPayload
+  | VoiceLeftPayload
 
-export type VoiceJoinedPayload = z.infer<typeof VoiceJoinedPayloadSchema>
+export interface InternalEvent {
+  event: VoiceEventName
+  payload: InternalEventPayload
+}
 
-export const VoiceLeftPayloadSchema = z.object({
-  guildId: z.string().regex(/^\d+$/),
-  channelId: z.string().regex(/^\d+$/).nullable(),
-  userId: z.string().regex(/^\d+$/),
-})
-
-export type VoiceLeftPayload = z.infer<typeof VoiceLeftPayloadSchema>
-
-// ============================================================================
-// Internal Event (Worker → TanStack Start)
-// ============================================================================
-
-export const InternalEventSchema = z.object({
-  event: z.enum(['room.created', 'room.deleted', 'voice.joined', 'voice.left']),
-  payload: z.union([
-    RoomCreatedPayloadSchema,
-    RoomDeletedPayloadSchema,
-    VoiceJoinedPayloadSchema,
-    VoiceLeftPayloadSchema,
-  ]),
-})
-
-export type InternalEvent = z.infer<typeof InternalEventSchema>
-
-// ============================================================================
-// Discord API Types
-// ============================================================================
-
-export const VoiceChannelSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  type: z.number(),
-  guild_id: z.string(),
-  parent_id: z.string().optional(),
-  user_limit: z.number().optional(),
-})
-
-export type VoiceChannel = z.infer<typeof VoiceChannelSchema>
-
-// ============================================================================
-// Discord Gateway Types
-// ============================================================================
+export interface VoiceChannel {
+  id: DiscordSnowflake
+  name: string
+  type: number
+  guild_id: DiscordSnowflake
+  parent_id?: DiscordSnowflake
+  user_limit?: number
+}
 
 export interface GatewayConfig {
   port: number
   botToken: string
-  primaryGuildId: string
+  primaryGuildId: DiscordSnowflake
   hubEndpoint: string
   hubSecret: string
 }
@@ -105,4 +76,78 @@ export interface GatewaySession {
   sessionId: string | null
   sequenceNumber: number | null
   resumeUrl: string | null
+}
+
+function isDiscordSnowflake(value: unknown): value is DiscordSnowflake {
+  return typeof value === 'string' && DISCORD_ID_REGEX.test(value)
+}
+
+export function isMessageEnvelope(value: unknown): value is MessageEnvelope {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const envelope = value as Record<string, unknown>
+
+  return (
+    envelope.v === 1 &&
+    (envelope.type === 'event' || envelope.type === 'ack' || envelope.type === 'error') &&
+    (envelope.event === undefined || typeof envelope.event === 'string') &&
+    typeof envelope.ts === 'number'
+  )
+}
+
+export function isInternalEvent(value: unknown): value is InternalEvent {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const event = value as { event?: unknown; payload?: unknown }
+  const payload = event.payload as Record<string, unknown> | undefined
+
+  if (
+    event.event !== 'room.created' &&
+    event.event !== 'room.deleted' &&
+    event.event !== 'voice.joined' &&
+    event.event !== 'voice.left'
+  ) {
+    return false
+  }
+
+  if (!payload) {
+    return false
+  }
+
+  switch (event.event) {
+    case 'room.created':
+      return (
+        isDiscordSnowflake(payload.channelId) &&
+        typeof payload.name === 'string' &&
+        isDiscordSnowflake(payload.guildId) &&
+        (payload.parentId === undefined || isDiscordSnowflake(payload.parentId)) &&
+        typeof payload.userLimit === 'number'
+      )
+
+    case 'room.deleted':
+      return (
+        isDiscordSnowflake(payload.channelId) &&
+        isDiscordSnowflake(payload.guildId)
+      )
+
+    case 'voice.joined':
+      return (
+        isDiscordSnowflake(payload.guildId) &&
+        isDiscordSnowflake(payload.channelId) &&
+        isDiscordSnowflake(payload.userId)
+      )
+
+    case 'voice.left':
+      return (
+        isDiscordSnowflake(payload.guildId) &&
+        (payload.channelId === null || isDiscordSnowflake(payload.channelId)) &&
+        isDiscordSnowflake(payload.userId)
+      )
+  }
+
+  return false
 }
