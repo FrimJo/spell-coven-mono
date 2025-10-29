@@ -31,11 +31,10 @@ export const Route = createFileRoute('/api/ws')({
           return new Response('Expected WebSocket upgrade', { status: 426 })
         }
 
-        // WebSocket upgrade handling needs to be done at the server level
-        // This is a placeholder - actual implementation requires Vite server integration
-        return new Response('WebSocket endpoint - requires server-side setup', {
-          status: 501,
-        })
+        // Upgrade handling is performed by the Vite/TanStack Start server hook
+        // (see vite.config.ts). If we reach this point the handshake was not
+        // processed, so instruct the client to retry with a proper upgrade.
+        return new Response('WebSocket upgrade required', { status: 426 })
       },
     },
   },
@@ -65,7 +64,8 @@ export function handleWebSocketConnection(ws: WebSocket): void {
   // Handle messages
   ws.on('message', async (data) => {
     try {
-      const message = JSON.parse(data.toString())
+      const raw = typeof data === 'string' ? data : data.toString()
+      const message = JSON.parse(raw)
 
       // Handle authentication
       if (!authenticated) {

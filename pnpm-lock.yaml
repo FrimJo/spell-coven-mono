@@ -485,6 +485,9 @@ importers:
       '@repo/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
+      '@repo/prettier-config':
+        specifier: workspace:*
+        version: link:../prettier
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config

@@ -13,8 +13,8 @@ import {
 import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
 
-import { useDiscordAuth } from '../hooks/useDiscordAuth'
 import type { CreatorInviteState } from '../lib/session-storage'
+import { useDiscordAuth } from '../hooks/useDiscordAuth'
 import { DiscordAuthModal } from './discord/DiscordAuthModal'
 import { DiscordUserProfile } from './discord/DiscordUserProfile'
 import { RoomInvitePanel } from './discord/RoomInvitePanel'
@@ -26,7 +26,6 @@ interface LandingPageProps {
   inviteState: CreatorInviteState | null
   onRefreshInvite: () => void | Promise<void>
   isRefreshingInvite?: boolean
-  privateRoomsEnabled: boolean
 }
 
 export function LandingPage({
@@ -36,7 +35,6 @@ export function LandingPage({
   inviteState,
   onRefreshInvite,
   isRefreshingInvite,
-  privateRoomsEnabled,
 }: LandingPageProps) {
   const { isAuthenticated } = useDiscordAuth()
   const [createName, setCreateName] = useState('')
@@ -133,7 +131,7 @@ export function LandingPage({
               </span>
             </div>
 
-            {privateRoomsEnabled && inviteState && (
+            {inviteState && (
               <div className="mx-auto w-full max-w-3xl text-left">
                 <RoomInvitePanel
                   invite={inviteState}
