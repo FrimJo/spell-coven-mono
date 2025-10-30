@@ -29,7 +29,7 @@ export default defineConfig({
   ],
   webServer: {
     // Use Vite preview to serve the SPA on port 3000
-    command: 'pnpm serve',
+    command: 'bunx serve',
     url: 'https://localhost:1234',
     timeout: 60_000,
     reuseExistingServer: true,
