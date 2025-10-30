@@ -2,19 +2,19 @@
   "name": "spell-coven",
   "engines": {
     "node": "~22.20",
-    "pnpm": "10.20.0"
+    "bun": "^1.1.30"
   },
   "engineStrict": true,
-  "packageManager": "pnpm@10.20.0+sha512.cf9998222162dd85864d0a8102e7892e7ba4ceadebbf5a31f9c2fce48dfce317a9c53b9f6464d1ef9042cba2e02ae02a9f7c143a2b438cd93c91840f0192b9dd",
+  "packageManager": "bun@1.1.30",
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "test": "turbo run test",
-    "lint": "turbo run lint",
-    "format": "turbo run format --continue -- --cache --cache-location .cache/.prettiercache",
-    "lint:fix": "turbo run lint -- --fix",
-    "format:fix": "turbo run format -- --write",
-    "check-types": "turbo run check-types"
+    "build": "bunx turbo run build",
+    "dev": "bunx turbo run dev",
+    "test": "bunx turbo run test",
+    "lint": "bunx turbo run lint",
+    "format": "bunx turbo run format --continue -- --cache --cache-location .cache/.prettiercache",
+    "lint:fix": "bunx turbo run lint -- --fix",
+    "format:fix": "bunx turbo run format -- --write",
+    "check-types": "bunx turbo run check-types"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
@@ -22,5 +22,20 @@
     "prettier-plugin-tailwindcss": "^0.6.11",
     "turbo": "^2.5.8",
     "typescript": "5.9.2"
+  },
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*",
+      "!packages/mtg-image-db"
+    ],
+    "catalog": {
+      "eslint": "^9.20.0",
+      "prettier": "^3.6.2",
+      "typescript": "~5.7",
+      "typescript-eslint": "^8.24.1",
+      "playwright": "^1.55.1",
+      "@playwright/test": "^1.55.1"
+    }
   }
 }

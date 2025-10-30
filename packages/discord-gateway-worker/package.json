@@ -11,9 +11,9 @@
   },
   "scripts": {
     "with-env": "dotenv -e ../../.env.development -e ../../.env.development.local -e .env.development -e .env.development.local --",
-    "dev": "pnpm with-env tsx watch src/index.ts",
+    "dev": "bun run with-env -- tsx watch src/index.ts",
     "build": "tsup",
-    "start": "pnpm with-env node dist/index.js",
+    "start": "bun run with-env -- node dist/index.js",
     "format": "prettier --check . --ignore-path ./.prettierignore --ignore-path ./.gitignore --ignore-path ../../.gitignore",
     "format:fix": "prettier --check . --ignore-path ./.prettierignore --ignore-path ./.gitignore --ignore-path ../../.gitignore --write",
     "lint": "eslint . --max-warnings 0",

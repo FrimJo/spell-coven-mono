@@ -1,4 +1,2 @@
-package-lock.json
-pnpm-lock.yaml
 *.gen.ts
 public/
