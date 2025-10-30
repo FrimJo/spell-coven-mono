@@ -55,7 +55,7 @@ DISCORD_BOT_TOKEN=your-bot-token-here
 PRIMARY_GUILD_ID=your-guild-id-here
 
 # Hub Configuration (TanStack Start Backend)
-HUB_ENDPOINT=http://localhost:3000/api/internal/events
+HUB_ENDPOINT=https://localhost:1234/api/internal/events
 HUB_SECRET=your-generated-secret-here
 
 # Optional: Logging
@@ -68,7 +68,7 @@ LOG_LEVEL=info
 # packages/discord-gateway-worker/.env
 
 # Defaults that can be committed to Git
-HUB_ENDPOINT=http://localhost:3000/api/internal/events
+HUB_ENDPOINT=https://localhost:1234/api/internal/events
 LOG_LEVEL=info
 ```
 

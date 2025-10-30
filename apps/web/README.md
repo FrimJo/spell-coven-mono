@@ -44,7 +44,7 @@ See [`CONTRAST_ENHANCEMENT_FRONTEND.md`](./CONTRAST_ENHANCEMENT_FRONTEND.md) for
 
 To enable the private voice rooms feature behind `/game/$gameId`:
 
-- **Environment variables**: Set `ROOM_TOKEN_SECRET` (32+ characters), configure `DISCORD_BOT_USER_ID`, and toggle both `ENABLE_PRIVATE_ROOMS=true` (server) and `VITE_ENABLE_PRIVATE_ROOMS=true` (frontend). Keep `ROOM_TOKEN_SECRET` private and rotate it if compromised.
+- **Environment variables**: Set `ROOM_TOKEN_SECRET` (32+ characters), configure `VITE_DISCORD_CLIENT_ID`. Keep `ROOM_TOKEN_SECRET` private and rotate it if compromised.
 - **Bot permissions**: The Discord bot must have `MANAGE_ROLES`, `MANAGE_CHANNELS`, `VIEW_CHANNEL`, `CONNECT`, and `CREATE_INSTANT_INVITE`. Position the bot role above any per-room roles it needs to assign.
 - **OAuth scopes**: Configure the Discord OAuth flow with `identify` and `guilds.join` so invitees can be added to the guild automatically.
 - **Rollout guidance**: Start with the flag disabled in production, validate in staging, then gradually enable while monitoring logs for Discord error codes (rate limits, missing permissions).
@@ -55,7 +55,7 @@ To enable the private voice rooms feature behind `/game/$gameId`:
 pnpm --filter @repo/web dev
 ```
 
-Open http://localhost:3000 and click "Start Webcam" to begin scanning cards.
+Open https://localhost:1234 and click "Start Webcam" to begin scanning cards.
 
 ### Troubleshooting
 

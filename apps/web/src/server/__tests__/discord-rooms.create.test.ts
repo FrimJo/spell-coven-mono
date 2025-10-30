@@ -29,7 +29,7 @@ describe('discord-rooms create/refresh', () => {
     vi.clearAllMocks()
     process.env.DISCORD_BOT_TOKEN = 'bot-token'
     process.env.PRIMARY_GUILD_ID = '123456789012345678'
-    process.env.DISCORD_BOT_USER_ID = '987654321098765432'
+    process.env.VITE_DISCORD_CLIENT_ID = '987654321098765432'
     process.env.ROOM_TOKEN_SECRET =
       'integration-test-secret-that-is-long-enough-to-pass'
 

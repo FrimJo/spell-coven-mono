@@ -1,25 +1,26 @@
 import { randomUUID } from 'node:crypto'
-
 import { createServerFn, createServerOnlyFn } from '@tanstack/react-start'
 
-import { DiscordRestClient } from '@repo/discord-integration/clients'
 import type { ChannelResponse } from '@repo/discord-integration/types'
 import type { PermissionOverwrite } from '@repo/discord-integration/utils'
+import { DiscordRestClient } from '@repo/discord-integration/clients'
 import { buildRoomPermissionOverwrites } from '@repo/discord-integration/utils'
 
+import type {
+  CreateRoomRequest,
+  CreateRoomResponse,
+  RefreshRoomInviteRequest,
+  RefreshRoomInviteResponse,
+  RoomSummary,
+} from './schemas'
+import { createRoomInviteToken } from './room-tokens'
 import {
   CreateRoomRequestSchema,
   CreateRoomResponseSchema,
   DeleteRoomResponseSchema,
   RefreshRoomInviteRequestSchema,
   RefreshRoomInviteResponseSchema,
-  type CreateRoomRequest,
-  type CreateRoomResponse,
-  type RefreshRoomInviteRequest,
-  type RefreshRoomInviteResponse,
-  type RoomSummary,
 } from './schemas'
-import { createRoomInviteToken } from './room-tokens'
 
 interface RoomCheckResult {
   exists: boolean
@@ -267,7 +268,12 @@ export const createRoom = createServerFn({ method: 'POST' })
     })
 
     const response = {
-      room: mapChannelToSummary(channel, guildId, role.id, permissionOverwrites),
+      room: mapChannelToSummary(
+        channel,
+        guildId,
+        role.id,
+        permissionOverwrites,
+      ),
       invite: {
         token: invite.token,
         issuedAt: invite.issuedAt,
@@ -316,7 +322,11 @@ export const refreshRoomInvite = createServerFn({ method: 'POST' })
         token: invite.token,
         issuedAt: invite.issuedAt,
         expiresAt: invite.expiresAt,
-        shareUrl: buildShareUrl(data.shareUrlBase, data.channelId, invite.token),
+        shareUrl: buildShareUrl(
+          data.shareUrlBase,
+          data.channelId,
+          invite.token,
+        ),
         maxSeats: data.maxSeats,
       },
     }

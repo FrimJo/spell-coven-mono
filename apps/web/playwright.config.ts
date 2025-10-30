@@ -14,7 +14,7 @@ export default defineConfig({
   // Global setup to initialize model once for all tests
   globalSetup: resolve(__dirname, './tests/global-setup.ts'),
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'https://localhost:1234',
     trace: 'on-first-retry',
     permissions: ['camera'],
     video: 'retain-on-failure',
@@ -30,7 +30,7 @@ export default defineConfig({
   webServer: {
     // Use Vite preview to serve the SPA on port 3000
     command: 'pnpm serve',
-    url: 'http://localhost:3000',
+    url: 'https://localhost:1234',
     timeout: 60_000,
     reuseExistingServer: true,
     stdout: 'ignore',

@@ -1,4 +1,4 @@
-import path from 'path'
+import path from 'node:path'
 import type { IncomingMessage } from 'node:http'
 import type { Duplex } from 'node:stream'
 import tailwindcss from '@tailwindcss/vite'
@@ -15,7 +15,9 @@ export default defineConfig(() => {
   return {
     // 🔴 important: include the trailing slash
     base: '/',
-
+    define: {
+      'process.env': process.env,
+    },
     plugins: [
       viteTsConfigPaths({ projects: ['./tsconfig.json'] }),
       mkcert({ savePath: './certificates' }),
