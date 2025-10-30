@@ -30,7 +30,7 @@ async function globalSetup(config: FullConfig) {
 
   try {
     // Navigate to the game page to trigger model initialization
-    const baseURL = config.projects[0].use.baseURL || 'http://localhost:3000'
+    const baseURL = config.projects[0].use.baseURL || 'https://localhost:1234'
     console.log(`📍 Navigating to ${baseURL}/game/setup-test`)
     await page.goto(`${baseURL}/game/setup-test`, { timeout: 60_000 })
 

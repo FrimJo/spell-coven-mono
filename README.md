@@ -66,7 +66,7 @@ Spell Coven is designed for Magic: The Gathering players who want to play with t
    ```
 
 3. **Open the app:**
-   Navigate to http://localhost:3000 and click "Start Webcam" to begin scanning cards.
+   Navigate to https://localhost:1234 and click "Start Webcam" to begin scanning cards.
 
 **Note**: On first load, the CLIP model (~150MB quantized) downloads directly to your browser's cache from Hugging Face CDN. Subsequent loads are instant.
 

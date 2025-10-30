@@ -46,7 +46,7 @@ import { DiscordOAuthClient } from '@repo/discord-integration/clients'
 
 const client = new DiscordOAuthClient({
   clientId: 'YOUR_CLIENT_ID',
-  redirectUri: 'http://localhost:3000/auth/discord/callback',
+  redirectUri: 'https://localhost:1234/auth/discord/callback',
   scopes: ['identify', 'guilds', 'messages.read'],
 })
 

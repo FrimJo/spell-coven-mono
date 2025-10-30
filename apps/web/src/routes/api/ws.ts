@@ -1,8 +1,9 @@
 import type { WebSocket } from 'ws'
-import { verifyJWT } from '@/server/jwt'
-import { WSAuthMessageSchema } from '@/server/schemas'
-import { wsManager } from '@/server/ws-manager'
 import { createFileRoute } from '@tanstack/react-router'
+
+import { verifyJWT } from '../../server/jwt'
+import { WSAuthMessageSchema } from '../../server/schemas'
+import { wsManager } from '../../server/ws-manager'
 
 /**
  * WebSocket endpoint for real-time Discord events

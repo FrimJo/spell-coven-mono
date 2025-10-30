@@ -2,7 +2,7 @@
   "cookies": [],
   "origins": [
     {
-      "origin": "http://localhost:3000",
+      "origin": "https://localhost:1234",
       "localStorage": [
         {
           "name": "playwright-model-setup-complete",
