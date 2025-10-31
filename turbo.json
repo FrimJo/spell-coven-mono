@@ -13,7 +13,8 @@
     "PORT",
     "ROOM_TOKEN_SECRET",
     "DISCORD_CLIENT_SECRET",
-    "WS_AUTH_SECRET"
+    "WS_AUTH_SECRET",
+    "WS_PORT"
   ],
   "tasks": {
     "build": {
