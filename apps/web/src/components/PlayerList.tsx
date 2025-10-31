@@ -26,6 +26,7 @@ interface PlayerListProps {
   isLobbyOwner: boolean
   localPlayerName: string
   onRemovePlayer: (playerId: string) => void
+  ownerId?: string
 }
 
 export function PlayerList({
@@ -33,6 +34,7 @@ export function PlayerList({
   isLobbyOwner,
   localPlayerName,
   onRemovePlayer,
+  ownerId,
 }: PlayerListProps) {
   return (
     <Card className="border-slate-800 bg-slate-900 p-4">
@@ -45,7 +47,7 @@ export function PlayerList({
         <div className="space-y-2">
           {players.map((player) => {
             const isLocal = player.name === localPlayerName
-            const isOwner = player.id === '1' // First player is owner
+            const isOwner = ownerId ? player.id === ownerId : player.id === '1' // Use provided ownerId or fallback to first player
 
             return (
               <div
