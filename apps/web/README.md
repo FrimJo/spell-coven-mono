@@ -30,10 +30,10 @@ To improve matching of blurry or low-contrast webcam cards, you can enable query
 
 ```bash
 # With 20% contrast boost (recommended for typical webcam blur)
-VITE_QUERY_CONTRAST=1.2 pnpm --filter @repo/web dev
+cd apps/web && VITE_QUERY_CONTRAST=1.2 bun run dev
 
 # With 50% contrast boost (aggressive, for very blurry conditions)
-VITE_QUERY_CONTRAST=1.5 pnpm --filter @repo/web dev
+cd apps/web && VITE_QUERY_CONTRAST=1.5 bun run dev
 ```
 
 **Important**: The frontend enhancement factor **must match** the database preprocessing factor. If you built the database with `--contrast 1.2`, set `VITE_QUERY_CONTRAST=1.2` in the frontend.
@@ -52,7 +52,7 @@ To enable the private voice rooms feature behind `/game/$gameId`:
 ## Develop
 
 ```bash
-pnpm --filter @repo/web dev
+cd apps/web && bun run dev
 ```
 
 Open https://localhost:1234 and click "Start Webcam" to begin scanning cards.
@@ -66,8 +66,8 @@ Open https://localhost:1234 and click "Start Webcam" to begin scanning cards.
 ## Build & Preview
 
 ```bash
-pnpm --filter @repo/web build
-pnpm --filter @repo/web serve
+cd apps/web && bun run build
+cd apps/web && bun run serve
 ```
 
 ## Programmatic API (from `src/lib/clip-search.ts`)
@@ -98,10 +98,10 @@ Notes:
 ## Testing & Linting
 
 ```bash
-pnpm --filter @repo/web test          # vitest
-pnpm --filter @repo/web check-types   # TypeScript
-pnpm --filter @repo/web format        # Prettier check
-pnpm --filter @repo/web lint          # Lint
+cd apps/web && bun run test          # vitest
+cd apps/web && bun run check-types   # TypeScript
+cd apps/web && bun run format        # Prettier check
+cd apps/web && bun run lint          # Lint
 ```
 
 ## Asset Paths

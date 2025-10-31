@@ -20,14 +20,16 @@ export default defineConfig(() => {
     },
     plugins: [
       viteTsConfigPaths({ projects: ['./tsconfig.json'] }),
-      mkcert({ savePath: './certificates' }),
-      tailwindcss(),
       {
         name: 'spell-coven-ws-upgrade',
         configureServer(server) {
           const httpServer = server.httpServer
-          if (!httpServer) return
+          if (!httpServer) {
+            console.warn('[Vite] No HTTP server available for WebSocket upgrade')
+            return
+          }
 
+          console.log('[Vite] Setting up WebSocket upgrade handler')
           const wss = new WebSocketServer({ noServer: true })
 
           const upgradeListener = (
@@ -36,24 +38,32 @@ export default defineConfig(() => {
             head: Buffer,
           ) => {
             const url = request.url
+            console.log('[Vite] Upgrade request for URL:', url)
 
             if (!url?.length || !url.startsWith('/api/ws')) {
+              console.log('[Vite] URL does not match /api/ws, skipping')
               return
             }
 
+            console.log('[Vite] Handling WebSocket upgrade for:', url)
             wss.handleUpgrade(request, socket, head, (ws) => {
+              console.log('[Vite] WebSocket upgrade successful')
               handleWebSocketConnection(ws)
             })
           }
 
           httpServer.on('upgrade', upgradeListener)
+          console.log('[Vite] Upgrade listener attached')
 
           httpServer.once('close', () => {
+            console.log('[Vite] HTTP server closing, cleaning up WebSocket')
             httpServer.off('upgrade', upgradeListener)
             wss.close()
           })
         },
       },
+      mkcert({ savePath: './certificates' }),
+      tailwindcss(),
       tanstackStart({ spa: { enabled: true } }),
       viteReact(), // Must come after tanstackStart()
     ],
