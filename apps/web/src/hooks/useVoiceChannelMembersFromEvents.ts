@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 
 import type { VoiceJoinedEvent, VoiceLeftEvent } from './useVoiceChannelEvents'
 import { useVoiceChannelEvents } from './useVoiceChannelEvents'
