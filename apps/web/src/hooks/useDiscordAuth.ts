@@ -4,14 +4,14 @@ import { useServerFn } from '@tanstack/react-start'
 
 import type { DiscordToken } from '@repo/discord-integration/types'
 
-import { TOKEN_REFRESH_BUFFER_MS } from '../config/discord'
+import { TOKEN_REFRESH_BUFFER_MS } from '../config/discord.js'
 import {
   clearStoredDiscordToken,
   ensureValidDiscordToken,
   getDiscordClient,
   refreshDiscordToken,
-} from '../lib/discord-client'
-import { revokeDiscordToken } from '../server/discord-auth'
+} from '../lib/discord-client.js'
+import { revokeDiscordToken } from '../server/discord-auth.js'
 
 /**
  * Discord Authentication Hook

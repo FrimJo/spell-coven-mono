@@ -1,4 +1,4 @@
-import { useDiscordAuth } from '../../hooks/useDiscordAuth'
+import { useDiscordAuth } from '../../hooks/useDiscordAuth.js'
 
 /**
  * Discord Authentication Modal

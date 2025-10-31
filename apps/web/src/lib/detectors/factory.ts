@@ -7,17 +7,17 @@
  * @module detectors/factory
  */
 
-import type { CardDetector, DetectorConfig, DetectorType } from './types'
+import type { CardDetector, DetectorConfig, DetectorType } from './types.js'
 import {
   CONFIDENCE_THRESHOLD,
   DETECTION_INTERVAL_MS,
   DETR_MODEL_ID,
-} from '../detection-constants'
-import { DETRDetector } from './detr-detector'
-import { OpenCVDetector } from './opencv-detector'
-import { OWLViTDetector } from './owl-vit-detector'
-import { SlimSAMDetector } from './slimsam-detector'
-import { YOLOv8Detector } from './yolov8-detector'
+} from '../detection-constants.js'
+import { DETRDetector } from './detr-detector.js'
+import { OpenCVDetector } from './opencv-detector.js'
+import { OWLViTDetector } from './owl-vit-detector.js'
+import { SlimSAMDetector } from './slimsam-detector.js'
+import { YOLOv8Detector } from './yolov8-detector.js'
 
 /**
  * Default configurations for each detector type

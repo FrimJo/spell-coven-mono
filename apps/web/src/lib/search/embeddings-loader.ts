@@ -1,8 +1,8 @@
-import type { MetadataFile } from '../validation/contract-validator'
+import type { MetadataFile } from '../validation/contract-validator.js'
 import {
   logValidationErrors,
   validateEmbeddings,
-} from '../validation/contract-validator'
+} from '../validation/contract-validator.js'
 
 /**
  * Embeddings loader module

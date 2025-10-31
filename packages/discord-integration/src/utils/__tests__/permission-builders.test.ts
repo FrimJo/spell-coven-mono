@@ -7,7 +7,7 @@ import {
   buildEveryoneDenyOverwrite,
   buildRoleAllowOverwrite,
   buildRoomPermissionOverwrites,
-} from '../permission-builders'
+} from '../permission-builders.js'
 
 const EVERYONE_DENY = (
   PermissionFlagsBits.ViewChannel | PermissionFlagsBits.Connect

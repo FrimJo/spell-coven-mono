@@ -6,7 +6,7 @@
  * await enableEdgeRefinement()
  */
 
-import { isOpenCVLoaded, loadOpenCV } from './card-edge-refiner'
+import { isOpenCVLoaded, loadOpenCV } from './card-edge-refiner.js'
 
 /**
  * Enable edge refinement by loading OpenCV

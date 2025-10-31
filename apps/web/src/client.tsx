@@ -3,7 +3,7 @@ import { StartClient } from '@tanstack/react-start/client'
 import { hydrateRoot } from 'react-dom/client'
 import { ErrorBoundary } from 'react-error-boundary'
 
-import { ErrorFallback } from './components/ErrorFallback'
+import { ErrorFallback } from './components/ErrorFallback.js'
 
 hydrateRoot(
   document,

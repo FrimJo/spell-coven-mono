@@ -7,7 +7,7 @@
  * @module detectors/geometry/sharpness
  */
 
-import { loadOpenCV } from '../../opencv-loader'
+import { loadOpenCV } from '../../opencv-loader.js'
 
 /**
  * Calculate sharpness score using Laplacian variance

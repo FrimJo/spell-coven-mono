@@ -20,7 +20,7 @@ import type {
   DetectionOutput,
   DetectorConfig,
   DetectorStatus,
-} from './types'
+} from './types.js'
 
 /**
  * OWL-ViT detector configuration

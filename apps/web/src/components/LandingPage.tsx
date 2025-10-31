@@ -13,11 +13,11 @@ import {
 import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
 
-import type { CreatorInviteState } from '../lib/session-storage'
-import { useDiscordAuth } from '../hooks/useDiscordAuth'
-import { DiscordAuthModal } from './discord/DiscordAuthModal'
-import { DiscordUserProfile } from './discord/DiscordUserProfile'
-import { RoomInvitePanel } from './discord/RoomInvitePanel'
+import type { CreatorInviteState } from '../lib/session-storage.js'
+import { useDiscordAuth } from '../hooks/useDiscordAuth.js'
+import { DiscordAuthModal } from './discord/DiscordAuthModal.js'
+import { DiscordUserProfile } from './discord/DiscordUserProfile.js'
+import { RoomInvitePanel } from './discord/RoomInvitePanel.js'
 
 interface LandingPageProps {
   onCreateGame: () => void | Promise<void>

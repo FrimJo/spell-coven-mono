@@ -11,8 +11,8 @@
 
 import type { Mat } from '@techstark/opencv-js'
 
-import type { CardQuad, Point } from '../types'
-import { loadOpenCV } from '../../opencv-loader'
+import type { CardQuad, Point } from '../types.js'
+import { loadOpenCV } from '../../opencv-loader.js'
 
 /**
  * Extract contours from a binary mask

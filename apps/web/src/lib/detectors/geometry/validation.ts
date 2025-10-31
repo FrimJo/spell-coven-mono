@@ -9,8 +9,8 @@
  * @module detectors/geometry/validation
  */
 
-import type { CardQuad, Point } from '../types'
-import { MTG_CARD_ASPECT_RATIO } from '../types'
+import type { CardQuad, Point } from '../types.js'
+import { MTG_CARD_ASPECT_RATIO } from '../types.js'
 
 /**
  * Result of quad validation

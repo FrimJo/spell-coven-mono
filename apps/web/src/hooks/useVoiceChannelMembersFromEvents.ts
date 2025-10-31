@@ -1,7 +1,10 @@
 import { useCallback, useMemo, useState } from 'react'
 
-import type { VoiceJoinedEvent, VoiceLeftEvent } from './useVoiceChannelEvents'
-import { useVoiceChannelEvents } from './useVoiceChannelEvents'
+import type {
+  VoiceJoinedEvent,
+  VoiceLeftEvent,
+} from './useVoiceChannelEvents.js'
+import { useVoiceChannelEvents } from './useVoiceChannelEvents.js'
 
 export interface VoiceChannelMember {
   id: string

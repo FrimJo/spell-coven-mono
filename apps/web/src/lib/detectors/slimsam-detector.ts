@@ -28,12 +28,12 @@ import type {
   DetectionOutput,
   DetectorConfig,
   DetectorStatus,
-} from './types'
-import { MTG_CARD_ASPECT_RATIO } from '../detection-constants'
-import { loadOpenCV } from '../opencv-loader'
-import { extractQuadFromMask } from './geometry/contours'
-import { warpCardToCanonical } from './geometry/perspective'
-import { validateQuad } from './geometry/validation'
+} from './types.js'
+import { MTG_CARD_ASPECT_RATIO } from '../detection-constants.js'
+import { loadOpenCV } from '../opencv-loader.js'
+import { extractQuadFromMask } from './geometry/contours.js'
+import { warpCardToCanonical } from './geometry/perspective.js'
+import { validateQuad } from './geometry/validation.js'
 
 // Suppress ONNX Runtime warnings
 if (

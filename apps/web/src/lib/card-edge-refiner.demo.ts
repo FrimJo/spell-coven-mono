@@ -4,8 +4,8 @@
  * This shows how to integrate the edge refinement feature into your application
  */
 
-import { loadOpenCV } from './card-edge-refiner'
-import { setupWebcam } from './webcam'
+import { loadOpenCV } from './card-edge-refiner.js'
+import { setupWebcam } from './webcam.js'
 
 /**
  * Example: Setup webcam with edge refinement enabled
