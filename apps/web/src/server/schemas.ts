@@ -192,3 +192,16 @@ export const InternalEventSchema = z.object({
 })
 
 export type InternalEvent = z.infer<typeof InternalEventSchema>
+
+export const JoinRoomRequestSchema = z.object({
+  token: z.string().min(10),
+  userId: SnowflakeSchema,
+  accessToken: z.string().min(10),
+})
+
+export const JoinRoomResponseSchema = z.object({
+  room: RoomSummarySchema,
+})
+
+export type JoinRoomRequest = z.infer<typeof JoinRoomRequestSchema>
+export type JoinRoomResponse = z.infer<typeof JoinRoomResponseSchema>

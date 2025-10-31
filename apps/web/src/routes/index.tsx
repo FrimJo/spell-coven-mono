@@ -46,7 +46,7 @@ function LandingPageRoute() {
     mutationFn: refreshRoomInviteFn,
   })
 
-  const handleCreateGame = async (playerName: string) => {
+  const handleCreateGame = async () => {
     setError(null)
 
     try {
@@ -61,7 +61,7 @@ function LandingPageRoute() {
       const result = await createRoomMutation.mutateAsync({
         data: {
           creatorId: user.id,
-          name: `🎮 ${playerName}'s Game #${shortId}`,
+          name: `🎮 ${user.username}'s Game #${shortId}`,
           userLimit: 4,
           maxSeats: 4,
           tokenTtlSeconds: 30 * 60,
@@ -91,7 +91,7 @@ function LandingPageRoute() {
 
       sessionStorage.saveGameState({
         gameId,
-        playerName,
+        playerName: user.username,
         timestamp: Date.now(),
       })
 

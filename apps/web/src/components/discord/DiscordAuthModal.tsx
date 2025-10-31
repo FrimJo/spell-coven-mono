@@ -8,15 +8,16 @@ import { useDiscordAuth } from '../../hooks/useDiscordAuth'
 export interface DiscordAuthModalProps {
   isOpen: boolean
   onClose: () => void
+  returnUrl?: string
 }
 
-export function DiscordAuthModal({ isOpen, onClose }: DiscordAuthModalProps) {
+export function DiscordAuthModal({ isOpen, onClose, returnUrl }: DiscordAuthModalProps) {
   const { login, isLoading, error } = useDiscordAuth()
 
   if (!isOpen) return null
 
   const handleLogin = async () => {
-    await login()
+    await login(returnUrl)
   }
 
   return (
