@@ -267,6 +267,26 @@ export class DiscordRestClient {
   }
 
   /**
+   * Move a user to a voice channel (bot-only operation)
+   * Requires MOVE_MEMBERS permission
+   */
+  async moveUserToVoiceChannel(
+    guildId: string,
+    userId: string,
+    channelId: string,
+    auditLogReason?: string,
+  ): Promise<GuildMember> {
+    const response = await this.requestWithData<GuildMember>(
+      'PATCH',
+      `/guilds/${guildId}/members/${userId}`,
+      { channel_id: channelId },
+      auditLogReason,
+    )
+
+    return GuildMemberSchema.parse(response)
+  }
+
+  /**
    * Add a role to a guild member
    */
   async addMemberRole(

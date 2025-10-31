@@ -1,16 +1,27 @@
 import type { CreatorInviteState } from '@/lib/session-storage'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { LandingPage } from '@/components/LandingPage'
 import { useDiscordUser } from '@/hooks/useDiscordUser'
+import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
+import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken'
 import { sessionStorage } from '@/lib/session-storage'
 import { createRoom, refreshRoomInvite } from '@/server/discord-rooms'
 import { useMutation } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { createClientOnlyFn, useServerFn } from '@tanstack/react-start'
 import { zodValidator } from '@tanstack/zod-adapter'
+import { ExternalLink, Loader2 } from 'lucide-react'
 import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
+
+import { Button } from '@repo/ui/components/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@repo/ui/components/dialog'
 
 const getBaseUrl = createClientOnlyFn(() => {
   const baseUrl = process.env.VITE_BASE_URL
@@ -35,6 +46,11 @@ function LandingPageRoute() {
   const [inviteState, setInviteState] = useState<CreatorInviteState | null>(
     () => sessionStorage.loadCreatorInviteState(),
   )
+  const [showJoinDiscordModal, setShowJoinDiscordModal] = useState(false)
+  const [pendingGameId, setPendingGameId] = useState<string | null>(null)
+  const [pendingInvite, setPendingInvite] = useState<CreatorInviteState | null>(
+    null,
+  )
 
   const createRoomFn = useServerFn(createRoom)
   const createRoomMutation = useMutation({
@@ -45,6 +61,54 @@ function LandingPageRoute() {
   const refreshRoomInviteMutation = useMutation({
     mutationFn: refreshRoomInviteFn,
   })
+
+  const [userJoinedVoice, setUserJoinedVoice] = useState(false)
+
+  const { data: wsTokenData } = useWebSocketAuthToken({ userId: user?.id })
+
+  useEffect(() => {
+    console.log('[LandingPage] WebSocket token:', {
+      hasToken: !!wsTokenData,
+      modalOpen: showJoinDiscordModal,
+      pendingGameId,
+      userId: user?.id,
+    })
+  }, [wsTokenData, showJoinDiscordModal, pendingGameId, user?.id])
+
+  const handleVoiceJoined = useCallback((event: any) => {
+    console.log('[LandingPage] Received voice.joined event:', event, {
+      modalOpen: showJoinDiscordModal,
+      pendingGameId,
+      userId: user?.id,
+      eventUserId: event.userId,
+      match: event.userId === user?.id,
+    })
+    if (showJoinDiscordModal && pendingGameId && event.userId === user?.id) {
+      console.log('[LandingPage] User joined voice channel - updating state')
+      setUserJoinedVoice(true)
+    }
+  }, [showJoinDiscordModal, pendingGameId, user?.id])
+
+  // Listen for voice.joined event to update modal status (only when modal is open)
+  useVoiceChannelEvents({
+    jwtToken: wsTokenData,
+    onVoiceJoined: handleVoiceJoined,
+  })
+
+  const handleProceedToGame = () => {
+    if (!pendingGameId || !user) return
+
+    console.log('[LandingPage] Proceeding to game room')
+    sessionStorage.saveGameState({
+      gameId: pendingGameId,
+      playerName: user.username,
+      timestamp: Date.now(),
+    })
+    setShowJoinDiscordModal(false)
+    setPendingGameId(null)
+    setUserJoinedVoice(false)
+    navigate({ to: '/game/$gameId', params: { gameId: pendingGameId } })
+  }
 
   const handleCreateGame = async () => {
     setError(null)
@@ -89,13 +153,10 @@ function LandingPageRoute() {
       sessionStorage.saveCreatorInviteState(nextInvite)
       setInviteState(nextInvite)
 
-      sessionStorage.saveGameState({
-        gameId,
-        playerName: user.username,
-        timestamp: Date.now(),
-      })
-
-      navigate({ to: '/game/$gameId', params: { gameId } })
+      // Show join Discord modal instead of navigating immediately
+      setPendingGameId(gameId)
+      setPendingInvite(nextInvite)
+      setShowJoinDiscordModal(true)
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to create game room'
@@ -180,6 +241,67 @@ function LandingPageRoute() {
         onRefreshInvite={handleRefreshInvite}
         isRefreshingInvite={refreshRoomInviteMutation.isPending}
       />
+
+      {/* Join Discord Modal */}
+      <Dialog
+        open={showJoinDiscordModal}
+        onOpenChange={setShowJoinDiscordModal}
+      >
+        <DialogContent className="border-slate-800 bg-slate-900 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              🎮 Your Game Room is Ready!
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            {!userJoinedVoice ? (
+              <>
+                <p className="text-slate-300">
+                  To start playing, join the Discord voice channel:
+                </p>
+                {pendingInvite && (
+                  <a
+                    href={pendingInvite.deepLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button
+                      className="w-full gap-2 bg-indigo-600 text-white hover:bg-indigo-700"
+                      size="lg"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Join Discord Voice Channel
+                    </Button>
+                  </a>
+                )}
+                <p className="text-center text-sm text-slate-400">
+                  Waiting for you to join...
+                  <br />
+                  <Loader2 className="mt-2 inline h-4 w-4 animate-spin" />
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="rounded-lg bg-green-500/10 p-4 text-center">
+                  <p className="text-lg font-semibold text-green-400">
+                    ✓ You're connected!
+                  </p>
+                  <p className="mt-2 text-sm text-slate-300">
+                    You've joined the voice channel. Ready to play?
+                  </p>
+                </div>
+                <Button
+                  onClick={handleProceedToGame}
+                  className="w-full bg-purple-600 text-white hover:bg-purple-700"
+                  size="lg"
+                >
+                  Enter Game Room
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </ErrorBoundary>
   )
 }
