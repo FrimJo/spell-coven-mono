@@ -1,7 +1,8 @@
 import type { Peer } from 'crossws'
-import { verifyWebSocketAuthToken } from './ws-token-crypto'
+
 import { WSAuthMessageSchema } from './schemas'
 import { wsManager } from './ws-manager'
+import { verifyWebSocketAuthToken } from './ws-token-crypto'
 
 interface AuthenticatedPeer extends Peer {
   userId?: string
@@ -59,7 +60,8 @@ export function createWebSocketHandler() {
               console.log(`[CrossWS] Client authenticated: ${peer.userId}`)
 
               // Register connection with manager
-              wsManager.registerPeer(peer as any, peer.userId, peer.guildId)
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              wsManager.registerPeer(peer as any, peer.userId, peer.guildId) // CrossWS peer type is complex
 
               // Send ACK
               const ackMessage = {
@@ -107,10 +109,10 @@ export function createWebSocketHandler() {
         }
       },
 
-      close: (_peer: AuthenticatedPeer) => {
-        console.log(`[CrossWS] Connection closed for user ${_peer.userId}`)
-        if (_peer.userId && _peer.guildId) {
-          wsManager.unregisterPeer(_peer as any, _peer.userId, _peer.guildId)
+      close: (peer: AuthenticatedPeer) => {
+        console.log(`[CrossWS] Connection closed for user ${peer.userId}`)
+        if (peer.userId && peer.guildId) {
+          wsManager.unregisterPeer(peer, peer.userId, peer.guildId)
         }
       },
 

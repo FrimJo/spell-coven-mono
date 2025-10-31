@@ -12,6 +12,20 @@ export interface WSConnection {
 }
 
 /**
+ * Type guard to check if connection is a WebSocket
+ */
+function isWebSocket(ws: WebSocket | Peer): ws is WebSocket {
+  return 'readyState' in ws && 'bufferedAmount' in ws
+}
+
+/**
+ * Type guard to check if connection is a Peer
+ */
+function isPeer(ws: WebSocket | Peer): ws is Peer {
+  return 'send' in ws && !('readyState' in ws)
+}
+
+/**
  * WebSocket registry for managing active connections
  */
 class WebSocketManager {
@@ -95,19 +109,24 @@ class WebSocketManager {
 
     for (const connection of this.connections) {
       try {
-        // Check backpressure (close if >1MB buffered)
-        if (connection.ws.bufferedAmount > 1024 * 1024) {
-          console.warn(
-            `[WS] Closing connection for user ${connection.userId} due to backpressure`,
-          )
-          connection.ws.close(1008, 'Backpressure limit exceeded')
-          this.unregister(connection)
-          continue
-        }
+        if (isWebSocket(connection.ws)) {
+          // Check backpressure (close if >1MB buffered)
+          if (connection.ws.bufferedAmount > 1024 * 1024) {
+            console.warn(
+              `[WS] Closing connection for user ${connection.userId} due to backpressure`,
+            )
+            connection.ws.close(1008, 'Backpressure limit exceeded')
+            this.unregister(connection)
+            continue
+          }
 
-        // Send message
-        if (connection.ws.readyState === 1) {
-          // OPEN
+          // Send message
+          if (connection.ws.readyState === 1) {
+            // OPEN
+            connection.ws.send(message)
+          }
+        } else if (isPeer(connection.ws)) {
+          // For Peer connections, just send (no backpressure check available)
           connection.ws.send(message)
         }
       } catch (error) {
@@ -142,24 +161,34 @@ class WebSocketManager {
         continue
       }
 
+      const readyState = isWebSocket(connection.ws) ? connection.ws.readyState : 1
       console.log(
-        `[WS] Found connection for user ${connection.userId} in guild ${guildId}. Ready state: ${connection.ws.readyState}`,
+        `[WS] Found connection for user ${connection.userId} in guild ${guildId}. Ready state: ${readyState}`,
       )
 
       try {
-        // Check backpressure
-        if (connection.ws.bufferedAmount > 1024 * 1024) {
-          console.warn(
-            `[WS] Closing connection for user ${connection.userId} due to backpressure`,
-          )
-          connection.ws.close(1008, 'Backpressure limit exceeded')
-          this.unregister(connection)
-          continue
-        }
+        if (isWebSocket(connection.ws)) {
+          // Check backpressure
+          if (connection.ws.bufferedAmount > 1024 * 1024) {
+            console.warn(
+              `[WS] Closing connection for user ${connection.userId} due to backpressure`,
+            )
+            connection.ws.close(1008, 'Backpressure limit exceeded')
+            this.unregister(connection)
+            continue
+          }
 
-        // Send message
-        if (connection.ws.readyState === 1) {
-          // OPEN
+          // Send message
+          if (connection.ws.readyState === 1) {
+            // OPEN
+            connection.ws.send(message)
+            sentCount++
+            console.log(
+              `[WS] Sent ${event} to user ${connection.userId}`,
+            )
+          }
+        } else if (isPeer(connection.ws)) {
+          // For Peer connections, just send
           connection.ws.send(message)
           sentCount++
           console.log(
