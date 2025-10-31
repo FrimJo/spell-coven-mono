@@ -57,12 +57,12 @@ Spell Coven is designed for Magic: The Gathering players who want to play with t
 
 1. **Install dependencies:**
    ```sh
-   pnpm install
+   bun install
    ```
 
 2. **Start the development server:**
    ```sh
-   pnpm dev
+   bun run dev
    ```
 
 3. **Open the app:**
@@ -127,7 +127,7 @@ Each package/app is 100% [TypeScript](https://www.typescriptlang.org/) (Python f
 - **Card Detection**: OpenCV.js for real-time card boundary detection
 - **Frontend**: React 19, TanStack Router, Tailwind CSS
 - **Build Tool**: Vite with TypeScript
-- **Monorepo**: Turborepo with pnpm workspaces
+- **Monorepo**: Turborepo managed with Bun workspaces
 - **Data Pipeline**: Python with PyTorch, FAISS, Scryfall API
 
 **Planned (Phase 2+)**:
@@ -156,7 +156,7 @@ turbo build
 # Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
 npx turbo build
 yarn dlx turbo build
-pnpm exec turbo build
+bunx turbo run build
 ```
 
 You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
@@ -168,7 +168,7 @@ turbo build --filter=docs
 # Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
 npx turbo build --filter=docs
 yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+bunx turbo run build --filter=docs
 ```
 
 ### Develop
@@ -184,7 +184,7 @@ turbo dev
 # Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
 npx turbo dev
 yarn exec turbo dev
-pnpm exec turbo dev
+bunx turbo run dev
 ```
 
 You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
@@ -196,7 +196,7 @@ turbo dev --filter=web
 # Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
 npx turbo dev --filter=web
 yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+bunx turbo run dev --filter=web
 ```
 
 ## Development Roadmap

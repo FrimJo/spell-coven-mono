@@ -19,7 +19,7 @@ TARGET_DIR="apps/web/public/data/mtg-embeddings/${NEW_VERSION}"
 # Check if source files exist
 if [ ! -f "${SOURCE_DIR}/meta.json" ]; then
   echo "Error: Source files not found in ${SOURCE_DIR}"
-  echo "Run 'cd packages/mtg-image-db && pnpm build' first"
+  echo "Run 'cd packages/mtg-image-db && bun run build' first"
   exit 1
 fi
 
@@ -39,6 +39,6 @@ echo "Next steps:"
 echo "1. Update VITE_EMBEDDINGS_VERSION in apps/web/.env.development and .env.production to '${NEW_VERSION}'"
 echo "   sed -i '' 's/VITE_EMBEDDINGS_VERSION=.*/VITE_EMBEDDINGS_VERSION=${NEW_VERSION}/' apps/web/.env.development"
 echo "   sed -i '' 's/VITE_EMBEDDINGS_VERSION=.*/VITE_EMBEDDINGS_VERSION=${NEW_VERSION}/' apps/web/.env.production"
-echo "2. Test the app locally: cd apps/web && pnpm dev"
+echo "2. Test the app locally: cd apps/web && bun run dev"
 echo "3. Commit the changes: git add apps/web/public/data/mtg-embeddings/${NEW_VERSION} apps/web/.env.*"
 echo "4. Update the README.md in apps/web/public/data/mtg-embeddings/ with new version info"

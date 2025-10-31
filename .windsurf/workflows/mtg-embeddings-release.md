@@ -69,13 +69,13 @@ description: Release MTG embeddings data to the web app
    1. Run web app locally with new embeddings:
       ```bash
       cd apps/web
-      pnpm install
-      pnpm dev
+      bun install
+      bun run dev
       ```
       Confirm search UI loads and returns results.
    2. (Optional) Run automated tests:
       ```bash
-      pnpm test --filter image
+      bun run test -- --filter image
       ```
 
 8. **Finalize release**

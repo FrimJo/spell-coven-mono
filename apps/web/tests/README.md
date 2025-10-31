@@ -50,13 +50,13 @@ All existing tests in `card-identification.spec.ts` have been updated to:
 
 ```bash
 # Run all tests (global setup runs automatically)
-pnpm test:e2e
+cd apps/web && bun run e2e
 
 # Run specific test file
-pnpm playwright test card-identification.spec.ts
+cd apps/web && bun run playwright test card-identification.spec.ts
 
 # Run validation tests
-pnpm playwright test validate-setup.spec.ts
+cd apps/web && bun run playwright test validate-setup.spec.ts
 ```
 
 ### Debugging
@@ -65,7 +65,7 @@ The tests include extensive logging to help debug cache behavior:
 
 ```bash
 # Run with debug output
-DEBUG=pw:api pnpm playwright test --headed
+cd apps/web && DEBUG=pw:api bun run playwright test --headed
 ```
 
 Look for log messages like:

@@ -13,7 +13,9 @@
     "JWT_PUBLIC_JWK_URL",
     "HUB_ENDPOINT",
     "PORT",
-    "ROOM_TOKEN_SECRET"
+    "ROOM_TOKEN_SECRET",
+    "DISCORD_CLIENT_SECRET",
+    "WS_AUTH_SECRET"
   ],
   "tasks": {
     "build": {
