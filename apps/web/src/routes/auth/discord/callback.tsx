@@ -7,6 +7,7 @@ import {
 import {
   createFileRoute,
   ErrorComponentProps,
+  redirect,
   useNavigate,
 } from '@tanstack/react-router'
 import z from 'zod'
@@ -19,6 +20,7 @@ import z from 'zod'
 export const Route = createFileRoute('/auth/discord/callback')({
   validateSearch: z.object({
     code: z.string('No authorization code received from Discord'),
+    state: z.string().optional(),
     error: z.string().optional(),
     error_description: z.string().optional(),
   }),
@@ -41,6 +43,24 @@ export const Route = createFileRoute('/auth/discord/callback')({
       // Always clean up PKCE
       getDiscordClient().clearStoredPKCE()
     }
+
+    // If state parameter is available, decode and redirect immediately
+    if (search.state) {
+      try {
+        const returnUrl = atob(search.state)
+        throw redirect({ to: returnUrl })
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('redirect')) {
+          throw err
+        }
+        console.error('Failed to decode state parameter:', err)
+      }
+    }
+  },
+  loader: async () => {
+    // If we reach here, state parameter was not available
+    // (redirect already happened in beforeLoad if it was)
+    return { returnUrl: null }
   },
   component: DiscordCallbackPage,
   errorComponent: ErrorComponent,
@@ -49,12 +69,15 @@ export const Route = createFileRoute('/auth/discord/callback')({
 
 function DiscordCallbackPage() {
   const navigate = useNavigate()
+  const { returnUrl } = Route.useLoaderData()
 
   useEffect(() => {
     setTimeout(() => {
-      navigate({ to: '/' })
+      // If returnUrl is provided, redirect there; otherwise go to home
+      const destination = returnUrl || '/'
+      navigate({ to: destination })
     }, 800)
-  }, [navigate])
+  }, [navigate, returnUrl])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
