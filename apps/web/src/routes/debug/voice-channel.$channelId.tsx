@@ -22,7 +22,9 @@ function DebugVoiceChannel() {
   const [error, setError] = useState<string | null>(null)
 
   const getVoiceChannelMembersFn = useServerFn(async () => {
-    const { getVoiceChannelMembers } = await import('@/server/discord-rooms')
+    const { getVoiceChannelMembers } = await import(
+      '@/server/handlers/discord-rooms'
+    )
     return getVoiceChannelMembers({
       data: {
         guildId: process.env.VITE_DISCORD_GUILD_ID || '',

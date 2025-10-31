@@ -1,4 +1,4 @@
-import { createWebSocketHandler } from '@/server/ws-crossws-handler'
+import { createWebSocketHandler } from '@/server/handlers/ws-crossws-handler'
 import { createFileRoute } from '@tanstack/react-router'
 
 // WebSocket route using CrossWS
