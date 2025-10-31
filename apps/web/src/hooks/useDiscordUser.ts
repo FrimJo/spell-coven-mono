@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { DiscordUser } from '@repo/discord-integration/types'
 
-import { getDiscordClient } from '../lib/discord-client'
-import { useDiscordAuth } from './useDiscordAuth'
+import { getDiscordClient } from '../lib/discord-client.js'
+import { useDiscordAuth } from './useDiscordAuth.js'
 
 /**
  * Discord User Hook

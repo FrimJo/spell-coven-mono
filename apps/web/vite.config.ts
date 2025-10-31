@@ -23,6 +23,13 @@ export default defineConfig(() => {
         '@repo/ui': path.resolve(__dirname, '../../packages/ui/src'),
       },
     },
+    optimizeDeps: {
+      exclude: ['@repo/discord-gateway'],
+    },
+    ssr: {
+      external: ['@repo/discord-gateway'],
+      noExternal: [],
+    },
     // (optional) if you import files from ../../packages during dev:
     preview: {
       port: 1234,

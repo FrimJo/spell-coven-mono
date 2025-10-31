@@ -10,7 +10,7 @@
  * @module frame-buffer
  */
 
-import type { FrameMetadata } from './detectors/types'
+import type { FrameMetadata } from './detectors/types.js'
 
 /**
  * Configuration for FrameBuffer

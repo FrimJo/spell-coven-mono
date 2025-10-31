@@ -9,7 +9,7 @@
  * @module detectors/geometry/roi
  */
 
-import type { Point, ROI } from '../types'
+import type { Point, ROI } from '../types.js'
 
 /**
  * Default ROI size (pixels)

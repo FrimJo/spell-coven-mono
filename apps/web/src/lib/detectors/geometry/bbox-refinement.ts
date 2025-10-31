@@ -9,9 +9,9 @@
  * @module detectors/geometry/bbox-refinement
  */
 
-import type { CardQuad, Point } from '../types'
-import { loadOpenCV } from '../../opencv-loader'
-import { validateQuad } from './validation'
+import type { CardQuad, Point } from '../types.js'
+import { loadOpenCV } from '../../opencv-loader.js'
+import { validateQuad } from './validation.js'
 
 /**
  * Refine a bounding box to precise card corners using OpenCV edge detection

@@ -16,7 +16,7 @@ import type {
   GatewayConnection,
   GatewayEvent,
   GatewayEventType,
-} from '../types/gateway'
+} from '../types/gateway.js'
 
 /**
  * Gateway Opcodes (from Discord API)

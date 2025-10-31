@@ -1,19 +1,19 @@
 // Utility exports
-export * from "./lib/utils";
+export * from "./lib/utils.js";
 
 // Type exports
-export * from "./types/card-query";
+export * from "./types/card-query.js";
 
 // Component exports
-export * from "./components/button";
-export * from "./components/card";
-export * from "./components/input";
-export * from "./components/label";
-export * from "./components/dialog";
-export * from "./components/badge";
-export * from "./components/tabs";
-export * from "./components/tooltip";
-export * from "./components/sonner";
-export * from "./components/loading-overlay";
-export * from "./components/inline-message";
-export * from "./components/card-result";
+export * from "./components/button.js";
+export * from "./components/card.js";
+export * from "./components/input.js";
+export * from "./components/label.js";
+export * from "./components/dialog.js";
+export * from "./components/badge.js";
+export * from "./components/tabs.js";
+export * from "./components/tooltip.js";
+export * from "./components/sonner.js";
+export * from "./components/loading-overlay.js";
+export * from "./components/inline-message.js";
+export * from "./components/card-result.js";

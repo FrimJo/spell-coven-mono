@@ -8,9 +8,9 @@
  * @module detectors/geometry/perspective
  */
 
-import type { CardQuad } from '../types'
-import { loadOpenCV } from '../../opencv-loader'
-import { CANONICAL_CARD_SIZE } from '../types'
+import type { CardQuad } from '../types.js'
+import { loadOpenCV } from '../../opencv-loader.js'
+import { CANONICAL_CARD_SIZE } from '../types.js'
 
 /**
  * Compute homography matrix from source quad to destination rectangle

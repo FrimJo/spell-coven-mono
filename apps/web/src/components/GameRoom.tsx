@@ -28,13 +28,13 @@ import {
   TooltipTrigger,
 } from '@repo/ui/components/tooltip'
 
-import { CardPreview } from './CardPreview'
-import { GameRoomLoader } from './GameRoomLoader'
-import { MediaSetupDialog } from './MediaSetupDialog'
-import { PlayerList } from './PlayerList'
-import { TurnTracker } from './TurnTracker'
-import { VideoStreamGrid } from './VideoStreamGrid'
-import { VoiceDropoutModal } from './VoiceDropoutModal'
+import { CardPreview } from './CardPreview.js'
+import { GameRoomLoader } from './GameRoomLoader.js'
+import { MediaSetupDialog } from './MediaSetupDialog.js'
+import { PlayerList } from './PlayerList.js'
+import { TurnTracker } from './TurnTracker.js'
+import { VideoStreamGrid } from './VideoStreamGrid.js'
+import { VoiceDropoutModal } from './VoiceDropoutModal.js'
 
 interface GameRoomProps {
   gameId: string

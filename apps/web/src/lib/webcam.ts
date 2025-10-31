@@ -3,13 +3,16 @@
 
 import type { DetectedCard } from '@/types/card-query'
 
-import type { CardDetector, DetectorType } from './detectors'
-import { warmModel } from './clip-search'
-import { CROPPED_CARD_HEIGHT, CROPPED_CARD_WIDTH } from './detection-constants'
-import { createDetector } from './detectors'
-import { refineBoundingBoxToCorners } from './detectors/geometry/bbox-refinement'
-import { warpCardToCanonical } from './detectors/geometry/perspective'
-import { loadingEvents } from './loading-events'
+import type { CardDetector, DetectorType } from './detectors/index.js'
+import { warmModel } from './clip-search.js'
+import {
+  CROPPED_CARD_HEIGHT,
+  CROPPED_CARD_WIDTH,
+} from './detection-constants.js'
+import { refineBoundingBoxToCorners } from './detectors/geometry/bbox-refinement.js'
+import { warpCardToCanonical } from './detectors/geometry/perspective.js'
+import { createDetector } from './detectors/index.js'
+import { loadingEvents } from './loading-events.js'
 
 // OpenCV removed - using DETR bounding boxes for cropping
 

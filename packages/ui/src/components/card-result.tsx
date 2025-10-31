@@ -1,13 +1,14 @@
-import * as React from "react";
-import { cn } from "../lib/utils";
-import { ExternalLink } from "lucide-react";
-import type { CardQueryResult } from "../types/card-query";
+import * as React from 'react'
+import { ExternalLink } from 'lucide-react'
+
+import type { CardQueryResult } from '../types/card-query.js'
+import { cn } from '../lib/utils.js'
 
 export interface CardResultProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Query result to display */
-  result: CardQueryResult;
+  result: CardQueryResult
   /** Whether to show low confidence warning (score < 0.70) */
-  showLowConfidenceWarning?: boolean;
+  showLowConfidenceWarning?: boolean
 }
 
 export function CardResult({
@@ -17,12 +18,12 @@ export function CardResult({
   ...props
 }: CardResultProps) {
   const cardImageUrl =
-    result.card_url || result.image_url?.replace("/art_crop/", "/normal/");
+    result.card_url || result.image_url?.replace('/art_crop/', '/normal/')
 
   return (
     <div
       className={cn(
-        "space-y-3 rounded-lg border bg-card p-4 text-card-foreground",
+        'bg-card text-card-foreground space-y-3 rounded-lg border p-4',
         className,
       )}
       {...props}
@@ -32,7 +33,7 @@ export function CardResult({
         <h3 className="font-semibold leading-none tracking-tight">
           {result.name}
         </h3>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="text-muted-foreground flex items-center gap-2 text-sm">
           <span className="font-medium">[{result.set}]</span>
           <span>•</span>
           <span>Score: {result.score.toFixed(3)}</span>
@@ -65,14 +66,14 @@ export function CardResult({
           href={result.scryfall_uri}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+          className="text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline"
         >
           View on Scryfall
           <ExternalLink className="h-3 w-3" aria-hidden="true" />
         </a>
       )}
     </div>
-  );
+  )
 }
 
-CardResult.displayName = "CardResult";
+CardResult.displayName = 'CardResult'

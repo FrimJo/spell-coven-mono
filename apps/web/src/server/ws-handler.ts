@@ -1,8 +1,8 @@
 import type { WebSocket } from 'ws'
 
-import { WSAuthMessageSchema } from './schemas'
-import { wsManager } from './ws-manager'
-import { verifyWebSocketAuthToken } from './ws-token-crypto'
+import { WSAuthMessageSchema } from './schemas.js'
+import { wsManager } from './ws-manager.js'
+import { verifyWebSocketAuthToken } from './ws-token-crypto.js'
 
 /**
  * Handle WebSocket connection

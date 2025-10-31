@@ -6,7 +6,7 @@
  * @module search/metadata-loader
  */
 
-import type { MetadataFile } from '../validation/contract-validator'
+import type { MetadataFile } from '../validation/contract-validator.js'
 
 /**
  * Load metadata JSON file from URL

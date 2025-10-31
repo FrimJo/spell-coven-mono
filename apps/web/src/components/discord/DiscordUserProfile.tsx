@@ -3,8 +3,8 @@ import {
   getAvatarUrl,
 } from '@repo/discord-integration/utils'
 
-import { useDiscordAuth } from '../../hooks/useDiscordAuth'
-import { useDiscordUser } from '../../hooks/useDiscordUser'
+import { useDiscordAuth } from '../../hooks/useDiscordAuth.js'
+import { useDiscordUser } from '../../hooks/useDiscordUser.js'
 
 /**
  * Discord User Profile Component

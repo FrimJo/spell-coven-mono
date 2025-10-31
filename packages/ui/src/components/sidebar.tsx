@@ -6,22 +6,22 @@ import { cva, VariantProps } from 'class-variance-authority'
 import { PanelLeftIcon } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
-import { Input } from './input'
-import { Separator } from './separator'
+import { Input } from './input.js'
+import { Separator } from './separator.js'
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from './sheet'
-import { Skeleton } from './skeleton'
+} from './sheet.js'
+import { Skeleton } from './skeleton.js'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from './tooltip'
+} from './tooltip.js'
 import { useIsMobile } from '@repo/ui/lib/use-mobile'
 import { cn } from '@repo/ui/lib/utils'
 

@@ -1,7 +1,7 @@
 import { createServer } from 'node:http'
 import { WebSocketServer } from 'ws'
 
-import { handleWebSocketConnection } from './ws-handler'
+import { handleWebSocketConnection } from './ws-handler.js'
 
 let wss: WebSocketServer | null = null
 

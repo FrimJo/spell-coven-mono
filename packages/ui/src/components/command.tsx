@@ -10,7 +10,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from './dialog'
+} from './dialog.js'
 import { cn } from '@repo/ui/lib/utils'
 
 function Command({

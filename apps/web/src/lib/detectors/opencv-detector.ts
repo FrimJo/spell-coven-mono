@@ -24,7 +24,7 @@ import type {
   DetectionOutput,
   DetectorConfig,
   DetectorStatus,
-} from './types'
+} from './types.js'
 
 // OpenCV.js minimal type definitions
 declare global {

@@ -9,7 +9,7 @@ import {
   DISCORD_CLIENT_ID,
   DISCORD_REDIRECT_URI,
   DISCORD_SCOPES,
-} from '../config/discord'
+} from '../config/discord.js'
 
 export const STORAGE_KEY = 'discord_token'
 

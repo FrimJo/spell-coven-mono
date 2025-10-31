@@ -1,4 +1,4 @@
-import { initializeDiscordGateway } from './discord-gateway-init'
+import { initializeDiscordGateway } from './discord-gateway-init.js'
 
 /**
  * Initialize server-side services

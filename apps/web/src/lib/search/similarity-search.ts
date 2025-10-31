@@ -7,8 +7,11 @@
  * @module search/similarity-search
  */
 
-import type { CardRecord, MetadataFile } from '../validation/contract-validator'
-import type { EmbeddingDatabase } from './embeddings-loader'
+import type {
+  CardRecord,
+  MetadataFile,
+} from '../validation/contract-validator.js'
+import type { EmbeddingDatabase } from './embeddings-loader.js'
 
 /**
  * Query embedding from CLIP model
