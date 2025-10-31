@@ -27,7 +27,6 @@
     "@repo/eslint-config": "workspace:*",
     "@repo/prettier-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^20.14.9",
     "@types/ws": "^8.5.12",
     "dotenv-cli": "^7.4.2",
     "tsup": "^8.1.0",

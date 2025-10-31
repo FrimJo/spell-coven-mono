@@ -56,7 +56,6 @@
     "@repo/typescript-config": "workspace:*",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.2.0",
-    "@types/node": "^22.10.2",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@types/ws": "^8.5.12",

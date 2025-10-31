@@ -28,7 +28,6 @@
     "@repo/prettier-config": "workspace:*",
     "@repo/tailwind-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^20.14.10",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "vitest": "^1.6.0",
     "eslint": "^9.34.0",
