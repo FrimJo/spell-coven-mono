@@ -23,11 +23,11 @@ Discord Gateway ←→ Gateway Worker → TanStack Start → WebSocket Clients
 
 ```bash
 # From repo root
-pnpm install
+bun install
 
 # Or from this package
 cd packages/discord-gateway-worker
-pnpm install
+bun install
 ```
 
 ## Configuration
@@ -94,17 +94,17 @@ LOG_LEVEL=info
 ### Development
 
 ```bash
-pnpm dev
+cd packages/discord-gateway-worker && bun run dev
 ```
 
 ### Production
 
 ```bash
 # Build
-pnpm build
+cd packages/discord-gateway-worker && bun run build
 
 # Start
-pnpm start
+cd packages/discord-gateway-worker && bun run start
 ```
 
 ## Health Check
@@ -182,20 +182,20 @@ railway up
 
 1. Create new Web Service
 2. Connect GitHub repository
-3. Set build command: `pnpm build`
-4. Set start command: `pnpm start`
+3. Set build command: `bun run build`
+4. Set start command: `bun run start`
 5. Add environment variables
 
 ### Docker
 
 ```dockerfile
-FROM node:20-alpine
+FROM oven/bun:1-alpine
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile
 COPY . .
-RUN pnpm build
-CMD ["pnpm", "start"]
+RUN bun run build
+CMD ["bun", "run", "start"]
 ```
 
 ## Monitoring

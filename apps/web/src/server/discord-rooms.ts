@@ -47,13 +47,13 @@ const DISCORD_DEEP_LINK_BASE = 'https://discord.com/channels'
 
 const getSecrets = createServerOnlyFn(() => {
   const botToken = process.env.DISCORD_BOT_TOKEN
-  const guildId = process.env.PRIMARY_GUILD_ID
+  const guildId = process.env.VITE_DISCORD_GUILD_ID || process.env.PRIMARY_GUILD_ID
 
   if (!botToken?.length) {
     throw new Error('DISCORD_BOT_TOKEN environment variable is not defined')
   }
   if (!guildId?.length) {
-    throw new Error('PRIMARY_GUILD_ID environment variable is not defined')
+    throw new Error('VITE_DISCORD_GUILD_ID or PRIMARY_GUILD_ID environment variable is not defined')
   }
 
   return { botToken, guildId }
