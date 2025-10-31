@@ -1,9 +1,8 @@
 import WebSocket from 'ws'
 
-type WebSocketData = string | ArrayBuffer | ArrayBufferView | Buffer | Buffer[]
-
-
 import type { ConnectionState, GatewayConfig, GatewaySession } from './types.js'
+
+type WebSocketData = string | ArrayBuffer | ArrayBufferView | Buffer | Buffer[]
 
 /**
  * Discord Gateway opcodes

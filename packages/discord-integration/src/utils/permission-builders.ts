@@ -29,7 +29,9 @@ function toStringBits(bits: bigint): string {
   return bits.toString()
 }
 
-export function buildEveryoneDenyOverwrite(guildId: string): PermissionOverwrite {
+export function buildEveryoneDenyOverwrite(
+  guildId: string,
+): PermissionOverwrite {
   return {
     id: guildId,
     type: 0,

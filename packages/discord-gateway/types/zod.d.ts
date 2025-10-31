@@ -22,15 +22,18 @@ declare module 'zod' {
 
   type ZodShape = Record<string, ZodType<unknown>>
 
-  type ZodObject<T extends ZodShape> = ZodType<{ [K in keyof T]: T[K]['_output'] }>
+  type ZodObject<T extends ZodShape> = ZodType<{
+    [K in keyof T]: T[K]['_output']
+  }>
 
-  type ZodUnion<T extends readonly [ZodType<unknown>, ...ZodType<unknown>[]]> = ZodType<
-    T[number]['_output']
-  >
+  type ZodUnion<T extends readonly [ZodType<unknown>, ...ZodType<unknown>[]]> =
+    ZodType<T[number]['_output']>
 
   const z: {
     object<T extends ZodShape>(shape: T): ZodObject<T>
-    literal<T extends string | number | boolean | bigint>(value: T): ZodLiteral<T>
+    literal<T extends string | number | boolean | bigint>(
+      value: T,
+    ): ZodLiteral<T>
     enum<T extends readonly string[]>(values: T): ZodEnum<T>
     unknown(): ZodUnknown
     string(): ZodString

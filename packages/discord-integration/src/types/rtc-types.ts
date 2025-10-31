@@ -189,12 +189,12 @@ export interface DiscordRtcClientConfig {
   sessionId: string
   token: string
   endpoint: string
-  
+
   // Optional configurations
   audioConfig?: Partial<AudioStreamConfig>
   videoConfig?: Partial<VideoStreamConfig>
   encryptionMode?: EncryptionMode
-  
+
   // Callbacks
   onConnectionStateChange?: (state: RtcConnectionState) => void
   onAudioReceived?: (userId: string, audioData: Uint8Array) => void
