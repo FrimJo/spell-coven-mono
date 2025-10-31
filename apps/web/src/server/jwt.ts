@@ -1,8 +1,5 @@
-import {
-  createPublicKey,
-  createVerify,
-  type JsonWebKey as NodeJsonWebKey,
-} from 'node:crypto'
+import { createPublicKey, createVerify } from 'node:crypto'
+import type { JsonWebKey as NodeJsonWebKey } from 'node:crypto'
 
 export interface JWTPayload {
   [key: string]: unknown
@@ -36,7 +33,10 @@ interface ParsedJwt {
 }
 
 const JWKS_CACHE_TTL_MS = 5 * 60 * 1000
-const jwksCache = new Map<string, { keys: NodeJsonWebKey[]; expiresAt: number }>()
+const jwksCache = new Map<
+  string,
+  { keys: NodeJsonWebKey[]; expiresAt: number }
+>()
 
 function base64UrlDecode(input: string): Buffer {
   const normalized = input.replace(/-/g, '+').replace(/_/g, '/')
@@ -256,4 +256,3 @@ export function extractBearerToken(authHeader: string | null): string | null {
   const match = authHeader.match(/^Bearer\s+(.+)$/i)
   return match ? match[1] : null
 }
-

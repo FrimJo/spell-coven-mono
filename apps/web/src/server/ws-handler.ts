@@ -1,8 +1,8 @@
 import type { WebSocket } from 'ws'
 
-import { verifyWebSocketAuthToken } from './ws-token-crypto'
 import { WSAuthMessageSchema } from './schemas'
 import { wsManager } from './ws-manager'
+import { verifyWebSocketAuthToken } from './ws-token-crypto'
 
 /**
  * Handle WebSocket connection
@@ -47,7 +47,10 @@ export function handleWebSocketConnection(ws: WebSocket): void {
 
       // Handle authentication
       if (!authenticated) {
-        console.log('[WS] Attempting authentication with message type:', message.type)
+        console.log(
+          '[WS] Attempting authentication with message type:',
+          message.type,
+        )
         const parseResult = WSAuthMessageSchema.safeParse(message)
 
         if (!parseResult.success) {
@@ -76,9 +79,13 @@ export function handleWebSocketConnection(ws: WebSocket): void {
           clearTimeout(authTimeout)
 
           // Register connection
-          console.log(`[WS] Registering connection for user ${userId} in guild ${guildId}`)
+          console.log(
+            `[WS] Registering connection for user ${userId} in guild ${guildId}`,
+          )
           wsManager.register(ws, userId, guildId)
-          console.log(`[WS] Connection registered. Total connections: ${wsManager.getConnectionCount()}`)
+          console.log(
+            `[WS] Connection registered. Total connections: ${wsManager.getConnectionCount()}`,
+          )
 
           // Send ACK
           const ackMessage = {

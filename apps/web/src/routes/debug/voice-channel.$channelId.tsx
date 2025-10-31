@@ -1,6 +1,7 @@
+import { useCallback, useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
-import { useCallback, useEffect, useState } from 'react'
+
 import { Button } from '@repo/ui/components/button'
 
 export const Route = createFileRoute('/debug/voice-channel/$channelId')({
@@ -51,25 +52,23 @@ function DebugVoiceChannel() {
   }, [channelId, handleFetch])
 
   return (
-    <div className="p-8 bg-slate-950 min-h-screen text-white">
-      <h1 className="text-3xl font-bold mb-4">Debug: Voice Channel Members</h1>
-      <p className="text-slate-400 mb-4">Channel ID: {channelId}</p>
+    <div className="min-h-screen bg-slate-950 p-8 text-white">
+      <h1 className="mb-4 text-3xl font-bold">Debug: Voice Channel Members</h1>
+      <p className="mb-4 text-slate-400">Channel ID: {channelId}</p>
 
       <Button onClick={handleFetch} disabled={loading} className="mb-4">
         {loading ? 'Loading...' : 'Fetch Members'}
       </Button>
 
       {error && (
-        <div className="bg-red-900 text-red-100 p-4 rounded mb-4">
+        <div className="mb-4 rounded bg-red-900 p-4 text-red-100">
           <p className="font-bold">Error:</p>
           <p>{error}</p>
         </div>
       )}
 
-      <div className="bg-slate-800 rounded p-4">
-        <h2 className="text-xl font-bold mb-4">
-          Members ({members.length})
-        </h2>
+      <div className="rounded bg-slate-800 p-4">
+        <h2 className="mb-4 text-xl font-bold">Members ({members.length})</h2>
 
         {members.length === 0 ? (
           <p className="text-slate-400">No members in voice channel</p>
@@ -78,13 +77,13 @@ function DebugVoiceChannel() {
             {members.map((member) => (
               <div
                 key={member.userId}
-                className="bg-slate-700 p-3 rounded flex items-center gap-3"
+                className="flex items-center gap-3 rounded bg-slate-700 p-3"
               >
                 {member.avatar && (
                   <img
                     src={`https://cdn.discordapp.com/avatars/${member.userId}/${member.avatar}.png`}
                     alt={member.username}
-                    className="w-8 h-8 rounded-full"
+                    className="h-8 w-8 rounded-full"
                   />
                 )}
                 <div>
@@ -97,9 +96,9 @@ function DebugVoiceChannel() {
         )}
       </div>
 
-      <div className="mt-8 bg-slate-800 rounded p-4">
-        <h2 className="text-xl font-bold mb-2">Raw JSON</h2>
-        <pre className="bg-slate-900 p-3 rounded text-sm overflow-auto">
+      <div className="mt-8 rounded bg-slate-800 p-4">
+        <h2 className="mb-2 text-xl font-bold">Raw JSON</h2>
+        <pre className="overflow-auto rounded bg-slate-900 p-3 text-sm">
           {JSON.stringify(members, null, 2)}
         </pre>
       </div>

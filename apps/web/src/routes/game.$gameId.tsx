@@ -3,14 +3,11 @@ import { Suspense, useCallback, useEffect, useState } from 'react'
 import { DiscordAuthModal } from '@/components/discord/DiscordAuthModal'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
-import { ensureValidDiscordToken, getDiscordClient } from '@/lib/discord-client'
-import { sessionStorage } from '@/lib/session-storage'
 import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
 import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken'
-import {
-  checkRoomExists,
-  joinRoom,
-} from '@/server/discord-rooms'
+import { ensureValidDiscordToken, getDiscordClient } from '@/lib/discord-client'
+import { sessionStorage } from '@/lib/session-storage'
+import { checkRoomExists, joinRoom } from '@/server/discord-rooms'
 import {
   createFileRoute,
   redirect,
@@ -19,17 +16,18 @@ import {
 } from '@tanstack/react-router'
 import { createClientOnlyFn, useServerFn } from '@tanstack/react-start'
 import { zodValidator } from '@tanstack/zod-adapter'
+import { ExternalLink, Loader2 } from 'lucide-react'
+import { ErrorBoundary } from 'react-error-boundary'
 import { toast } from 'sonner'
 import { z } from 'zod'
+
+import { Button } from '@repo/ui/components/button'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@repo/ui/components/dialog'
-import { Button } from '@repo/ui/components/button'
-import { ExternalLink, Loader2 } from 'lucide-react'
-import { ErrorBoundary } from 'react-error-boundary'
 
 const defaultValues = {
   detector: 'opencv' as const,
@@ -122,7 +120,7 @@ function GameRoomRoute() {
   const playerName = state?.playerName ?? 'Guest'
 
   const joinRoomFn = useServerFn(joinRoom)
-  
+
   // Get invite token from search params if present (client-side only)
   const getUrlParams = createClientOnlyFn((): URLSearchParams | null => {
     return new URLSearchParams(window.location.search)
@@ -133,12 +131,15 @@ function GameRoomRoute() {
   // Generate WebSocket auth token
   const { data: wsTokenData } = useWebSocketAuthToken({ userId: auth?.userId })
 
-  const handleVoiceJoined = useCallback((event: { userId: string }) => {
-    if (showJoinDiscordModal && event.userId === auth?.userId) {
-      console.log('[GameRoomRoute] User joined voice channel')
-      setUserJoinedVoice(true)
-    }
-  }, [showJoinDiscordModal, auth?.userId])
+  const handleVoiceJoined = useCallback(
+    (event: { userId: string }) => {
+      if (showJoinDiscordModal && event.userId === auth?.userId) {
+        console.log('[GameRoomRoute] User joined voice channel')
+        setUserJoinedVoice(true)
+      }
+    },
+    [showJoinDiscordModal, auth?.userId],
+  )
 
   // Listen for voice.joined event to update modal status (only when modal is open)
   useVoiceChannelEvents({
@@ -264,7 +265,10 @@ function GameRoomRoute() {
       </Suspense>
 
       {/* Join Discord Modal for friends joining via link */}
-      <Dialog open={showJoinDiscordModal} onOpenChange={setShowJoinDiscordModal}>
+      <Dialog
+        open={showJoinDiscordModal}
+        onOpenChange={setShowJoinDiscordModal}
+      >
         <DialogContent className="border-slate-800 bg-slate-900 sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-white">

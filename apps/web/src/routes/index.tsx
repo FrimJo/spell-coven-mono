@@ -75,19 +75,22 @@ function LandingPageRoute() {
     })
   }, [wsTokenData, showJoinDiscordModal, pendingGameId, user?.id])
 
-  const handleVoiceJoined = useCallback((event: { userId: string }) => {
-    console.log('[LandingPage] Received voice.joined event:', event, {
-      modalOpen: showJoinDiscordModal,
-      pendingGameId,
-      userId: user?.id,
-      eventUserId: event.userId,
-      match: event.userId === user?.id,
-    })
-    if (showJoinDiscordModal && pendingGameId && event.userId === user?.id) {
-      console.log('[LandingPage] User joined voice channel - updating state')
-      setUserJoinedVoice(true)
-    }
-  }, [showJoinDiscordModal, pendingGameId, user?.id])
+  const handleVoiceJoined = useCallback(
+    (event: { userId: string }) => {
+      console.log('[LandingPage] Received voice.joined event:', event, {
+        modalOpen: showJoinDiscordModal,
+        pendingGameId,
+        userId: user?.id,
+        eventUserId: event.userId,
+        match: event.userId === user?.id,
+      })
+      if (showJoinDiscordModal && pendingGameId && event.userId === user?.id) {
+        console.log('[LandingPage] User joined voice channel - updating state')
+        setUserJoinedVoice(true)
+      }
+    },
+    [showJoinDiscordModal, pendingGameId, user?.id],
+  )
 
   // Listen for voice.joined event to update modal status (only when modal is open)
   useVoiceChannelEvents({

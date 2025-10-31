@@ -1,5 +1,5 @@
-import type { WebSocket } from 'ws'
 import type { Peer } from 'crossws'
+import type { WebSocket } from 'ws'
 
 /**
  * WebSocket connection with metadata
@@ -76,7 +76,9 @@ class WebSocketManager {
     }
 
     this.connections.add(connection)
-    console.log(`[CrossWS] Added connection to set. Total: ${this.connections.size}`)
+    console.log(
+      `[CrossWS] Added connection to set. Total: ${this.connections.size}`,
+    )
 
     return connection
   }
@@ -161,7 +163,9 @@ class WebSocketManager {
         continue
       }
 
-      const readyState = isWebSocket(connection.ws) ? connection.ws.readyState : 1
+      const readyState = isWebSocket(connection.ws)
+        ? connection.ws.readyState
+        : 1
       console.log(
         `[WS] Found connection for user ${connection.userId} in guild ${guildId}. Ready state: ${readyState}`,
       )
@@ -183,17 +187,13 @@ class WebSocketManager {
             // OPEN
             connection.ws.send(message)
             sentCount++
-            console.log(
-              `[WS] Sent ${event} to user ${connection.userId}`,
-            )
+            console.log(`[WS] Sent ${event} to user ${connection.userId}`)
           }
         } else if (isPeer(connection.ws)) {
           // For Peer connections, just send
           connection.ws.send(message)
           sentCount++
-          console.log(
-            `[WS] Sent ${event} to user ${connection.userId}`,
-          )
+          console.log(`[WS] Sent ${event} to user ${connection.userId}`)
         }
       } catch (error) {
         console.error(

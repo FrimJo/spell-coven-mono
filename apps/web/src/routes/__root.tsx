@@ -9,8 +9,8 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 
 import globalCss from '../globals.css?url'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
-import appCss from '../styles.css?url'
 import { initializeServerServices } from '../server/start-ws-server'
+import appCss from '../styles.css?url'
 
 interface MyRouterContext {
   queryClient: QueryClient

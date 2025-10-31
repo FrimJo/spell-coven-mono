@@ -4,6 +4,7 @@
  */
 
 import { createServerFn } from '@tanstack/react-start'
+
 import { createWebSocketAuthToken } from './ws-token-crypto'
 
 // ============================================================================

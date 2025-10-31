@@ -12,8 +12,8 @@ import { useVoiceChannelMembersFromEvents } from '@/hooks/useVoiceChannelMembers
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
 import { loadOpenCV } from '@/lib/opencv-loader'
-import { generateWebSocketAuthToken } from '@/server/ws-auth'
 import { connectUserToVoiceChannel } from '@/server/discord-rooms'
+import { generateWebSocketAuthToken } from '@/server/ws-auth'
 import { useQuery } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 import { ArrowLeft, Check, Copy, Settings, Users } from 'lucide-react'
@@ -161,7 +161,10 @@ function GameRoomContent({
         if (result.success) {
           console.log('[GameRoom] Successfully connected to voice channel')
         } else {
-          console.error('[GameRoom] Failed to connect to voice channel:', result.error)
+          console.error(
+            '[GameRoom] Failed to connect to voice channel:',
+            result.error,
+          )
           toast.error('Failed to connect to voice channel: ' + result.error)
         }
 

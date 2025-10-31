@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
 import { createWebSocketHandler } from '@/server/ws-crossws-handler'
+import { createFileRoute } from '@tanstack/react-router'
 
 // WebSocket route using CrossWS
 export const Route = createFileRoute('/api/ws')({

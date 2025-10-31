@@ -1,12 +1,19 @@
 type TestCallback = () => void | Promise<void>
 
-declare interface MockInstance<Args extends unknown[] = unknown[], Returns = unknown> {
+declare interface MockInstance<
+  Args extends unknown[] = unknown[],
+  Returns = unknown,
+> {
   (...args: Args): Returns
   mockResolvedValue(value: Returns): MockInstance<Args, Returns>
   mockReturnValue(value: Returns): MockInstance<Args, Returns>
-  mockImplementation(impl: (...args: Args) => Returns): MockInstance<Args, Returns>
+  mockImplementation(
+    impl: (...args: Args) => Returns,
+  ): MockInstance<Args, Returns>
   mockReturnValueOnce(value: Returns): MockInstance<Args, Returns>
-  mockImplementationOnce(impl: (...args: Args) => Returns): MockInstance<Args, Returns>
+  mockImplementationOnce(
+    impl: (...args: Args) => Returns,
+  ): MockInstance<Args, Returns>
   mockClear(): void
   mockReset(): void
 }
