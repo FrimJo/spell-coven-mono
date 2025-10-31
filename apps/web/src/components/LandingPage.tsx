@@ -20,7 +20,7 @@ import { DiscordUserProfile } from './discord/DiscordUserProfile'
 import { RoomInvitePanel } from './discord/RoomInvitePanel'
 
 interface LandingPageProps {
-  onCreateGame: (playerName: string) => void | Promise<void>
+  onCreateGame: () => void | Promise<void>
   onJoinGame: (playerName: string, gameId: string) => void
   isCreatingGame?: boolean
   inviteState: CreatorInviteState | null
@@ -37,10 +37,8 @@ export function LandingPage({
   isRefreshingInvite,
 }: LandingPageProps) {
   const { isAuthenticated } = useDiscordAuth()
-  const [createName, setCreateName] = useState('')
   const [joinName, setJoinName] = useState('')
   const [joinGameId, setJoinGameId] = useState('')
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [joinDialogOpen, setJoinDialogOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
 
@@ -49,7 +47,7 @@ export function LandingPage({
       setShowAuthModal(true)
       return
     }
-    setCreateDialogOpen(true)
+    onCreateGame()
   }
 
   const handleJoinClick = () => {
@@ -60,11 +58,6 @@ export function LandingPage({
     setJoinDialogOpen(true)
   }
 
-  const handleCreate = () => {
-    if (createName.trim()) {
-      onCreateGame(createName.trim())
-    }
-  }
 
   const handleJoin = () => {
     if (joinName.trim() && joinGameId.trim()) {
@@ -155,52 +148,15 @@ export function LandingPage({
             </p>
 
             <div className="flex flex-col items-center justify-center gap-4 pt-8 sm:flex-row">
-              <Dialog
-                open={createDialogOpen}
-                onOpenChange={setCreateDialogOpen}
+              <Button
+                size="lg"
+                className="min-w-[200px] gap-2 bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
+                onClick={handleCreateClick}
+                disabled={isCreatingGame}
               >
-                <DialogTrigger asChild>
-                  <Button
-                    size="lg"
-                    className="min-w-[200px] gap-2 bg-purple-600 text-white hover:bg-purple-700"
-                    onClick={handleCreateClick}
-                  >
-                    <Plus className="h-5 w-5" />
-                    Create Game
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="border-slate-800 bg-slate-900">
-                  <DialogHeader>
-                    <DialogTitle className="text-white">
-                      Create a New Game
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 pt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="create-name" className="text-slate-300">
-                        Your Name
-                      </Label>
-                      <Input
-                        id="create-name"
-                        placeholder="Enter your name"
-                        value={createName}
-                        onChange={(e) => setCreateName(e.target.value)}
-                        className="border-slate-700 bg-slate-950 text-white"
-                        onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                      />
-                    </div>
-                    <Button
-                      onClick={handleCreate}
-                      disabled={!createName.trim() || isCreatingGame}
-                      className="w-full bg-purple-600 text-white hover:bg-purple-700"
-                    >
-                      {isCreatingGame
-                        ? 'Creating Discord Room...'
-                        : 'Create Game Room'}
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                <Plus className="h-5 w-5" />
+                {isCreatingGame ? 'Creating Game...' : 'Create Game'}
+              </Button>
 
               <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
                 <DialogTrigger asChild>

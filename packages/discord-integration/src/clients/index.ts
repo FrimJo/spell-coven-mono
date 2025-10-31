@@ -15,9 +15,9 @@ export type { DiscordRestClientConfig } from './DiscordRestClient'
 export type {
   AddGuildMemberRequest,
   CreateRoleRequest,
-  GuildVoiceStateSnapshot,
   Role,
   VoiceState,
+  GuildMember,
 } from '../types/rest-schemas'
 
 export { DiscordRtcClient } from './DiscordRtcClient'

@@ -256,3 +256,4 @@ export function extractBearerToken(authHeader: string | null): string | null {
   const match = authHeader.match(/^Bearer\s+(.+)$/i)
   return match ? match[1] : null
 }
+

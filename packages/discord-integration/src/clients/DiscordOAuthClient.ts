@@ -155,9 +155,10 @@ export class DiscordOAuthClient {
    * Get Discord OAuth2 authorization URL
    *
    * @param codeChallenge PKCE code challenge from generatePKCE()
+   * @param state Optional state parameter for CSRF protection and custom data passing
    * @returns Authorization URL to redirect user to
    */
-  getAuthUrl(codeChallenge: string): string {
+  getAuthUrl(codeChallenge: string, state?: string): string {
     const params = new URLSearchParams({
       client_id: this.clientId,
       redirect_uri: this.redirectUri,
@@ -166,6 +167,10 @@ export class DiscordOAuthClient {
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
     })
+
+    if (state) {
+      params.append('state', state)
+    }
 
     return `https://discord.com/oauth2/authorize?${params.toString()}`
   }
@@ -325,13 +330,28 @@ export class DiscordOAuthClient {
   /**
    * Revoke access token (logout)
    *
+   * ⚠️ IMPORTANT: Discord's token revocation endpoint requires client_secret,
+   * which cannot be safely stored in browser-side PKCE flows.
+   *
+   * This method will fail with 401 Unauthorized when called from the browser.
+   * For proper token revocation in PKCE flows, you should:
+   * 1. Create a server-side endpoint (e.g., POST /api/auth/revoke)
+   * 2. Store DISCORD_CLIENT_SECRET securely on the server
+   * 3. Have the browser call your server endpoint
+   * 4. Your server calls Discord's revoke endpoint with the secret
+   *
+   * Alternatively, tokens expire naturally after 7 days, so clearing local
+   * storage is often sufficient for logout functionality.
+   *
    * @param accessToken Access token to revoke
-   * @throws {OAuthError} if revocation fails
+   * @throws {OAuthError} if revocation fails (expected in browser PKCE flows)
    */
   async revokeToken(accessToken: string): Promise<void> {
     const params = new URLSearchParams({
       client_id: this.clientId,
       token: accessToken,
+      // Note: client_secret is required by Discord but cannot be included
+      // in browser-side code. This will result in 401 Unauthorized.
     })
 
     const response = await fetch(`${this.apiBase}/oauth2/token/revoke`, {

@@ -21,8 +21,7 @@ const BOT_ALLOW =
   PermissionFlagsBits.MoveMembers |
   PermissionFlagsBits.MuteMembers |
   PermissionFlagsBits.DeafenMembers |
-  PermissionFlagsBits.ManageChannels |
-  PermissionFlagsBits.ManageRoles
+  PermissionFlagsBits.ManageChannels
 
 const ZERO = 0n
 

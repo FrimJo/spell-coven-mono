@@ -85,17 +85,25 @@ export class DiscordRestClient {
 
   /**
    * Ensure a user is in a guild
+   * Returns the guild member if newly added (201), or undefined if already in guild (204)
    */
   async ensureUserInGuild(
     guildId: string,
     userId: string,
     request: { access_token: string },
-  ) {
+  ): Promise<GuildMember | undefined> {
     const response = await this.request<GuildMember>(
       'PUT',
       `/guilds/${guildId}/members/${userId}`,
       request,
     )
+    
+    // 204 No Content means user was already in guild (returns null)
+    // 201 Created means user was added (returns GuildMember)
+    if (response === null) {
+      return undefined
+    }
+    
     return GuildMemberSchema.parse(response)
   }
 
@@ -110,7 +118,7 @@ export class DiscordRestClient {
     // Validate request
     const validatedRequest = CreateVoiceChannelRequestSchema.parse(request)
 
-    const response = await this.request<ChannelResponse>(
+    const response = await this.requestWithData<ChannelResponse>(
       'POST',
       `/guilds/${guildId}/channels`,
       {
@@ -127,7 +135,7 @@ export class DiscordRestClient {
    * Fetch a channel by ID
    */
   async getChannel(channelId: string): Promise<ChannelResponse> {
-    const response = await this.request<ChannelResponse>(
+    const response = await this.requestWithData<ChannelResponse>(
       'GET',
       `/channels/${channelId}`,
     )
@@ -139,7 +147,7 @@ export class DiscordRestClient {
    * Fetch a guild role by ID
    */
   async getGuildRole(guildId: string, roleId: string): Promise<Role> {
-    const response = await this.request<GuildRoleListResponse>(
+    const response = await this.requestWithData<GuildRoleListResponse>(
       'GET',
       `/guilds/${guildId}/roles`,
     )
@@ -162,37 +170,12 @@ export class DiscordRestClient {
    * Fetch a guild member by ID
    */
   async getGuildMember(guildId: string, userId: string): Promise<GuildMember> {
-    const response = await this.request<GuildMember>(
+    const response = await this.requestWithData<GuildMember>(
       'GET',
       `/guilds/${guildId}/members/${userId}`,
     )
 
     return GuildMemberSchema.parse(response)
-  }
-
-  /**
-   * Snapshot current voice states for a guild
-   */
-  async getVoiceStateSnapshot(
-    guildId: string,
-    channelId?: string,
-  ): Promise<VoiceState[]> {
-    const response = await this.request<GuildVoiceStateSnapshot>(
-      'GET',
-      `/guilds/${guildId}/voice-states`,
-    )
-
-    const snapshot = GuildVoiceStateSnapshotSchema.parse(response)
-
-    const states = snapshot.voice_states.map((state) =>
-      VoiceStateSchema.parse(state),
-    )
-
-    if (channelId) {
-      return states.filter((state) => state.channel_id === channelId)
-    }
-
-    return states
   }
 
   /**
@@ -202,7 +185,7 @@ export class DiscordRestClient {
     channelId: string,
     auditLogReason?: string,
   ): Promise<ChannelResponse> {
-    const response = await this.request<ChannelResponse>(
+    const response = await this.requestWithData<ChannelResponse>(
       'DELETE',
       `/channels/${channelId}`,
       undefined,
@@ -216,7 +199,7 @@ export class DiscordRestClient {
    * Get a list of channels in a guild
    */
   async getChannels(guildId: string): Promise<GuildChannelListResponse> {
-    const response = await this.request<GuildChannelListResponse>(
+    const response = await this.requestWithData<GuildChannelListResponse>(
       'GET',
       `/guilds/${guildId}/channels`,
     )
@@ -234,7 +217,7 @@ export class DiscordRestClient {
   ): Promise<Role> {
     const validatedRequest = CreateRoleRequestSchema.parse(request)
 
-    const response = await this.request<Role>(
+    const response = await this.requestWithData<Role>(
       'POST',
       `/guilds/${guildId}/roles`,
       validatedRequest,
@@ -252,7 +235,7 @@ export class DiscordRestClient {
     roleId: string,
     auditLogReason?: string,
   ): Promise<Role> {
-    const response = await this.request<Role>(
+    const response = await this.requestWithData<Role>(
       'DELETE',
       `/guilds/${guildId}/roles/${roleId}`,
       undefined,
@@ -273,7 +256,7 @@ export class DiscordRestClient {
   ): Promise<GuildMember> {
     const validatedRequest = AddGuildMemberRequestSchema.parse(request)
 
-    const response = await this.request<GuildMember>(
+    const response = await this.requestWithData<GuildMember>(
       'PUT',
       `/guilds/${guildId}/members/${userId}`,
       validatedRequest,
@@ -318,14 +301,47 @@ export class DiscordRestClient {
   }
 
   /**
+   * Fetch all voice states for a guild
+   */
+  async getGuildVoiceStates(guildId: string): Promise<VoiceState[]> {
+    const response = await this.requestWithData<VoiceState[]>(
+      'GET',
+      `/guilds/${guildId}/voice-states`,
+    )
+    return response.map((state) => VoiceStateSchema.parse(state))
+  }
+
+  /**
+   * Get voice states for a specific channel
+   */
+  async getChannelVoiceStates(
+    guildId: string,
+    channelId: string,
+  ): Promise<VoiceState[]> {
+    const allVoiceStates = await this.getGuildVoiceStates(guildId)
+    return allVoiceStates.filter((state) => state.channel_id === channelId)
+  }
+
+  /**
    * Count active voice connections for a channel
    */
   async countVoiceChannelMembers(
     guildId: string,
     channelId: string,
   ): Promise<number> {
-    const voiceStates = await this.getVoiceStateSnapshot(guildId, channelId)
+    const voiceStates = await this.getChannelVoiceStates(guildId, channelId)
     return voiceStates.length
+  }
+
+  /**
+   * Fetch all roles in a guild
+   */
+  async getGuildRoles(guildId: string): Promise<Role[]> {
+    const response = await this.requestWithData<Role[]>(
+      'GET',
+      `/guilds/${guildId}/roles`,
+    )
+    return response;
   }
 
   // ============================================================================
@@ -342,7 +358,7 @@ export class DiscordRestClient {
     // Validate request
     const validatedRequest = SendMessageRequestSchema.parse(request)
 
-    const response = await this.request<MessageResponse>(
+    const response = await this.requestWithData<MessageResponse>(
       'POST',
       `/channels/${channelId}/messages`,
       validatedRequest,
@@ -355,12 +371,35 @@ export class DiscordRestClient {
   // Private HTTP Methods
   // ============================================================================
 
-  private async request<T>(
+  /**
+   * Make an HTTP request that expects data in response
+   * Throws if response is 204 No Content
+   */
+  private async requestWithData<T>(
     method: string,
     path: string,
     body?: unknown,
     auditLogReason?: string,
   ): Promise<T> {
+    const response = await this.request<T>(method, path, body, auditLogReason)
+    if (response === null) {
+      throw new DiscordRestError(
+        `Expected data but received 204 No Content for ${method} ${path}`,
+      )
+    }
+    return response
+  }
+
+  /**
+   * Make an HTTP request to Discord API
+   * Returns null for 204 No Content responses
+   */
+  private async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    auditLogReason?: string,
+  ): Promise<T | null> {
     let lastError: DiscordRestError | null = null
 
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
@@ -435,7 +474,7 @@ export class DiscordRestClient {
         }
 
         if (response.status === 204) {
-          return {} as T
+          return null
         }
 
         return await response.json()

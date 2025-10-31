@@ -210,17 +210,10 @@ export const AddGuildMemberRequestSchema = z.object({
   roles: z.array(SnowflakeSchema).optional(),
   mute: z.boolean().optional(),
   deaf: z.boolean().optional(),
+  channel_id: SnowflakeSchema.optional(),
 })
 
 export type AddGuildMemberRequest = z.infer<typeof AddGuildMemberRequestSchema>
-
-export const GuildVoiceStateSnapshotSchema = z.object({
-  voice_states: z.array(VoiceStateSchema),
-})
-
-export type GuildVoiceStateSnapshot = z.infer<
-  typeof GuildVoiceStateSnapshotSchema
->
 
 // ============================================================================
 // Error Schemas
