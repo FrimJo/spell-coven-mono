@@ -30,6 +30,8 @@ export interface RoomDeletedPayload extends BaseEventPayload {
 export interface VoiceJoinedPayload extends BaseEventPayload {
   channelId: DiscordSnowflake
   userId: DiscordSnowflake
+  username: string
+  avatar: string | null
 }
 
 export interface VoiceLeftPayload extends BaseEventPayload {
@@ -138,7 +140,9 @@ export function isInternalEvent(value: unknown): value is InternalEvent {
       return (
         isDiscordSnowflake(payload.guildId) &&
         isDiscordSnowflake(payload.channelId) &&
-        isDiscordSnowflake(payload.userId)
+        isDiscordSnowflake(payload.userId) &&
+        typeof payload.username === 'string' &&
+        (payload.avatar === null || typeof payload.avatar === 'string')
       )
 
     case 'voice.left':

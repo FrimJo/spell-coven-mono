@@ -17,7 +17,7 @@ import { HubClient } from './hub-client.js'
 function loadConfig(): GatewayConfig {
   const port = Number(process.env.PORT)
   const botToken = process.env.DISCORD_BOT_TOKEN
-  const primaryGuildId = process.env.PRIMARY_GUILD_ID
+  const primaryGuildId = process.env.PRIMARY_GUILD_ID || process.env.VITE_DISCORD_GUILD_ID
   const hubEndpoint = process.env.HUB_ENDPOINT
   const hubSecret = process.env.HUB_SECRET
 
@@ -30,7 +30,7 @@ function loadConfig(): GatewayConfig {
   }
 
   if (!primaryGuildId) {
-    throw new Error('Missing required env var: PRIMARY_GUILD_ID')
+    throw new Error('Missing required env var: PRIMARY_GUILD_ID or VITE_DISCORD_GUILD_ID')
   }
 
   if (!hubEndpoint) {
@@ -108,10 +108,17 @@ async function main() {
       case 'VOICE_STATE_UPDATE':
         // User joined voice channel
         if (data.channel_id && !data.before?.channel_id) {
+          // Extract user info from the event
+          // Discord includes user object in VOICE_STATE_UPDATE
+          const username = data.user?.username || 'Unknown User'
+          const avatar = data.user?.avatar || null
+
           await hub.postEvent('voice.joined', {
             guildId: data.guild_id,
             channelId: data.channel_id,
             userId: data.user_id,
+            username,
+            avatar,
           })
         }
         // User left voice channel
