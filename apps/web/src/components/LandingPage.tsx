@@ -58,7 +58,6 @@ export function LandingPage({
     setJoinDialogOpen(true)
   }
 
-
   const handleJoin = () => {
     if (joinName.trim() && joinGameId.trim()) {
       onJoinGame(joinName.trim(), joinGameId.trim())

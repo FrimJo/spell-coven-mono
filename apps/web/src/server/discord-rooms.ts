@@ -52,9 +52,7 @@ const getSecrets = createServerOnlyFn(() => {
     throw new Error('DISCORD_BOT_TOKEN environment variable is not defined')
   }
   if (!guildId?.length) {
-    throw new Error(
-      'VITE_DISCORD_GUILD_ID environment variable is not defined',
-    )
+    throw new Error('VITE_DISCORD_GUILD_ID environment variable is not defined')
   }
 
   return { botToken, guildId }
@@ -517,8 +515,9 @@ export const connectUserToVoiceChannel = createServerFn({ method: 'POST' })
 
       return { success: true, member: response }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+
       // Discord returns "Target user is not connected to voice" if user isn't in any voice channel yet
       // This is expected - user will join Discord voice channel manually
       if (errorMessage.includes('not connected to voice')) {

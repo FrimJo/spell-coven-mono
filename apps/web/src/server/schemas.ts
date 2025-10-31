@@ -27,9 +27,7 @@ export const DiscordChannelSummarySchema = z.object({
   name: z.string().min(1).max(100),
   type: z.number().int(),
   parentId: SnowflakeSchema.nullable().optional(),
-  permissionOverwrites: z
-    .array(DiscordPermissionOverwriteSchema)
-    .optional(),
+  permissionOverwrites: z.array(DiscordPermissionOverwriteSchema).optional(),
   rtcRegion: z.string().nullable().optional(),
   userLimit: z.number().int().min(0).max(99).optional(),
 })
@@ -83,9 +81,7 @@ export const DiscordDeepLinkSchema = z
 // HTTP Request/Response Schemas
 // ============================================================================
 
-const UrlSchema = z
-  .string()
-  .url('Expected absolute URL')
+const UrlSchema = z.string().url('Expected absolute URL')
 
 export const RoomSummarySchema = z.object({
   guildId: SnowflakeSchema,
@@ -112,7 +108,12 @@ export const CreateRoomRequestSchema = z.object({
   parentId: SnowflakeSchema.optional(),
   userLimit: z.number().int().min(0).max(99).default(4),
   maxSeats: z.number().int().min(1).max(99).optional(),
-  tokenTtlSeconds: z.number().int().min(60).max(6 * 60 * 60).default(30 * 60),
+  tokenTtlSeconds: z
+    .number()
+    .int()
+    .min(60)
+    .max(6 * 60 * 60)
+    .default(30 * 60),
   shareUrlBase: UrlSchema,
   includeCreatorOverwrite: z.boolean().default(true),
 })

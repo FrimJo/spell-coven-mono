@@ -1,16 +1,16 @@
+import type { GatewayConfig } from '@repo/discord-gateway'
+import {
+  createDiscordGatewayEventHandler,
+  DiscordGatewayClient,
+  HubClient,
+} from '@repo/discord-gateway'
+
 /**
  * Discord Gateway Initialization
  *
  * Initializes the Discord Gateway client to listen for events and post them to the hub.
  * This runs once when the server starts.
  */
-
-import {
-  DiscordGatewayClient,
-  HubClient,
-  createDiscordGatewayEventHandler,
-  type GatewayConfig,
-} from '@repo/discord-gateway'
 
 let gatewayClient: DiscordGatewayClient | null = null
 let isInitialized = false
@@ -68,7 +68,9 @@ export async function initializeDiscordGateway(): Promise<void> {
     // Create and register event handler
     const eventHandler = createDiscordGatewayEventHandler(
       config,
-      hubClient as unknown as { postEvent: (event: string, payload: unknown) => Promise<void> },
+      hubClient as unknown as {
+        postEvent: (event: string, payload: unknown) => Promise<void>
+      },
     )
     gatewayClient.onEvent(eventHandler)
 

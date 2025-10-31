@@ -207,7 +207,10 @@ class VoiceChannelWebSocketManager {
           reason: event.reason,
           wasClean: event.wasClean,
         })
-        console.log('[VoiceChannelEvents] Listeners count:', this.listeners.size)
+        console.log(
+          '[VoiceChannelEvents] Listeners count:',
+          this.listeners.size,
+        )
         console.log('[VoiceChannelEvents] Stack trace:', new Error().stack)
         this.cleanupReconnectTimeout()
         this.ws = null
@@ -251,7 +254,6 @@ class VoiceChannelWebSocketManager {
       this.isConnecting = false
     }
   }
-
 
   isConnected(): boolean {
     return this.ws?.readyState === WebSocket.OPEN

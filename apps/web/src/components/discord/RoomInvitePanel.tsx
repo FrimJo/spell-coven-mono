@@ -1,3 +1,4 @@
+import type { CreatorInviteState } from '@/lib/session-storage'
 import { useCallback, useMemo, useState } from 'react'
 
 import { Badge } from '@repo/ui/components/badge'
@@ -13,8 +14,6 @@ import {
 import { InlineMessage } from '@repo/ui/components/inline-message'
 import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
-
-import type { CreatorInviteState } from '@/lib/session-storage'
 
 export interface RoomInvitePanelProps {
   invite: CreatorInviteState
@@ -120,11 +119,17 @@ export function RoomInvitePanel({
             </CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="bg-purple-500/20 text-purple-100">
+            <Badge
+              variant="secondary"
+              className="bg-purple-500/20 text-purple-100"
+            >
               {expiresInLabel}
             </Badge>
             {typeof invite.maxSeats === 'number' && (
-              <Badge variant="outline" className="border-purple-500/50 text-purple-100">
+              <Badge
+                variant="outline"
+                className="border-purple-500/50 text-purple-100"
+              >
                 Max seats: {invite.maxSeats}
               </Badge>
             )}

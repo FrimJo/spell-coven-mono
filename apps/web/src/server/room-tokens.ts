@@ -1,12 +1,8 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
-
 import { createServerOnlyFn } from '@tanstack/react-start'
 
-import {
-  RoomInviteClaimsSchema,
-  type RoomInviteClaims,
-  type RoomTokenErrorCode,
-} from './schemas'
+import type { RoomInviteClaims, RoomTokenErrorCode } from './schemas'
+import { RoomInviteClaimsSchema } from './schemas'
 
 type JwtPayload = Record<string, unknown>
 
@@ -71,7 +67,8 @@ export interface VerifyRoomInviteTokenOptions {
 }
 
 function base64UrlEncode(data: string | Uint8Array): string {
-  const buffer = typeof data === 'string' ? Buffer.from(data) : Buffer.from(data)
+  const buffer =
+    typeof data === 'string' ? Buffer.from(data) : Buffer.from(data)
   return buffer
     .toString('base64')
     .replace(/=/g, '')
@@ -113,17 +110,25 @@ function verifyHs256Token(
 ): { header: JwtHeader; payload: JwtPayload } {
   const parts = token.split('.')
   if (parts.length !== 3) {
-    throw new RoomTokenError('Invite token verification failed', 'TOKEN_INVALID')
+    throw new RoomTokenError(
+      'Invite token verification failed',
+      'TOKEN_INVALID',
+    )
   }
 
   const [encodedHeader, encodedPayload, encodedSignature] = parts
-  const header = JSON.parse(base64UrlDecode(encodedHeader).toString('utf-8')) as JwtHeader
+  const header = JSON.parse(
+    base64UrlDecode(encodedHeader).toString('utf-8'),
+  ) as JwtHeader
   const payload = JSON.parse(
     base64UrlDecode(encodedPayload).toString('utf-8'),
   ) as JwtPayload
 
   if (header.alg !== 'HS256') {
-    throw new RoomTokenError('Invite token verification failed', 'TOKEN_INVALID')
+    throw new RoomTokenError(
+      'Invite token verification failed',
+      'TOKEN_INVALID',
+    )
   }
 
   const expectedSignature = createHmac('sha256', toBuffer(secret))
@@ -135,7 +140,10 @@ function verifyHs256Token(
     expectedSignature.length !== actualSignature.length ||
     !timingSafeEqual(expectedSignature, actualSignature)
   ) {
-    throw new RoomTokenError('Invite token verification failed', 'TOKEN_INVALID')
+    throw new RoomTokenError(
+      'Invite token verification failed',
+      'TOKEN_INVALID',
+    )
   }
 
   return { header, payload }
@@ -165,11 +173,7 @@ export async function createRoomInviteToken(
     exp: expiresAt,
   }
 
-  const token = createJwtToken(
-    { alg: 'HS256', typ: 'JWT' },
-    claims,
-    secret,
-  )
+  const token = createJwtToken({ alg: 'HS256', typ: 'JWT' }, claims, secret)
 
   return { token, issuedAt, expiresAt, claims }
 }
@@ -191,7 +195,10 @@ export async function verifyRoomInviteToken(
     })
 
     if (claims.purpose !== expectedPurpose) {
-      throw new RoomTokenError('Invite token has unexpected purpose', 'TOKEN_INVALID')
+      throw new RoomTokenError(
+        'Invite token has unexpected purpose',
+        'TOKEN_INVALID',
+      )
     }
 
     const nowSeconds = Math.floor((options.now ?? Date.now()) / 1000)
@@ -220,7 +227,9 @@ export async function verifyRoomInviteToken(
     }
 
     throw new RoomTokenError(
-      error instanceof Error ? error.message : 'Invite token verification failed',
+      error instanceof Error
+        ? error.message
+        : 'Invite token verification failed',
       'TOKEN_INVALID',
     )
   }

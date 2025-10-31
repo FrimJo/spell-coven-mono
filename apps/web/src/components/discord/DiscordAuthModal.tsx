@@ -11,7 +11,11 @@ export interface DiscordAuthModalProps {
   returnUrl?: string
 }
 
-export function DiscordAuthModal({ isOpen, onClose, returnUrl }: DiscordAuthModalProps) {
+export function DiscordAuthModal({
+  isOpen,
+  onClose,
+  returnUrl,
+}: DiscordAuthModalProps) {
   const { login, isLoading, error } = useDiscordAuth()
 
   if (!isOpen) return null
