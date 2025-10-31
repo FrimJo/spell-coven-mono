@@ -17,7 +17,7 @@ import { HubClient } from './hub-client.js'
 function loadConfig(): GatewayConfig {
   const port = Number(process.env.PORT)
   const botToken = process.env.DISCORD_BOT_TOKEN
-  const primaryGuildId = process.env.PRIMARY_GUILD_ID || process.env.VITE_DISCORD_GUILD_ID
+  const primaryGuildId = process.env.VITE_DISCORD_GUILD_ID
   const hubEndpoint = process.env.HUB_ENDPOINT
   const hubSecret = process.env.HUB_SECRET
 
@@ -30,7 +30,7 @@ function loadConfig(): GatewayConfig {
   }
 
   if (!primaryGuildId) {
-    throw new Error('Missing required env var: PRIMARY_GUILD_ID or VITE_DISCORD_GUILD_ID')
+    throw new Error('Missing required env var: VITE_DISCORD_GUILD_ID')
   }
 
   if (!hubEndpoint) {
@@ -70,7 +70,7 @@ async function main() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   gateway.onEvent(async (event, data: any) => {
     console.log(`[Worker] Received Discord event: ${event}`)
-    console.log(`[Worker] Event data:`, JSON.stringify(data, null, 2))
+    // console.log(`[Worker] Event data:`, JSON.stringify(data, null, 2))
 
     // Filter to primary guild only
     if (data.guild_id && data.guild_id !== config.primaryGuildId) {

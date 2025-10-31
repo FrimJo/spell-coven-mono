@@ -112,7 +112,7 @@ export const Route = createFileRoute('/api/internal/events')({
           const { event: eventType, payload } = parseResult.data
 
           // Broadcast event to WebSocket clients
-          const guildId = process.env.VITE_DISCORD_GUILD_ID || process.env.PRIMARY_GUILD_ID!
+          const guildId = process.env.VITE_DISCORD_GUILD_ID!
           wsManager.broadcastToGuild(guildId, eventType, payload)
 
           console.log(`[Internal] Event broadcast: ${eventType}`)
