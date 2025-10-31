@@ -9,8 +9,8 @@ interface GameRoomLoaderProps {
   onLoadingComplete: () => void
 }
 
-// Number of loading steps (embeddings, clip-model, opencv, detector, game-room)
-const TOTAL_STEPS = 5
+// Number of loading steps (embeddings, clip-model, opencv, detector, voice-channel, game-room)
+const TOTAL_STEPS = 6
 
 export function GameRoomLoader({ onLoadingComplete }: GameRoomLoaderProps) {
   const [progress, setProgress] = useState(0)

@@ -1,12 +1,21 @@
+import type { VoiceLeftEvent } from '@/hooks/useVoiceChannelEvents'
 import type { DetectorType } from '@/lib/detectors'
+import type { LoadingEvent } from '@/lib/loading-events'
 import { useEffect, useState } from 'react'
 import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
+import { useAuth } from '@/hooks/useAuth'
+import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
+import { useVoiceChannelMembersFromEvents } from '@/hooks/useVoiceChannelMembersFromEvents'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
 import { loadOpenCV } from '@/lib/opencv-loader'
+import { generateWebSocketAuthToken } from '@/server/ws-auth'
+import { connectUserToVoiceChannel } from '@/server/discord-rooms'
+import { useQuery } from '@tanstack/react-query'
+import { useServerFn } from '@tanstack/react-start'
 import { ArrowLeft, Check, Copy, Settings, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -21,12 +30,15 @@ import {
 
 import { CardPreview } from './CardPreview'
 import { GameRoomLoader } from './GameRoomLoader'
+import { MediaSetupDialog } from './MediaSetupDialog'
 import { PlayerList } from './PlayerList'
 import { TurnTracker } from './TurnTracker'
 import { VideoStreamGrid } from './VideoStreamGrid'
+import { VoiceDropoutModal } from './VoiceDropoutModal'
 
 interface GameRoomProps {
   gameId: string
+  guildId: string
   playerName: string
   onLeaveGame: () => void
   isLobbyOwner?: boolean
@@ -43,6 +55,7 @@ interface Player {
 
 function GameRoomContent({
   gameId,
+  guildId,
   playerName,
   onLeaveGame,
   isLobbyOwner = true,
@@ -51,18 +64,144 @@ function GameRoomContent({
 }: GameRoomProps) {
   const { query } = useCardQueryContext()
   const [copied, setCopied] = useState(false)
-  const [players, setPlayers] = useState<Player[]>([
-    { id: '1', name: playerName, life: 20, isActive: true },
-    { id: '2', name: 'Alex', life: 20, isActive: false },
-    { id: '3', name: 'Jordan', life: 20, isActive: false },
-    { id: '4', name: 'Sam', life: 20, isActive: false },
-  ])
+  const [players, setPlayers] = useState<Player[]>([])
 
   const [isLoading, setIsLoading] = useState(true)
+  // HOOK: Dialog open state
+  const [mediaDialogOpen, setMediaDialogOpen] = useState<boolean>(true)
+
+  // Voice dropout modal state
+  const [voiceDropoutOpen, setVoiceDropoutOpen] = useState(false)
 
   const handleLoadingComplete = () => {
     setIsLoading(false)
   }
+
+  // Listen to loading events and complete when voice-channel step reaches 95%
+  useEffect(() => {
+    const handleLoadingEvent = (event: LoadingEvent) => {
+      if (event.step === 'voice-channel' && event.progress >= 95) {
+        handleLoadingComplete()
+      }
+    }
+
+    const unsubscribe = loadingEvents.subscribe(handleLoadingEvent)
+    return unsubscribe
+  }, [])
+
+  const auth = useAuth()
+
+  const generateWsTokenFn = useServerFn(generateWebSocketAuthToken)
+
+  // Generate WebSocket auth token using useQuery (not suspense - we handle loading separately)
+  const { data: wsTokenData } = useQuery({
+    queryKey: ['ws-auth-token', auth.userId],
+    queryFn: async () => {
+      return generateWsTokenFn({ data: { userId: auth.userId } })
+    },
+    staleTime: 50 * 60 * 1000, // 50 minutes (token expires in 1 hour)
+  })
+
+  // Fetch voice channel members via real-time events
+  // Only enabled when both userId and wsAuthToken are available
+  const { members: voiceChannelMembers } = useVoiceChannelMembersFromEvents({
+    gameId,
+    userId: auth.userId,
+    jwtToken: wsTokenData?.token,
+    enabled: !!wsTokenData?.token,
+  })
+
+  useEffect(() => {
+    if (voiceChannelMembers.length > 0) {
+      // Convert voice channel members to player objects with life tracking
+      const updatedPlayers = voiceChannelMembers.map((member, index) => ({
+        id: member.id,
+        name: member.username,
+        life: 20, // Default life total
+        isActive: index === 0, // First member is active
+      }))
+      setPlayers(updatedPlayers)
+    }
+  }, [voiceChannelMembers])
+
+  // Connect user to voice channel (required for loading to complete)
+  const connectToVoiceChannelFn = useServerFn(connectUserToVoiceChannel)
+
+  useEffect(() => {
+    if (!auth?.userId) return
+
+    const connectToVoiceChannel = async () => {
+      try {
+        console.log('[GameRoom] Connecting to voice channel...')
+        loadingEvents.emit({
+          step: 'voice-channel',
+          progress: 88,
+          message: 'Connecting to voice channel...',
+        })
+
+        if (!guildId) {
+          console.error('[GameRoom] Guild ID not configured')
+          loadingEvents.emit({
+            step: 'voice-channel',
+            progress: 95,
+            message: 'Voice channel ready',
+          })
+          return
+        }
+
+        const result = await connectToVoiceChannelFn({
+          data: {
+            guildId,
+            channelId: gameId,
+            userId: auth.userId,
+          },
+        })
+
+        if (result.success) {
+          console.log('[GameRoom] Successfully connected to voice channel')
+        } else {
+          console.error('[GameRoom] Failed to connect to voice channel:', result.error)
+          toast.error('Failed to connect to voice channel: ' + result.error)
+        }
+
+        loadingEvents.emit({
+          step: 'voice-channel',
+          progress: 95,
+          message: 'Voice channel ready',
+        })
+      } catch (error) {
+        console.error('[GameRoom] Error connecting to voice channel:', error)
+        toast.error('Error connecting to voice channel')
+        loadingEvents.emit({
+          step: 'voice-channel',
+          progress: 95,
+          message: 'Voice channel ready',
+        })
+      }
+    }
+
+    connectToVoiceChannel()
+  }, [auth?.userId, gameId, guildId, connectToVoiceChannelFn])
+
+  // Listen for voice channel events (for dropout detection)
+  // Only enabled when wsAuthToken is available
+  useVoiceChannelEvents({
+    userId: auth.userId,
+    jwtToken: wsTokenData?.token,
+    onVoiceLeft: wsTokenData?.token
+      ? (event: VoiceLeftEvent) => {
+          console.log('[GameRoom] User left voice channel:', event)
+          setVoiceDropoutOpen(true)
+          toast.warning('You have been removed from the voice channel')
+        }
+      : undefined,
+    onError: wsTokenData?.token
+      ? (error: Error) => {
+          console.error('[GameRoom] Voice channel event error:', error)
+          // Don't show error toast for connection issues - they're expected
+        }
+      : undefined,
+  })
 
   // Initialize CLIP model and embeddings on mount
   useEffect(() => {
@@ -78,7 +217,7 @@ function GameRoomContent({
           return
         }
 
-        // Step 1: Load embeddings (0-20%)
+        // Step 1: Load embeddings (0-16.67%)
         console.log('[GameRoom] Step 1: Loading embeddings...')
         loadingEvents.emit({
           step: 'embeddings',
@@ -93,14 +232,14 @@ function GameRoomContent({
 
         loadingEvents.emit({
           step: 'embeddings',
-          progress: 20,
+          progress: 16.67,
           message: 'Card embeddings loaded',
         })
 
-        // Step 2: Load CLIP model (20-40%)
+        // Step 2: Load CLIP model (16.67-33.33%)
         loadingEvents.emit({
           step: 'clip-model',
-          progress: 25,
+          progress: 20,
           message: 'Downloading CLIP model...',
         })
 
@@ -110,17 +249,17 @@ function GameRoomContent({
               console.log('[GameRoom] CLIP model loading:', msg)
               // Parse progress from message (e.g., "progress onnx/model.onnx 45.5%")
               const percentMatch = msg.match(/(\d+(?:\.\d+)?)\s*%/)
-              let progress = 25 // Default start
+              let progress = 20 // Default start
 
               if (percentMatch) {
                 const downloadPercent = parseFloat(percentMatch[1])
-                // Map download progress (0-100%) to loading range (25-40%)
-                progress = 25 + (downloadPercent / 100) * 15
+                // Map download progress (0-100%) to loading range (20-33.33%)
+                progress = 20 + (downloadPercent / 100) * 13.33
               }
 
               loadingEvents.emit({
                 step: 'clip-model',
-                progress: Math.min(progress, 40),
+                progress: Math.min(progress, 33.33),
                 message: msg,
               })
             }
@@ -132,21 +271,29 @@ function GameRoomContent({
         console.log('[GameRoom] CLIP model loaded successfully')
         loadingEvents.emit({
           step: 'clip-model',
-          progress: 40,
+          progress: 33.33,
           message: 'CLIP model ready',
         })
 
         if (!mounted) return
 
-        // Step 3: Load OpenCV (40-60%)
+        // Step 3: Load OpenCV (33.33-50%)
         loadingEvents.emit({
           step: 'opencv',
-          progress: 45,
+          progress: 38,
           message: 'Loading OpenCV.js...',
         })
 
         try {
-          await loadOpenCV()
+          // Add timeout to prevent hanging
+          const openCVPromise = loadOpenCV()
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error('OpenCV loading timeout')),
+              30000,
+            ),
+          )
+          await Promise.race([openCVPromise, timeoutPromise])
           console.log(
             '[GameRoom] OpenCV loaded successfully during initialization',
           )
@@ -162,14 +309,15 @@ function GameRoomContent({
 
         loadingEvents.emit({
           step: 'opencv',
-          progress: 60,
+          progress: 50,
           message: 'OpenCV.js ready',
         })
 
         if (!mounted) return
 
         // Note: Detector initialization happens in VideoStreamGrid/useWebcam
-        // It will emit its own loading events (60-100%) when it initializes
+        // It will emit its own loading events (50-83.33%) when it initializes
+        // Voice channel validation happens in a separate effect after auth is available
       } catch (err) {
         console.error('[GameRoom] Model initialization error:', err)
         console.error('[GameRoom] Error details:', {
@@ -188,6 +336,11 @@ function GameRoomContent({
       mounted = false
     }
   }, [])
+
+  // Show dialog until user completes media setup
+  const handleDialogComplete = () => {
+    setMediaDialogOpen(false)
+  }
 
   const handleCopyGameId = () => {
     navigator.clipboard.writeText(gameId)
@@ -220,6 +373,19 @@ function GameRoomContent({
 
   return (
     <div className="flex h-screen flex-col bg-slate-950">
+      {/* Media Setup Dialog - modal */}
+      <MediaSetupDialog
+        open={mediaDialogOpen}
+        onComplete={handleDialogComplete}
+      />
+
+      {/* Voice Dropout Modal */}
+      <VoiceDropoutModal
+        open={voiceDropoutOpen}
+        onRejoin={() => setVoiceDropoutOpen(false)}
+        onLeaveGame={onLeaveGame}
+      />
+
       <Toaster />
 
       {/* Header */}
@@ -304,6 +470,7 @@ function GameRoomContent({
               isLobbyOwner={isLobbyOwner}
               localPlayerName={playerName}
               onRemovePlayer={handleRemovePlayer}
+              ownerId={auth?.userId}
             />
             <CardPreview playerName={playerName} onClose={() => {}} />
           </div>
