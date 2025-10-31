@@ -6,8 +6,12 @@
  */
 
 export { DiscordGatewayClient } from './gateway.ts'
-export { HubClient } from './hub-client.ts'
-export type { GatewayConfig } from './types.ts'
+export {
+  generateHmacSignature,
+  verifyHmacSignature,
+  getCurrentTimestamp,
+} from './hmac.ts'
+export type { GatewayConfig, InternalEvent } from './types.ts'
 
 /**
  * Create Discord Gateway event handler

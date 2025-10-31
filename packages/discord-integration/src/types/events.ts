@@ -1,3 +1,8 @@
+/**
+ * Internal event types for real-time event streaming
+ * These events are emitted by the Discord Gateway and broadcast to connected clients
+ */
+
 const DISCORD_ID_REGEX = /^\d+$/
 
 export type DiscordSnowflake = string
@@ -131,34 +136,4 @@ export function isInternalEvent(value: unknown): value is InternalEvent {
   }
 
   return false
-}
-
-export interface VoiceChannel {
-  id: string
-  name: string
-  type: number
-  guild_id: string
-  parent_id?: string
-  user_limit?: number
-}
-
-export interface GatewayConfig {
-  port: number
-  botToken: string
-  primaryGuildId: string
-  hubEndpoint: string
-  hubSecret: string
-}
-
-export type ConnectionState =
-  | 'DISCONNECTED'
-  | 'CONNECTING'
-  | 'IDENTIFYING'
-  | 'CONNECTED'
-  | 'RECONNECTING'
-
-export interface GatewaySession {
-  sessionId: string | null
-  sequenceNumber: number | null
-  resumeUrl: string | null
 }
