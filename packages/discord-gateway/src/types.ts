@@ -2,7 +2,11 @@ const DISCORD_ID_REGEX = /^\d+$/
 
 type DiscordSnowflake = string
 
-type VoiceEventName = 'room.created' | 'room.deleted' | 'voice.joined' | 'voice.left'
+type VoiceEventName =
+  | 'room.created'
+  | 'room.deleted'
+  | 'voice.joined'
+  | 'voice.left'
 
 type BaseEventPayload = {
   guildId: DiscordSnowflake
@@ -93,7 +97,9 @@ export function isMessageEnvelope(value: unknown): value is MessageEnvelope {
 
   return (
     envelope.v === 1 &&
-    (envelope.type === 'event' || envelope.type === 'ack' || envelope.type === 'error') &&
+    (envelope.type === 'event' ||
+      envelope.type === 'ack' ||
+      envelope.type === 'error') &&
     (envelope.event === undefined || typeof envelope.event === 'string') &&
     typeof envelope.ts === 'number'
   )
@@ -126,7 +132,8 @@ export function isInternalEvent(value: unknown): value is InternalEvent {
         isDiscordSnowflake(payload.channelId) &&
         typeof payload.name === 'string' &&
         isDiscordSnowflake(payload.guildId) &&
-        (payload.parentId === undefined || isDiscordSnowflake(payload.parentId)) &&
+        (payload.parentId === undefined ||
+          isDiscordSnowflake(payload.parentId)) &&
         typeof payload.userLimit === 'number'
       )
 

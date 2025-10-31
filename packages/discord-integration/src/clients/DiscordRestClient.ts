@@ -29,8 +29,8 @@ import {
   CreateVoiceChannelRequestSchema,
   DiscordErrorResponseSchema,
   GuildChannelListResponseSchema,
-  GuildRoleListResponseSchema,
   GuildMemberSchema,
+  GuildRoleListResponseSchema,
   MessageResponseSchema,
   RateLimitResponseSchema,
   RoleSchema,
@@ -95,13 +95,13 @@ export class DiscordRestClient {
       `/guilds/${guildId}/members/${userId}`,
       request,
     )
-    
+
     // 204 No Content means user was already in guild (returns null)
     // 201 Created means user was added (returns GuildMember)
     if (response === null) {
       return undefined
     }
-    
+
     return GuildMemberSchema.parse(response)
   }
 
@@ -359,7 +359,7 @@ export class DiscordRestClient {
       'GET',
       `/guilds/${guildId}/roles`,
     )
-    return response;
+    return response
   }
 
   // ============================================================================

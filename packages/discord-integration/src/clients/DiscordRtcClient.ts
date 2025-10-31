@@ -43,24 +43,24 @@ const DEFAULT_VIDEO_CONFIG: VideoStreamConfig = {
 export class DiscordRtcClient {
   private config: DiscordRtcClientConfig
   private connectionState: RtcConnectionState = 'disconnected'
-  
+
   // WebSocket connection to Discord Voice Gateway
   private ws: WebSocket | null = null
   private heartbeatInterval: number | null = null
-  
+
   // WebRTC peer connection
   private peerConnection: RTCPeerConnection | null = null
-  
+
   // Media streams
   private localAudioStream: MediaStream | null = null
   private localVideoStream: MediaStream | null = null
   private remoteStreams: Map<string, MediaStream> = new Map()
-  
+
   // Voice state
   private ssrc: number | null = null
   private _secretKey: Uint8Array | null = null
   private encryptionMode: EncryptionMode = 'xsalsa20_poly1305'
-  
+
   // Audio/Video configuration
   private _audioConfig: AudioStreamConfig
   private videoConfig: VideoStreamConfig
@@ -69,7 +69,7 @@ export class DiscordRtcClient {
     this.config = config
     this._audioConfig = { ...DEFAULT_AUDIO_CONFIG, ...config.audioConfig }
     this.videoConfig = { ...DEFAULT_VIDEO_CONFIG, ...config.videoConfig }
-    
+
     if (config.encryptionMode) {
       this.encryptionMode = config.encryptionMode
     }
@@ -92,10 +92,10 @@ export class DiscordRtcClient {
     try {
       // Connect to Discord Voice Gateway WebSocket
       await this.connectVoiceGateway()
-      
+
       // Initialize WebRTC peer connection
       this.initializePeerConnection()
-      
+
       this.setConnectionState('connected')
     } catch (error) {
       this.setConnectionState('failed')
@@ -152,7 +152,7 @@ export class DiscordRtcClient {
       // Configure video encoding parameters
       const sender = this.peerConnection.addTrack(track, stream)
       const parameters = sender.getParameters()
-      
+
       if (parameters.encodings && parameters.encodings.length > 0) {
         const encoding = parameters.encodings[0]
         if (encoding) {
@@ -176,7 +176,7 @@ export class DiscordRtcClient {
       this.localAudioStream.getTracks().forEach((track) => track.stop())
       this.localAudioStream = null
     }
-    
+
     this.setSpeaking(SpeakingFlags.Microphone, false)
   }
 
@@ -309,7 +309,7 @@ export class DiscordRtcClient {
 
   private handleHello(data: VoiceHelloPayload): void {
     console.log('[DiscordRtcClient] Received HELLO, starting heartbeat')
-    
+
     // Start heartbeat
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval)
@@ -329,7 +329,7 @@ export class DiscordRtcClient {
 
   private handleReady(data: VoiceReadyPayload, resolve: () => void): void {
     console.log('[DiscordRtcClient] Received READY')
-    
+
     this.ssrc = data.ssrc
 
     // Select protocol (UDP)
@@ -352,14 +352,12 @@ export class DiscordRtcClient {
     resolve()
   }
 
-  private handleSessionDescription(
-    data: VoiceSessionDescriptionPayload,
-  ): void {
+  private handleSessionDescription(data: VoiceSessionDescriptionPayload): void {
     console.log('[DiscordRtcClient] Received SESSION_DESCRIPTION')
-    
+
     // Store encryption key
     this._secretKey = new Uint8Array(data.secret_key)
-    
+
     console.log('[DiscordRtcClient] Voice connection established')
   }
 
@@ -374,15 +372,18 @@ export class DiscordRtcClient {
 
   private handleClientDisconnect(data: { user_id: string }): void {
     console.log(`[DiscordRtcClient] User ${data.user_id} disconnected`)
-    
+
     this.remoteStreams.delete(data.user_id)
-    
+
     if (this.config.onUserLeft) {
       this.config.onUserLeft(data.user_id)
     }
   }
 
-  private async setSpeaking(flags: SpeakingFlags, speaking: boolean): Promise<void> {
+  private async setSpeaking(
+    flags: SpeakingFlags,
+    speaking: boolean,
+  ): Promise<void> {
     if (!this.ws || !this.ssrc) return
 
     this.ws.send(
@@ -413,19 +414,19 @@ export class DiscordRtcClient {
     // Handle incoming tracks (audio/video from other users)
     this.peerConnection.ontrack = (event) => {
       console.log('[DiscordRtcClient] Received remote track:', event.track.kind)
-      
+
       const stream = event.streams[0]
       if (stream) {
         // Store remote stream
         // Note: In a real implementation, you'd need to map this to a Discord user ID
         // This would come from the SSRC in the RTP packets
         this.remoteStreams.set('remote-user', stream)
-        
+
         if (event.track.kind === 'audio' && this.config.onAudioReceived) {
           // Handle audio data
           // Note: Actual audio data extraction would require MediaRecorder or AudioWorklet
         }
-        
+
         if (event.track.kind === 'video' && this.config.onVideoReceived) {
           // Handle video frames
           // Note: Actual video frame extraction would require canvas or VideoFrame API
@@ -440,7 +441,7 @@ export class DiscordRtcClient {
           '[DiscordRtcClient] ICE connection state:',
           this.peerConnection.iceConnectionState,
         )
-        
+
         if (this.peerConnection.iceConnectionState === 'failed') {
           this.setConnectionState('failed')
         } else if (this.peerConnection.iceConnectionState === 'disconnected') {
@@ -487,10 +488,9 @@ export class DiscordRtcClient {
 
   private setConnectionState(state: RtcConnectionState): void {
     this.connectionState = state
-    
+
     if (this.config.onConnectionStateChange) {
       this.config.onConnectionStateChange(state)
     }
   }
 }
-

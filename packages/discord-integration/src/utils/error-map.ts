@@ -32,7 +32,9 @@ const ERROR_CODE_MAP: Record<number, DiscordDomainErrorCode> = {
 
 function isDiscordRestError(
   error: unknown,
-): error is DiscordRestError | { code?: number; status?: number; message?: string } {
+): error is
+  | DiscordRestError
+  | { code?: number; status?: number; message?: string } {
   if (!error || typeof error !== 'object') {
     return false
   }

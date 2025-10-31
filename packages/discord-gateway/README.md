@@ -38,7 +38,11 @@ The gateway is automatically initialized when the TanStack Start server starts. 
 ### Manual Initialization
 
 ```typescript
-import { DiscordGatewayClient, HubClient, createDiscordGatewayEventHandler } from '@repo/discord-gateway'
+import {
+  createDiscordGatewayEventHandler,
+  DiscordGatewayClient,
+  HubClient,
+} from '@repo/discord-gateway'
 
 const config = {
   botToken: process.env.DISCORD_BOT_TOKEN,
@@ -60,11 +64,11 @@ await gateway.connect()
 
 Environment variables are loaded from the root `.env.development` and `.env.development.local` files:
 
-| Variable                | Required | Description                                   |
-| ----------------------- | -------- | --------------------------------------------- |
-| `DISCORD_BOT_TOKEN`     | Yes      | Discord bot token from Developer Portal       |
-| `VITE_DISCORD_GUILD_ID` | Yes      | Discord guild (server) ID to monitor          |
-| `HUB_SECRET`            | Yes      | Shared secret for HMAC signature verification |
+| Variable                | Required | Description                                                |
+| ----------------------- | -------- | ---------------------------------------------------------- |
+| `DISCORD_BOT_TOKEN`     | Yes      | Discord bot token from Developer Portal                    |
+| `VITE_DISCORD_GUILD_ID` | Yes      | Discord guild (server) ID to monitor                       |
+| `HUB_SECRET`            | Yes      | Shared secret for HMAC signature verification              |
 | `VITE_BASE_URL`         | No       | Base URL for hub endpoint (default: http://localhost:1234) |
 
 **Example `.env.development.local`**:
@@ -86,6 +90,7 @@ bun run dev
 ```
 
 Check the logs for:
+
 ```
 [Gateway Init] Discord Gateway initialized successfully
 ```
@@ -95,6 +100,7 @@ Check the logs for:
 The gateway processes and forwards these Discord events:
 
 ### `room.created`
+
 Sent when a voice channel is created in the guild.
 
 ```typescript
@@ -108,6 +114,7 @@ Sent when a voice channel is created in the guild.
 ```
 
 ### `room.deleted`
+
 Sent when a voice channel is deleted from the guild.
 
 ```typescript
@@ -118,6 +125,7 @@ Sent when a voice channel is deleted from the guild.
 ```
 
 ### `voice.joined`
+
 Sent when a user joins a voice channel.
 
 ```typescript
@@ -131,6 +139,7 @@ Sent when a user joins a voice channel.
 ```
 
 ### `voice.left`
+
 Sent when a user leaves a voice channel.
 
 ```typescript
