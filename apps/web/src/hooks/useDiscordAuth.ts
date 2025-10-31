@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { DiscordToken } from '@repo/discord-integration/types'
+import { useMutation } from '@tanstack/react-query'
+import { useServerFn } from '@tanstack/react-start'
 
 import { TOKEN_REFRESH_BUFFER_MS } from '../config/discord'
 import {
@@ -9,6 +11,7 @@ import {
   getDiscordClient,
   refreshDiscordToken,
 } from '../lib/discord-client'
+import { revokeDiscordToken } from '../server/discord-auth'
 
 /**
  * Discord Authentication Hook
@@ -26,7 +29,7 @@ export interface UseDiscordAuthReturn {
   isAuthenticated: boolean
   isLoading: boolean
   error: Error | null
-  login: () => Promise<void>
+  login: (returnUrl?: string) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -35,6 +38,67 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const refreshTimerRef = useRef<number | null>(null)
+  
+  // Server function for token revocation
+  const revokeTokenFn = useServerFn(revokeDiscordToken)
+  
+  // Mutation for token revocation
+  const revokeTokenMutation = useMutation({
+    mutationFn: revokeTokenFn,
+    onError: (err) => {
+      console.warn('Token revocation failed:', err)
+      // Continue with logout - token will expire naturally
+    },
+  })
+
+  // Mutation for login
+  const loginMutation = useMutation({
+    mutationFn: async (returnUrl?: string) => {
+      const client = getDiscordClient()
+      // Generate PKCE and store it (client handles storage)
+      const codeChallenge = await client.generateAndStorePKCE()
+
+      // Encode returnUrl as state parameter for OAuth2 flow
+      const state = returnUrl ? btoa(returnUrl) : undefined
+
+      // Redirect to Discord OAuth with state parameter
+      const authUrl = client.getAuthUrl(codeChallenge, state)
+      window.location.href = authUrl
+    },
+    onError: (err) => {
+      console.error('Login failed:', err)
+    },
+  })
+
+  // Mutation for logout
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      if (token) {
+        // Revoke token via server function mutation
+        // This safely uses client_secret stored on the server
+        await revokeTokenMutation.mutateAsync({
+          data: {
+            token: token.accessToken,
+            token_type_hint: 'access_token',
+          },
+        })
+      }
+    },
+    onSuccess: () => {
+      // Clear local state
+      setToken(null)
+      clearStoredDiscordToken()
+      getDiscordClient().clearStoredPKCE()
+      setError(null)
+    },
+    onError: (err) => {
+      console.error('Logout failed:', err)
+      // Still clear local state even if revocation fails
+      setToken(null)
+      clearStoredDiscordToken()
+      setError(err as Error)
+    },
+  })
 
   // Silent token refresh
   const refreshTokenSilently = useCallback(async (refreshToken: string) => {
@@ -114,60 +178,29 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
   }, [token, refreshTokenSilently])
 
   // Login: Generate PKCE and redirect to Discord
-  const login = useCallback(async () => {
-    try {
-      setIsLoading(true)
+  const login = useCallback(
+    async (returnUrl?: string) => {
       setError(null)
-
-      const client = getDiscordClient()
-      // Generate PKCE and store it (client handles storage)
-      const codeChallenge = await client.generateAndStorePKCE()
-
-      // Redirect to Discord OAuth
-      const authUrl = client.getAuthUrl(codeChallenge)
-      window.location.href = authUrl
-    } catch (err) {
-      console.error('Login failed:', err)
-      setError(err as Error)
-      setIsLoading(false)
-    }
-  }, [])
+      await loginMutation.mutateAsync(returnUrl)
+    },
+    [loginMutation],
+  )
 
   // Logout: Revoke token and clear storage
   const logout = useCallback(async () => {
-    try {
-      setIsLoading(true)
-
-      if (token) {
-        // Revoke token on Discord's side
-        await getDiscordClient().revokeToken(token.accessToken)
-      }
-
-      // Clear local state
-      setToken(null)
-      clearStoredDiscordToken()
-      getDiscordClient().clearStoredPKCE()
-      setError(null)
-    } catch (err) {
-      console.error('Logout failed:', err)
-      // Still clear local state even if revocation fails
-      setToken(null)
-      clearStoredDiscordToken()
-      setError(err as Error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [token])
+    setError(null)
+    await logoutMutation.mutateAsync()
+  }, [logoutMutation])
 
   return useMemo(
     () => ({
       token,
       isAuthenticated: !!token,
-      isLoading,
-      error,
+      isLoading: isLoading || loginMutation.isPending || logoutMutation.isPending,
+      error: error || loginMutation.error || logoutMutation.error,
       login,
       logout,
     }),
-    [error, isLoading, login, logout, token],
+    [error, isLoading, login, logout, token, loginMutation.isPending, loginMutation.error, logoutMutation.isPending, logoutMutation.error],
   )
 }
