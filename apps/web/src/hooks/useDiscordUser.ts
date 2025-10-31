@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { DiscordUser } from '@repo/discord-integration/types'
 
@@ -22,6 +22,7 @@ export function useDiscordUser(): UseDiscordUserReturn {
   const [user, setUser] = useState<DiscordUser | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
+  const hasFetchedRef = useRef(false)
 
   const fetchUser = useCallback(async () => {
     if (!token) return
@@ -42,12 +43,14 @@ export function useDiscordUser(): UseDiscordUserReturn {
 
   // Fetch user when authenticated
   useEffect(() => {
-    if (isAuthenticated && !user) {
+    if (isAuthenticated && !hasFetchedRef.current) {
+      hasFetchedRef.current = true
       fetchUser()
     } else if (!isAuthenticated) {
+      hasFetchedRef.current = false
       setUser(null)
     }
-  }, [isAuthenticated, user, fetchUser])
+  }, [isAuthenticated, fetchUser])
 
   return {
     user,

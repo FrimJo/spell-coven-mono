@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws'
 import { createFileRoute } from '@tanstack/react-router'
 
-import { verifyJWT } from '../../server/jwt'
+import { verifyWebSocketAuthToken } from '../../server/ws-token-crypto'
 import { WSAuthMessageSchema } from '../../server/schemas'
 import { wsManager } from '../../server/ws-manager'
 
@@ -48,28 +48,32 @@ export const Route = createFileRoute('/api/ws')({
  * In a real TanStack Start setup, this would be integrated with the server's upgrade handler.
  */
 export function handleWebSocketConnection(ws: WebSocket): void {
-  console.log('[WS] New WebSocket connection')
+  console.log('[WS] New WebSocket connection established')
+  console.log('[WS] WebSocket ready state:', ws.readyState)
 
   let authenticated = false
   let userId: string | null = null
   let guildId: string | null = null
 
-  // Set up authentication timeout (30 seconds)
+  // Set up authentication timeout (60 seconds - give client time to send auth)
   const authTimeout = setTimeout(() => {
     if (!authenticated) {
-      console.warn('[WS] Authentication timeout')
+      console.warn('[WS] Authentication timeout - closing connection')
       ws.close(4401, 'Authentication timeout')
     }
-  }, 30000)
+  }, 60000)
 
   // Handle messages
-  ws.on('message', async (data) => {
+  ws.on('message', (data) => {
     try {
       const raw = typeof data === 'string' ? data : data.toString()
       const message = JSON.parse(raw)
 
+      console.log('[WS] Received message:', message.type)
+
       // Handle authentication
       if (!authenticated) {
+        console.log('[WS] Attempting authentication with message type:', message.type)
         const parseResult = WSAuthMessageSchema.safeParse(message)
 
         if (!parseResult.success) {
@@ -89,16 +93,10 @@ export function handleWebSocketConnection(ws: WebSocket): void {
         }
 
         // Verify JWT
-        const jwtConfig = {
-          issuer: process.env.JWT_ISSUER!,
-          audience: process.env.JWT_AUDIENCE!,
-          jwksUrl: process.env.JWT_PUBLIC_JWK_URL!,
-        }
-
         try {
-          const claims = await verifyJWT(parseResult.data.token, jwtConfig)
+          const claims = verifyWebSocketAuthToken(parseResult.data.token)
           userId = claims.sub
-          guildId = process.env.PRIMARY_GUILD_ID!
+          guildId = process.env.VITE_DISCORD_GUILD_ID || process.env.PRIMARY_GUILD_ID!
           authenticated = true
 
           clearTimeout(authTimeout)
@@ -107,15 +105,14 @@ export function handleWebSocketConnection(ws: WebSocket): void {
           wsManager.register(ws, userId, guildId)
 
           // Send ACK
-          ws.send(
-            JSON.stringify({
-              v: 1,
-              type: 'ack',
-              event: 'auth.ok',
-              guildId,
-              ts: Date.now(),
-            }),
-          )
+          const ackMessage = {
+            v: 1,
+            type: 'ack',
+            event: 'auth.ok',
+            guildId,
+            ts: Date.now(),
+          }
+          ws.send(JSON.stringify(ackMessage))
 
           console.log(`[WS] Client authenticated: ${userId}`)
         } catch (error) {
