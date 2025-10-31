@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { Badge } from '@repo/ui/components/badge'
 import { Button } from '@repo/ui/components/button'
@@ -50,15 +50,6 @@ export function RoomInvitePanel({
   isRefreshingInvite,
 }: RoomInvitePanelProps) {
   const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle')
-  const resetTimer = useRef<number | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (resetTimer.current) {
-        window.clearTimeout(resetTimer.current)
-      }
-    }
-  }, [])
 
   const expiresInLabel = useMemo(
     () => formatExpiry(invite.expiresAt),
@@ -89,14 +80,12 @@ export function RoomInvitePanel({
     } catch (error) {
       console.error('Failed to copy invite link', error)
       setCopyStatus('error')
+    } finally {
+      // Always reset copy status after 2500ms
+      setTimeout(() => {
+        setCopyStatus('idle')
+      }, 2500)
     }
-
-    if (resetTimer.current) {
-      window.clearTimeout(resetTimer.current)
-    }
-    resetTimer.current = window.setTimeout(() => {
-      setCopyStatus('idle')
-    }, 2500)
   }, [invite.shareUrl])
 
   const copyMessage = useMemo(() => {
