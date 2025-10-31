@@ -9,22 +9,21 @@ import { buildRoomPermissionOverwrites } from '@repo/discord-integration/utils'
 import type {
   CreateRoomRequest,
   CreateRoomResponse,
+  JoinRoomRequest,
+  JoinRoomResponse,
   RefreshRoomInviteRequest,
   RefreshRoomInviteResponse,
   RoomSummary,
 } from './schemas'
-import { createRoomInviteToken } from './room-tokens'
-import { verifyRoomInviteToken } from './room-tokens'
+import { createRoomInviteToken, verifyRoomInviteToken } from './room-tokens'
 import {
   CreateRoomRequestSchema,
   CreateRoomResponseSchema,
   DeleteRoomResponseSchema,
-  RefreshRoomInviteRequestSchema,
-  RefreshRoomInviteResponseSchema,
   JoinRoomRequestSchema,
   JoinRoomResponseSchema,
-  type JoinRoomRequest,
-  type JoinRoomResponse,
+  RefreshRoomInviteRequestSchema,
+  RefreshRoomInviteResponseSchema,
 } from './schemas'
 
 interface RoomCheckResult {
@@ -47,13 +46,15 @@ const DISCORD_DEEP_LINK_BASE = 'https://discord.com/channels'
 
 const getSecrets = createServerOnlyFn(() => {
   const botToken = process.env.DISCORD_BOT_TOKEN
-  const guildId = process.env.VITE_DISCORD_GUILD_ID || process.env.PRIMARY_GUILD_ID
+  const guildId = process.env.VITE_DISCORD_GUILD_ID
 
   if (!botToken?.length) {
     throw new Error('DISCORD_BOT_TOKEN environment variable is not defined')
   }
   if (!guildId?.length) {
-    throw new Error('VITE_DISCORD_GUILD_ID or PRIMARY_GUILD_ID environment variable is not defined')
+    throw new Error(
+      'VITE_DISCORD_GUILD_ID environment variable is not defined',
+    )
   }
 
   return { botToken, guildId }
@@ -172,7 +173,11 @@ export const ensureUserInGuild = createServerFn({ method: 'POST' })
       // First, verify the bot can access the guild
       try {
         const channels = await client.getChannels(guildId)
-        console.log('[DEBUG] Bot can access guild, found', channels.length, 'channels')
+        console.log(
+          '[DEBUG] Bot can access guild, found',
+          channels.length,
+          'channels',
+        )
       } catch (guildError) {
         console.error('[DEBUG] Bot cannot access guild:', guildError)
         throw guildError
@@ -181,13 +186,13 @@ export const ensureUserInGuild = createServerFn({ method: 'POST' })
       const member = await client.ensureUserInGuild(guildId, userId, {
         access_token: accessToken,
       })
-      
+
       if (member) {
         console.log('[DEBUG] User was added to guild')
       } else {
         console.log('[DEBUG] User was already in guild')
       }
-      
+
       return { inGuild: true }
     } catch (error) {
       console.error('[Discord] Error in ensureUserInGuild:', error)
@@ -249,19 +254,27 @@ export const createRoom = createServerFn({ method: 'POST' })
     // Fetch the bot's guild member and roles
     const guildMember = await client.getGuildMember(guildId, botUserId)
     const botRoles = guildMember.roles
-    const allRoles = await client.getGuildRoles(guildId);
-    let basePermissions = 0n;
+    const allRoles = await client.getGuildRoles(guildId)
+    let basePermissions = 0n
     for (const roleId of botRoles) {
-      const role = allRoles.find((r: { id: string }) => r.id === roleId);
+      const role = allRoles.find((r: { id: string }) => r.id === roleId)
       if (role) {
-        basePermissions |= BigInt(role.permissions);
+        basePermissions |= BigInt(role.permissions)
       }
     }
-    console.log('[DEBUG] botUser effective guild-level permissions (bitfield as BigInt):', basePermissions.toString());
+    console.log(
+      '[DEBUG] botUser effective guild-level permissions (bitfield as BigInt):',
+      basePermissions.toString(),
+    )
 
-    const { PermissionFlagsBits } = await import('discord-api-types/v10');
-    const humanPerms = Object.entries(PermissionFlagsBits).filter((entry) => (basePermissions & BigInt(entry[1])) !== 0n).map((entry) => entry[0]);
-    console.log('[DEBUG] botUser effective guild-level permissions (list):', humanPerms);
+    const { PermissionFlagsBits } = await import('discord-api-types/v10')
+    const humanPerms = Object.entries(PermissionFlagsBits)
+      .filter((entry) => (basePermissions & BigInt(entry[1])) !== 0n)
+      .map((entry) => entry[0])
+    console.log(
+      '[DEBUG] botUser effective guild-level permissions (list):',
+      humanPerms,
+    )
 
     const role = await client.createRole(
       guildId,
@@ -280,12 +293,19 @@ export const createRoom = createServerFn({ method: 'POST' })
       guildId,
       roleId: role.id,
       botUserId,
-      creatorId: request.includeCreatorOverwrite ? request.creatorId : undefined,
+      creatorId: request.includeCreatorOverwrite
+        ? request.creatorId
+        : undefined,
     })
-    console.log('[DEBUG] Permission overwrites sent to Discord (no creatorId):', JSON.stringify(permissionOverwrites, null, 2))
+    console.log(
+      '[DEBUG] Permission overwrites sent to Discord (no creatorId):',
+      JSON.stringify(permissionOverwrites, null, 2),
+    )
     const roomName = ensureRoomName(request.name)
     // Confirm parent_id is NOT being sent
-    console.log('[DEBUG] parent_id for channel will NOT be sent (should be undefined)')
+    console.log(
+      '[DEBUG] parent_id for channel will NOT be sent (should be undefined)',
+    )
     let channel
     try {
       channel = await client.createVoiceChannel(
@@ -301,7 +321,10 @@ export const createRoom = createServerFn({ method: 'POST' })
     } catch (e) {
       console.error('[DEBUG] DISCORD CHANNEL CREATE ERROR:', e)
       try {
-        console.error('[DEBUG] DISCORD CHANNEL CREATE ERROR (stringified):', JSON.stringify(e, null, 2))
+        console.error(
+          '[DEBUG] DISCORD CHANNEL CREATE ERROR (stringified):',
+          JSON.stringify(e, null, 2),
+        )
       } catch {
         // Ignore JSON.stringify errors
       }
@@ -467,10 +490,13 @@ export const joinRoom = createServerFn({ method: 'POST' })
   })
 
 export const connectUserToVoiceChannel = createServerFn({ method: 'POST' })
-  .inputValidator((data: { guildId: string; channelId: string; userId: string }) => data)
+  .inputValidator(
+    (data: { guildId: string; channelId: string; userId: string }) => data,
+  )
   .handler(async ({ data: { guildId, channelId, userId } }) => {
     try {
-      const client = getDiscordClient()
+      const { botToken } = await getSecrets()
+      const botClient = new DiscordRestClient({ botToken })
 
       console.log(
         `[Discord] Connecting user ${userId} to voice channel ${channelId}`,
@@ -478,13 +504,10 @@ export const connectUserToVoiceChannel = createServerFn({ method: 'POST' })
 
       // Use the Discord API to move the user to the voice channel
       // This requires the bot to have MOVE_MEMBERS permission
-      const response = await client.addGuildMember(
+      const response = await botClient.moveUserToVoiceChannel(
         guildId,
         userId,
-        {
-          access_token: '', // Not needed for bot requests
-          channel_id: channelId,
-        },
+        channelId,
         'Spell Coven: auto-connect to voice channel',
       )
 
@@ -494,13 +517,24 @@ export const connectUserToVoiceChannel = createServerFn({ method: 'POST' })
 
       return { success: true, member: response }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      
+      // Discord returns "Target user is not connected to voice" if user isn't in any voice channel yet
+      // This is expected - user will join Discord voice channel manually
+      if (errorMessage.includes('not connected to voice')) {
+        console.log(
+          `[Discord] User ${userId} not yet in voice channel - they will join manually`,
+        )
+        return { success: true, skipped: true }
+      }
+
       console.error(
         `[Discord] Failed to connect user to voice channel:`,
-        error instanceof Error ? error.message : error,
+        errorMessage,
       )
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to connect',
+        error: errorMessage,
       }
     }
   })
@@ -509,7 +543,8 @@ export const getVoiceChannelMembers = createServerFn({ method: 'POST' })
   .inputValidator((data: { guildId: string; channelId: string }) => data)
   .handler(async ({ data: { guildId, channelId } }) => {
     try {
-      const client = getDiscordClient()
+      const { botToken } = await getSecrets()
+      const client = new DiscordRestClient({ botToken })
 
       console.log(
         `[Discord] Fetching voice states for guild ${guildId}, channel ${channelId}`,
@@ -520,14 +555,20 @@ export const getVoiceChannelMembers = createServerFn({ method: 'POST' })
 
       console.log(
         `[Discord] Found ${voiceStates.length} voice states in channel ${channelId}:`,
-        voiceStates.map((vs) => ({ userId: vs.user_id, channelId: vs.channel_id })),
+        voiceStates.map((vs) => ({
+          userId: vs.user_id,
+          channelId: vs.channel_id,
+        })),
       )
 
       // For each voice state, fetch the guild member to get user data
       const members = await Promise.all(
         voiceStates.map(async (voiceState) => {
           try {
-            const member = await client.getGuildMember(guildId, voiceState.user_id)
+            const member = await client.getGuildMember(
+              guildId,
+              voiceState.user_id,
+            )
             return {
               userId: voiceState.user_id,
               username: member.user?.username || 'Unknown User',
@@ -562,8 +603,8 @@ export const getVoiceChannelMembers = createServerFn({ method: 'POST' })
       )
       return {
         members: [],
-        error: error instanceof Error ? error.message : 'Failed to fetch members',
+        error:
+          error instanceof Error ? error.message : 'Failed to fetch members',
       }
     }
   })
-
