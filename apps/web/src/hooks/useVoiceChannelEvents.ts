@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 
 export interface VoiceLeftEvent {
   guildId: string
@@ -23,7 +23,6 @@ interface WSMessage {
 }
 
 interface UseVoiceChannelEventsOptions {
-  userId: string
   jwtToken?: string
   onVoiceLeft?: (event: VoiceLeftEvent) => void
   onVoiceJoined?: (event: VoiceJoinedEvent) => void
@@ -46,7 +45,6 @@ class VoiceChannelWebSocketManager {
     onVoiceLeft?: (event: VoiceLeftEvent) => void
     onVoiceJoined?: (event: VoiceJoinedEvent) => void
     onError?: (error: Error) => void
-    userId: string
   }> = new Set()
 
   private constructor() {}
@@ -62,7 +60,6 @@ class VoiceChannelWebSocketManager {
     onVoiceLeft?: (event: VoiceLeftEvent) => void
     onVoiceJoined?: (event: VoiceJoinedEvent) => void
     onError?: (error: Error) => void
-    userId: string
   }): void {
     this.listeners.add(listener)
   }
@@ -71,13 +68,10 @@ class VoiceChannelWebSocketManager {
     onVoiceLeft?: (event: VoiceLeftEvent) => void
     onVoiceJoined?: (event: VoiceJoinedEvent) => void
     onError?: (error: Error) => void
-    userId: string
   }): void {
     this.listeners.delete(listener)
-    // Close connection if no more listeners
-    if (this.listeners.size === 0) {
-      this.disconnect()
-    }
+    // Don't close connection - keep it alive for other potential listeners
+    // The connection will be reused if new listeners are added
   }
 
   setJwtToken(token: string | undefined): void {
@@ -112,8 +106,10 @@ class VoiceChannelWebSocketManager {
     this.isConnecting = true
 
     try {
+      // Connect to standalone WebSocket server on port 1235
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const wsUrl = `${protocol}//${window.location.host}/api/ws`
+      const host = window.location.hostname
+      const wsUrl = `${protocol}//${host}:1235/api/ws`
 
       console.log('[VoiceChannelEvents] Connecting to WebSocket:', wsUrl)
       this.ws = new WebSocket(wsUrl)
@@ -135,26 +131,27 @@ class VoiceChannelWebSocketManager {
 
       this.ws.onmessage = (event) => {
         try {
-          const message: WSMessage = JSON.parse(event.data)
+          const message = JSON.parse(event.data)
+          console.log('[VoiceChannelEvents] Received message:', message)
 
-          // Handle authentication acknowledgement
+          // Handle authentication response (type: ack, event: auth.ok)
           if (message.type === 'ack' && message.event === 'auth.ok') {
             console.log('[VoiceChannelEvents] Authentication successful')
+            this.isAuthenticated = true
+            this.reconnectAttempts = 0
             return
           }
 
-          // Broadcast events to all listeners
+          // Broadcast events to all listeners (type: event, event: voice.left or voice.joined)
           if (message.type === 'event' && message.event === 'voice.left') {
             const payload = message.payload as VoiceLeftEvent | undefined
             if (payload) {
+              console.log(
+                '[VoiceChannelEvents] Received voice.left event for user:',
+                payload.userId,
+              )
               this.listeners.forEach((listener) => {
-                if (payload.userId === listener.userId) {
-                  console.log(
-                    '[VoiceChannelEvents] Received voice.left event for user:',
-                    payload.userId,
-                  )
-                  listener.onVoiceLeft?.(payload)
-                }
+                listener.onVoiceLeft?.(payload)
               })
             }
           }
@@ -213,6 +210,8 @@ class VoiceChannelWebSocketManager {
           reason: event.reason,
           wasClean: event.wasClean,
         })
+        console.log('[VoiceChannelEvents] Listeners count:', this.listeners.size)
+        console.log('[VoiceChannelEvents] Stack trace:', new Error().stack)
         this.ws = null
         this.isConnecting = false
 
@@ -289,13 +288,18 @@ class VoiceChannelWebSocketManager {
  * - Cleanup on unmount
  */
 export function useVoiceChannelEvents({
-  userId,
   jwtToken,
   onVoiceLeft,
   onVoiceJoined,
   onError,
 }: UseVoiceChannelEventsOptions) {
-  const manager = VoiceChannelWebSocketManager.getInstance()
+  const manager = useMemo(() => VoiceChannelWebSocketManager.getInstance(), [])
+
+  // Store callbacks in refs so they can be updated without re-registering listener
+  const callbacksRef = useRef({ onVoiceLeft, onVoiceJoined, onError })
+  useEffect(() => {
+    callbacksRef.current = { onVoiceLeft, onVoiceJoined, onError }
+  }, [onVoiceLeft, onVoiceJoined, onError])
 
   // Update JWT token in manager
   useEffect(() => {
@@ -304,20 +308,20 @@ export function useVoiceChannelEvents({
     }
   }, [jwtToken, manager])
 
-  // Register/unregister listener
+  // Register listener once and keep it registered (don't remove on unmount)
   useEffect(() => {
     const listener = {
-      onVoiceLeft,
-      onVoiceJoined,
-      onError,
-      userId,
+      onVoiceLeft: (event: VoiceLeftEvent) =>
+        callbacksRef.current.onVoiceLeft?.(event),
+      onVoiceJoined: (event: VoiceJoinedEvent) =>
+        callbacksRef.current.onVoiceJoined?.(event),
+      onError: (error: Error) => callbacksRef.current.onError?.(error),
     }
     manager.addListener(listener)
-
-    return () => {
-      manager.removeListener(listener)
-    }
-  }, [userId, onVoiceLeft, onVoiceJoined, onError, manager])
+    // Note: We intentionally don't remove the listener on unmount
+    // The WebSocket connection should persist for the lifetime of the app
+    // and be reused by other components that need it
+  }, [manager])
 
   return useMemo(
     () => ({
