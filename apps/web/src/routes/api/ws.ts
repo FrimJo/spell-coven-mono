@@ -4,6 +4,6 @@ import { createWebSocketHandler } from '@/server/ws-crossws-handler'
 // WebSocket route using CrossWS
 export const Route = createFileRoute('/api/ws')({
   server: {
-    handlers: createWebSocketHandler(),
+    handlers: createWebSocketHandler() as any,
   },
 })
