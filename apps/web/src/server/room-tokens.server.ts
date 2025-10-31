@@ -1,8 +1,8 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import { createServerOnlyFn } from '@tanstack/react-start'
 
-import type { RoomInviteClaims, RoomTokenErrorCode } from './schemas.js'
-import { RoomInviteClaimsSchema } from './schemas.js'
+import type { RoomInviteClaims, RoomTokenErrorCode } from './schemas/schemas.js'
+import { RoomInviteClaimsSchema } from './schemas/schemas.js'
 
 type JwtPayload = Record<string, unknown>
 
@@ -235,4 +235,4 @@ export async function verifyRoomInviteToken(
   }
 }
 
-export type { RoomInviteClaims, RoomTokenErrorCode } from './schemas.js'
+export type { RoomInviteClaims, RoomTokenErrorCode } from './schemas/schemas.js'

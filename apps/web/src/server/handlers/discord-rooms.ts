@@ -14,8 +14,11 @@ import type {
   RefreshRoomInviteRequest,
   RefreshRoomInviteResponse,
   RoomSummary,
-} from './schemas.js'
-import { createRoomInviteToken, verifyRoomInviteToken } from './room-tokens.js'
+} from '../schemas/schemas.js'
+import {
+  createRoomInviteToken,
+  verifyRoomInviteToken,
+} from '../room-tokens.server.js'
 import {
   CreateRoomRequestSchema,
   CreateRoomResponseSchema,
@@ -24,7 +27,7 @@ import {
   JoinRoomResponseSchema,
   RefreshRoomInviteRequestSchema,
   RefreshRoomInviteResponseSchema,
-} from './schemas.js'
+} from '../schemas/schemas.js'
 
 interface RoomCheckResult {
   exists: boolean
