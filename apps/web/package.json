@@ -18,8 +18,8 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^3.7.5",
-    "@repo/discord-integration": "workspace:*",
     "@repo/discord-gateway-worker": "workspace:*",
+    "@repo/discord-integration": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/react-devtools": "^0.7.0",
@@ -32,6 +32,7 @@
     "@tanstack/zod-adapter": "^1.133.3",
     "@techstark/opencv-js": "4.11.0-release.1",
     "cross-fetch": "^4.1.0",
+    "crossws": "^0.4.1",
     "discord-api-types": "^0.37.97",
     "jose": "^5.9.6",
     "lucide-react": "^0.487.0",
