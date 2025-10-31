@@ -100,3 +100,18 @@ export {
   VoiceOpcode,
   SpeakingFlags,
 } from './rtc-types'
+
+// Event types
+export type {
+  DiscordSnowflake,
+  VoiceEventName,
+  BaseEventPayload,
+  MessageEnvelope,
+  RoomCreatedPayload,
+  RoomDeletedPayload,
+  VoiceJoinedPayload,
+  VoiceLeftPayload,
+  InternalEventPayload,
+  InternalEvent,
+} from './events'
+export { isMessageEnvelope, isInternalEvent } from './events'

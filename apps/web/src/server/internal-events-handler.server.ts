@@ -1,4 +1,5 @@
-import { verifyHmacSignature } from './hmac.server'
+import { verifyHmacSignature } from '@repo/discord-gateway'
+
 import { wsManager } from './managers/ws-manager'
 import { InternalEventSchema } from './schemas/schemas'
 

@@ -2,8 +2,9 @@ import type { GatewayConfig } from '@repo/discord-gateway'
 import {
   createDiscordGatewayEventHandler,
   DiscordGatewayClient,
-  HubClient,
 } from '@repo/discord-gateway'
+
+import { HubClient } from '../hub-client.server'
 
 /**
  * Discord Gateway Initialization
