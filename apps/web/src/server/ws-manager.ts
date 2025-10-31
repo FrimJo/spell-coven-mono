@@ -1,10 +1,11 @@
 import type { WebSocket } from 'ws'
+import type { Peer } from 'crossws'
 
 /**
  * WebSocket connection with metadata
  */
 export interface WSConnection {
-  ws: WebSocket
+  ws: WebSocket | Peer
   userId: string
   guildId: string
   authenticatedAt: number
@@ -15,6 +16,7 @@ export interface WSConnection {
  */
 class WebSocketManager {
   private connections = new Set<WSConnection>()
+  private connectionRefs: Map<WebSocket, WSConnection> = new Map()
 
   /**
    * Register a new authenticated WebSocket connection
@@ -28,10 +30,14 @@ class WebSocketManager {
     }
 
     this.connections.add(connection)
+    this.connectionRefs.set(ws, connection)
+    console.log(`[WS] Added connection to set. Total: ${this.connections.size}`)
 
     // Auto-cleanup on close
     ws.on('close', () => {
+      console.log(`[WS] Connection closed for user ${userId}. Unregistering.`)
       this.unregister(connection)
+      this.connectionRefs.delete(ws)
     })
 
     return connection
@@ -42,6 +48,35 @@ class WebSocketManager {
    */
   unregister(connection: WSConnection): void {
     this.connections.delete(connection)
+  }
+
+  /**
+   * Register a CrossWS Peer connection
+   */
+  registerPeer(peer: Peer, userId: string, guildId: string): WSConnection {
+    const connection: WSConnection = {
+      ws: peer,
+      userId,
+      guildId,
+      authenticatedAt: Date.now(),
+    }
+
+    this.connections.add(connection)
+    console.log(`[CrossWS] Added connection to set. Total: ${this.connections.size}`)
+
+    return connection
+  }
+
+  /**
+   * Unregister a CrossWS Peer connection
+   */
+  unregisterPeer(peer: Peer, userId: string, guildId: string): void {
+    const connection = Array.from(this.connections).find(
+      (c) => c.ws === peer && c.userId === userId && c.guildId === guildId,
+    )
+    if (connection) {
+      this.unregister(connection)
+    }
   }
 
   /**
@@ -97,10 +132,19 @@ class WebSocketManager {
       ts: Date.now(),
     })
 
+    console.log(
+      `[WS] Broadcasting ${event} to guild ${guildId}. Total connections: ${this.connections.size}`,
+    )
+
+    let sentCount = 0
     for (const connection of this.connections) {
       if (connection.guildId !== guildId) {
         continue
       }
+
+      console.log(
+        `[WS] Found connection for user ${connection.userId} in guild ${guildId}. Ready state: ${connection.ws.readyState}`,
+      )
 
       try {
         // Check backpressure
@@ -117,6 +161,10 @@ class WebSocketManager {
         if (connection.ws.readyState === 1) {
           // OPEN
           connection.ws.send(message)
+          sentCount++
+          console.log(
+            `[WS] Sent ${event} to user ${connection.userId}`,
+          )
         }
       } catch (error) {
         console.error(
@@ -125,6 +173,10 @@ class WebSocketManager {
         )
       }
     }
+
+    console.log(
+      `[WS] Broadcast complete: sent ${event} to ${sentCount} connections`,
+    )
   }
 
   /**
