@@ -66,7 +66,10 @@ export async function initializeDiscordGateway(): Promise<void> {
     const hubClient = new HubClient(config.hubEndpoint, config.hubSecret)
 
     // Create and register event handler
-    const eventHandler = createDiscordGatewayEventHandler(config, hubClient as any)
+    const eventHandler = createDiscordGatewayEventHandler(
+      config,
+      hubClient as unknown as { postEvent: (event: string, payload: unknown) => Promise<void> },
+    )
     gatewayClient.onEvent(eventHandler)
 
     // Connect to Discord Gateway

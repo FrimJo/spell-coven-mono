@@ -173,12 +173,22 @@ export function useMediaStream(
 
   // Auto-start effect
   useEffect(() => {
-    if (autoStart) {
-      startStream()
+    if (!autoStart) {
+      return
     }
+
+    let isMounted = true
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    startStream().catch((err) => {
+      if (isMounted) {
+        console.error('Failed to start stream:', err)
+      }
+    })
 
     // Cleanup on unmount
     return () => {
+      isMounted = false
       stopStream()
     }
   }, [autoStart, startStream, stopStream])

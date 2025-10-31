@@ -14,14 +14,6 @@ export interface VoiceJoinedEvent {
   avatar: string | null
 }
 
-interface WSMessage {
-  v: number
-  type: 'event' | 'ack' | 'error'
-  event?: string
-  payload?: unknown
-  ts: number
-}
-
 interface UseVoiceChannelEventsOptions {
   jwtToken?: string
   onVoiceLeft?: (event: VoiceLeftEvent) => void
@@ -38,6 +30,12 @@ class VoiceChannelWebSocketManager {
   private ws: WebSocket | null = null
   private reconnectTimeout: NodeJS.Timeout | null = null
   private reconnectAttempts = 0
+  private cleanupReconnectTimeout(): void {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout)
+      this.reconnectTimeout = null
+    }
+  }
   private maxReconnectAttempts = 5
   private jwtToken: string | null = null
   private isConnecting = false
@@ -137,7 +135,6 @@ class VoiceChannelWebSocketManager {
           // Handle authentication response (type: ack, event: auth.ok)
           if (message.type === 'ack' && message.event === 'auth.ok') {
             console.log('[VoiceChannelEvents] Authentication successful')
-            this.isAuthenticated = true
             this.reconnectAttempts = 0
             return
           }
@@ -212,6 +209,7 @@ class VoiceChannelWebSocketManager {
         })
         console.log('[VoiceChannelEvents] Listeners count:', this.listeners.size)
         console.log('[VoiceChannelEvents] Stack trace:', new Error().stack)
+        this.cleanupReconnectTimeout()
         this.ws = null
         this.isConnecting = false
 
@@ -254,19 +252,6 @@ class VoiceChannelWebSocketManager {
     }
   }
 
-  private disconnect(): void {
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout)
-      this.reconnectTimeout = null
-    }
-
-    if (this.ws) {
-      this.ws.close(1000, 'All listeners removed')
-      this.ws = null
-    }
-
-    this.reconnectAttempts = 0
-  }
 
   isConnected(): boolean {
     return this.ws?.readyState === WebSocket.OPEN

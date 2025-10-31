@@ -24,7 +24,7 @@ export function DiscordLoginButton({
 
   return (
     <button
-      onClick={login}
+      onClick={() => login()}
       disabled={isLoading}
       className={`inline-flex items-center justify-center rounded-md bg-[#5865F2] font-semibold text-white transition-colors hover:bg-[#4752C4] disabled:cursor-not-allowed disabled:opacity-50 ${sizeClasses[size]} ${className}`}
     >

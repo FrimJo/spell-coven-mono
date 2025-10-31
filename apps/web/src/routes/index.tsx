@@ -75,7 +75,7 @@ function LandingPageRoute() {
     })
   }, [wsTokenData, showJoinDiscordModal, pendingGameId, user?.id])
 
-  const handleVoiceJoined = useCallback((event: any) => {
+  const handleVoiceJoined = useCallback((event: { userId: string }) => {
     console.log('[LandingPage] Received voice.joined event:', event, {
       modalOpen: showJoinDiscordModal,
       pendingGameId,
@@ -284,10 +284,10 @@ function LandingPageRoute() {
               <>
                 <div className="rounded-lg bg-green-500/10 p-4 text-center">
                   <p className="text-lg font-semibold text-green-400">
-                    ✓ You're connected!
+                    ✓ You&apos;re connected!
                   </p>
                   <p className="mt-2 text-sm text-slate-300">
-                    You've joined the voice channel. Ready to play?
+                    You&apos;ve joined the voice channel. Ready to play?
                   </p>
                 </div>
                 <Button
