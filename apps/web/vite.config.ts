@@ -1,71 +1,40 @@
 import path from 'node:path'
-import type { IncomingMessage } from 'node:http'
-import type { Duplex } from 'node:stream'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import mkcert from 'vite-plugin-mkcert'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
-import { WebSocketServer } from 'ws'
 
-import { handleWebSocketConnection } from './src/routes/api/ws'
+import { initializeWebSocketServer } from './src/server/ws-server'
 
 export default defineConfig(() => {
   return {
     // 🔴 important: include the trailing slash
     base: '/',
     define: {
-      'process.env': process.env,
+      'process.env.VITE_BASE_URL': JSON.stringify(process.env.VITE_BASE_URL || 'http://localhost:1234'),
+      'process.env.VITE_DISCORD_GUILD_ID': JSON.stringify(process.env.VITE_DISCORD_GUILD_ID),
+      'process.env.VITE_DISCORD_BOT_TOKEN': JSON.stringify(process.env.VITE_DISCORD_BOT_TOKEN),
     },
     plugins: [
       viteTsConfigPaths({ projects: ['./tsconfig.json'] }),
-      {
-        name: 'spell-coven-ws-upgrade',
-        configureServer(server) {
-          const httpServer = server.httpServer
-          if (!httpServer) {
-            console.warn('[Vite] No HTTP server available for WebSocket upgrade')
-            return
-          }
-
-          console.log('[Vite] Setting up WebSocket upgrade handler')
-          const wss = new WebSocketServer({ noServer: true })
-
-          const upgradeListener = (
-            request: IncomingMessage,
-            socket: Duplex,
-            head: Buffer,
-          ) => {
-            const url = request.url
-            console.log('[Vite] Upgrade request for URL:', url)
-
-            if (!url?.length || !url.startsWith('/api/ws')) {
-              console.log('[Vite] URL does not match /api/ws, skipping')
-              return
-            }
-
-            console.log('[Vite] Handling WebSocket upgrade for:', url)
-            wss.handleUpgrade(request, socket, head, (ws) => {
-              console.log('[Vite] WebSocket upgrade successful')
-              handleWebSocketConnection(ws)
-            })
-          }
-
-          httpServer.on('upgrade', upgradeListener)
-          console.log('[Vite] Upgrade listener attached')
-
-          httpServer.once('close', () => {
-            console.log('[Vite] HTTP server closing, cleaning up WebSocket')
-            httpServer.off('upgrade', upgradeListener)
-            wss.close()
-          })
-        },
-      },
       mkcert({ savePath: './certificates' }),
       tailwindcss(),
       tanstackStart({ spa: { enabled: true } }),
       viteReact(), // Must come after tanstackStart()
+      {
+        name: 'spell-coven-ws-init',
+        apply: 'serve',
+        configureServer() {
+          // Defer WebSocket server initialization to avoid conflicts with Vite startup
+          setImmediate(() => {
+            const port = parseInt(process.env.WS_PORT || '1235', 10)
+            console.log(`[Vite] Initializing WebSocket server on port ${port}`)
+            initializeWebSocketServer(port)
+          })
+        },
+      },
     ],
     resolve: {
       alias: {
