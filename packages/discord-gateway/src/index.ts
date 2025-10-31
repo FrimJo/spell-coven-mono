@@ -5,9 +5,9 @@
  * The gateway is initialized in the web app's server startup, not as a standalone service.
  */
 
-export { DiscordGatewayClient } from './gateway.js'
-export { HubClient } from './hub-client.js'
-export type { GatewayConfig } from './types.js'
+export { DiscordGatewayClient } from './gateway.ts'
+export { HubClient } from './hub-client.ts'
+export type { GatewayConfig } from './types.ts'
 
 /**
  * Create Discord Gateway event handler

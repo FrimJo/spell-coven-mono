@@ -1,5 +1,5 @@
-import type { InternalEvent } from './types.js'
-import { generateHmacSignature, getCurrentTimestamp } from './hmac.js'
+import type { InternalEvent } from './types.ts'
+import { generateHmacSignature, getCurrentTimestamp } from './hmac.ts'
 
 /**
  * Hub client for posting events to TanStack Start backend
