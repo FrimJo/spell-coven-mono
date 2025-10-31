@@ -10,12 +10,25 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import globalCss from '../globals.css?url'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
+import { initializeServerServices } from '../server/start-ws-server'
 
 interface MyRouterContext {
   queryClient: QueryClient
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
+  beforeLoad: async () => {
+    // Initialize server services (Discord Gateway, etc.) on first load
+    if (typeof window === 'undefined') {
+      // Server-side only
+      try {
+        await initializeServerServices()
+      } catch (error) {
+        console.error('[Root] Failed to initialize server services:', error)
+        // Don't throw - allow app to continue
+      }
+    }
+  },
   head: () => ({
     meta: [
       {
