@@ -1,10 +1,19 @@
-import { initializeWebSocketServer } from './ws-server'
+import { initializeDiscordGateway } from './discord-gateway-init'
 
 /**
- * Start the WebSocket server
- * Call this from your main server entry point
+ * Initialize server-side services
+ *
+ * This should be called once during server startup.
+ * Currently initializes the Discord Gateway client.
  */
-export function startWebSocketServer(): void {
-  const port = parseInt(process.env.WS_PORT || '1234', 10)
-  initializeWebSocketServer(port)
+export async function initializeServerServices(): Promise<void> {
+  try {
+    console.log('[Server Init] Starting server services initialization...')
+    await initializeDiscordGateway()
+    console.log('[Server Init] Server services initialized successfully')
+  } catch (error) {
+    console.error('[Server Init] Failed to initialize server services:', error)
+    // Don't throw - allow server to start even if gateway fails
+    // The gateway will attempt to reconnect
+  }
 }
