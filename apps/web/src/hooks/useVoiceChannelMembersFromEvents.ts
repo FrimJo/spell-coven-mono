@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useCallback, useState, useMemo } from 'react'
 
 import type { VoiceJoinedEvent, VoiceLeftEvent } from './useVoiceChannelEvents'
 import { useVoiceChannelEvents } from './useVoiceChannelEvents'
@@ -90,7 +90,6 @@ export function useVoiceChannelMembersFromEvents({
 
   // Listen for voice channel events (only if token is available and enabled)
   useVoiceChannelEvents({
-    userId,
     jwtToken: enabled ? jwtToken : undefined,
     onVoiceJoined: enabled ? handleVoiceJoined : undefined,
     onVoiceLeft: enabled ? handleVoiceLeft : undefined,

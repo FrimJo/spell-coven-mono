@@ -1,15 +1,22 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@repo/ui/components/button'
 
 export const Route = createFileRoute('/debug/voice-channel/$channelId')({
   component: DebugVoiceChannel,
 })
 
+interface VoiceChannelMember {
+  userId: string
+  username: string
+  avatar: string | null
+  channelId: string | null
+}
+
 function DebugVoiceChannel() {
   const { channelId } = Route.useParams()
-  const [members, setMembers] = useState<any[]>([])
+  const [members, setMembers] = useState<VoiceChannelMember[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -23,7 +30,7 @@ function DebugVoiceChannel() {
     })
   })
 
-  const handleFetch = async () => {
+  const handleFetch = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -37,11 +44,11 @@ function DebugVoiceChannel() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [getVoiceChannelMembersFn])
 
   useEffect(() => {
-    handleFetch()
-  }, [channelId])
+    void handleFetch()
+  }, [channelId, handleFetch])
 
   return (
     <div className="p-8 bg-slate-950 min-h-screen text-white">

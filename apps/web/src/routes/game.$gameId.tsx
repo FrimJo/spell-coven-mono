@@ -133,7 +133,7 @@ function GameRoomRoute() {
   // Generate WebSocket auth token
   const { data: wsTokenData } = useWebSocketAuthToken({ userId: auth?.userId })
 
-  const handleVoiceJoined = useCallback((event: any) => {
+  const handleVoiceJoined = useCallback((event: { userId: string }) => {
     if (showJoinDiscordModal && event.userId === auth?.userId) {
       console.log('[GameRoomRoute] User joined voice channel')
       setUserJoinedVoice(true)
@@ -182,7 +182,7 @@ function GameRoomRoute() {
           toast.error(
             'Failed to join private room: ' + (err?.message || 'Unknown error'),
           )
-          navigate({ to: '/' })
+          void navigate({ to: '/' })
         })
     } else if (!inviteToken && auth?.userId && auth?.accessToken) {
       // Creator joining their own room (no invite token)
@@ -221,7 +221,7 @@ function GameRoomRoute() {
         )
       }
     }
-  }, [inviteToken, auth?.userId, auth?.accessToken, joinRoomFn])
+  }, [inviteToken, auth?.userId, auth?.accessToken, joinRoomFn, navigate])
 
   const handleLeaveGame = () => {
     sessionStorage.clearGameState()
@@ -300,10 +300,10 @@ function GameRoomRoute() {
               <>
                 <div className="rounded-lg bg-green-500/10 p-4 text-center">
                   <p className="text-lg font-semibold text-green-400">
-                    ✓ You're connected!
+                    ✓ You&apos;re connected!
                   </p>
                   <p className="mt-2 text-sm text-slate-300">
-                    You've joined the voice channel. Ready to play?
+                    You&apos;ve joined the voice channel. Ready to play?
                   </p>
                 </div>
                 <Button

@@ -38,7 +38,7 @@ export function VoiceDropoutModal({
             <DialogTitle>Disconnected from Voice Channel</DialogTitle>
           </div>
           <DialogDescription className="mt-2">
-            You've been removed from the voice channel. Would you like to rejoin or leave the game?
+            You&apos;ve been removed from the voice channel. Would you like to rejoin or leave the game?
           </DialogDescription>
         </DialogHeader>
 

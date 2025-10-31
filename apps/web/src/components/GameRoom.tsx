@@ -120,6 +120,7 @@ function GameRoomContent({
         life: 20, // Default life total
         isActive: index === 0, // First member is active
       }))
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPlayers(updatedPlayers)
     }
   }, [voiceChannelMembers])
@@ -186,7 +187,6 @@ function GameRoomContent({
   // Listen for voice channel events (for dropout detection)
   // Only enabled when wsAuthToken is available
   useVoiceChannelEvents({
-    userId: auth.userId,
     jwtToken: wsTokenData?.token,
     onVoiceLeft: wsTokenData?.token
       ? (event: VoiceLeftEvent) => {

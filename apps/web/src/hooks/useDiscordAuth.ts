@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-
-import type { DiscordToken } from '@repo/discord-integration/types'
 import { useMutation } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
+
+import type { DiscordToken } from '@repo/discord-integration/types'
 
 import { TOKEN_REFRESH_BUFFER_MS } from '../config/discord'
 import {
@@ -38,10 +38,10 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const refreshTimerRef = useRef<number | null>(null)
-  
+
   // Server function for token revocation
   const revokeTokenFn = useServerFn(revokeDiscordToken)
-  
+
   // Mutation for token revocation
   const revokeTokenMutation = useMutation({
     mutationFn: revokeTokenFn,
@@ -69,6 +69,8 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
       console.error('Login failed:', err)
     },
   })
+
+  const { mutateAsync: loginAsync } = loginMutation
 
   // Mutation for logout
   const logoutMutation = useMutation({
@@ -99,6 +101,8 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
       setError(err as Error)
     },
   })
+
+  const { mutateAsync: logoutAsync } = logoutMutation
 
   // Silent token refresh
   const refreshTokenSilently = useCallback(async (refreshToken: string) => {
@@ -181,26 +185,37 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
   const login = useCallback(
     async (returnUrl?: string) => {
       setError(null)
-      await loginMutation.mutateAsync(returnUrl)
+      await loginAsync(returnUrl)
     },
-    [loginMutation],
+    [loginAsync],
   )
 
   // Logout: Revoke token and clear storage
   const logout = useCallback(async () => {
     setError(null)
-    await logoutMutation.mutateAsync()
-  }, [logoutMutation])
+    await logoutAsync()
+  }, [logoutAsync])
 
   return useMemo(
     () => ({
       token,
       isAuthenticated: !!token,
-      isLoading: isLoading || loginMutation.isPending || logoutMutation.isPending,
+      isLoading:
+        isLoading || loginMutation.isPending || logoutMutation.isPending,
       error: error || loginMutation.error || logoutMutation.error,
       login,
       logout,
     }),
-    [error, isLoading, login, logout, token, loginMutation.isPending, loginMutation.error, logoutMutation.isPending, logoutMutation.error],
+    [
+      error,
+      isLoading,
+      login,
+      logout,
+      token,
+      loginMutation.isPending,
+      loginMutation.error,
+      logoutMutation.isPending,
+      logoutMutation.error,
+    ],
   )
 }

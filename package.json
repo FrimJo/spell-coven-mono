@@ -30,6 +30,11 @@
       "!packages/mtg-image-db"
     ],
     "catalog": {
+      "react": "^19.2.0",
+      "react-dom": "^19.2.0",
+      "@types/react": "^19.2.2",
+      "@types/react-dom": "^19.2.2",
+      "react-error-boundary": "^4.0.0",
       "eslint": "^9.20.0",
       "prettier": "^3.6.2",
       "typescript": "~5.7",

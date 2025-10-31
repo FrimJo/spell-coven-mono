@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Camera, Mic, Volume2, Check, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/components/dialog';
 import { Button } from '@repo/ui/components/button';
@@ -43,7 +43,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   const permissionGrantedRef = useRef<boolean>(false);
 
   // Enumerate devices function (extracted for reuse)
-  const enumerateDevices = async (requestPermission: boolean = false) => {
+  const enumerateDevices = useCallback(async (requestPermission: boolean = false) => {
     try {
       // Request permissions first if needed
       if (requestPermission && !permissionGrantedRef.current) {
@@ -137,13 +137,14 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
       console.error('Error accessing media devices:', error);
       setPermissionError('Unable to access camera or microphone. Please grant permissions and try again.');
     }
-  };
+  }, [selectedVideoId, selectedAudioInputId, selectedAudioOutputId]);
 
   // Initial device enumeration
   useEffect(() => {
     if (!open) return;
 
-    enumerateDevices(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void enumerateDevices(true);
   }, [open, enumerateDevices]);
 
   // Listen for device changes (plug/unplug)
@@ -152,7 +153,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
 
     const handleDeviceChange = () => {
       console.log('[MediaSetupDialog] Device change detected, re-enumerating devices...');
-      enumerateDevices(false);
+      void enumerateDevices(false);
     };
 
     navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
@@ -433,7 +434,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
                 {isTestingOutput ? 'Playing...' : 'Test'}
               </Button>
             </div>
-            <p className="text-xs text-slate-500">Click "Test" to play a short sound</p>
+            <p className="text-xs text-slate-500">Click &quot;Test&quot; to play a short sound</p>
           </div>
         </div>
 
