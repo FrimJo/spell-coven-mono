@@ -107,14 +107,14 @@ export function createWebSocketHandler() {
         }
       },
 
-      close: (peer: AuthenticatedPeer) => {
-        console.log(`[CrossWS] Connection closed for user ${peer.userId}`)
-        if (peer.userId && peer.guildId) {
-          wsManager.unregisterPeer(peer as any, peer.userId, peer.guildId)
+      close: (_peer: AuthenticatedPeer) => {
+        console.log(`[CrossWS] Connection closed for user ${_peer.userId}`)
+        if (_peer.userId && _peer.guildId) {
+          wsManager.unregisterPeer(_peer as any, _peer.userId, _peer.guildId)
         }
       },
 
-      error: (peer: AuthenticatedPeer, error: Error) => {
+      error: (_peer: AuthenticatedPeer, error: Error) => {
         console.error('[CrossWS] WebSocket error:', error)
       },
     },
