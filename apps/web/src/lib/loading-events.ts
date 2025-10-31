@@ -14,6 +14,7 @@ export type LoadingStep =
   | 'clip-model'
   | 'opencv'
   | 'detector'
+  | 'voice-channel'
   | 'game-room'
   | 'complete'
 
