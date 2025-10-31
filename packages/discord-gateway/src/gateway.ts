@@ -1,22 +1,22 @@
 import WebSocket from 'ws'
 
-import type { ConnectionState, GatewayConfig, GatewaySession } from './types.js'
+import type { ConnectionState, GatewayConfig, GatewaySession } from './types.ts'
 
 type WebSocketData = string | ArrayBuffer | ArrayBufferView | Buffer | Buffer[]
 
 /**
  * Discord Gateway opcodes
  */
-const enum GatewayOp {
-  Dispatch = 0,
-  Heartbeat = 1,
-  Identify = 2,
-  Resume = 6,
-  Reconnect = 7,
-  InvalidSession = 9,
-  Hello = 10,
-  HeartbeatAck = 11,
-}
+const GatewayOp = {
+  Dispatch: 0,
+  Heartbeat: 1,
+  Identify: 2,
+  Resume: 6,
+  Reconnect: 7,
+  InvalidSession: 9,
+  Hello: 10,
+  HeartbeatAck: 11,
+} as const
 
 /**
  * Discord Gateway intents
