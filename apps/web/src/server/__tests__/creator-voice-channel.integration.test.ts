@@ -41,7 +41,7 @@ describe('Creator voice channel access integration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     process.env.DISCORD_BOT_TOKEN = 'bot-token'
-    process.env.PRIMARY_GUILD_ID = '123456789012345678'
+    process.env.VITE_DISCORD_GUILD_ID = '123456789012345678'
     process.env.VITE_DISCORD_CLIENT_ID = '987654321098765432'
     process.env.DISCORD_BOT_USER_ID = '111111111111111111'
     process.env.ROOM_TOKEN_SECRET =
