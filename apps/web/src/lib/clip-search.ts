@@ -60,6 +60,12 @@ let loadTask: Promise<void> | null = null
 let modelWarmed = false
 
 function int8ToFloat32(int8Array: Int8Array, scaleFactor = 127) {
+  if (!Number.isFinite(scaleFactor) || scaleFactor === 0) {
+    throw new Error(
+      `Invalid int8 scale factor: ${scaleFactor}. Expected a finite, non-zero value.`,
+    )
+  }
+
   const out = new Float32Array(int8Array.length)
   for (let i = 0; i < int8Array.length; i++) {
     out[i] = int8Array[i] / scaleFactor
@@ -133,7 +139,7 @@ export async function loadEmbeddingsAndMetaFromPackage() {
   if (loadTask) {
     return loadTask
   }
-  loadTask = (async () => {
+  const task = (async () => {
     const metaUrl = META_URL as string
     console.log('[loadEmbeddingsAndMetaFromPackage] Loading from:', {
       BLOB_STORAGE_URL,
@@ -200,6 +206,26 @@ export async function loadEmbeddingsAndMetaFromPackage() {
         )
       }
 
+      const { quantization } = metaObj
+      if (
+        typeof quantization.dtype !== 'string' ||
+        !Number.isFinite(quantization.scale_factor) ||
+        quantization.scale_factor <= 0
+      ) {
+        throw new Error(
+          `Invalid meta.json: quantization.scale_factor must be a positive finite number (received ${quantization.scale_factor}).`,
+        )
+      }
+
+      if (
+        quantization.dtype !== 'int8' &&
+        quantization.dtype !== 'float32'
+      ) {
+        throw new Error(
+          `Invalid meta.json: unsupported quantization dtype "${quantization.dtype}". Expected "int8" or "float32".`,
+        )
+      }
+
       // Validate shape matches buffer size
       // Calculate expected size in bytes based on data type
       const numElements = metaObj.shape[0] * metaObj.shape[1]
@@ -251,6 +277,17 @@ export async function loadEmbeddingsAndMetaFromPackage() {
           }
           norm = Math.sqrt(norm)
 
+          if (!Number.isFinite(norm) || norm <= Number.EPSILON) {
+            console.warn(
+              '[loadEmbeddingsAndMetaFromPackage] Encountered zero-norm embedding during dequantization; storing zeros to avoid NaNs.',
+              { index: i },
+            )
+            for (let j = 0; j < D_local; j++) {
+              db[offset + j] = 0
+            }
+            continue
+          }
+
           // Normalize and store
           for (let j = 0; j < D_local; j++) {
             db[offset + j] = dequantized[offset + j] / norm
@@ -263,10 +300,20 @@ export async function loadEmbeddingsAndMetaFromPackage() {
       }
     }
   })()
+  loadTask = task
   try {
-    await loadTask
+    await task
+  } catch (error) {
+    if (loadTask === task) {
+      loadTask = null
+    }
+    throw error
   } finally {
-    // keep the resolved promise for future callers
+    if (loadTask === task) {
+      // Allow future callers to exit early via the (meta && db) check without
+      // holding onto a resolved promise reference indefinitely.
+      loadTask = null
+    }
   }
 }
 
