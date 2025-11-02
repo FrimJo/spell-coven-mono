@@ -23,7 +23,7 @@ function DebugVoiceChannel() {
 
   const getVoiceChannelMembersFn = useServerFn(async () => {
     const { getVoiceChannelMembers } = await import(
-      '@/server/handlers/discord-rooms'
+      '@/server/handlers/discord-rooms.server'
     )
     return getVoiceChannelMembers({
       data: {

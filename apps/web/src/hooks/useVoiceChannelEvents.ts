@@ -104,10 +104,10 @@ class VoiceChannelWebSocketManager {
     this.isConnecting = true
 
     try {
-      // Connect to standalone WebSocket server on port 1235
+      // Connect to TanStack Start WebSocket server on same origin
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const host = window.location.hostname
-      const wsUrl = `${protocol}//${host}:1235/api/ws`
+      const host = window.location.host // includes port
+      const wsUrl = `${protocol}//${host}/api/ws`
 
       console.log('[VoiceChannelEvents] Connecting to WebSocket:', wsUrl)
       this.ws = new WebSocket(wsUrl)

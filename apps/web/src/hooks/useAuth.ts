@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Route } from '@/routes/game.$gameId'
 
 /**
@@ -10,7 +11,7 @@ import { Route } from '@/routes/game.$gameId'
  * @throws Error if auth is not available (component rendered without authentication)
  */
 export function useAuth() {
-  const { auth } = Route.useLoaderData()
+  const { auth, guildId } = Route.useLoaderData()
 
   if (!auth) {
     throw new Error(
@@ -18,5 +19,5 @@ export function useAuth() {
     )
   }
 
-  return auth
+  return useMemo(() => ({ auth, guildId }), [auth, guildId])
 }

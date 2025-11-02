@@ -5,12 +5,9 @@
  * The gateway is initialized in the web app's server startup, not as a standalone service.
  */
 
+import type { InternalEvent } from './types.ts'
+
 export { DiscordGatewayClient } from './gateway.ts'
-export {
-  generateHmacSignature,
-  verifyHmacSignature,
-  getCurrentTimestamp,
-} from './hmac.ts'
 export type { GatewayConfig, InternalEvent } from './types.ts'
 
 /**
@@ -25,7 +22,12 @@ export type { GatewayConfig, InternalEvent } from './types.ts'
  */
 export function createDiscordGatewayEventHandler(
   config: { primaryGuildId: string },
-  hub: { postEvent: (event: string, payload: unknown) => Promise<void> },
+  hub: {
+    postEvent: (
+      event: InternalEvent['event'],
+      payload: unknown,
+    ) => Promise<void>
+  },
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return async (event: string, data: any) => {

@@ -11,7 +11,7 @@ import {
   getDiscordClient,
   refreshDiscordToken,
 } from '../lib/discord-client.js'
-import { revokeDiscordToken } from '../server/discord-auth.js'
+import { revokeDiscordToken } from '../server/discord-auth.server.js'
 
 /**
  * Discord Authentication Hook
