@@ -47,7 +47,8 @@ export async function calculateSharpness(
     cv.meanStdDev(laplacian, mean, stddev)
 
     // Variance = stddev^2
-    const variance = Math.pow(stddev.data64F[0], 2)
+    const stddevValue = stddev.data64F[0]
+    const variance = stddevValue !== undefined ? Math.pow(stddevValue, 2) : 0
 
     // Cleanup
     mean.delete()

@@ -60,7 +60,7 @@
     "@types/react-dom": "catalog:",
     "@types/ws": "^8.5.12",
     "@vitejs/plugin-react": "^4.3.4",
-    "dotenv-cli": "^7.4.2",
+    "dotenv-cli": "catalog:",
     "eslint": "^9.34.0",
     "eslint-plugin-react-compiler": "19.1.0-rc.2",
     "jsdom": "^26.0.0",

@@ -160,8 +160,8 @@ export async function approximateToQuad(
     const points: Point[] = []
     for (let i = 0; i < 4; i++) {
       points.push({
-        x: approx.data32S[i * 2],
-        y: approx.data32S[i * 2 + 1],
+        x: approx.data32S[i * 2]!,
+        y: approx.data32S[i * 2 + 1]!,
       })
     }
 
@@ -203,10 +203,10 @@ export function orderQuadPoints(points: Point[]): CardQuad {
 
   // Find top-left point (smallest x + y sum)
   let topLeftIdx = 0
-  let minSum = sorted[0].x + sorted[0].y
+  let minSum = sorted[0]!.x + sorted[0]!.y
 
   for (let i = 1; i < 4; i++) {
-    const sum = sorted[i].x + sorted[i].y
+    const sum = sorted[i]!.x + sorted[i]!.y
     if (sum < minSum) {
       minSum = sum
       topLeftIdx = i
@@ -216,14 +216,14 @@ export function orderQuadPoints(points: Point[]): CardQuad {
   // Reorder starting from top-left, going clockwise
   const ordered: Point[] = []
   for (let i = 0; i < 4; i++) {
-    ordered.push(sorted[(topLeftIdx + i) % 4])
+    ordered.push(sorted[(topLeftIdx + i) % 4]!)
   }
 
   return {
-    topLeft: ordered[0],
-    topRight: ordered[1],
-    bottomRight: ordered[2],
-    bottomLeft: ordered[3],
+    topLeft: ordered[0]!,
+    topRight: ordered[1]!,
+    bottomRight: ordered[2]!,
+    bottomLeft: ordered[3]!,
   }
 }
 

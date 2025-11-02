@@ -71,7 +71,10 @@ export function dequantizeEmbeddings(
   const float32Data = new Float32Array(int8Data.length)
 
   for (let i = 0; i < int8Data.length; i++) {
-    float32Data[i] = int8Data[i] / scaleFactor
+    const val = int8Data[i]
+    if (val !== undefined) {
+      float32Data[i] = val / scaleFactor
+    }
   }
 
   return float32Data
@@ -106,7 +109,9 @@ export function verifyL2Normalization(
     let norm = 0
     for (let j = 0; j < embeddingDim; j++) {
       const val = vectors[offset + j]
-      norm += val * val
+      if (val !== undefined) {
+        norm += val * val
+      }
     }
     norm = Math.sqrt(norm)
 

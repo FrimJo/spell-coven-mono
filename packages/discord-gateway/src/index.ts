@@ -5,10 +5,10 @@
  * The gateway is initialized in the web app's server startup, not as a standalone service.
  */
 
-import type { InternalEvent } from './types.ts'
+import type { InternalEvent } from './types'
 
-export { DiscordGatewayClient } from './gateway.ts'
-export type { GatewayConfig, InternalEvent } from './types.ts'
+export { DiscordGatewayClient } from './gateway'
+export type { GatewayConfig, InternalEvent } from './types'
 
 /**
  * Create Discord Gateway event handler

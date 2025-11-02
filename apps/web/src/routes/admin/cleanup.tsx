@@ -1,24 +1,29 @@
-import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
+import { createFileRoute } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
+
+import type {
+  CleanupResult,
+  ListResult,
+} from '../../server/handlers/admin-cleanup.server'
 import {
   cleanupAppChannels,
-  CleanupResult,
   listAppChannels,
-  ListResult,
 } from '../../server/handlers/admin-cleanup.server'
 
 export const Route = createFileRoute('/admin/cleanup')({
   component: AdminCleanup,
 })
 
-type ChannelsReult= (CleanupResult & {type: 'cleanup'}) | (ListResult & {type: 'list'}) | ({type: 'cleanup' | 'list', error: string, success: false})
+type ChannelsReult =
+  | (CleanupResult & { type: 'cleanup' })
+  | (ListResult & { type: 'list' })
+  | { type: 'cleanup' | 'list'; error: string; success: false }
 
 function AdminCleanup() {
   const [secret, setSecret] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ChannelsReult | null>(null)
-
 
   const listChannels = useServerFn(listAppChannels)
   const cleanup = useServerFn(cleanupAppChannels)
@@ -34,7 +39,7 @@ function AdminCleanup() {
       const response = await listChannels({ data: { secret } })
       setResult({
         type: 'list',
-        ...response
+        ...response,
       })
     } catch (error) {
       setResult({
@@ -70,7 +75,7 @@ function AdminCleanup() {
       const response = await cleanup({ data: { secret } })
       setResult({
         type: 'cleanup',
-        ...response
+        ...response,
       })
     } catch (error) {
       setResult({
@@ -115,7 +120,9 @@ function AdminCleanup() {
               disabled={loading}
               className="flex-1 rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:bg-gray-400"
             >
-              {loading && result?.type === 'list' ? 'Loading...' : 'List Channels'}
+              {loading && result?.type === 'list'
+                ? 'Loading...'
+                : 'List Channels'}
             </button>
             <button
               onClick={handleCleanup}
@@ -152,9 +159,7 @@ function AdminCleanup() {
                 <div>
                   <p className="mb-4 text-gray-700">
                     Found{' '}
-                    <span className="font-bold">
-                      {result.channels.length}
-                    </span>{' '}
+                    <span className="font-bold">{result.channels.length}</span>{' '}
                     app-created channels:
                   </p>
                   {result.channels.length > 0 ? (
@@ -191,7 +196,9 @@ function AdminCleanup() {
                       )}
                     </div>
                   ) : (
-                    <p className="text-gray-600">No app-created channels found</p>
+                    <p className="text-gray-600">
+                      No app-created channels found
+                    </p>
                   )}
                 </div>
               )}
@@ -219,7 +226,9 @@ function AdminCleanup() {
                             <div className="font-medium text-gray-900">
                               {idx + 1}. {channel.name}
                             </div>
-                            <div className="text-gray-600">ID: {channel.id}</div>
+                            <div className="text-gray-600">
+                              ID: {channel.id}
+                            </div>
                           </div>
                         ),
                       )}
@@ -236,11 +245,11 @@ function AdminCleanup() {
           <div className="mt-8 rounded-lg border border-blue-200 bg-blue-50 p-4">
             <h3 className="mb-2 font-semibold text-blue-900">How it works:</h3>
             <ul className="space-y-1 text-sm text-blue-800">
-              <li>
-                ✓ Only removes voice channels with permission overwrites
-              </li>
+              <li>✓ Only removes voice channels with permission overwrites</li>
               <li>✓ Leaves all other channels untouched</li>
-              <li>✓ Use &quot;List Channels&quot; to preview before deleting</li>
+              <li>
+                ✓ Use &quot;List Channels&quot; to preview before deleting
+              </li>
               <li>✓ All deletions are logged for audit trail</li>
             </ul>
           </div>

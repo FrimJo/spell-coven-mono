@@ -155,8 +155,8 @@ export async function refineBoundingBoxToCorners(
       // Perfect! We have a quadrilateral
       const points: Point[] = []
       for (let i = 0; i < 4; i++) {
-        const x = approx.data32S[i * 2]
-        const y = approx.data32S[i * 2 + 1]
+        const x = approx.data32S[i * 2]!
+        const y = approx.data32S[i * 2 + 1]!
         points.push({ x, y })
       }
 
@@ -253,7 +253,7 @@ function orderQuadPoints(points: Point[]): CardQuad {
   let topLeftIdx = 0
   let minSum = Infinity
   for (let i = 0; i < 4; i++) {
-    const sum = sorted[i].x + sorted[i].y
+    const sum = sorted[i]!.x + sorted[i]!.y
     if (sum < minSum) {
       minSum = sum
       topLeftIdx = i
@@ -263,13 +263,13 @@ function orderQuadPoints(points: Point[]): CardQuad {
   // Reorder starting from top-left, going clockwise
   const ordered: Point[] = []
   for (let i = 0; i < 4; i++) {
-    ordered.push(sorted[(topLeftIdx + i) % 4])
+    ordered.push(sorted[(topLeftIdx + i) % 4]!)
   }
 
   return {
-    topLeft: ordered[0],
-    topRight: ordered[1],
-    bottomRight: ordered[2],
-    bottomLeft: ordered[3],
+    topLeft: ordered[0]!,
+    topRight: ordered[1]!,
+    bottomRight: ordered[2]!,
+    bottomLeft: ordered[3]!,
   }
 }

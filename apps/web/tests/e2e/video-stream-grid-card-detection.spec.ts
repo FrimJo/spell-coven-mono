@@ -1,6 +1,7 @@
 import { readFile } from 'fs/promises'
 import path from 'path'
-import { expect, Page, test } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 // Load the demo video from the local filesystem and pass it to the page as a data URL.
 const VIDEO_RELATIVE = 'tests/assets/card_demo.webm'
@@ -89,6 +90,10 @@ async function checkForGreenBorders(page: Page): Promise<boolean> {
       // Check if pixel is greenish (lime color used for borders)
       // Allow some tolerance for anti-aliasing
       if (
+        a !== undefined &&
+        r !== undefined &&
+        g !== undefined &&
+        b !== undefined &&
         a > 200 && // Not transparent
         r < 50 && // Low red
         g > 200 && // High green

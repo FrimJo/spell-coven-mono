@@ -1,6 +1,7 @@
 import { readFile } from 'fs/promises'
 import path from 'path'
-import { expect, Page, test } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 // Load the demo video from the local filesystem and pass it to the page as a data URL.
 // Place your file at tests/assets/card_demo.webm

@@ -217,7 +217,9 @@ export class OpenCVDetector implements CardDetector {
           for (let j = 0; j < 4; j++) {
             const x = approx.data32S[j * 2]
             const y = approx.data32S[j * 2 + 1]
-            points.push({ x, y })
+            if (x !== undefined && y !== undefined) {
+              points.push({ x, y })
+            }
           }
 
           // Calculate bounding box

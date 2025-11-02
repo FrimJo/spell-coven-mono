@@ -4,7 +4,8 @@
 // To update: run the build script in packages/mtg-image-db, then copy the output files here
 
 // Top-level import for transformers (no SSR)
-import { env, pipeline, ProgressInfo } from '@huggingface/transformers'
+import type { ProgressInfo } from '@huggingface/transformers'
+import { env, pipeline } from '@huggingface/transformers'
 
 // Version of the embeddings data - configured via environment variable
 const EMBEDDINGS_VERSION = import.meta.env.VITE_EMBEDDINGS_VERSION || 'v1.3'
@@ -62,16 +63,29 @@ let modelWarmed = false
 function int8ToFloat32(int8Array: Int8Array, scaleFactor = 127) {
   const out = new Float32Array(int8Array.length)
   for (let i = 0; i < int8Array.length; i++) {
-    out[i] = int8Array[i] / scaleFactor
+    const val = int8Array[i]
+    if (val !== undefined) {
+      out[i] = val / scaleFactor
+    }
   }
   return out
 }
 
 function l2norm(x: Float32Array) {
   let s = 0
-  for (let i = 0; i < x.length; i++) s += x[i] * x[i]
+  for (let i = 0; i < x.length; i++) {
+    const val = x[i]
+    if (val !== undefined) {
+      s += val * val
+    }
+  }
   s = Math.sqrt(s) || 1
-  for (let i = 0; i < x.length; i++) x[i] /= s
+  for (let i = 0; i < x.length; i++) {
+    const val = x[i]
+    if (val !== undefined) {
+      x[i] = val / s
+    }
+  }
   return x
 }
 
@@ -113,7 +127,7 @@ function enhanceCanvasContrast(
   for (let i = 0; i < data.length; i += 4) {
     // Skip alpha channel (i+3)
     for (let j = 0; j < 3; j++) {
-      const value = data[i + j]
+      const value = data[i + j]!
       const enhanced = Math.round((value - midpoint) * factor + midpoint)
       // Clamp to [0, 255]
       data[i + j] = Math.max(0, Math.min(255, enhanced))
@@ -246,14 +260,14 @@ export async function loadEmbeddingsAndMetaFromPackage() {
           // Calculate norm for this embedding
           let norm = 0
           for (let j = 0; j < D_local; j++) {
-            const val = dequantized[offset + j]
+            const val = dequantized[offset + j]!
             norm += val * val
           }
           norm = Math.sqrt(norm)
 
           // Normalize and store
           for (let j = 0; j < D_local; j++) {
-            db[offset + j] = dequantized[offset + j] / norm
+            db[offset + j] = dequantized[offset + j]! / norm
           }
         }
       } else {
@@ -558,7 +572,7 @@ export function top1(q: Float32Array): (CardMeta & { score: number }) | null {
     let dot = 0
     for (let d = 0; d < D; d++) {
       if (d >= q.length) break
-      dot += q[d] * db[i * D + d]
+      dot += q[d]! * db![i * D + d]!
     }
     if (dot > best) {
       best = dot
@@ -586,7 +600,7 @@ export function top1(q: Float32Array): (CardMeta & { score: number }) | null {
   } else {
     console.log('[top1] No match found')
   }
-  return idx >= 0 ? { ...meta[idx], score: best } : null
+  return idx >= 0 ? { ...meta[idx]!, score: best } : null
 }
 
 /**
@@ -611,12 +625,12 @@ export function getDatabaseEmbedding(cardName: string): {
   const embedding = new Float32Array(D)
   const offset = index * D
   for (let i = 0; i < D; i++) {
-    embedding[i] = db[offset + i]
+    embedding[i] = db[offset + i]!
   }
 
   return {
     embedding,
-    metadata: meta[index],
+    metadata: meta[index]!,
     index,
   }
 }
@@ -637,13 +651,13 @@ export function compareEmbeddings(
   // Cosine similarity (dot product of normalized vectors)
   let dotProduct = 0
   for (let i = 0; i < embedding1.length; i++) {
-    dotProduct += embedding1[i] * embedding2[i]
+    dotProduct += embedding1[i]! * embedding2[i]!
   }
 
   // L2 distance
   let l2Distance = 0
   for (let i = 0; i < embedding1.length; i++) {
-    const diff = embedding1[i] - embedding2[i]
+    const diff = embedding1[i]! - embedding2[i]!
     l2Distance += diff * diff
   }
   l2Distance = Math.sqrt(l2Distance)
@@ -651,7 +665,7 @@ export function compareEmbeddings(
   // Element-wise statistics
   const diffs = new Float32Array(embedding1.length)
   for (let i = 0; i < embedding1.length; i++) {
-    diffs[i] = Math.abs(embedding1[i] - embedding2[i])
+    diffs[i] = Math.abs(embedding1[i]! - embedding2[i]!)
   }
 
   const maxDiff = Math.max(...diffs)
@@ -675,12 +689,12 @@ export function topK(query: Float32Array, K = 5) {
   for (let i = 0; i < N; i++) {
     let s = 0
     const off = i * D
-    for (let j = 0; j < D; j++) s += query[j] * db[off + j]
+    for (let j = 0; j < D; j++) s += query[j]! * db[off + j]!
     scores[i] = s
   }
   const idx = Array.from(scores.keys())
-  idx.sort((a, b) => scores[b] - scores[a])
+  idx.sort((a, b) => scores[b]! - scores[a]!)
   return idx
     .slice(0, K)
-    .map((i) => ({ score: scores[i], ...(meta as CardMeta[])[i] }))
+    .map((i) => ({ score: scores[i]!, ...(meta as CardMeta[])[i]! }))
 }

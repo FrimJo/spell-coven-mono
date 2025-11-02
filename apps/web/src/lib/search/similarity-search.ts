@@ -51,7 +51,11 @@ export function computeSimilarity(
 ): number {
   let score = 0
   for (let j = 0; j < embeddingDim; j++) {
-    score += queryVec[j] * dbVec[offset + j]
+    const q = queryVec[j]
+    const d = dbVec[offset + j]
+    if (q !== undefined && d !== undefined) {
+      score += q * d
+    }
   }
   return score
 }
@@ -118,8 +122,13 @@ export function top1(
     )
   }
 
+  const bestCard = metadata.records[bestIdx]
+  if (!bestCard) {
+    throw new Error(`Best match card at index ${bestIdx} is undefined`)
+  }
+
   return {
-    card: metadata.records[bestIdx],
+    card: bestCard,
     score: maxScore,
     inferenceTimeMs,
     index: bestIdx,
@@ -177,10 +186,21 @@ export function topK(
   const inferenceTimeMs = performance.now() - startTime
 
   // Build results
-  return topKScores.map(({ score, index }) => ({
-    card: metadata.records[index],
-    score,
-    inferenceTimeMs: inferenceTimeMs / topKScores.length, // Amortized time
-    index,
-  }))
+  return topKScores
+    .map(({ score, index }) => {
+      const card = metadata.records[index]
+      if (!card) return null
+      return {
+        card,
+        score,
+        inferenceTimeMs: inferenceTimeMs / topKScores.length, // Amortized time
+        index,
+      }
+    })
+    .filter((result) => result !== null) as Array<{
+    card: (typeof metadata.records)[0]
+    score: number
+    inferenceTimeMs: number
+    index: number
+  }>
 }

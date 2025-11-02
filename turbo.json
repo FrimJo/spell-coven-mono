@@ -15,7 +15,12 @@
     "DISCORD_CLIENT_SECRET",
     "WS_AUTH_SECRET",
     "WS_PORT",
-    "ADMIN_CLEANUP_SECRET"
+    "ADMIN_CLEANUP_SECRET",
+    "NODE_ENV",
+    "VITE_DISCORD_GUILD_ID",
+    "GATEWAY_WS_PORT",
+    "GATEWAY_WS_URL",
+    "LINK_TOKEN"
   ],
   "tasks": {
     "build": {

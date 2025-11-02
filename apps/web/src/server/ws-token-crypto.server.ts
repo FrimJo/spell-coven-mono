@@ -101,6 +101,9 @@ export function verifyWebSocketAuthToken(token: string): {
     .update(signingInput)
     .digest()
 
+  if (!encodedSignature || !encodedPayload) {
+    throw new Error('Invalid token format: missing parts')
+  }
   const actualSignature = base64UrlDecode(encodedSignature)
 
   if (

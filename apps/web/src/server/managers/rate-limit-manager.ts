@@ -45,7 +45,7 @@ export class RateLimitManager {
    * Queue a request with automatic retry on rate limit
    */
   async enqueue<T>(fn: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
+    return new Promise<T>((resolve, reject) => {
       const item: RateLimitQueueItem = {
         id: `${Date.now()}-${Math.random()}`,
         fn: fn as () => Promise<unknown>,
@@ -53,7 +53,7 @@ export class RateLimitManager {
         maxRetries: this.config.maxRetries,
         backoffMs: this.config.initialBackoffMs,
         createdAt: Date.now(),
-        resolve,
+        resolve: resolve as (value: unknown) => void,
         reject,
       }
 

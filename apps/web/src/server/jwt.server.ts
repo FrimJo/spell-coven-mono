@@ -53,6 +53,9 @@ function parseJwt(token: string): ParsedJwt {
   }
 
   const [encodedHeader, encodedPayload, encodedSignature] = parts
+  if (!encodedHeader || !encodedPayload || !encodedSignature) {
+    throw new Error('Invalid JWT format: missing parts')
+  }
   const header = JSON.parse(
     base64UrlDecode(encodedHeader).toString('utf-8'),
   ) as ParsedJwt['header']
@@ -254,5 +257,5 @@ export function extractBearerToken(authHeader: string | null): string | null {
   }
 
   const match = authHeader.match(/^Bearer\s+(.+)$/i)
-  return match ? match[1] : null
+  return match?.[1] ?? null
 }

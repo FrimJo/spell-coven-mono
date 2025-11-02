@@ -1,6 +1,7 @@
 import { readFile } from 'fs/promises'
 import path from 'path'
-import { expect, Page, test } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 import {
   logModelCacheStatus,
@@ -81,7 +82,16 @@ async function checkForGreenBorders(page: Page): Promise<boolean> {
       const b = data[i + 2]
       const a = data[i + 3]
 
-      if (a > 200 && r < 50 && g > 200 && b < 50) {
+      if (
+        a !== undefined &&
+        r !== undefined &&
+        g !== undefined &&
+        b !== undefined &&
+        a > 200 &&
+        r < 50 &&
+        g > 200 &&
+        b < 50
+      ) {
         greenPixelCount++
       }
     }
