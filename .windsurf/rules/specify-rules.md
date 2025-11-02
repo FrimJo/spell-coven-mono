@@ -21,6 +21,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-13
 - Browser IndexedDB (model caching), CDN-served embeddings (int8 quantized binaries) (012-fix-clip-model-alignment)
 - TypeScript 5.5+, Node.js 20+ (014-discord-gateway-service)
 - N/A (stateless services, in-memory WebSocket registry) (014-discord-gateway-service)
+- TypeScript 5.x (Bun runtime for scripts, Node.js 20 for Start server) + TanStack Start (`@tanstack/react-start`), `ws`, `crossws`, `discord-api-types`, `@repo/discord-gateway`, `zod` (016-realtime-plan)
+- N/A (in-memory event bus and queues only) (016-realtime-plan)
 
 ## Project Structure
 ```
@@ -35,9 +37,9 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript 5.x (frontend), Node.js 20+ (build tooling): Follow standard conventions
 
 ## Recent Changes
+- 016-realtime-plan: Added TypeScript 5.x (Bun runtime for scripts, Node.js 20 for Start server) + TanStack Start (`@tanstack/react-start`), `ws`, `crossws`, `discord-api-types`, `@repo/discord-gateway`, `zod`
 - 014-discord-gateway-service: Added TypeScript 5.5+, Node.js 20+
 - 012-fix-clip-model-alignment: Added TypeScript 5.x (ES2022 target), React 19 + @huggingface/transformers 3.7.5, Vite 7.x, TanStack Router, Tailwind CSS 4.x
-- 011-advanced-card-extraction: Added TypeScript 5.x (React/Vite frontend)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
