@@ -143,11 +143,7 @@ export interface VoiceChannel {
 }
 
 export interface GatewayConfig {
-  port: number
   botToken: string
-  primaryGuildId: string
-  hubEndpoint: string
-  hubSecret: string
 }
 
 export type ConnectionState =

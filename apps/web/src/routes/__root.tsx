@@ -1,4 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { useAuth } from '@/hooks/useAuth.js'
+import { wsManager } from '@/server/managers/ws-manager.js'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import {
   createRootRouteWithContext,
@@ -6,6 +9,7 @@ import {
   Scripts,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
+import WebSocket from 'ws'
 
 import globalCss from '../globals.css?url'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools.js'
@@ -18,15 +22,11 @@ interface MyRouterContext {
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   beforeLoad: async () => {
-    // Initialize server services (Discord Gateway, etc.) on first load
-    if (typeof window === 'undefined') {
-      // Server-side only
-      try {
-        await initializeServerServices()
-      } catch (error) {
-        console.error('[Root] Failed to initialize server services:', error)
-        // Don't throw - allow app to continue
-      }
+    try {
+      await initializeServerServices()
+    } catch (error) {
+      console.error('[Root] Failed to initialize server services:', error)
+      // Don't throw - allow app to continue
     }
   },
   head: () => ({
@@ -59,6 +59,15 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const { auth, guildId } = useAuth()
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:1234')
+    const connection = wsManager.register(ws, auth.userId, guildId)
+    return () => {
+      wsManager.unregister(connection)
+      ws.close()
+    }
+  }, [auth.userId, guildId])
   return (
     <html lang="en">
       <head>

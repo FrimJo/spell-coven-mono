@@ -2,7 +2,7 @@ import type { InternalEvent } from '@repo/discord-gateway'
 import {
   generateHmacSignature,
   getCurrentTimestamp,
-} from '@repo/discord-gateway'
+} from '@repo/discord-gateway/src/hmac'
 
 /**
  * Hub client for posting events to TanStack Start backend

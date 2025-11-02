@@ -6,10 +6,13 @@ import { useDiscordUser } from '@/hooks/useDiscordUser'
 import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
 import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken'
 import { sessionStorage } from '@/lib/session-storage'
-import { createRoom, refreshRoomInvite } from '@/server/handlers/discord-rooms'
+import {
+  createRoom,
+  refreshRoomInvite,
+} from '@/server/handlers/discord-rooms.server'
 import { useMutation } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { createClientOnlyFn, useServerFn } from '@tanstack/react-start'
+import { useServerFn } from '@tanstack/react-start'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { ExternalLink, Loader2 } from 'lucide-react'
 import { ErrorBoundary } from 'react-error-boundary'
@@ -22,12 +25,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@repo/ui/components/dialog'
-
-const getBaseUrl = createClientOnlyFn(() => {
-  const baseUrl = process.env.VITE_BASE_URL
-  if (baseUrl == null) throw new Error('VITE_BASE_URL is not defined')
-  return baseUrl
-})
 
 const landingSearchSchema = z.object({
   error: z.string().optional(),
@@ -124,7 +121,6 @@ function LandingPageRoute() {
 
       // Generate short unique ID for the game
       const shortId = Math.random().toString(36).substring(2, 6).toUpperCase()
-
       const result = await createRoomMutation.mutateAsync({
         data: {
           creatorId: user.id,
@@ -133,7 +129,7 @@ function LandingPageRoute() {
           maxSeats: 4,
           tokenTtlSeconds: 30 * 60,
           includeCreatorOverwrite: true,
-          shareUrlBase: getBaseUrl(),
+          shareUrlBase: window.location.origin,
         },
       })
 

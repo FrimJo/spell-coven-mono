@@ -12,10 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GameGameIdRouteImport } from './routes/game.$gameId'
 import { Route as DebugSessionStorageRouteImport } from './routes/debug/session-storage'
-import { Route as ApiWsRouteImport } from './routes/api/ws'
+import { Route as AdminCleanupRouteImport } from './routes/admin/cleanup'
 import { Route as DebugVoiceChannelChannelIdRouteImport } from './routes/debug/voice-channel.$channelId'
 import { Route as AuthDiscordCallbackRouteImport } from './routes/auth/discord/callback'
-import { Route as ApiInternalEventsRouteImport } from './routes/api/internal/events'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -32,9 +31,9 @@ const DebugSessionStorageRoute = DebugSessionStorageRouteImport.update({
   path: '/debug/session-storage',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiWsRoute = ApiWsRouteImport.update({
-  id: '/api/ws',
-  path: '/api/ws',
+const AdminCleanupRoute = AdminCleanupRouteImport.update({
+  id: '/admin/cleanup',
+  path: '/admin/cleanup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DebugVoiceChannelChannelIdRoute =
@@ -48,37 +47,29 @@ const AuthDiscordCallbackRoute = AuthDiscordCallbackRouteImport.update({
   path: '/auth/discord/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiInternalEventsRoute = ApiInternalEventsRouteImport.update({
-  id: '/api/internal/events',
-  path: '/api/internal/events',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/api/ws': typeof ApiWsRoute
+  '/admin/cleanup': typeof AdminCleanupRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/api/internal/events': typeof ApiInternalEventsRoute
   '/auth/discord/callback': typeof AuthDiscordCallbackRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/api/ws': typeof ApiWsRoute
+  '/admin/cleanup': typeof AdminCleanupRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/api/internal/events': typeof ApiInternalEventsRoute
   '/auth/discord/callback': typeof AuthDiscordCallbackRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/api/ws': typeof ApiWsRoute
+  '/admin/cleanup': typeof AdminCleanupRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/api/internal/events': typeof ApiInternalEventsRoute
   '/auth/discord/callback': typeof AuthDiscordCallbackRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
@@ -86,38 +77,34 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/api/ws'
+    | '/admin/cleanup'
     | '/debug/session-storage'
     | '/game/$gameId'
-    | '/api/internal/events'
     | '/auth/discord/callback'
     | '/debug/voice-channel/$channelId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/api/ws'
+    | '/admin/cleanup'
     | '/debug/session-storage'
     | '/game/$gameId'
-    | '/api/internal/events'
     | '/auth/discord/callback'
     | '/debug/voice-channel/$channelId'
   id:
     | '__root__'
     | '/'
-    | '/api/ws'
+    | '/admin/cleanup'
     | '/debug/session-storage'
     | '/game/$gameId'
-    | '/api/internal/events'
     | '/auth/discord/callback'
     | '/debug/voice-channel/$channelId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ApiWsRoute: typeof ApiWsRoute
+  AdminCleanupRoute: typeof AdminCleanupRoute
   DebugSessionStorageRoute: typeof DebugSessionStorageRoute
   GameGameIdRoute: typeof GameGameIdRoute
-  ApiInternalEventsRoute: typeof ApiInternalEventsRoute
   AuthDiscordCallbackRoute: typeof AuthDiscordCallbackRoute
   DebugVoiceChannelChannelIdRoute: typeof DebugVoiceChannelChannelIdRoute
 }
@@ -145,11 +132,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DebugSessionStorageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/ws': {
-      id: '/api/ws'
-      path: '/api/ws'
-      fullPath: '/api/ws'
-      preLoaderRoute: typeof ApiWsRouteImport
+    '/admin/cleanup': {
+      id: '/admin/cleanup'
+      path: '/admin/cleanup'
+      fullPath: '/admin/cleanup'
+      preLoaderRoute: typeof AdminCleanupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/debug/voice-channel/$channelId': {
@@ -166,22 +153,14 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthDiscordCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/internal/events': {
-      id: '/api/internal/events'
-      path: '/api/internal/events'
-      fullPath: '/api/internal/events'
-      preLoaderRoute: typeof ApiInternalEventsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ApiWsRoute: ApiWsRoute,
+  AdminCleanupRoute: AdminCleanupRoute,
   DebugSessionStorageRoute: DebugSessionStorageRoute,
   GameGameIdRoute: GameGameIdRoute,
-  ApiInternalEventsRoute: ApiInternalEventsRoute,
   AuthDiscordCallbackRoute: AuthDiscordCallbackRoute,
   DebugVoiceChannelChannelIdRoute: DebugVoiceChannelChannelIdRoute,
 }

@@ -9,12 +9,11 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
 import { useVoiceChannelMembersFromEvents } from '@/hooks/useVoiceChannelMembersFromEvents'
+import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken.js'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
 import { loadOpenCV } from '@/lib/opencv-loader'
-import { connectUserToVoiceChannel } from '@/server/handlers/discord-rooms'
-import { generateWebSocketAuthToken } from '@/server/handlers/ws-auth'
-import { useQuery } from '@tanstack/react-query'
+import { connectUserToVoiceChannel } from '@/server/handlers/discord-rooms.server'
 import { useServerFn } from '@tanstack/react-start'
 import { ArrowLeft, Check, Copy, Settings, Users } from 'lucide-react'
 import { toast } from 'sonner'
@@ -89,26 +88,17 @@ function GameRoomContent({
     return unsubscribe
   }, [])
 
-  const auth = useAuth()
+  const { auth } = useAuth()
 
-  const generateWsTokenFn = useServerFn(generateWebSocketAuthToken)
-
-  // Generate WebSocket auth token using useQuery (not suspense - we handle loading separately)
-  const { data: wsTokenData } = useQuery({
-    queryKey: ['ws-auth-token', auth.userId],
-    queryFn: async () => {
-      return generateWsTokenFn({ data: { userId: auth.userId } })
-    },
-    staleTime: 50 * 60 * 1000, // 50 minutes (token expires in 1 hour)
-  })
+  const { data: wsTokenData } = useWebSocketAuthToken()
 
   // Fetch voice channel members via real-time events
   // Only enabled when both userId and wsAuthToken are available
   const { members: voiceChannelMembers } = useVoiceChannelMembersFromEvents({
     gameId,
     userId: auth.userId,
-    jwtToken: wsTokenData?.token,
-    enabled: !!wsTokenData?.token,
+    jwtToken: wsTokenData,
+    enabled: !!wsTokenData,
   })
 
   useEffect(() => {
@@ -190,15 +180,15 @@ function GameRoomContent({
   // Listen for voice channel events (for dropout detection)
   // Only enabled when wsAuthToken is available
   useVoiceChannelEvents({
-    jwtToken: wsTokenData?.token,
-    onVoiceLeft: wsTokenData?.token
+    jwtToken: wsTokenData,
+    onVoiceLeft: wsTokenData
       ? (event: VoiceLeftEvent) => {
           console.log('[GameRoom] User left voice channel:', event)
           setVoiceDropoutOpen(true)
           toast.warning('You have been removed from the voice channel')
         }
       : undefined,
-    onError: wsTokenData?.token
+    onError: wsTokenData
       ? (error: Error) => {
           console.error('[GameRoom] Voice channel event error:', error)
           // Don't show error toast for connection issues - they're expected
