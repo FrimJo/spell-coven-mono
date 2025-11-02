@@ -28,7 +28,7 @@
     "@repo/prettier-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/ws": "^8.5.12",
-    "dotenv-cli": "^7.4.2",
+    "dotenv-cli": "catalog:",
     "tsup": "^8.1.0",
     "tsx": "^4.16.0",
     "typescript": "^5.5.3",

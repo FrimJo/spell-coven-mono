@@ -133,26 +133,26 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
 
         // Set defaults or validate existing selections
         if (videoInputs.length > 0 && !selectedVideoId) {
-          setSelectedVideoId(videoInputs[0].deviceId)
+          setSelectedVideoId(videoInputs[0]!.deviceId)
         } else if (
           selectedVideoId &&
           !videoInputs.find((d) => d.deviceId === selectedVideoId)
         ) {
           // Currently selected device was disconnected, switch to first available
           setSelectedVideoId(
-            videoInputs.length > 0 ? videoInputs[0].deviceId : '',
+            videoInputs.length > 0 ? videoInputs[0]!.deviceId : '',
           )
         }
 
         if (audioInputs.length > 0 && !selectedAudioInputId) {
-          setSelectedAudioInputId(audioInputs[0].deviceId)
+          setSelectedAudioInputId(audioInputs[0]!.deviceId)
         } else if (
           selectedAudioInputId &&
           !audioInputs.find((d) => d.deviceId === selectedAudioInputId)
         ) {
           // Currently selected device was disconnected, switch to first available
           setSelectedAudioInputId(
-            audioInputs.length > 0 ? audioInputs[0].deviceId : '',
+            audioInputs.length > 0 ? audioInputs[0]!.deviceId : '',
           )
         }
 

@@ -89,7 +89,11 @@ export class YOLOv8Detector implements CardDetector {
     })
 
     // Process output
-    const rawOutput = outputs['output0'].data as Float32Array
+    const output0 = outputs['output0']
+    if (!output0) {
+      throw new Error('YOLOv8 inference failed: no output0')
+    }
+    const rawOutput = output0.data as Float32Array
     const cards = this.processOutput(rawOutput, canvasWidth, canvasHeight)
 
     const inferenceTimeMs = performance.now() - startTime
@@ -127,9 +131,14 @@ export class YOLOv8Detector implements CardDetector {
     const blue: number[] = []
 
     for (let i = 0; i < data.length; i += 4) {
-      red.push(data[i] / 255)
-      green.push(data[i + 1] / 255)
-      blue.push(data[i + 2] / 255)
+      const r = data[i]
+      const g = data[i + 1]
+      const b = data[i + 2]
+      if (r !== undefined && g !== undefined && b !== undefined) {
+        red.push(r / 255)
+        green.push(g / 255)
+        blue.push(b / 255)
+      }
     }
 
     // Concatenate RGB channels
@@ -165,10 +174,19 @@ export class YOLOv8Detector implements CardDetector {
     // Parse detections
     for (let i = 0; i < numDetections; i++) {
       // Get bbox coordinates
-      const x = output[i]
-      const y = output[numDetections + i]
+      const x = output[0 * numDetections + i]
+      const y = output[1 * numDetections + i]
       const w = output[2 * numDetections + i]
       const h = output[3 * numDetections + i]
+
+      if (
+        x === undefined ||
+        y === undefined ||
+        w === undefined ||
+        h === undefined
+      ) {
+        continue
+      }
 
       // Get class scores (skip first 4 bbox values)
       let maxScore = 0
@@ -176,7 +194,7 @@ export class YOLOv8Detector implements CardDetector {
 
       for (let c = 0; c < numClasses; c++) {
         const score = output[(4 + c) * numDetections + i]
-        if (score > maxScore) {
+        if (score !== undefined && score > maxScore) {
           maxScore = score
           maxClassId = c
         }

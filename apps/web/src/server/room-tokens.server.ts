@@ -117,6 +117,12 @@ function verifyHs256Token(
   }
 
   const [encodedHeader, encodedPayload, encodedSignature] = parts
+  if (!encodedHeader || !encodedPayload || !encodedSignature) {
+    throw new RoomTokenError(
+      'Invite token verification failed',
+      'TOKEN_INVALID',
+    )
+  }
   const header = JSON.parse(
     base64UrlDecode(encodedHeader).toString('utf-8'),
   ) as JwtHeader

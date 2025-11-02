@@ -1,6 +1,7 @@
 import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
-import { chromium, FullConfig } from '@playwright/test'
+import type { FullConfig } from '@playwright/test'
+import { chromium } from '@playwright/test'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -30,7 +31,7 @@ async function globalSetup(config: FullConfig) {
 
   try {
     // Navigate to the game page to trigger model initialization
-    const baseURL = config.projects[0].use.baseURL || 'https://localhost:1234'
+    const baseURL = config.projects[0]?.use.baseURL || 'https://localhost:1234'
     console.log(`📍 Navigating to ${baseURL}/game/setup-test`)
     await page.goto(`${baseURL}/game/setup-test`, { timeout: 60_000 })
 

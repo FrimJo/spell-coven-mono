@@ -473,6 +473,7 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
   // Second pass: find best detection at click
   for (let i = 0; i < detectedCards.length; i++) {
     const card = detectedCards[i]
+    if (!card) continue
     const box = card.box
 
     // Convert normalized box to pixel coordinates
@@ -519,7 +520,7 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
     return false
   }
 
-  const card = detectedCards[bestIndex]
+  const card = detectedCards[bestIndex]!
 
   // Use the current frame canvas captured during detection
   if (!currentFrameCanvas) {
@@ -847,7 +848,7 @@ export async function setupWebcam(args: {
         videoEl.srcObject = stream
         const track = stream.getVideoTracks()[0]
         const settings = (
-          track.getSettings ? track.getSettings() : {}
+          track?.getSettings ? track.getSettings() : {}
         ) as MediaTrackSettings
         currentDeviceId = settings.deviceId || deviceId || null
         return new Promise<void>((resolve) => {

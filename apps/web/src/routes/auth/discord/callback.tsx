@@ -1,15 +1,11 @@
+import type { ErrorComponentProps } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import {
   clearStoredDiscordToken,
   getDiscordClient,
   setStoredDiscordToken,
 } from '@/lib/discord-client'
-import {
-  createFileRoute,
-  ErrorComponentProps,
-  redirect,
-  useNavigate,
-} from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import z from 'zod'
 
 /**

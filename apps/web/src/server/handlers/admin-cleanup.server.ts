@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+
 import { DiscordRestClient } from '@repo/discord-integration/clients'
 
 const getSecrets = () => {
@@ -19,7 +20,6 @@ const getSecrets = () => {
   return { botToken, guildId, adminSecret }
 }
 
-
 export interface CleanupResult {
   success: boolean
   deletedChannels: Array<{
@@ -30,15 +30,15 @@ export interface CleanupResult {
 }
 
 export interface ListResult {
-      success: boolean
-      channels: Array<{
-        id: string
-        name: string
-        userLimit?: number
-        permissionOverwriteCount: number
-      }>
-      error?: string
-    }
+  success: boolean
+  channels: Array<{
+    id: string
+    name: string
+    userLimit?: number
+    permissionOverwriteCount: number
+  }>
+  error?: string
+}
 
 /**
  * Admin function to remove all voice channels created by the Spell Coven app.
@@ -153,74 +153,66 @@ export const cleanupAppChannels = createServerFn({ method: 'POST' })
  */
 export const listAppChannels = createServerFn({ method: 'POST' })
   .inputValidator((data: { secret: string }) => data)
-  .handler(
-    async ({
-      data: { secret },
-    }): Promise<ListResult> => {
-      try {
-        const { botToken, guildId, adminSecret } = getSecrets()
+  .handler(async ({ data: { secret } }): Promise<ListResult> => {
+    try {
+      const { botToken, guildId, adminSecret } = getSecrets()
 
-        // Verify admin secret
-        if (secret !== adminSecret) {
-          console.warn('[Admin] List attempted with invalid secret')
-          return {
-            success: false,
-            channels: [],
-            error: 'Invalid admin secret',
-          }
-        }
-
-        const client = new DiscordRestClient({ botToken })
-
-        console.log('[Admin] Listing app-created channels...')
-
-        // Fetch all channels in the guild
-        const channels = await client.getChannels(guildId)
-
-        // Filter for app-created channels
-        const appChannels = channels
-          .filter((channel) => {
-            const isVoiceChannel = channel.type === 2
-            const hasPermissionOverwrites =
-              channel.permission_overwrites &&
-              Array.isArray(channel.permission_overwrites) &&
-              channel.permission_overwrites.length > 0
-
-            return isVoiceChannel && hasPermissionOverwrites
-          })
-          .map((channel) => ({
-            id: channel.id,
-            name: channel.name || 'Unnamed Channel',
-            userLimit:
-              typeof channel.user_limit === 'number'
-                ? channel.user_limit
-                : undefined,
-            permissionOverwriteCount: Array.isArray(
-              channel.permission_overwrites,
-            )
-              ? channel.permission_overwrites.length
-              : 0,
-          }))
-
-        console.log(
-          `[Admin] Found ${appChannels.length} app-created channels`,
-        )
-
-        return {
-          success: true,
-          channels: appChannels,
-        }
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error)
-
-        console.error('[Admin] List failed:', errorMessage)
-
+      // Verify admin secret
+      if (secret !== adminSecret) {
+        console.warn('[Admin] List attempted with invalid secret')
         return {
           success: false,
           channels: [],
-          error: errorMessage,
+          error: 'Invalid admin secret',
         }
       }
-    },
-  )
+
+      const client = new DiscordRestClient({ botToken })
+
+      console.log('[Admin] Listing app-created channels...')
+
+      // Fetch all channels in the guild
+      const channels = await client.getChannels(guildId)
+
+      // Filter for app-created channels
+      const appChannels = channels
+        .filter((channel) => {
+          const isVoiceChannel = channel.type === 2
+          const hasPermissionOverwrites =
+            channel.permission_overwrites &&
+            Array.isArray(channel.permission_overwrites) &&
+            channel.permission_overwrites.length > 0
+
+          return isVoiceChannel && hasPermissionOverwrites
+        })
+        .map((channel) => ({
+          id: channel.id,
+          name: channel.name || 'Unnamed Channel',
+          userLimit:
+            typeof channel.user_limit === 'number'
+              ? channel.user_limit
+              : undefined,
+          permissionOverwriteCount: Array.isArray(channel.permission_overwrites)
+            ? channel.permission_overwrites.length
+            : 0,
+        }))
+
+      console.log(`[Admin] Found ${appChannels.length} app-created channels`)
+
+      return {
+        success: true,
+        channels: appChannels,
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+
+      console.error('[Admin] List failed:', errorMessage)
+
+      return {
+        success: false,
+        channels: [],
+        error: errorMessage,
+      }
+    }
+  })

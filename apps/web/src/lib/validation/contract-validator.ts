@@ -118,9 +118,10 @@ export function validateEmbeddings(
   const sampleSize = Math.min(metadata.records.length, 10)
   for (let i = 0; i < sampleSize; i++) {
     const record = metadata.records[i]
+    if (!record) continue
     const requiredFields = ['name', 'set', 'image_url', 'card_url']
     for (const field of requiredFields) {
-      if (!record[field]) {
+      if (!record[field as keyof typeof record]) {
         errors.push(
           `Missing required field "${field}" in card record at index ${i}. ` +
             `Check export_for_browser.py output for completeness.`,

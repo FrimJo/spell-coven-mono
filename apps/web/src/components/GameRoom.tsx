@@ -244,7 +244,7 @@ function GameRoomContent({
               const percentMatch = msg.match(/(\d+(?:\.\d+)?)\s*%/)
               let progress = 20 // Default start
 
-              if (percentMatch) {
+              if (percentMatch && percentMatch[1]) {
                 const downloadPercent = parseFloat(percentMatch[1])
                 // Map download progress (0-100%) to loading range (20-33.33%)
                 progress = 20 + (downloadPercent / 100) * 13.33

@@ -15,9 +15,13 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2022",
-    "allowImportingTsExtensions": true,
+    "allowImportingTsExtensions": false,
     "noEmit": true,
     "verbatimModuleSyntax": true,
-    "types": ["bun-types"]
+    "types": ["bun-types"],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
   }
 }

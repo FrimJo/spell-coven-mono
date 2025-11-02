@@ -14,7 +14,8 @@
 
 import { readFile } from 'fs/promises'
 import path from 'path'
-import { expect, Page, test } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 const VIDEO_RELATIVE = 'tests/assets/card_demo.webm'
 
@@ -210,7 +211,16 @@ test.describe.skip('Card Identification - Debug Mode', () => {
         const b = data[i + 2]
         const a = data[i + 3]
 
-        if (a > 200 && r < 50 && g > 200 && b < 50) {
+        if (
+          a !== undefined &&
+          r !== undefined &&
+          g !== undefined &&
+          b !== undefined &&
+          a > 200 &&
+          r < 50 &&
+          g > 200 &&
+          b < 50
+        ) {
           greenPixelCount++
         }
       }

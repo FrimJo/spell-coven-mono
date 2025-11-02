@@ -92,7 +92,7 @@ export function useCardQuery(): UseCardQueryReturn {
         // Embed the 180° rotated canvas
         console.log('[useCardQuery] Starting embedding...')
         const { embedding, metrics: embeddingMetrics } = await embedFromCanvas(
-          rotated180,
+          rotated180!,
         ).catch((err) => {
           throw new Error(`Failed to embed canvas: ${err.message}`)
         })

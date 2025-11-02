@@ -58,7 +58,7 @@ export async function computeHomography(
     // Extract matrix data
     const matrixData = new Float32Array(9)
     for (let i = 0; i < 9; i++) {
-      matrixData[i] = M.data64F[i]
+      matrixData[i] = M.data64F[i]!
     }
 
     // Cleanup
@@ -188,7 +188,8 @@ export function isValidHomography(matrix: Float32Array): boolean {
 
   // Check all elements are finite
   for (let i = 0; i < 9; i++) {
-    if (!isFinite(matrix[i])) {
+    const val = matrix[i]
+    if (val === undefined || !isFinite(val)) {
       return false
     }
   }
@@ -200,6 +201,20 @@ export function isValidHomography(matrix: Float32Array): boolean {
   // det = a(ei - fh) - b(di - fg) + c(dh - eg)
 
   const [a, b, c, d, e, f, g, h, i] = matrix
+
+  if (
+    a === undefined ||
+    b === undefined ||
+    c === undefined ||
+    d === undefined ||
+    e === undefined ||
+    f === undefined ||
+    g === undefined ||
+    h === undefined ||
+    i === undefined
+  ) {
+    return false
+  }
 
   const det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)
 

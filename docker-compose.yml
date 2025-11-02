@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # Discord Gateway Service
+  # Maintains persistent connection to Discord Gateway
+  # Forwards events to TanStack Start backend via WebSocket
+  discord-gateway:
+    build:
+      context: .
+      dockerfile: apps/discord-gateway/Dockerfile
+    environment:
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - VITE_DISCORD_GUILD_ID=${VITE_DISCORD_GUILD_ID}
+      - LINK_TOKEN=${LINK_TOKEN}
+      - GATEWAY_WS_PORT=8080
+      - NODE_ENV=production
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - spell-coven-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # TanStack Start Web App
+  # Serves the web application and connects to Gateway service
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      - GATEWAY_WS_URL=ws://discord-gateway:8080
+      - LINK_TOKEN=${LINK_TOKEN}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - VITE_DISCORD_GUILD_ID=${VITE_DISCORD_GUILD_ID}
+      - VITE_BASE_URL=${VITE_BASE_URL:-http://localhost:3000}
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    depends_on:
+      discord-gateway:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - spell-coven-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  spell-coven-network:
+    driver: bridge

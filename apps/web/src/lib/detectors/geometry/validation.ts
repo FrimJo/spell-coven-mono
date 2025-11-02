@@ -107,6 +107,8 @@ export function isConvexQuad(quad: CardQuad): QuadValidationResult {
     const p2 = points[(i + 1) % 4]
     const p3 = points[(i + 2) % 4]
 
+    if (!p1 || !p2 || !p3) continue
+
     // Vectors
     const v1x = p2.x - p1.x
     const v1y = p2.y - p1.y
@@ -257,6 +259,7 @@ export function calculateQuadArea(quad: CardQuad): number {
   for (let i = 0; i < 4; i++) {
     const p1 = points[i]
     const p2 = points[(i + 1) % 4]
+    if (!p1 || !p2) continue
     area += p1.x * p2.y - p2.x * p1.y
   }
 

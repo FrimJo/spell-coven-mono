@@ -6,7 +6,6 @@ import { GameRoom } from '@/components/GameRoom'
 import { useAuth } from '@/hooks/useAuth'
 import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
 import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken'
-import { ensureValidDiscordToken, getDiscordClient } from '@/lib/discord-client'
 import { sessionStorage } from '@/lib/session-storage'
 import {
   checkRoomExists,

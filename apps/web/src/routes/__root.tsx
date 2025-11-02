@@ -1,6 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { useAuth } from '@/hooks/useAuth.js'
 import {
   ensureValidDiscordToken,
   getDiscordClient,
@@ -20,7 +19,7 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools.js'
 import { initializeServerServices } from '../server/init/start-ws.server.js'
 import appCss from '../styles.css?url'
 
-interface MyRouterContext {
+export interface MyRouterContext {
   queryClient: QueryClient
 }
 

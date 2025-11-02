@@ -110,12 +110,7 @@ export const CreateRoomRequestSchema = z.object({
   userLimit: z.number().int().min(1).max(4).default(4),
   maxSeats: z.number().int().min(1).max(4).optional(),
   // 24-hour token expiry per spec requirement (86400 seconds = 24 hours)
-  tokenTtlSeconds: z
-    .number()
-    .int()
-    .min(60)
-    .max(86400)
-    .default(86400),
+  tokenTtlSeconds: z.number().int().min(60).max(86400).default(86400),
   shareUrlBase: UrlSchema,
   includeCreatorOverwrite: z.boolean().default(true),
 })
@@ -137,12 +132,7 @@ export const RefreshRoomInviteRequestSchema = z.object({
   // 4-player limit per spec requirement
   maxSeats: z.number().int().min(1).max(4).optional(),
   // 24-hour token expiry per spec requirement (86400 seconds = 24 hours)
-  tokenTtlSeconds: z
-    .number()
-    .int()
-    .min(60)
-    .max(86400)
-    .default(86400),
+  tokenTtlSeconds: z.number().int().min(60).max(86400).default(86400),
 })
 
 export type RefreshRoomInviteRequest = z.infer<

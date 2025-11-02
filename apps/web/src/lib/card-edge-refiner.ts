@@ -136,10 +136,10 @@ function orderPoints(
   const bottom = sorted.slice(2, 4).sort((a, b) => a.x - b.x)
 
   return [
-    top[0], // top-left
-    top[1], // top-right
-    bottom[1], // bottom-right
-    bottom[0], // bottom-left
+    top[0]!, // top-left
+    top[1]!, // top-right
+    bottom[1]!, // bottom-right
+    bottom[0]!, // bottom-left
   ]
 }
 
@@ -164,14 +164,14 @@ function applyPerspectiveTransform(
 
   // Source points (card corners in original image)
   const srcPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
-    ordered[0].x,
-    ordered[0].y,
-    ordered[1].x,
-    ordered[1].y,
-    ordered[2].x,
-    ordered[2].y,
-    ordered[3].x,
-    ordered[3].y,
+    ordered[0]!.x,
+    ordered[0]!.y,
+    ordered[1]!.x,
+    ordered[1]!.y,
+    ordered[2]!.x,
+    ordered[2]!.y,
+    ordered[3]!.x,
+    ordered[3]!.y,
   ])
 
   // Destination points (rectangle in output image)
@@ -274,30 +274,31 @@ export function refineCardEdges(
     // Extract corner points
     const corners: Array<{ x: number; y: number }> = []
     for (let i = 0; i < 4; i++) {
-      corners.push({
-        x: quad.data32F[i * 2],
-        y: quad.data32F[i * 2 + 1],
-      })
+      const x = quad.data32F[i * 2]
+      const y = quad.data32F[i * 2 + 1]
+      if (x !== undefined && y !== undefined) {
+        corners.push({ x, y })
+      }
     }
 
     // Calculate confidence based on how rectangular the shape is
     // (A perfect rectangle would have corners at right angles)
     const orderedCorners = orderPoints(corners)
     const width1 = Math.hypot(
-      orderedCorners[1].x - orderedCorners[0].x,
-      orderedCorners[1].y - orderedCorners[0].y,
+      orderedCorners[1]!.x - orderedCorners[0]!.x,
+      orderedCorners[1]!.y - orderedCorners[0]!.y,
     )
     const width2 = Math.hypot(
-      orderedCorners[2].x - orderedCorners[3].x,
-      orderedCorners[2].y - orderedCorners[3].y,
+      orderedCorners[2]!.x - orderedCorners[3]!.x,
+      orderedCorners[2]!.y - orderedCorners[3]!.y,
     )
     const height1 = Math.hypot(
-      orderedCorners[3].x - orderedCorners[0].x,
-      orderedCorners[3].y - orderedCorners[0].y,
+      orderedCorners[3]!.x - orderedCorners[0]!.x,
+      orderedCorners[3]!.y - orderedCorners[0]!.y,
     )
     const height2 = Math.hypot(
-      orderedCorners[2].x - orderedCorners[1].x,
-      orderedCorners[2].y - orderedCorners[1].y,
+      orderedCorners[2]!.x - orderedCorners[1]!.x,
+      orderedCorners[2]!.y - orderedCorners[1]!.y,
     )
 
     const widthDiff = Math.abs(width1 - width2) / Math.max(width1, width2)
