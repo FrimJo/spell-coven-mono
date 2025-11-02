@@ -3,11 +3,15 @@ import { Suspense, useCallback, useEffect, useState } from 'react'
 import { DiscordAuthModal } from '@/components/discord/DiscordAuthModal'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
+import { useAuth } from '@/hooks/useAuth'
 import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
 import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken'
 import { ensureValidDiscordToken, getDiscordClient } from '@/lib/discord-client'
 import { sessionStorage } from '@/lib/session-storage'
-import { checkRoomExists, joinRoom } from '@/server/handlers/discord-rooms.server'
+import {
+  checkRoomExists,
+  joinRoom,
+} from '@/server/handlers/discord-rooms.server'
 import {
   createFileRoute,
   redirect,
@@ -70,34 +74,8 @@ export const Route = createFileRoute('/game/$gameId')({
   loader: async ({ params }) => {
     const { gameId } = params
 
-    // Get guild ID from session storage (set when room was created)
-    const creatorInviteState = sessionStorage.loadCreatorInviteState()
-    const guildId =
-      creatorInviteState?.guildId || process.env.VITE_DISCORD_GUILD_ID || ''
-
-    // Try to get auth, but don't fail if not authenticated
-    // Component will handle showing auth modal
-    const token = await ensureValidDiscordToken()
-
-    let auth = null
-    if (token) {
-      try {
-        const client = getDiscordClient()
-        const user = await client.fetchUser(token.accessToken)
-        auth = {
-          accessToken: token.accessToken,
-          userId: user.id,
-        }
-      } catch (error) {
-        console.error('Failed to fetch user:', error)
-        auth = null
-      }
-    }
-
     return {
       gameId,
-      guildId,
-      auth,
     }
   },
   component: GameRoomRoute,
@@ -111,7 +89,7 @@ function GameRoomRoute() {
   const { gameId } = Route.useParams()
   const { detector, usePerspectiveWarp } = Route.useSearch()
   const navigate = useNavigate()
-  const { auth, guildId } = Route.useLoaderData()
+  const { auth, guildId } = useAuth()
   const [showAuthModal, setShowAuthModal] = useState(!auth)
   const [showJoinDiscordModal, setShowJoinDiscordModal] = useState(false)
   const [userJoinedVoice, setUserJoinedVoice] = useState(false)

@@ -1,6 +1,10 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth.js'
+import {
+  ensureValidDiscordToken,
+  getDiscordClient,
+} from '@/lib/discord-client.js'
 import { wsManager } from '@/server/managers/ws-manager.js'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import {
@@ -27,6 +31,36 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     } catch (error) {
       console.error('[Root] Failed to initialize server services:', error)
       // Don't throw - allow app to continue
+    }
+  },
+  loader: async () => {
+    // Get guild ID from session storage (set when room was created)
+    const creatorInviteState = sessionStorage.loadCreatorInviteState()
+    const guildId =
+      creatorInviteState?.guildId || process.env.VITE_DISCORD_GUILD_ID || ''
+
+    // Try to get auth, but don't fail if not authenticated
+    // Component will handle showing auth modal
+    const token = await ensureValidDiscordToken()
+
+    let auth = null
+    if (token) {
+      try {
+        const client = getDiscordClient()
+        const user = await client.fetchUser(token.accessToken)
+        auth = {
+          accessToken: token.accessToken,
+          userId: user.id,
+        }
+      } catch (error) {
+        console.error('Failed to fetch user:', error)
+        auth = null
+      }
+    }
+
+    return {
+      guildId,
+      auth,
     }
   },
   head: () => ({
@@ -59,15 +93,18 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { auth, guildId } = useAuth()
+  const { auth, guildId } = Route.useLoaderData()
+
   useEffect(() => {
+    if (!auth || !guildId) return
     const ws = new WebSocket('ws://localhost:1234')
     const connection = wsManager.register(ws, auth.userId, guildId)
     return () => {
       wsManager.unregister(connection)
       ws.close()
     }
-  }, [auth.userId, guildId])
+  }, [auth, guildId])
+
   return (
     <html lang="en">
       <head>
