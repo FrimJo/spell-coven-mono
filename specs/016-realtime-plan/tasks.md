@@ -25,8 +25,8 @@
 
 **Purpose**: Prepare environment configuration and testing scaffolding used by all stories
 
-- [ ] T001 Update `.env.example` with `GATEWAY_WS_URL`, `LINK_TOKEN`, and `ENABLE_WS_BRIDGE` placeholders for the realtime gateway secrets
-- [ ] T002 Create `apps/web/tests/server/README.md` and `apps/web/tests/integration/README.md` to describe new realtime test suites and ensure directories exist
+- [X] T001 Update `.env.example` with `GATEWAY_WS_URL`, `LINK_TOKEN`, and `ENABLE_WS_BRIDGE` placeholders for the realtime gateway secrets
+- [X] T002 Create `apps/web/tests/server/README.md` and `apps/web/tests/integration/README.md` to describe new realtime test suites and ensure directories exist
 
 ---
 
@@ -36,12 +36,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Update `packages/discord-gateway/src/types.ts` with versioned `TraceMeta`, `GatewayEvent`, and `GatewayCommand` contracts and sanitize helpers
-- [ ] T004 Export the new realtime contracts from `packages/discord-gateway/src/index.ts` and `packages/discord-gateway/types/index.d.ts`
-- [ ] T005 Add `apps/web/src/server/gateway/event-bus.ts` implementing the in-memory `EventBus<GatewayEvent>` with safe subscriber teardown
-- [ ] T006 Add `apps/web/src/server/gateway/command-queue.ts` encapsulating the capped retry queue with jitter backoff controls
-- [ ] T007 Add `apps/web/src/server/gateway/config.ts` to parse `GATEWAY_WS_URL`, `LINK_TOKEN`, and feature flags with descriptive errors
-- [ ] T008 Add `apps/web/src/server/metrics/gateway-metrics.ts` exposing counters, histograms, and gauges for gateway health
+- [X] T003 Update `packages/discord-gateway/src/types.ts` with versioned `TraceMeta`, `GatewayEvent`, and `GatewayCommand` contracts and sanitize helpers
+- [X] T004 Export the new realtime contracts from `packages/discord-gateway/src/index.ts` and `packages/discord-gateway/types/index.d.ts`
+- [X] T005 Add `apps/web/src/server/gateway/event-bus.ts` implementing the in-memory `EventBus<GatewayEvent>` with safe subscriber teardown
+- [X] T006 Add `apps/web/src/server/gateway/command-queue.ts` encapsulating the capped retry queue with jitter backoff controls
+- [X] T007 Add `apps/web/src/server/gateway/config.ts` to parse `GATEWAY_WS_URL`, `LINK_TOKEN`, and feature flags with descriptive errors
+- [X] T008 Add `apps/web/src/server/metrics/gateway-metrics.ts` exposing counters, histograms, and gauges for gateway health
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -55,14 +55,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Implement `apps/web/src/server/gateway/gateway-ws.client.ts` to lazily connect, reconnect with backoff, fan out events, and emit logs/metrics
-- [ ] T010 [P] [US1] Implement `apps/web/src/server/gateway/sse-router.server.ts` to translate bus events into SSE frames with 15s heartbeats
-- [ ] T011 [US1] Add `apps/web/src/routes/api/stream.ts` to wire the SSE handler into TanStack Start and ensure `gateway.start()` is invoked
-- [ ] T012 [US1] Refactor `apps/web/src/server/init/start-ws.server.ts` to bootstrap the singleton gateway client instead of the legacy Discord connector
-- [ ] T013 [US1] Replace `apps/web/src/server/init/discord-gateway-init.ts` with a facade that delegates lifecycle controls to the new `GatewayWsClient`
-- [ ] T014 [US1] Update `apps/web/src/server/internal-events-handler.server.ts` to emit incoming hub fallbacks onto the event bus with structured logging
-- [ ] T015 [US1] Add Vitest coverage in `apps/web/tests/server/gateway-ws.test.ts` for reconnect logic, queue overflow, and event bus fan-out
-- [ ] T016 [US1] Add integration test `apps/web/tests/integration/realtime-bridge.test.ts` that streams mock gateway events and asserts SSE delivery + metrics gauges
+- [X] T009 [US1] Implement `apps/web/src/server/gateway/gateway-ws.client.ts` to lazily connect, reconnect with backoff, fan out events, and emit logs/metrics
+- [X] T010 [P] [US1] Implement `apps/web/src/server/gateway/sse-router.server.ts` to translate bus events into SSE frames with 15s heartbeats
+- [X] T011 [US1] Add `apps/web/src/routes/api/stream.ts` to wire the SSE handler into TanStack Start and ensure `gateway.start()` is invoked
+- [X] T012 [US1] Refactor `apps/web/src/server/init/start-ws.server.ts` to bootstrap the singleton gateway client instead of the legacy Discord connector
+- [X] T013 [US1] Replace `apps/web/src/server/init/discord-gateway-init.ts` with a facade that delegates lifecycle controls to the new `GatewayWsClient`
+- [X] T014 [US1] Update `apps/web/src/server/internal-events-handler.server.ts` to emit incoming hub fallbacks onto the event bus with structured logging
+- [X] T015 [US1] Add Vitest coverage in `apps/web/tests/server/gateway-ws.test.ts` for reconnect logic, queue overflow, and event bus fan-out
+- [X] T016 [US1] Add integration test `apps/web/tests/integration/realtime-bridge.test.ts` that streams mock gateway events and asserts SSE delivery + metrics gauges
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 

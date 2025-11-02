@@ -1,4 +1,4 @@
-import { initializeDiscordGateway } from './discord-gateway-init.js'
+import { ensureGatewayStarted } from '../gateway/gateway-ws.client'
 
 /**
  * Initialize server-side services
@@ -9,7 +9,7 @@ import { initializeDiscordGateway } from './discord-gateway-init.js'
 export async function initializeServerServices(): Promise<void> {
   try {
     console.log('[Server Init] Starting server services initialization...')
-    await initializeDiscordGateway()
+    await ensureGatewayStarted()
     console.log('[Server Init] Server services initialized successfully')
   } catch (error) {
     console.error('[Server Init] Failed to initialize server services:', error)

@@ -1,7 +1,15 @@
-import { verifyHmacSignature } from '@repo/discord-gateway'
+import { randomUUID } from 'node:crypto'
+
+import {
+  GATEWAY_SCHEMA_VERSION,
+  sanitizeTraceMeta,
+  verifyHmacSignature,
+} from '@repo/discord-gateway'
 
 import { wsManager } from './managers/ws-manager'
 import { InternalEventSchema } from './schemas/schemas'
+import { getGatewayClient } from './gateway/gateway-ws.client'
+import { gatewayMetrics } from './metrics/gateway-metrics'
 
 /**
  * Handle internal webhook events from Discord Gateway Worker
@@ -93,11 +101,37 @@ export async function handleInternalEvent({
 
     const { event: eventType, payload } = parseResult.data
 
-    // Broadcast event to WebSocket clients
-    const guildId = process.env.VITE_DISCORD_GUILD_ID!
-    wsManager.broadcastToGuild(guildId, eventType, payload)
+    const traceMeta = sanitizeTraceMeta({
+      traceId: randomUUID(),
+      sentAt: new Date().toISOString(),
+      source: 'gateway-hub-fallback',
+    })
 
-    console.log(`[Internal] Event broadcast: ${eventType}`)
+    const gatewayEvent = {
+      version: GATEWAY_SCHEMA_VERSION,
+      type: eventType,
+      data: payload,
+      meta: traceMeta,
+    }
+
+    gatewayMetrics.eventsReceived.increment()
+
+    getGatewayClient().bus.publish(gatewayEvent)
+
+    // Preserve legacy WebSocket broadcast until voice bridge migration completes
+    const guildId = process.env.VITE_DISCORD_GUILD_ID
+    if (guildId) {
+      wsManager.broadcastToGuild(guildId, eventType, payload)
+    }
+
+    console.log(
+      JSON.stringify({
+        namespace: 'gateway.internal',
+        level: 'info',
+        event: eventType,
+        traceId: traceMeta.traceId,
+      }),
+    )
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
