@@ -11,7 +11,21 @@ export {
   verifyHmacSignature,
   getCurrentTimestamp,
 } from './hmac.ts'
-export type { GatewayConfig, InternalEvent } from './types.ts'
+export {
+  GATEWAY_SCHEMA_VERSION,
+  sanitizeGatewayCommand,
+  sanitizeGatewayEvent,
+  sanitizeTraceMeta,
+} from './types.ts'
+export type {
+  GatewayCommand,
+  GatewayCommandType,
+  GatewayConfig,
+  GatewayEvent,
+  GatewayEventType,
+  InternalEvent,
+  TraceMeta,
+} from './types.ts'
 
 /**
  * Create Discord Gateway event handler

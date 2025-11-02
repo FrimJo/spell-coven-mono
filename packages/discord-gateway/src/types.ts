@@ -1,6 +1,161 @@
 const DISCORD_ID_REGEX = /^\d+$/
 
+const GATEWAY_EVENT_TYPES = [
+  'ready',
+  'messageCreate',
+  'messageUpdate',
+  'messageDelete',
+  'voice.joined',
+  'voice.left',
+  'error',
+] as const
+
+const GATEWAY_COMMAND_TYPES = [
+  'sendMessage',
+  'addReaction',
+  'typingStart',
+] as const
+
+export const GATEWAY_SCHEMA_VERSION = '1.0' as const
+
 export type DiscordSnowflake = string
+
+export type GatewayEventType = (typeof GATEWAY_EVENT_TYPES)[number]
+
+export type GatewayCommandType = (typeof GATEWAY_COMMAND_TYPES)[number]
+
+export interface TraceMeta {
+  traceId: string
+  sentAt: string
+  requestId?: string
+  spanId?: string
+  source?: string
+}
+
+export type GatewayEvent<TData = Record<string, unknown>> = {
+  version: string
+  type: GatewayEventType
+  data: TData
+  meta: TraceMeta
+}
+
+export type GatewayCommand<TData = Record<string, unknown>> = {
+  version: string
+  type: GatewayCommandType
+  data: TData
+  meta: TraceMeta
+}
+
+function isPlainObject(
+  value: unknown,
+): value is Record<string, unknown | undefined> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function coerceIsoTimestamp(value: unknown): string {
+  if (typeof value === 'string' && !Number.isNaN(Date.parse(value))) {
+    return new Date(value).toISOString()
+  }
+
+  return new Date().toISOString()
+}
+
+function generateFallbackId(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID()
+  }
+
+  return Math.random().toString(16).slice(2)
+}
+
+function sanitizeString(value: unknown): string | undefined {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim()
+  }
+
+  return undefined
+}
+
+export function sanitizeTraceMeta(value: unknown): TraceMeta {
+  const meta = isPlainObject(value) ? value : {}
+
+  const traceId = sanitizeString(meta.traceId) ?? generateFallbackId()
+  const sentAt = coerceIsoTimestamp(meta.sentAt)
+
+  const sanitized: TraceMeta = {
+    traceId,
+    sentAt,
+  }
+
+  const requestId = sanitizeString(meta.requestId)
+  if (requestId) {
+    sanitized.requestId = requestId
+  }
+
+  const spanId = sanitizeString(meta.spanId)
+  if (spanId) {
+    sanitized.spanId = spanId
+  }
+
+  const source = sanitizeString(meta.source)
+  if (source) {
+    sanitized.source = source
+  }
+
+  return sanitized
+}
+
+function isGatewayEventType(value: unknown): value is GatewayEventType {
+  return typeof value === 'string' && GATEWAY_EVENT_TYPES.includes(value as never)
+}
+
+function isGatewayCommandType(value: unknown): value is GatewayCommandType {
+  return (
+    typeof value === 'string' && GATEWAY_COMMAND_TYPES.includes(value as never)
+  )
+}
+
+export function sanitizeGatewayEvent(
+  value: unknown,
+): GatewayEvent | null {
+  if (!isPlainObject(value)) {
+    return null
+  }
+
+  if (!isGatewayEventType(value.type)) {
+    return null
+  }
+
+  const data = isPlainObject(value.data) ? value.data : {}
+
+  return {
+    version: typeof value.version === 'string' ? value.version : GATEWAY_SCHEMA_VERSION,
+    type: value.type,
+    data,
+    meta: sanitizeTraceMeta(value.meta),
+  }
+}
+
+export function sanitizeGatewayCommand(
+  value: unknown,
+): GatewayCommand | null {
+  if (!isPlainObject(value)) {
+    return null
+  }
+
+  if (!isGatewayCommandType(value.type)) {
+    return null
+  }
+
+  const data = isPlainObject(value.data) ? value.data : {}
+
+  return {
+    version: typeof value.version === 'string' ? value.version : GATEWAY_SCHEMA_VERSION,
+    type: value.type,
+    data,
+    meta: sanitizeTraceMeta(value.meta),
+  }
+}
 
 export type VoiceEventName =
   | 'room.created'
@@ -59,44 +214,32 @@ function isDiscordSnowflake(value: unknown): value is DiscordSnowflake {
 }
 
 export function isMessageEnvelope(value: unknown): value is MessageEnvelope {
-  if (typeof value !== 'object' || value === null) {
+  if (!isPlainObject(value)) {
     return false
   }
 
-  const envelope = value as Record<string, unknown>
-
   return (
-    envelope.v === 1 &&
-    (envelope.type === 'event' ||
-      envelope.type === 'ack' ||
-      envelope.type === 'error') &&
-    (envelope.event === undefined || typeof envelope.event === 'string') &&
-    typeof envelope.ts === 'number'
+    value.v === 1 &&
+    (value.type === 'event' ||
+      value.type === 'ack' ||
+      value.type === 'error') &&
+    (value.event === undefined || typeof value.event === 'string') &&
+    typeof value.ts === 'number'
   )
 }
 
 export function isInternalEvent(value: unknown): value is InternalEvent {
-  if (typeof value !== 'object' || value === null) {
+  if (!isPlainObject(value)) {
     return false
   }
 
-  const event = value as { event?: unknown; payload?: unknown }
-  const payload = event.payload as Record<string, unknown> | undefined
-
-  if (
-    event.event !== 'room.created' &&
-    event.event !== 'room.deleted' &&
-    event.event !== 'voice.joined' &&
-    event.event !== 'voice.left'
-  ) {
-    return false
-  }
+  const payload = value.payload as Record<string, unknown> | undefined
 
   if (!payload) {
     return false
   }
 
-  switch (event.event) {
+  switch (value.event) {
     case 'room.created':
       return (
         isDiscordSnowflake(payload.channelId) &&
@@ -128,9 +271,10 @@ export function isInternalEvent(value: unknown): value is InternalEvent {
         (payload.channelId === null || isDiscordSnowflake(payload.channelId)) &&
         isDiscordSnowflake(payload.userId)
       )
-  }
 
-  return false
+    default:
+      return false
+  }
 }
 
 export interface VoiceChannel {
