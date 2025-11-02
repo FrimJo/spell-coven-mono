@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Route } from '@/routes/game.$gameId'
+import { Route } from '@/routes/__root'
 
 /**
  * Hook to get authenticated user data

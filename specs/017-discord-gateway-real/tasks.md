@@ -25,12 +25,12 @@
 
 **Note**: Most infrastructure already exists. This phase verifies and updates existing components.
 
-- [ ] T001 Verify TypeScript 5.7 and Node.js 22.20 versions match plan.md requirements
-- [ ] T002 [P] Verify @repo/discord-integration package exports all required types in packages/discord-integration/src/types/events.ts
-- [ ] T003 [P] Verify @repo/discord-gateway package exports DiscordGatewayClient in packages/discord-gateway/src/index.ts
-- [ ] T004 [P] Verify WebSocket route exists at apps/web/src/routes/api/ws.ts
-- [ ] T005 [P] Verify WebSocket manager exists at apps/web/src/server/managers/ws-manager.ts
-- [ ] T006 Update environment variables documentation with all required secrets in apps/web/.env.example
+- [x] T001 Verify TypeScript 5.7 and Node.js 22.20 versions match plan.md requirements
+- [x] T002 [P] Verify @repo/discord-integration package exports all required types in packages/discord-integration/src/types/events.ts
+- [x] T003 [P] Verify @repo/discord-gateway package exports DiscordGatewayClient in packages/discord-gateway/src/index.ts
+- [x] T004 [P] Verify WebSocket route exists at apps/web/src/routes/api/ws.ts
+- [x] T005 [P] Verify WebSocket manager exists at apps/web/src/server/managers/ws-manager.ts
+- [x] T006 Update environment variables documentation with all required secrets in apps/web/.env.example
 
 ---
 
@@ -40,14 +40,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T007 Add room cleanup timer types to apps/web/src/server/types/game-room.ts
-- [ ] T008 [P] Add session refresh types to apps/web/src/server/types/session.ts
-- [ ] T009 [P] Add rate limit queue types to apps/web/src/server/types/rate-limit.ts
-- [ ] T010 Update Zod schemas for 4-player limit in apps/web/src/server/schemas/schemas.ts
-- [ ] T011 Update Zod schemas for 24-hour token expiry in apps/web/src/server/schemas/schemas.ts
-- [ ] T012 [P] Create rate limit queue manager in apps/web/src/server/managers/rate-limit-manager.ts
-- [ ] T013 [P] Create room cleanup manager in apps/web/src/server/managers/room-cleanup-manager.ts
-- [ ] T014 Update JWT token generation to use 24-hour expiry in apps/web/src/server/room-tokens.server.ts
+- [x] T007 Add room cleanup timer types to apps/web/src/server/types/game-room.ts
+- [x] T008 [P] Add session refresh types to apps/web/src/server/types/session.ts
+- [x] T009 [P] Add rate limit queue types to apps/web/src/server/types/rate-limit.ts
+- [x] T010 Update Zod schemas for 4-player limit in apps/web/src/server/schemas/schemas.ts
+- [x] T011 Update Zod schemas for 24-hour token expiry in apps/web/src/server/schemas/schemas.ts
+- [x] T012 [P] Create rate limit queue manager in apps/web/src/server/managers/rate-limit-manager.ts
+- [x] T013 [P] Create room cleanup manager in apps/web/src/server/managers/room-cleanup-manager.ts
+- [x] T014 Update JWT token generation to use 24-hour expiry in apps/web/src/server/room-tokens.server.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -61,15 +61,15 @@
 
 ### Implementation for User Story 1
 
-- [ ] T015 [P] [US1] Verify voice.joined event payload schema in packages/discord-integration/src/types/events.ts
-- [ ] T016 [P] [US1] Verify voice.left event payload schema in packages/discord-integration/src/types/events.ts
-- [ ] T017 [US1] Verify WebSocket message broadcasting in apps/web/src/server/managers/ws-manager.ts handles voice events
-- [ ] T018 [US1] Verify useVoiceChannelEvents hook in apps/web/src/hooks/useVoiceChannelEvents.ts handles reconnection
-- [ ] T019 [US1] Verify useVoiceChannelMembersFromEvents hook in apps/web/src/hooks/useVoiceChannelMembersFromEvents.ts updates member list
-- [ ] T020 [US1] Update GameRoom component in apps/web/src/components/GameRoom.tsx to use verified hooks
-- [ ] T021 [US1] Add latency monitoring to WebSocket events in apps/web/src/server/managers/ws-manager.ts
-- [ ] T022 [US1] Add structured logging for voice events in apps/web/src/server/managers/ws-manager.ts
-- [ ] T023 [US1] Verify VoiceDropoutModal component in apps/web/src/components/VoiceDropoutModal.tsx shows on disconnect
+- [x] T015 [P] [US1] Verify voice.joined event payload schema in packages/discord-integration/src/types/events.ts
+- [x] T016 [P] [US1] Verify voice.left event payload schema in packages/discord-integration/src/types/events.ts
+- [x] T017 [US1] Verify WebSocket message broadcasting in apps/web/src/server/managers/ws-manager.ts handles voice events
+- [x] T018 [US1] Verify useVoiceChannelEvents hook in apps/web/src/hooks/useVoiceChannelEvents.ts handles reconnection
+- [x] T019 [US1] Verify useVoiceChannelMembersFromEvents hook in apps/web/src/hooks/useVoiceChannelMembersFromEvents.ts updates member list
+- [x] T020 [US1] Update GameRoom component in apps/web/src/components/GameRoom.tsx to use verified hooks
+- [x] T021 [US1] Add latency monitoring to WebSocket events in apps/web/src/server/managers/ws-manager.ts
+- [x] T022 [US1] Add structured logging for voice events in apps/web/src/server/managers/ws-manager.ts
+- [x] T023 [US1] Verify VoiceDropoutModal component in apps/web/src/components/VoiceDropoutModal.tsx shows on disconnect
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users see real-time voice channel updates within 300ms
 
@@ -83,15 +83,15 @@
 
 ### Implementation for User Story 2
 
-- [ ] T024 [P] [US2] Update createRoom server function in apps/web/src/server/handlers/discord-rooms.server.ts to enforce 4-player limit
-- [ ] T025 [P] [US2] Update createRoom to set userLimit: 4 on Discord voice channel creation
-- [ ] T026 [US2] Update joinRoom server function in apps/web/src/server/handlers/discord-rooms.server.ts to verify room capacity
-- [ ] T027 [US2] Add room full error handling in apps/web/src/server/handlers/discord-rooms.server.ts
-- [ ] T028 [US2] Update game route in apps/web/src/routes/game.$gameId.tsx to handle room full errors
-- [ ] T029 [US2] Add "Room Full" UI state to GameRoom component in apps/web/src/components/GameRoom.tsx
-- [ ] T030 [US2] Verify automatic role assignment in joinRoom function
-- [ ] T031 [US2] Add connection timeout handling (2-second target) in apps/web/src/server/handlers/discord-rooms.server.ts
-- [ ] T032 [US2] Add retry logic for failed voice channel connections in apps/web/src/components/GameRoom.tsx
+- [x] T024 [P] [US2] Update createRoom server function in apps/web/src/server/handlers/discord-rooms.server.ts to enforce 4-player limit
+- [x] T025 [P] [US2] Update createRoom to set userLimit: 4 on Discord voice channel creation
+- [x] T026 [US2] Update joinRoom server function in apps/web/src/server/handlers/discord-rooms.server.ts to verify room capacity
+- [x] T027 [US2] Add room full error handling in apps/web/src/server/handlers/discord-rooms.server.ts
+- [x] T028 [US2] Update game route in apps/web/src/routes/game.$gameId.tsx to handle room full errors
+- [x] T029 [US2] Add "Room Full" UI state to GameRoom component in apps/web/src/components/GameRoom.tsx
+- [x] T030 [US2] Verify automatic role assignment in joinRoom function
+- [x] T031 [US2] Add connection timeout handling (2-second target) in apps/web/src/server/handlers/discord-rooms.server.ts
+- [x] T032 [US2] Add retry logic for failed voice channel connections in apps/web/src/components/GameRoom.tsx
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - users see real-time updates AND are automatically connected
 
@@ -105,14 +105,14 @@
 
 ### Implementation for User Story 3
 
-- [ ] T033 [P] [US3] Verify exponential backoff reconnection in packages/discord-gateway/src/gateway.ts (1s → 2s → 4s → 8s → 16s)
-- [ ] T034 [P] [US3] Verify max 5 reconnection attempts in packages/discord-gateway/src/gateway.ts
-- [ ] T035 [US3] Verify session resumption logic in packages/discord-gateway/src/gateway.ts
-- [ ] T036 [US3] Add connection state tracking to apps/web/src/server/init/discord-gateway-init.server.ts
-- [ ] T037 [US3] Add heartbeat monitoring to packages/discord-gateway/src/gateway.ts
-- [ ] T038 [US3] Add reconnection event logging in packages/discord-gateway/src/gateway.ts
-- [ ] T039 [US3] Add operator notification on max reconnection attempts in apps/web/src/server/init/discord-gateway-init.server.ts
-- [ ] T040 [US3] Add connection state metrics to structured logging
+- [x] T033 [P] [US3] Verify exponential backoff reconnection in packages/discord-gateway/src/gateway.ts (1s → 2s → 4s → 8s → 16s)
+- [x] T034 [P] [US3] Verify max 5 reconnection attempts in packages/discord-gateway/src/gateway.ts
+- [x] T035 [US3] Verify session resumption logic in packages/discord-gateway/src/gateway.ts
+- [x] T036 [US3] Add connection state tracking to apps/web/src/server/init/discord-gateway-init.server.ts
+- [x] T037 [US3] Add heartbeat monitoring to packages/discord-gateway/src/gateway.ts
+- [x] T038 [US3] Add reconnection event logging in packages/discord-gateway/src/gateway.ts
+- [x] T039 [US3] Add operator notification on max reconnection attempts in apps/web/src/server/init/discord-gateway-init.server.ts
+- [x] T040 [US3] Add connection state metrics to structured logging
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should work - real-time updates, auto-connection, AND reliable reconnection
 
@@ -126,18 +126,18 @@
 
 ### Implementation for User Story 4
 
-- [ ] T041 [P] [US4] Update invite token generation to use 24-hour expiry in apps/web/src/server/room-tokens.server.ts
-- [ ] T042 [P] [US4] Update invite token validation to check 24-hour expiry in apps/web/src/server/room-tokens.server.ts
-- [ ] T043 [US4] Add expired token error handling in apps/web/src/routes/game.$gameId.tsx
-- [ ] T044 [US4] Implement room cleanup background job in apps/web/src/server/managers/room-cleanup-manager.ts
-- [ ] T045 [US4] Add 1-hour inactivity timer tracking to room registry in apps/web/src/server/managers/room-cleanup-manager.ts
-- [ ] T046 [US4] Add cleanup job scheduler (runs every 5 minutes) in apps/web/src/server/init/discord-gateway-init.server.ts
-- [ ] T047 [US4] Implement 30-second warning notification before cleanup in apps/web/src/server/managers/room-cleanup-manager.ts
-- [ ] T048 [US4] Add Discord channel deletion on cleanup in apps/web/src/server/managers/room-cleanup-manager.ts
-- [ ] T049 [US4] Add Discord role deletion on cleanup in apps/web/src/server/managers/room-cleanup-manager.ts
-- [ ] T050 [US4] Broadcast room.deleted event on cleanup in apps/web/src/server/managers/room-cleanup-manager.ts
-- [ ] T051 [US4] Add manual room close handler in apps/web/src/server/handlers/discord-rooms.server.ts
-- [ ] T052 [US4] Update GameRoom component to handle room.deleted events in apps/web/src/components/GameRoom.tsx
+- [x] T041 [P] [US4] Update invite token generation to use 24-hour expiry in apps/web/src/server/room-tokens.server.ts
+- [x] T042 [P] [US4] Update invite token validation to check 24-hour expiry in apps/web/src/server/room-tokens.server.ts
+- [x] T043 [US4] Add expired token error handling in apps/web/src/routes/game.$gameId.tsx
+- [x] T044 [US4] Implement room cleanup background job in apps/web/src/server/managers/room-cleanup-manager.ts
+- [x] T045 [US4] Add 1-hour inactivity timer tracking to room registry in apps/web/src/server/managers/room-cleanup-manager.ts
+- [x] T046 [US4] Add cleanup job scheduler (runs every 5 minutes) in apps/web/src/server/init/discord-gateway-init.server.ts
+- [x] T047 [US4] Implement 30-second warning notification before cleanup in apps/web/src/server/managers/room-cleanup-manager.ts
+- [x] T048 [US4] Add Discord channel deletion on cleanup in apps/web/src/server/managers/room-cleanup-manager.ts
+- [x] T049 [US4] Add Discord role deletion on cleanup in apps/web/src/server/managers/room-cleanup-manager.ts
+- [x] T050 [US4] Broadcast room.deleted event on cleanup in apps/web/src/server/managers/room-cleanup-manager.ts
+- [x] T051 [US4] Add manual room close handler in apps/web/src/server/handlers/discord-rooms.server.ts
+- [x] T052 [US4] Update GameRoom component to handle room.deleted events in apps/web/src/components/GameRoom.tsx
 
 **Checkpoint**: At this point, User Stories 1-4 should work - real-time updates, auto-connection, reliable reconnection, AND room management with cleanup
 
@@ -151,15 +151,15 @@
 
 ### Implementation for User Story 5
 
-- [ ] T053 [P] [US5] Add connection count tracking to apps/web/src/server/managers/ws-manager.ts
-- [ ] T054 [P] [US5] Add event ordering guarantees to apps/web/src/server/managers/ws-manager.ts
-- [ ] T055 [US5] Implement slow connection detection in apps/web/src/server/managers/ws-manager.ts
-- [ ] T056 [US5] Add backpressure handling (1MB buffer limit) in apps/web/src/routes/api/ws.ts
-- [ ] T057 [US5] Add connection close on buffer exceeded in apps/web/src/routes/api/ws.ts
-- [ ] T058 [US5] Implement event broadcast optimization for multiple recipients in apps/web/src/server/managers/ws-manager.ts
-- [ ] T059 [US5] Add broadcast latency monitoring in apps/web/src/server/managers/ws-manager.ts
-- [ ] T060 [US5] Add reconnection state synchronization in apps/web/src/hooks/useVoiceChannelEvents.ts
-- [ ] T061 [US5] Verify 500ms variance limit for member list sync across clients
+- [x] T053 [P] [US5] Add connection count tracking to apps/web/src/server/managers/ws-manager.ts
+- [x] T054 [P] [US5] Add event ordering guarantees to apps/web/src/server/managers/ws-manager.ts
+- [x] T055 [US5] Implement slow connection detection in apps/web/src/server/managers/ws-manager.ts
+- [x] T056 [US5] Add backpressure handling (1MB buffer limit) in apps/web/src/routes/api/ws.ts
+- [x] T057 [US5] Add connection close on buffer exceeded in apps/web/src/routes/api/ws.ts
+- [x] T058 [US5] Implement event broadcast optimization for multiple recipients in apps/web/src/server/managers/ws-manager.ts
+- [x] T059 [US5] Add broadcast latency monitoring in apps/web/src/server/managers/ws-manager.ts
+- [x] T060 [US5] Add reconnection state synchronization in apps/web/src/hooks/useVoiceChannelEvents.ts
+- [x] T061 [US5] Verify 500ms variance limit for member list sync across clients
 
 **Checkpoint**: All user stories should now be independently functional with optimized multi-user broadcasting
 
@@ -171,13 +171,13 @@
 
 **Purpose**: Cross-cutting enhancement that improves all user stories
 
-- [ ] T062 [P] Create session refresh utility in apps/web/src/server/auth/session-refresh.server.ts
-- [ ] T063 [P] Add OAuth2 token refresh logic in apps/web/src/server/auth/session-refresh.server.ts
-- [ ] T064 Add silent refresh attempt on session expiry in apps/web/src/server/middleware/auth-middleware.server.ts
-- [ ] T065 Add login redirect with return URL on refresh failure in apps/web/src/server/middleware/auth-middleware.server.ts
-- [ ] T066 Update OAuth callback to handle return URL from state parameter in apps/web/src/routes/auth/discord/callback.tsx
-- [ ] T067 Add session expiry handling to WebSocket authentication in apps/web/src/routes/api/ws.ts
-- [ ] T068 Add session refresh logging in apps/web/src/server/auth/session-refresh.server.ts
+- [x] T062 [P] Create session refresh utility in apps/web/src/server/auth/session-refresh.server.ts
+- [x] T063 [P] Add OAuth2 token refresh logic in apps/web/src/server/auth/session-refresh.server.ts
+- [x] T064 Add silent refresh attempt on session expiry in apps/web/src/server/middleware/auth-middleware.server.ts
+- [x] T065 Add login redirect with return URL on refresh failure in apps/web/src/server/middleware/auth-middleware.server.ts
+- [x] T066 Update OAuth callback to handle return URL from state parameter in apps/web/src/routes/auth/discord/callback.tsx
+- [x] T067 Add session expiry handling to WebSocket authentication in apps/web/src/routes/api/ws.ts
+- [x] T068 Add session refresh logging in apps/web/src/server/auth/session-refresh.server.ts
 
 ---
 
@@ -187,13 +187,13 @@
 
 **Purpose**: Cross-cutting enhancement that improves reliability across all user stories
 
-- [ ] T069 [P] Implement request queue in apps/web/src/server/managers/rate-limit-manager.ts
-- [ ] T070 [P] Add exponential backoff logic (1s → 2s → 4s → 8s → 16s) in apps/web/src/server/managers/rate-limit-manager.ts
-- [ ] T071 Add max 5 retry attempts to rate limit manager
-- [ ] T072 Add Discord rate limit header parsing in apps/web/src/server/managers/rate-limit-manager.ts
-- [ ] T073 Integrate rate limit manager with Discord API calls in packages/discord-integration/src/clients/rest-client.ts
-- [ ] T074 Add rate limit event logging in apps/web/src/server/managers/rate-limit-manager.ts
-- [ ] T075 Add rate limit metrics to structured logging
+- [x] T069 [P] Implement request queue in apps/web/src/server/managers/rate-limit-manager.ts
+- [x] T070 [P] Add exponential backoff logic (1s → 2s → 4s → 8s → 16s) in apps/web/src/server/managers/rate-limit-manager.ts
+- [x] T071 Add max 5 retry attempts to rate limit manager
+- [x] T072 Add Discord rate limit header parsing in apps/web/src/server/managers/rate-limit-manager.ts
+- [x] T073 Integrate rate limit manager with Discord API calls in packages/discord-integration/src/clients/rest-client.ts
+- [x] T074 Add rate limit event logging in apps/web/src/server/managers/rate-limit-manager.ts
+- [x] T075 Add rate limit metrics to structured logging
 
 ---
 
@@ -201,21 +201,21 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T076 [P] Update quickstart.md with final implementation details
-- [ ] T077 [P] Add performance monitoring dashboard queries for <300ms p95 latency
-- [ ] T078 [P] Add uptime monitoring for 99.9% target
-- [ ] T079 [P] Verify all secrets are server-side only (security audit checklist)
-- [ ] T080 [P] Add structured logging for all Discord events
-- [ ] T081 [P] Add error tracking for all failure modes
-- [ ] T082 Code cleanup: Remove any SSE references if found (WebSocket is used)
-- [ ] T083 Update technical documentation to clarify WebSocket vs SSE decision
-- [ ] T084 Verify all Zod schemas match data-model.md specifications
-- [ ] T085 Run type checking: `pnpm check-types`
-- [ ] T086 Run linting: `pnpm lint`
-- [ ] T087 Run formatting: `pnpm format`
-- [ ] T088 Verify all environment variables documented in .env.example
-- [ ] T089 Run quickstart.md validation scenarios
-- [ ] T090 Update README.md with feature documentation
+- [x] T076 [P] Update quickstart.md with final implementation details
+- [x] T077 [P] Add performance monitoring dashboard queries for <300ms p95 latency
+- [x] T078 [P] Add uptime monitoring for 99.9% target
+- [x] T079 [P] Verify all secrets are server-side only (security audit checklist)
+- [x] T080 [P] Add structured logging for all Discord events
+- [x] T081 [P] Add error tracking for all failure modes
+- [x] T082 Code cleanup: Remove any SSE references if found (WebSocket is used)
+- [x] T083 Update technical documentation to clarify WebSocket vs SSE decision
+- [x] T084 Verify all Zod schemas match data-model.md specifications
+- [x] T085 Run type checking: `pnpm check-types`
+- [x] T086 Run linting: `pnpm lint`
+- [x] T087 Run formatting: `pnpm format`
+- [x] T088 Verify all environment variables documented in .env.example
+- [x] T089 Run quickstart.md validation scenarios
+- [x] T090 Update README.md with feature documentation
 
 ---
 
