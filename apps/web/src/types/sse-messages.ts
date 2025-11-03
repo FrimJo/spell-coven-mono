@@ -20,7 +20,7 @@ export const SSEMessageBaseSchema = z.object({
 /**
  * Custom application event names
  */
-export type CustomEventName = 'voice.joined' | 'voice.left'
+export type CustomEventName = 'voice.joined' | 'voice.left' | 'webrtc.signal'
 
 /**
  * SSE Discord Gateway Event Message - Raw Discord events
@@ -40,7 +40,7 @@ export type SSEDiscordEventMessage = z.infer<
  */
 export const SSECustomEventMessageSchema = SSEMessageBaseSchema.extend({
   type: z.literal('custom.event'),
-  event: z.enum(['voice.joined', 'voice.left']), // Custom event names
+  event: z.enum(['voice.joined', 'voice.left', 'webrtc.signal']), // Custom event names
   payload: z.unknown(), // Custom event payload
 })
 

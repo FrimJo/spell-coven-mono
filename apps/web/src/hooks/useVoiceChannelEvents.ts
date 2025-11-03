@@ -4,14 +4,17 @@ import type { APIVoiceState } from '@repo/discord-integration/clients'
 
 import {
   isSSEAckMessage,
+  isSSECustomEventMessage,
   isSSEDiscordEventMessage,
   isSSEErrorMessage,
   SSEMessageSchema,
+  type SSECustomEventMessage,
 } from '../types/sse-messages'
 
 interface UseVoiceChannelEventsOptions {
   jwtToken?: string
   onVoiceStateUpdate?: (voiceState: APIVoiceState) => void
+  onCustomEvent?: (event: SSECustomEventMessage) => void
   onError?: (error: Error) => void
 }
 
@@ -35,6 +38,7 @@ class VoiceChannelSSEManager {
   private isConnecting = false
   private listeners: Set<{
     onVoiceStateUpdate?: (voiceState: APIVoiceState) => void
+    onCustomEvent?: (event: SSECustomEventMessage) => void
     onError?: (error: Error) => void
   }> = new Set()
 
@@ -144,6 +148,18 @@ class VoiceChannelSSEManager {
             const error = new Error(message.message)
             this.listeners.forEach((listener) => {
               listener.onError?.(error)
+            })
+            return
+          }
+
+          // Handle custom application events
+          if (isSSECustomEventMessage(message)) {
+            console.log(
+              `[VoiceChannelEvents] Received custom event: ${message.event}`,
+            )
+
+            this.listeners.forEach((listener) => {
+              listener.onCustomEvent?.(message)
             })
             return
           }
@@ -261,15 +277,16 @@ class VoiceChannelSSEManager {
 export function useVoiceChannelEvents({
   jwtToken,
   onVoiceStateUpdate,
+  onCustomEvent,
   onError,
 }: UseVoiceChannelEventsOptions) {
   const manager = useMemo(() => VoiceChannelSSEManager.getInstance(), [])
 
   // Store callbacks in a ref to avoid recreating listener on every render
-  const callbacksRef = useRef({ onVoiceStateUpdate, onError })
+  const callbacksRef = useRef({ onVoiceStateUpdate, onCustomEvent, onError })
   useEffect(() => {
-    callbacksRef.current = { onVoiceStateUpdate, onError }
-  }, [onVoiceStateUpdate, onError])
+    callbacksRef.current = { onVoiceStateUpdate, onCustomEvent, onError }
+  }, [onVoiceStateUpdate, onCustomEvent, onError])
 
   // Set JWT token when it changes
   useEffect(() => {
@@ -283,6 +300,8 @@ export function useVoiceChannelEvents({
     const listener = {
       onVoiceStateUpdate: (voiceState: APIVoiceState) =>
         callbacksRef.current.onVoiceStateUpdate?.(voiceState),
+      onCustomEvent: (event: SSECustomEventMessage) =>
+        callbacksRef.current.onCustomEvent?.(event),
       onError: (error: Error) => callbacksRef.current.onError?.(error),
     }
     manager.addListener(listener)
