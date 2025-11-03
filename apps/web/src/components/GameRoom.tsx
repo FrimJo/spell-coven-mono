@@ -40,7 +40,11 @@ interface GameRoomProps {
   isLobbyOwner?: boolean
   detectorType?: DetectorType
   usePerspectiveWarp?: boolean
-  initialMembers?: Array<{ id: string; username: string; avatar: string | null }>
+  initialMembers?: Array<{
+    id: string
+    username: string
+    avatar: string | null
+  }>
 }
 
 interface Player {
@@ -61,7 +65,7 @@ function GameRoomContent({
 }: GameRoomProps) {
   const { query } = useCardQueryContext()
   const [copied, setCopied] = useState(false)
-  
+
   // Initialize players from initial members (from loader)
   const [players, setPlayers] = useState<Player[]>(
     initialMembers.map((member, index) => ({
@@ -69,7 +73,7 @@ function GameRoomContent({
       name: member.username,
       life: 20,
       isActive: index === 0,
-    }))
+    })),
   )
 
   const [isLoading, setIsLoading] = useState(true)
@@ -97,8 +101,10 @@ function GameRoomContent({
 
   const { user: discordUser } = useDiscordUser()
 
-  const { data: wsTokenData } = useWebSocketAuthToken({ userId: discordUser?.id })
-  
+  const { data: wsTokenData } = useWebSocketAuthToken({
+    userId: discordUser?.id,
+  })
+
   const [hasConnectedToVoice, setHasConnectedToVoice] = useState(false)
 
   // Auto-connect to voice channel AFTER SSE is established
@@ -108,12 +114,16 @@ function GameRoomContent({
         return
       }
 
-      console.log('[GameRoom] SSE connected, auto-connecting to voice channel...')
+      console.log(
+        '[GameRoom] SSE connected, auto-connecting to voice channel...',
+      )
       setHasConnectedToVoice(true)
 
       // Import the server function dynamically
-      const { connectUserToVoiceChannel } = await import('@/server/handlers/discord-rooms.server')
-      
+      const { connectUserToVoiceChannel } = await import(
+        '@/server/handlers/discord-rooms.server'
+      )
+
       const result = await connectUserToVoiceChannel({
         data: { userId: discordUser.id, channelId: gameId },
       })
@@ -121,7 +131,10 @@ function GameRoomContent({
       if (result.success) {
         console.log('[GameRoom] Successfully connected to voice channel')
       } else {
-        console.warn('[GameRoom] Failed to connect to voice channel:', result.error)
+        console.warn(
+          '[GameRoom] Failed to connect to voice channel:',
+          result.error,
+        )
       }
     }
 
@@ -133,30 +146,28 @@ function GameRoomContent({
   // This will update the list when new members join or leave
   const { members: voiceChannelMembers } = useVoiceChannelMembersFromEvents({
     gameId,
-    userId: discordUser?.id || '',
+    userId: discordUser?.id,
     jwtToken: wsTokenData,
     enabled: !!wsTokenData && !!discordUser,
   })
 
   useEffect(() => {
-    if (voiceChannelMembers.length > 0) {
-      // Update players when voice channel members change
-      // This handles real-time joins/leaves after initial load
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPlayers((prevPlayers) => {
-        const newPlayers = voiceChannelMembers.map((member) => {
-          // Preserve life total for existing players
-          const existing = prevPlayers.find((p) => p.id === member.id)
-          return {
-            id: member.id,
-            name: member.username,
-            life: existing?.life ?? 20,
-            isActive: member.isActive,
-          }
-        })
-        return newPlayers
+    // Update players when voice channel members change
+    // This handles real-time joins/leaves after initial load
+
+    setPlayers((prevPlayers) => {
+      const newPlayers = voiceChannelMembers.map((member) => {
+        // Preserve life total for existing players
+        const existing = prevPlayers.find((p) => p.id === member.id)
+        return {
+          id: member.id,
+          name: member.username,
+          life: existing?.life ?? 20,
+          isActive: member.isActive,
+        }
       })
-    }
+      return newPlayers
+    })
   }, [voiceChannelMembers])
 
   // Voice channel validation is now done in the route's beforeLoad hook
@@ -186,9 +197,12 @@ function GameRoomContent({
         channelId: voiceState.channel_id,
         currentUserId: discordUser?.id,
       })
-      
+
       // Only handle events for the current user
-      if (voiceState.user_id === discordUser?.id && voiceState.channel_id === null) {
+      if (
+        voiceState.user_id === discordUser?.id &&
+        voiceState.channel_id === null
+      ) {
         console.log('[GameRoom] Current user left voice channel')
         setVoiceDropoutOpen(true)
         toast.warning('You have been removed from the voice channel')

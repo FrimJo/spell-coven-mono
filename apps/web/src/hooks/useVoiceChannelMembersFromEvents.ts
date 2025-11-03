@@ -13,7 +13,7 @@ export interface VoiceChannelMember {
 
 interface UseVoiceChannelMembersFromEventsProps {
   gameId: string
-  userId: string
+  userId?: string | undefined
   jwtToken?: string
   enabled?: boolean
 }
@@ -48,11 +48,11 @@ export function useVoiceChannelMembersFromEvents({
     (voiceState: APIVoiceState) => {
       console.log(
         '[VoiceChannelMembersFromEvents] Received VOICE_STATE_UPDATE:',
-        { 
+        {
           userId: voiceState.user_id,
           channelId: voiceState.channel_id,
           gameId,
-          match: voiceState.channel_id === gameId 
+          match: voiceState.channel_id === gameId,
         },
       )
 
@@ -70,10 +70,7 @@ export function useVoiceChannelMembersFromEvents({
         const username = voiceState.member?.user?.username || 'Unknown User'
         const avatar = voiceState.member?.user?.avatar || null
 
-        console.log(
-          '[VoiceChannelMembersFromEvents] Member joined:',
-          username,
-        )
+        console.log('[VoiceChannelMembersFromEvents] Member joined:', username)
 
         setMembers((prevMembers) => {
           // Check if member already exists
@@ -108,7 +105,9 @@ export function useVoiceChannelMembersFromEvents({
         )
 
         setMembers((prevMembers) => {
-          const filtered = prevMembers.filter((m) => m.id !== voiceState.user_id)
+          const filtered = prevMembers.filter(
+            (m) => m.id !== voiceState.user_id,
+          )
           console.log(
             '[VoiceChannelMembersFromEvents] Members updated after leave:',
             filtered.length,

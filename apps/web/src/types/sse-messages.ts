@@ -28,7 +28,7 @@ export type CustomEventName = 'voice.joined' | 'voice.left'
 export const SSEDiscordEventMessageSchema = SSEMessageBaseSchema.extend({
   type: z.literal('discord.event'),
   event: z.string().transform((event) => event as GatewayDispatchEvents), // Transform to GatewayDispatchEvents
-  payload: z.unknown(), // Raw Discord event payload
+  payload: z.unknown(), // Raw Discord event payload GatewaySendPayload
 })
 
 export type SSEDiscordEventMessage = z.infer<
