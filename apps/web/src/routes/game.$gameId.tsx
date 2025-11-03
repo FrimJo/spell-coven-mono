@@ -1,15 +1,20 @@
 import type { DetectorType } from '@/lib/detectors'
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useState } from 'react'
 import { DiscordAuthModal } from '@/components/discord/DiscordAuthModal'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
-import { useAuth } from '@/hooks/useAuth'
+import {
+  discordTokenQueryOptions,
+  useDiscordAuth,
+} from '@/hooks/useDiscordAuth'
+import { discordUserQueryOptions, useDiscordUser } from '@/hooks/useDiscordUser'
 import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
 import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken'
 import { sessionStorage } from '@/lib/session-storage'
 import {
   checkRoomExists,
-  joinRoom,
+  checkUserInVoiceChannel,
+  ensureUserInGuild,
 } from '@/server/handlers/discord-rooms.server'
 import {
   createFileRoute,
@@ -17,11 +22,9 @@ import {
   stripSearchParams,
   useNavigate,
 } from '@tanstack/react-router'
-import { createClientOnlyFn, useServerFn } from '@tanstack/react-start'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { ExternalLink, Loader2 } from 'lucide-react'
 import { ErrorBoundary } from 'react-error-boundary'
-import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { Button } from '@repo/ui/components/button'
@@ -51,30 +54,66 @@ export const Route = createFileRoute('/game/$gameId')({
   beforeLoad: async ({ params }) => {
     const { gameId } = params
 
-    // Check if room exists first (before auth check)
+    // VALIDATION STEP 1: Check if room exists
     const result = await checkRoomExists({ data: { channelId: gameId } })
 
     if (!result.exists) {
-      console.warn(
-        `[Game] Room ${gameId} does not exist: ${result.error || 'Unknown reason'}`,
-      )
+      console.warn('[Game] Room does not exist:', result.error)
       throw redirect({
         to: '/',
-        search: {
-          error: result.error || 'Game room not found',
-        },
+        search: { error: result.error || 'Game room not found' },
       })
     }
 
     return {
-      roomName: result.channel?.name || 'Game Room',
+      roomName: result.channelName || 'Game Room',
     }
   },
-  loader: async ({ params }) => {
+  loader: async ({ params, context }) => {
     const { gameId } = params
+    let user, token
+    try {
+      token = await context.queryClient.ensureQueryData(
+        discordTokenQueryOptions,
+      )
+
+      if (!token) throw new Error('No token available')
+
+      user = await context.queryClient.ensureQueryData(
+        discordUserQueryOptions(token.accessToken),
+      )
+    } catch (error) {
+      return {
+        isAuthenticated: false,
+        voiceChannelStatus: {
+          inChannel: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      }
+    }
+
+    const { error } = await ensureUserInGuild({
+      data: { userId: user.id, accessToken: token.accessToken },
+    })
+
+    if (error) {
+      console.error('[Game] Error ensuring user in guild:', error)
+      throw redirect({
+        to: '/',
+        search: { error: error || 'Failed to ensure user in guild' },
+      })
+    }
+
+    const result = await checkUserInVoiceChannel({
+      data: {
+        userId: user.id,
+        channelId: gameId,
+      },
+    })
 
     return {
-      gameId,
+      isAuthenticated: true,
+      voiceChannelStatus: result,
     }
   },
   component: GameRoomRoute,
@@ -86,36 +125,48 @@ export const Route = createFileRoute('/game/$gameId')({
 
 function GameRoomRoute() {
   const { gameId } = Route.useParams()
+  const loaderData = Route.useLoaderData()
   const { detector, usePerspectiveWarp } = Route.useSearch()
   const navigate = useNavigate()
-  const { auth, guildId } = useAuth()
-  const [showAuthModal, setShowAuthModal] = useState(!auth)
-  const [showJoinDiscordModal, setShowJoinDiscordModal] = useState(false)
-  const [userJoinedVoice, setUserJoinedVoice] = useState(false)
+  const { user: discordUser } = useDiscordUser()
+  const { token: discordToken } = useDiscordAuth()
+  const guildId = import.meta.env.VITE_DISCORD_GUILD_ID
+  const [showAuthModal, setShowAuthModal] = useState(
+    !loaderData.isAuthenticated,
+  )
+  const [showJoinDiscordModal, setShowJoinDiscordModal] = useState(
+    loaderData.isAuthenticated && !loaderData.voiceChannelStatus.inChannel,
+  )
+  const [userJoinedVoice, setUserJoinedVoice] = useState(!showJoinDiscordModal)
 
   const state = sessionStorage.loadGameState()
   const playerName = state?.playerName ?? 'Guest'
 
-  const joinRoomFn = useServerFn(joinRoom)
-
   // Get invite token from search params if present (client-side only)
-  const getUrlParams = createClientOnlyFn((): URLSearchParams | null => {
-    return new URLSearchParams(window.location.search)
-  })
-  const urlParams = getUrlParams()
-  const inviteToken = urlParams?.get('t') || null
+  // const getUrlParams = createClientOnlyFn((): URLSearchParams | null => {
+  //   return new URLSearchParams(window.location.search)
+  // })
+  // const urlParams = getUrlParams()
+  // const inviteToken = urlParams?.get('t') || null
 
   // Generate WebSocket auth token
-  const { data: wsTokenData } = useWebSocketAuthToken({ userId: auth?.userId })
+  const { data: wsTokenData } = useWebSocketAuthToken({
+    userId: discordUser?.id,
+  })
+
+  const handleProceedToGame = useCallback(() => {
+    setShowJoinDiscordModal(false)
+    setUserJoinedVoice(true)
+  }, [])
 
   const handleVoiceJoined = useCallback(
     (event: { userId: string }) => {
-      if (showJoinDiscordModal && event.userId === auth?.userId) {
+      if (showJoinDiscordModal && event.userId === discordUser?.id) {
         console.log('[GameRoomRoute] User joined voice channel')
         setUserJoinedVoice(true)
       }
     },
-    [showJoinDiscordModal, auth?.userId],
+    [showJoinDiscordModal, discordUser?.id],
   )
 
   // Listen for voice.joined event to update modal status (only when modal is open)
@@ -124,90 +175,13 @@ function GameRoomRoute() {
     onVoiceJoined: handleVoiceJoined,
   })
 
-  const handleProceedToGame = () => {
-    console.log('[GameRoomRoute] Proceeding to game room')
-    setShowJoinDiscordModal(false)
-    setUserJoinedVoice(false)
-  }
-
-  // Join logic: if token, userId, accessToken
-  useEffect(() => {
-    console.log('[GameRoomRoute] Join effect triggered', {
-      inviteToken: !!inviteToken,
-      userId: auth?.userId,
-      hasAccessToken: !!auth?.accessToken,
-    })
-
-    if (inviteToken && auth?.userId && auth?.accessToken) {
-      console.log('[GameRoomRoute] Joining with invite token:', inviteToken)
-      joinRoomFn({
-        data: {
-          token: inviteToken,
-          userId: auth.userId,
-          accessToken: auth.accessToken,
-        },
-      })
-        .then(() => {
-          console.log('[GameRoomRoute] Successfully joined with invite token')
-          // Show join Discord modal for friends joining via link
-          setShowJoinDiscordModal(true)
-        })
-        .catch((err) => {
-          console.error(
-            '[GameRoomRoute] Failed to join with invite token:',
-            err,
-          )
-          toast.error(
-            'Failed to join private room: ' + (err?.message || 'Unknown error'),
-          )
-          void navigate({ to: '/' })
-        })
-    } else if (!inviteToken && auth?.userId && auth?.accessToken) {
-      // Creator joining their own room (no invite token)
-      // Get the invite token from session storage and use it to join
-      console.log(
-        '[GameRoomRoute] No invite token, checking session storage for creator token',
-      )
-      const creatorInviteState = sessionStorage.loadCreatorInviteState()
-      console.log('[GameRoomRoute] Creator invite state:', {
-        exists: !!creatorInviteState,
-        hasToken: !!creatorInviteState?.token,
-        channelId: creatorInviteState?.channelId,
-      })
-
-      if (creatorInviteState && creatorInviteState.token) {
-        console.log('[GameRoomRoute] Joining creator with stored token')
-        joinRoomFn({
-          data: {
-            token: creatorInviteState.token,
-            userId: auth.userId,
-            accessToken: auth.accessToken,
-          },
-        })
-          .then(() => {
-            console.log('[GameRoomRoute] Creator successfully joined room')
-            // User will manually join Discord voice channel
-            // Real-time events will show them in the player list when they join
-          })
-          .catch((err) => {
-            console.error('[GameRoomRoute] Creator failed to join room:', err)
-            // Don't navigate away - let them continue even if join fails
-          })
-      } else {
-        console.warn(
-          '[GameRoomRoute] No creator invite token found in session storage',
-        )
-      }
-    }
-  }, [inviteToken, auth?.userId, auth?.accessToken, joinRoomFn, navigate])
-
   const handleLeaveGame = () => {
     sessionStorage.clearGameState()
     navigate({ to: '/' })
   }
 
-  // Show auth modal if not authenticated
-  if (!auth) {
+  // VALIDATION STEP 2: Show auth modal if not authenticated
+  if (!discordToken) {
     return (
       <DiscordAuthModal
         isOpen={showAuthModal}
@@ -224,24 +198,26 @@ function GameRoomRoute() {
       )}
       onReset={() => window.location.reload()}
     >
-      <Suspense
-        fallback={
-          <div className="flex h-screen items-center justify-center">
-            Loading game room...
-          </div>
-        }
-      >
-        <GameRoom
-          gameId={gameId}
-          guildId={guildId}
-          playerName={playerName}
-          onLeaveGame={handleLeaveGame}
-          detectorType={detector as DetectorType | undefined}
-          usePerspectiveWarp={usePerspectiveWarp}
-        />
-      </Suspense>
+      {/* Only render GameRoom if user is in voice channel (modal is closed) */}
+      {!showJoinDiscordModal && (
+        <Suspense
+          fallback={
+            <div className="flex h-screen items-center justify-center">
+              Loading game room...
+            </div>
+          }
+        >
+          <GameRoom
+            gameId={gameId}
+            playerName={playerName}
+            onLeaveGame={handleLeaveGame}
+            detectorType={detector as DetectorType | undefined}
+            usePerspectiveWarp={usePerspectiveWarp}
+          />
+        </Suspense>
+      )}
 
-      {/* Join Discord Modal for friends joining via link */}
+      {/* Join Discord Modal - shown when user is not in voice channel */}
       <Dialog
         open={showJoinDiscordModal}
         onOpenChange={setShowJoinDiscordModal}

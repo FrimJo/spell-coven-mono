@@ -1,3 +1,8 @@
+import type { GatewayReceivePayload } from 'discord-api-types/v10'
+import { GatewayDispatchEvents, GatewayOpcodes } from 'discord-api-types/v10'
+
+import type { GatewayConnection } from '../types/gateway.js'
+
 /**
  * Discord Gateway Client (WebSocket)
  * Manages real-time connection to Discord Gateway for receiving events
@@ -12,22 +17,10 @@
  * SoC: Pure logic, no React, no localStorage, returns data to caller
  */
 
-import type {
-  GatewayConnection,
-  GatewayEvent,
-  GatewayEventType,
-} from '../types/gateway.js'
-
 /**
- * Gateway Opcodes (from Discord API)
+ * Re-export Gateway Opcodes from discord-api-types
  */
-const GatewayOpcodes = {
-  DISPATCH: 0, // Receive events
-  HEARTBEAT: 1, // Send heartbeat
-  IDENTIFY: 2, // Identify session
-  HELLO: 10, // Receive heartbeat interval
-  HEARTBEAT_ACK: 11, // Heartbeat acknowledged
-} as const
+export { GatewayOpcodes } from 'discord-api-types/v10'
 
 /**
  * Gateway Close Codes (from Discord API)
@@ -66,7 +59,7 @@ export interface ConnectionStateEvent {
  * Gateway event data
  */
 export interface GatewayEventData {
-  type: GatewayEventType
+  type: GatewayDispatchEvents
   data: unknown
   sequence: number
 }
@@ -87,8 +80,10 @@ export class DiscordGatewayClient {
 
   // Event listeners
   private stateListeners: Set<EventListener<ConnectionStateEvent>> = new Set()
-  private eventListeners: Map<GatewayEventType, Set<EventListener<unknown>>> =
-    new Map()
+  private eventListeners: Map<
+    GatewayDispatchEvents,
+    Set<EventListener<unknown>>
+  > = new Map()
   private anyEventListeners: Set<EventListener<GatewayEventData>> = new Set()
 
   // Current connection state
@@ -200,7 +195,7 @@ export class DiscordGatewayClient {
    * Subscribe to specific Gateway event type
    */
   on<T = unknown>(
-    eventType: GatewayEventType,
+    eventType: GatewayDispatchEvents,
     listener: EventListener<T>,
   ): () => void {
     if (!this.eventListeners.has(eventType)) {
@@ -229,7 +224,7 @@ export class DiscordGatewayClient {
    */
   private handleMessage(data: string): void {
     try {
-      const payload = JSON.parse(data) as GatewayEvent
+      const payload = JSON.parse(data) as GatewayReceivePayload
 
       // Update sequence number
       if (payload.s !== null) {
@@ -237,15 +232,15 @@ export class DiscordGatewayClient {
       }
 
       switch (payload.op) {
-        case GatewayOpcodes.HELLO:
-          this.handleHello(payload.d as { heartbeat_interval: number })
+        case GatewayOpcodes.Hello:
+          this.handleHello(payload.d)
           break
 
-        case GatewayOpcodes.HEARTBEAT_ACK:
+        case GatewayOpcodes.HeartbeatAck:
           this.handleHeartbeatAck()
           break
 
-        case GatewayOpcodes.DISPATCH:
+        case GatewayOpcodes.Dispatch:
           this.handleDispatch(payload)
           break
 
@@ -304,7 +299,7 @@ export class DiscordGatewayClient {
     }
 
     const payload = {
-      op: GatewayOpcodes.HEARTBEAT,
+      op: GatewayOpcodes.Heartbeat,
       d: this.sequence,
     }
 
@@ -330,7 +325,7 @@ export class DiscordGatewayClient {
     }
 
     const payload = {
-      op: GatewayOpcodes.IDENTIFY,
+      op: GatewayOpcodes.Identify,
       d: {
         token: this.accessToken,
         properties: {
@@ -349,17 +344,17 @@ export class DiscordGatewayClient {
   /**
    * Handle DISPATCH event (actual Gateway events)
    */
-  private handleDispatch(payload: GatewayEvent): void {
+  private handleDispatch(payload: GatewayReceivePayload): void {
     if (!payload.t) {
       console.warn('[Gateway] DISPATCH event without type')
       return
     }
 
-    const eventType = payload.t as GatewayEventType
+    const eventType = payload.t
 
     // Handle READY event specially
     if (eventType === 'READY') {
-      this.handleReady(payload.d as { session_id: string })
+      this.handleReady(payload.d)
     }
 
     // Emit to specific event listeners

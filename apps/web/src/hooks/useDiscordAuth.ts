@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
 
 import type { DiscordToken } from '@repo/discord-integration/types'
@@ -24,6 +30,23 @@ import { revokeDiscordToken } from '../server/discord-auth.server.js'
  * - Logout functionality
  */
 
+export const discordTokenQueryOptions = queryOptions({
+  queryKey: ['discordToken'],
+  queryFn: async () => {
+    try {
+      const existing = await ensureValidDiscordToken()
+      return existing
+    } catch (err) {
+      console.error('Failed to load Discord token:', err)
+      clearStoredDiscordToken()
+      return null
+    }
+  },
+  staleTime: 1000 * 60 * 5, // 5 minutes
+  gcTime: 1000 * 60 * 10, // 10 minutes
+  retry: false, // Don't retry if token is invalid
+})
+
 export interface UseDiscordAuthReturn {
   token: DiscordToken | null
   isAuthenticated: boolean
@@ -34,10 +57,12 @@ export interface UseDiscordAuthReturn {
 }
 
 export function useDiscordAuth(): UseDiscordAuthReturn {
-  const [token, setToken] = useState<DiscordToken | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+  const queryClient = useQueryClient()
   const refreshTimerRef = useRef<number | null>(null)
+  const navigate = useNavigate()
+
+  // Use TanStack Query to load and cache the Discord token
+  const { data: token, isLoading, error } = useQuery(discordTokenQueryOptions)
 
   // Server function for token revocation
   const revokeTokenFn = useServerFn(revokeDiscordToken)
@@ -63,7 +88,10 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
 
       // Redirect to Discord OAuth with state parameter
       const authUrl = client.getAuthUrl(codeChallenge, state)
-      window.location.href = authUrl
+      return authUrl
+    },
+    onSuccess: (authUrl) => {
+      navigate({ href: authUrl, reloadDocument: true })
     },
     onError: (err) => {
       console.error('Login failed:', err)
@@ -87,70 +115,36 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
       }
     },
     onSuccess: () => {
-      // Clear local state
-      setToken(null)
+      // Clear query cache and local storage
+      queryClient.setQueryData(['discordToken'], null)
       clearStoredDiscordToken()
       getDiscordClient().clearStoredPKCE()
-      setError(null)
     },
     onError: (err) => {
       console.error('Logout failed:', err)
       // Still clear local state even if revocation fails
-      setToken(null)
+      queryClient.setQueryData(['discordToken'], null)
       clearStoredDiscordToken()
-      setError(err as Error)
     },
   })
 
   const { mutateAsync: logoutAsync } = logoutMutation
 
   // Silent token refresh
-  const refreshTokenSilently = useCallback(async (refreshToken: string) => {
-    try {
-      const newToken = await refreshDiscordToken(refreshToken)
-      setToken(newToken)
-      setError(null)
-    } catch (err) {
-      console.error('Token refresh failed:', err)
-      setError(err as Error)
-      // Clear invalid token
-      setToken(null)
-      clearStoredDiscordToken()
-    }
-  }, [])
-
-  // Load token from localStorage on mount
-  useEffect(() => {
-    let cancelled = false
-
-    const loadToken = async () => {
+  const refreshTokenSilently = useCallback(
+    async (refreshToken: string) => {
       try {
-        const existing = await ensureValidDiscordToken()
-        if (!cancelled) {
-          setToken(existing)
-        }
+        const newToken = await refreshDiscordToken(refreshToken)
+        queryClient.setQueryData(['discordToken'], newToken)
       } catch (err) {
-        console.error('Failed to load Discord token:', err)
-        if (!cancelled) {
-          clearStoredDiscordToken()
-          setToken(null)
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
-        }
+        console.error('Token refresh failed:', err)
+        // Clear invalid token
+        queryClient.setQueryData(['discordToken'], null)
+        clearStoredDiscordToken()
       }
-    }
-
-    loadToken()
-
-    return () => {
-      cancelled = true
-      if (refreshTimerRef.current) {
-        clearTimeout(refreshTimerRef.current)
-      }
-    }
-  }, [])
+    },
+    [queryClient],
+  )
 
   // Setup automatic token refresh
   useEffect(() => {
@@ -184,7 +178,6 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
   // Login: Generate PKCE and redirect to Discord
   const login = useCallback(
     async (returnUrl?: string) => {
-      setError(null)
       await loginAsync(returnUrl)
     },
     [loginAsync],
@@ -192,13 +185,12 @@ export function useDiscordAuth(): UseDiscordAuthReturn {
 
   // Logout: Revoke token and clear storage
   const logout = useCallback(async () => {
-    setError(null)
     await logoutAsync()
   }, [logoutAsync])
 
   return useMemo(
     () => ({
-      token,
+      token: token ?? null,
       isAuthenticated: !!token,
       isLoading:
         isLoading || loginMutation.isPending || logoutMutation.isPending,

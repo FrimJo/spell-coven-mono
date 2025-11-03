@@ -15,9 +15,12 @@ export type { DiscordRestClientConfig } from './DiscordRestClient.js'
 export type {
   AddGuildMemberRequest,
   CreateRoleRequest,
-  Role,
-  VoiceState,
-  GuildMember,
 } from '../types/rest-schemas.js'
+
+export type {
+  APIRole,
+  APIVoiceState,
+  APIGuildMember,
+} from 'discord-api-types/v10'
 
 export { DiscordRtcClient } from './DiscordRtcClient.js'

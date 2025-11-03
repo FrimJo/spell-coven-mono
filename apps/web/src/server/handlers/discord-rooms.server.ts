@@ -1,179 +1,29 @@
-import { randomUUID } from 'node:crypto'
-import { createServerFn, createServerOnlyFn } from '@tanstack/react-start'
+/**
+ * Discord Room Management Server Functions
+ * Handles room creation, validation, and voice channel access
+ */
 
-import type { ChannelResponse } from '@repo/discord-integration/types'
-import type { PermissionOverwrite } from '@repo/discord-integration/utils'
+import { createServerFn } from '@tanstack/react-start'
+
 import { DiscordRestClient } from '@repo/discord-integration/clients'
-import { buildRoomPermissionOverwrites } from '@repo/discord-integration/utils'
 
-import type {
-  CreateRoomRequest,
-  CreateRoomResponse,
-  JoinRoomRequest,
-  JoinRoomResponse,
-  RefreshRoomInviteRequest,
-  RefreshRoomInviteResponse,
-  RoomSummary,
-} from '../schemas/schemas.js'
-import {
-  createRoomInviteToken,
-  verifyRoomInviteToken,
-} from '../room-tokens.server.js'
-import {
-  CreateRoomRequestSchema,
-  CreateRoomResponseSchema,
-  DeleteRoomResponseSchema,
-  JoinRoomRequestSchema,
-  JoinRoomResponseSchema,
-  RefreshRoomInviteRequestSchema,
-  RefreshRoomInviteResponseSchema,
-} from '../schemas/schemas.js'
-
-interface RoomCheckResult {
-  exists: boolean
-  channel?: {
-    id: string
-    name: string
-    type: number
-  }
-  error?: string
-}
-
-interface ListRoomsResult {
-  id: string
-  name: string
-  createdAt: string
-}
-
-const DISCORD_DEEP_LINK_BASE = 'https://discord.com/channels'
-
-const getSecrets = createServerOnlyFn(() => {
-  const botToken = process.env.DISCORD_BOT_TOKEN
-  const guildId = process.env.VITE_DISCORD_GUILD_ID
-
-  if (!botToken?.length) {
-    throw new Error('DISCORD_BOT_TOKEN environment variable is not defined')
-  }
-  if (!guildId?.length) {
-    throw new Error('VITE_DISCORD_GUILD_ID environment variable is not defined')
-  }
-
-  return { botToken, guildId }
-})
-
-const getBotUserId = createServerOnlyFn(() => {
-  const botUserId = process.env.DISCORD_BOT_USER_ID
-
-  if (!botUserId?.length) {
-    throw new Error('DISCORD_BOT_USER_ID environment variable is not defined')
-  }
-
-  return botUserId
-})
-
-let discordClient: DiscordRestClient | null = null
-
-const getDiscordClient = createServerOnlyFn(() => {
-  if (!discordClient) {
-    const { botToken } = getSecrets()
-    discordClient = new DiscordRestClient({
-      botToken,
-      onRateLimit: (retryAfter, isGlobal) => {
-        console.warn(
-          `[Discord] Rate limited for ${retryAfter}s (global: ${isGlobal})`,
-        )
-      },
-      onError: (error) => {
-        console.error('[Discord] API error:', error.message)
-      },
-    })
-  }
-  return discordClient
-})
-
-function normalizeShareBase(base: string): string {
-  return base.endsWith('/') ? base.slice(0, -1) : base
-}
-
-function buildShareUrl(base: string, channelId: string, token: string): string {
-  const normalizedBase = normalizeShareBase(base)
-  return `${normalizedBase}/game/${channelId}?t=${encodeURIComponent(token)}`
-}
-
-function buildDeepLink(guildId: string, channelId: string): string {
-  return `${DISCORD_DEEP_LINK_BASE}/${guildId}/${channelId}`
-}
-
-function ensureRoomName(name?: string): string {
-  const fallback = 'Private Voice Room'
-  if (!name) return fallback
-
-  const trimmed = name.trim()
-  if (!trimmed.length) {
-    return fallback
-  }
-
-  return trimmed.slice(0, 100)
-}
-
-function createRoleName(): string {
-  return `room-${randomUUID().slice(0, 8)}`
-}
-
-function mapPermissionOverwrites(
-  overwrites: PermissionOverwrite[] | undefined,
-): PermissionOverwrite[] {
-  if (!overwrites?.length) {
-    return []
-  }
-
-  return overwrites.map((overwrite) => ({
-    id: overwrite.id,
-    type: overwrite.type,
-    allow: overwrite.allow,
-    deny: overwrite.deny,
-  }))
-}
-
-function mapChannelToSummary(
-  channel: ChannelResponse,
-  guildId: string,
-  roleId: string,
-  fallbackOverwrites: PermissionOverwrite[] | undefined,
-): RoomSummary {
-  const permissionOverwrites = mapPermissionOverwrites(
-    channel.permission_overwrites as PermissionOverwrite[] | undefined,
-  )
-
-  const overwrites =
-    permissionOverwrites.length > 0
-      ? permissionOverwrites
-      : mapPermissionOverwrites(fallbackOverwrites)
-
-  return {
-    guildId,
-    channelId: channel.id,
-    roleId,
-    name: channel.name,
-    userLimit:
-      typeof channel.user_limit === 'number' ? channel.user_limit : undefined,
-    permissionOverwrites: overwrites,
-    deepLink: buildDeepLink(guildId, channel.id),
-  }
-}
+const GUILD_ID = process.env.VITE_DISCORD_GUILD_ID || ''
+const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || ''
 
 export const ensureUserInGuild = createServerFn({ method: 'POST' })
   .inputValidator((data: { userId: string; accessToken: string }) => data)
   .handler(async ({ data: { userId, accessToken } }) => {
     try {
-      const client = getDiscordClient()
-      const { guildId } = getSecrets()
+      const client = new DiscordRestClient({ botToken: BOT_TOKEN })
 
-      console.log('[DEBUG] ensureUserInGuild called with:', { guildId, userId })
+      console.log('[DEBUG] ensureUserInGuild called with:', {
+        guildId: GUILD_ID,
+        userId,
+      })
 
       // First, verify the bot can access the guild
       try {
-        const channels = await client.getChannels(guildId)
+        const channels = await client.getChannels(GUILD_ID)
         console.log(
           '[DEBUG] Bot can access guild, found',
           channels.length,
@@ -184,7 +34,7 @@ export const ensureUserInGuild = createServerFn({ method: 'POST' })
         throw guildError
       }
 
-      const member = await client.ensureUserInGuild(guildId, userId, {
+      const member = await client.ensureUserInGuild(GUILD_ID, userId, {
         access_token: accessToken,
       })
 
@@ -204,409 +54,273 @@ export const ensureUserInGuild = createServerFn({ method: 'POST' })
     }
   })
 
+/**
+ * Check if a Discord voice channel (game room) exists
+ */
 export const checkRoomExists = createServerFn({ method: 'POST' })
   .inputValidator((data: { channelId: string }) => data)
-  .handler(async ({ data: { channelId } }): Promise<RoomCheckResult> => {
-    try {
-      const client = getDiscordClient()
-      const { guildId } = getSecrets()
+  .handler(async ({ data: { channelId } }) => {
+    // Lazy import to prevent bundling for browser
 
-      const channels = await client.getChannels(guildId)
-      const channel = channels.find((ch) => ch.id === channelId)
-
-      if (!channel) {
-        return { exists: false }
+    if (!BOT_TOKEN) {
+      return {
+        exists: false,
+        error: 'Discord bot not configured',
       }
+    }
 
+    try {
+      const client = new DiscordRestClient({ botToken: BOT_TOKEN })
+
+      // Try to fetch the channel
+      const channel = await client.getChannel(channelId)
+
+      // Verify it's a voice channel (type 2)
       if (channel.type !== 2) {
         return {
           exists: false,
-          error: 'Not a voice channel',
+          error: 'Channel is not a voice channel',
+        }
+      }
+
+      // Verify it's in the correct guild
+      if (channel.guild_id !== GUILD_ID) {
+        return {
+          exists: false,
+          error: 'Channel not found in this server',
         }
       }
 
       return {
         exists: true,
-        channel: {
-          id: channel.id,
-          name: channel.name || 'Voice Channel',
-          type: channel.type,
-        },
+        channelName: channel.name || 'Game Room',
       }
     } catch (error) {
-      console.error('[Discord] Error checking room:', error)
+      console.error('[checkRoomExists] Error checking room:', error)
       return {
         exists: false,
-        error: 'Internal server error',
+        error: error instanceof Error ? error.message : 'Failed to check room',
       }
     }
   })
 
-export const createRoom = createServerFn({ method: 'POST' })
-  .inputValidator((data: CreateRoomRequest) =>
-    CreateRoomRequestSchema.parse(data),
-  )
-  .handler(async ({ data }): Promise<CreateRoomResponse> => {
-    const request = data
-    const client = getDiscordClient()
-    const { guildId } = getSecrets()
-    const botUserId = getBotUserId()
+/**
+ * Check if a user is currently in a specific voice channel
+ */
+export const checkUserInVoiceChannel = createServerFn({ method: 'POST' })
+  .inputValidator((data: { userId: string; channelId: string }) => data)
+  .handler(async ({ data: { userId, channelId } }) => {
+    // Lazy import to prevent bundling for browser
 
-    // Fetch the bot's guild member and roles
-    const guildMember = await client.getGuildMember(guildId, botUserId)
-    const botRoles = guildMember.roles
-    const allRoles = await client.getGuildRoles(guildId)
-    let basePermissions = 0n
-    for (const roleId of botRoles) {
-      const role = allRoles.find((r: { id: string }) => r.id === roleId)
-      if (role) {
-        basePermissions |= BigInt(role.permissions)
-      }
-    }
-    console.log(
-      '[DEBUG] botUser effective guild-level permissions (bitfield as BigInt):',
-      basePermissions.toString(),
-    )
-
-    const { PermissionFlagsBits } = await import('discord-api-types/v10')
-    const humanPerms = Object.entries(PermissionFlagsBits)
-      .filter((entry) => (basePermissions & BigInt(entry[1])) !== 0n)
-      .map((entry) => entry[0])
-    console.log(
-      '[DEBUG] botUser effective guild-level permissions (list):',
-      humanPerms,
-    )
-
-    const role = await client.createRole(
-      guildId,
-      {
-        name: createRoleName(),
-        permissions: '0',
-        mentionable: false,
-        hoist: false,
-      },
-      'Spell Coven: create private voice room role',
-    )
-
-    console.log('[DEBUG] Bot User ID for permission overwrites:', botUserId)
-    // TEMPORARY DIAGNOSTIC: remove creatorId from permission overwrites for Discord bug isolation
-    const permissionOverwrites = buildRoomPermissionOverwrites({
-      guildId,
-      roleId: role.id,
-      botUserId,
-      creatorId: request.includeCreatorOverwrite
-        ? request.creatorId
-        : undefined,
-    })
-    console.log(
-      '[DEBUG] Permission overwrites sent to Discord (no creatorId):',
-      JSON.stringify(permissionOverwrites, null, 2),
-    )
-    const roomName = ensureRoomName(request.name)
-    // Confirm parent_id is NOT being sent
-    console.log(
-      '[DEBUG] parent_id for channel will NOT be sent (should be undefined)',
-    )
-    let channel
-    try {
-      channel = await client.createVoiceChannel(
-        guildId,
-        {
-          name: roomName,
-          // parent_id: request.parentId, // Make sure this stays commented/not present
-          user_limit: request.userLimit,
-          permission_overwrites: permissionOverwrites,
-        },
-        'Spell Coven: create private voice room channel',
-      )
-    } catch (e) {
-      console.error('[DEBUG] DISCORD CHANNEL CREATE ERROR:', e)
-      try {
-        console.error(
-          '[DEBUG] DISCORD CHANNEL CREATE ERROR (stringified):',
-          JSON.stringify(e, null, 2),
-        )
-      } catch {
-        // Ignore JSON.stringify errors
-      }
-      throw e
-    }
-
-    const maxSeats = request.maxSeats ?? request.userLimit
-
-    const invite = await createRoomInviteToken({
-      guildId,
-      channelId: channel.id,
-      roleId: role.id,
-      creatorId: request.creatorId,
-      expiresInSeconds: request.tokenTtlSeconds,
-      maxSeats,
-      roomName: channel.name ?? roomName,
-    })
-
-    const response = {
-      room: mapChannelToSummary(
-        channel,
-        guildId,
-        role.id,
-        permissionOverwrites,
-      ),
-      invite: {
-        token: invite.token,
-        issuedAt: invite.issuedAt,
-        expiresAt: invite.expiresAt,
-        shareUrl: buildShareUrl(request.shareUrlBase, channel.id, invite.token),
-        maxSeats: maxSeats ?? undefined,
-      },
-    }
-
-    return CreateRoomResponseSchema.parse(response)
-  })
-
-export const refreshRoomInvite = createServerFn({ method: 'POST' })
-  .inputValidator((data: RefreshRoomInviteRequest) =>
-    RefreshRoomInviteRequestSchema.parse(data),
-  )
-  .handler(async ({ data }): Promise<RefreshRoomInviteResponse> => {
-    const client = getDiscordClient()
-    const { guildId } = getSecrets()
-
-    const channel = await client.getChannel(data.channelId)
-    const resolvedGuildId = channel.guild_id ?? guildId
-
-    const invite = await createRoomInviteToken({
-      guildId: resolvedGuildId,
-      channelId: data.channelId,
-      roleId: data.roleId,
-      creatorId: data.creatorId,
-      expiresInSeconds: data.tokenTtlSeconds,
-      maxSeats: data.maxSeats,
-      roomName: channel.name,
-    })
-
-    const permissionOverwrites = mapPermissionOverwrites(
-      channel.permission_overwrites as PermissionOverwrite[] | undefined,
-    )
-
-    const response = {
-      room: mapChannelToSummary(
-        channel,
-        resolvedGuildId,
-        data.roleId,
-        permissionOverwrites,
-      ),
-      invite: {
-        token: invite.token,
-        issuedAt: invite.issuedAt,
-        expiresAt: invite.expiresAt,
-        shareUrl: buildShareUrl(
-          data.shareUrlBase,
-          data.channelId,
-          invite.token,
-        ),
-        maxSeats: data.maxSeats,
-      },
-    }
-
-    return RefreshRoomInviteResponseSchema.parse(response)
-  })
-
-export const deleteRoom = createServerFn({ method: 'POST' })
-  .inputValidator((data: { channelId: string }) => data)
-  .handler(async ({ data: { channelId } }) => {
-    const client = getDiscordClient()
-
-    await client.deleteChannel(channelId, 'Deleted by Spell Coven app')
-
-    console.log(`[Discord] Deleted voice channel: ${channelId}`)
-
-    return DeleteRoomResponseSchema.parse({ ok: true })
-  })
-
-export const listRooms = createServerFn({ method: 'POST' })
-  .inputValidator((data: { onlyGameRooms?: boolean }) => data)
-  .handler(async ({ data: options }): Promise<ListRoomsResult[]> => {
-    const { onlyGameRooms = false } = options || {}
-    const client = getDiscordClient()
-    const { guildId } = getSecrets()
-
-    const channels = await client.getChannels(guildId)
-
-    let voiceChannels = channels.filter((channel) => channel.type === 2)
-
-    if (onlyGameRooms) {
-      voiceChannels = voiceChannels.filter((channel) =>
-        channel.name?.startsWith('🎮 '),
-      )
-    }
-
-    return voiceChannels.map((channel) => ({
-      id: channel.id,
-      name: channel.name || 'Voice Channel',
-      createdAt: new Date().toISOString(),
-    }))
-  })
-
-export const joinRoom = createServerFn({ method: 'POST' })
-  .inputValidator((data: JoinRoomRequest) => JoinRoomRequestSchema.parse(data))
-  .handler(async ({ data }): Promise<JoinRoomResponse> => {
-    const client = getDiscordClient()
-
-    // 1) Verify invite token first (without seat check to avoid cyclic reference)
-    const claims = await verifyRoomInviteToken(data.token)
-
-    // (Optional) You can enforce capacity here if desired:
-    // const current = await client.countVoiceChannelMembers(claims.guild_id, claims.channel_id)
-    // await verifyRoomInviteToken(data.token, { currentSeatCount: current })
-
-    // 2) Ensure the user is in the guild (requires OAuth access token)
-    await client.ensureUserInGuild(claims.guild_id, data.userId, {
-      access_token: data.accessToken,
-    })
-
-    // 3) Assign the room role to the user
-    await client.addMemberRole(
-      claims.guild_id,
-      data.userId,
-      claims.role_id,
-      'Spell Coven: grant room role via invite token',
-    )
-
-    // 4) Fetch the channel and return a summary for the UI
-    const channel = await client.getChannel(claims.channel_id)
-    const permissionOverwrites = mapPermissionOverwrites(
-      channel.permission_overwrites as PermissionOverwrite[] | undefined,
-    )
-
-    const response = {
-      room: mapChannelToSummary(
-        channel,
-        claims.guild_id,
-        claims.role_id,
-        permissionOverwrites,
-      ),
-    }
-
-    return JoinRoomResponseSchema.parse(response)
-  })
-
-export const connectUserToVoiceChannel = createServerFn({ method: 'POST' })
-  .inputValidator(
-    (data: { guildId: string; channelId: string; userId: string }) => data,
-  )
-  .handler(async ({ data: { guildId, channelId, userId } }) => {
-    try {
-      const { botToken } = await getSecrets()
-      const botClient = new DiscordRestClient({ botToken })
-
-      console.log(
-        `[Discord] Connecting user ${userId} to voice channel ${channelId}`,
-      )
-
-      // Use the Discord API to move the user to the voice channel
-      // This requires the bot to have MOVE_MEMBERS permission
-      const response = await botClient.moveUserToVoiceChannel(
-        guildId,
-        userId,
-        channelId,
-        'Spell Coven: auto-connect to voice channel',
-      )
-
-      console.log(
-        `[Discord] Successfully connected user ${userId} to voice channel ${channelId}`,
-      )
-
-      return { success: true, member: response }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error)
-
-      // Discord returns "Target user is not connected to voice" if user isn't in any voice channel yet
-      // This is expected - user will join Discord voice channel manually
-      if (errorMessage.includes('not connected to voice')) {
-        console.log(
-          `[Discord] User ${userId} not yet in voice channel - they will join manually`,
-        )
-        return { success: true, skipped: true }
-      }
-
-      console.error(
-        `[Discord] Failed to connect user to voice channel:`,
-        errorMessage,
-      )
+    if (!BOT_TOKEN) {
       return {
-        success: false,
-        error: errorMessage,
+        inChannel: false,
+        error: 'Discord bot not configured',
       }
     }
-  })
 
-export const getVoiceChannelMembers = createServerFn({ method: 'POST' })
-  .inputValidator((data: { guildId: string; channelId: string }) => data)
-  .handler(async ({ data: { guildId, channelId } }) => {
     try {
-      const { botToken } = await getSecrets()
-      const client = new DiscordRestClient({ botToken })
+      const client = new DiscordRestClient({ botToken: BOT_TOKEN })
 
-      console.log(
-        `[Discord] Fetching voice states for guild ${guildId}, channel ${channelId}`,
+      // Get all voice states for the guild
+      const voiceStates = await client.getGuildVoiceStates(GUILD_ID)
+
+      // Find the user's voice state
+      const userVoiceState = voiceStates.find(
+        (state) => state.user_id === userId,
       )
 
-      // Fetch all voice states for the channel
-      const voiceStates = await client.getChannelVoiceStates(guildId, channelId)
+      if (!userVoiceState || !userVoiceState.channel_id) {
+        return {
+          inChannel: false,
+          error: 'User is not in any voice channel',
+        }
+      }
 
-      console.log(
-        `[Discord] Found ${voiceStates.length} voice states in channel ${channelId}:`,
-        voiceStates.map((vs) => ({
-          userId: vs.user_id,
-          channelId: vs.channel_id,
-        })),
-      )
+      // Check if they're in the specific channel
+      const isInChannel = userVoiceState.channel_id === channelId
 
-      // For each voice state, fetch the guild member to get user data
-      const members = await Promise.all(
-        voiceStates.map(async (voiceState) => {
-          try {
-            const member = await client.getGuildMember(
-              guildId,
-              voiceState.user_id,
-            )
-            return {
-              userId: voiceState.user_id,
-              username: member.user?.username || 'Unknown User',
-              avatar: member.user?.avatar || null,
-              channelId: voiceState.channel_id,
-            }
-          } catch (error) {
-            console.error(
-              `[Discord] Failed to fetch member ${voiceState.user_id}:`,
-              error,
-            )
-            return {
-              userId: voiceState.user_id,
-              username: 'Unknown User',
-              avatar: null,
-              channelId: voiceState.channel_id,
-            }
-          }
-        }),
-      )
-
-      console.log(
-        `[Discord] Fetched ${members.length} members from voice channel ${channelId}`,
-        members,
-      )
-
-      return { members }
+      return {
+        inChannel: isInChannel,
+        currentChannelId: userVoiceState.channel_id,
+      }
     } catch (error) {
       console.error(
-        '[Discord] Error fetching voice channel members:',
-        error instanceof Error ? error.message : error,
+        '[checkUserInVoiceChannel] Error checking voice state:',
+        error,
       )
       return {
-        members: [],
+        inChannel: false,
         error:
-          error instanceof Error ? error.message : 'Failed to fetch members',
+          error instanceof Error
+            ? error.message
+            : 'Failed to check voice state',
       }
+    }
+  })
+
+/**
+ * Create a new game room with voice channel and role
+ */
+export const createRoom = createServerFn({ method: 'POST' })
+  .inputValidator(
+    (data: {
+      creatorId: string
+      name: string
+      userLimit: number
+      maxSeats: number
+      tokenTtlSeconds: number
+      includeCreatorOverwrite: boolean
+      shareUrlBase: string
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    const { createHmac } = await import('node:crypto')
+
+    if (!BOT_TOKEN || !GUILD_ID) {
+      throw new Error('Discord bot not configured')
+    }
+
+    const client = new DiscordRestClient({ botToken: BOT_TOKEN })
+
+    try {
+      // 1. Create role for the room
+      const role = await client.createRole(GUILD_ID, {
+        name: data.name,
+        permissions: '0', // No special permissions
+        mentionable: false,
+      })
+
+      // 2. Create voice channel with role permissions
+      const channel = await client.createVoiceChannel(GUILD_ID, {
+        name: data.name,
+        user_limit: data.userLimit,
+        permission_overwrites: [
+          {
+            id: GUILD_ID, // @everyone role
+            type: 0,
+            allow: '0',
+            deny: '1024', // VIEW_CHANNEL
+          },
+          {
+            id: role.id,
+            type: 0,
+            allow: '3146752', // VIEW_CHANNEL + CONNECT + SPEAK
+            deny: '0',
+          },
+        ],
+      })
+
+      // 3. Generate invite token
+      const issuedAt = Math.floor(Date.now() / 1000)
+      const expiresAt = issuedAt + data.tokenTtlSeconds
+
+      const payload = JSON.stringify({
+        guild_id: GUILD_ID,
+        channel_id: channel.id,
+        role_id: role.id,
+        creator_id: data.creatorId,
+        max_seats: data.maxSeats,
+        issued_at: issuedAt,
+        expires_at: expiresAt,
+      })
+
+      const secret = process.env.HUB_SECRET || 'default-secret'
+      const signature = createHmac('sha256', secret)
+        .update(payload)
+        .digest('hex')
+
+      const token = `${Buffer.from(payload).toString('base64')}.${signature}`
+      const shareUrl = `${data.shareUrlBase}/game/${channel.id}?t=${token}`
+      const deepLink = `https://discord.com/channels/${GUILD_ID}/${channel.id}`
+
+      return {
+        room: {
+          channelId: channel.id,
+          roleId: role.id,
+          guildId: GUILD_ID,
+          deepLink,
+        },
+        invite: {
+          token,
+          issuedAt,
+          expiresAt,
+          shareUrl,
+          maxSeats: data.maxSeats,
+        },
+      }
+    } catch (error) {
+      console.error('[createRoom] Error creating room:', error)
+      throw new Error(
+        error instanceof Error ? error.message : 'Failed to create room',
+      )
+    }
+  })
+
+/**
+ * Refresh an existing room's invite token
+ */
+export const refreshRoomInvite = createServerFn({ method: 'POST' })
+  .inputValidator(
+    (data: {
+      channelId: string
+      roleId: string
+      creatorId: string
+      shareUrlBase: string
+      maxSeats: number
+      tokenTtlSeconds: number
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    const { createHmac } = await import('node:crypto')
+
+    if (!GUILD_ID) {
+      throw new Error('Discord bot not configured')
+    }
+
+    try {
+      // Generate new invite token
+      const issuedAt = Math.floor(Date.now() / 1000)
+      const expiresAt = issuedAt + data.tokenTtlSeconds
+
+      const payload = JSON.stringify({
+        guild_id: GUILD_ID,
+        channel_id: data.channelId,
+        role_id: data.roleId,
+        creator_id: data.creatorId,
+        max_seats: data.maxSeats,
+        issued_at: issuedAt,
+        expires_at: expiresAt,
+      })
+
+      const secret = process.env.HUB_SECRET || 'default-secret'
+      const signature = createHmac('sha256', secret)
+        .update(payload)
+        .digest('hex')
+
+      const token = `${Buffer.from(payload).toString('base64')}.${signature}`
+      const shareUrl = `${data.shareUrlBase}/game/${data.channelId}?t=${token}`
+      const deepLink = `https://discord.com/channels/${GUILD_ID}/${data.channelId}`
+
+      return {
+        room: {
+          channelId: data.channelId,
+          roleId: data.roleId,
+          guildId: GUILD_ID,
+          deepLink,
+        },
+        invite: {
+          token,
+          issuedAt,
+          expiresAt,
+          shareUrl,
+          maxSeats: data.maxSeats,
+        },
+      }
+    } catch (error) {
+      console.error('[refreshRoomInvite] Error refreshing invite:', error)
+      throw new Error(
+        error instanceof Error ? error.message : 'Failed to refresh invite',
+      )
     }
   })

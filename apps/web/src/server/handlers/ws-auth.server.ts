@@ -1,11 +1,35 @@
 /**
  * WebSocket authentication server function
- * Token crypto operations are in ws-token-crypto.ts (pure server-only)
  */
 
+import { createHmac } from 'node:crypto'
 import { createServerFn } from '@tanstack/react-start'
 
-import { createWebSocketAuthToken } from '../ws-token-crypto.server.js'
+// ============================================================================
+// Token Generation
+// ============================================================================
+
+/**
+ * Create a WebSocket authentication token
+ */
+function createWebSocketAuthToken(
+  userId: string,
+  expirationSeconds: number,
+): string {
+  const secret = process.env.HUB_SECRET || 'default-secret'
+  const issuedAt = Math.floor(Date.now() / 1000)
+  const expiresAt = issuedAt + expirationSeconds
+
+  const payload = JSON.stringify({
+    userId,
+    issuedAt,
+    expiresAt,
+  })
+
+  const signature = createHmac('sha256', secret).update(payload).digest('hex')
+
+  return `${Buffer.from(payload).toString('base64')}.${signature}`
+}
 
 // ============================================================================
 // Server Function

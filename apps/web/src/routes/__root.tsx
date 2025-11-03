@@ -1,10 +1,4 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
-import {
-  ensureValidDiscordToken,
-  getDiscordClient,
-} from '@/lib/discord-client.js'
-import { wsManager } from '@/server/managers/ws-manager.js'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import {
   createRootRouteWithContext,
@@ -12,7 +6,6 @@ import {
   Scripts,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import WebSocket from 'ws'
 
 import globalCss from '../globals.css?url'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools.js'
@@ -25,6 +18,11 @@ export interface MyRouterContext {
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   beforeLoad: async () => {
+    // Only initialize on server
+    if (typeof window !== 'undefined') {
+      return
+    }
+
     try {
       await initializeServerServices()
     } catch (error) {
@@ -33,33 +31,14 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     }
   },
   loader: async () => {
-    // Get guild ID from session storage (set when room was created)
-    const creatorInviteState = sessionStorage.loadCreatorInviteState()
-    const guildId =
-      creatorInviteState?.guildId || process.env.VITE_DISCORD_GUILD_ID || ''
+    // Get guild ID from environment
+    const guildId = process.env.VITE_DISCORD_GUILD_ID || ''
 
-    // Try to get auth, but don't fail if not authenticated
-    // Component will handle showing auth modal
-    const token = await ensureValidDiscordToken()
-
-    let auth = null
-    if (token) {
-      try {
-        const client = getDiscordClient()
-        const user = await client.fetchUser(token.accessToken)
-        auth = {
-          accessToken: token.accessToken,
-          userId: user.id,
-        }
-      } catch (error) {
-        console.error('Failed to fetch user:', error)
-        auth = null
-      }
-    }
-
+    // Auth is fetched on the client side where localStorage is available
+    // Server-side loader cannot access client-only functions
     return {
       guildId,
-      auth,
+      auth: null,
     }
   },
   head: () => ({
@@ -92,25 +71,12 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { auth, guildId } = Route.useLoaderData()
-
-  useEffect(() => {
-    if (!auth || !guildId) return
-    const ws = new WebSocket('ws://localhost:1234')
-    const connection = wsManager.register(ws, auth.userId, guildId)
-    return () => {
-      wsManager.unregister(connection)
-      ws.close()
-    }
-  }, [auth, guildId])
-
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body className="dark min-h-screen bg-slate-950">
-        <head />
         {children}
         <TanStackDevtools
           config={{

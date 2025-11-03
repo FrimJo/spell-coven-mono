@@ -24,36 +24,6 @@ export const GatewayConnectionSchema = z.object({
 export type GatewayConnection = z.infer<typeof GatewayConnectionSchema>
 
 /**
- * Gateway Event Types
- * Subset of Discord Gateway events we handle
- */
-export const GatewayEventTypeSchema = z.enum([
-  'READY',
-  'MESSAGE_CREATE',
-  'MESSAGE_UPDATE',
-  'MESSAGE_DELETE',
-  'VOICE_STATE_UPDATE',
-  'CHANNEL_CREATE',
-  'CHANNEL_UPDATE',
-  'CHANNEL_DELETE',
-])
-
-export type GatewayEventType = z.infer<typeof GatewayEventTypeSchema>
-
-/**
- * Gateway Event Payload
- * Generic structure for all Gateway events
- */
-export const GatewayEventSchema = z.object({
-  op: z.number().int(), // Opcode
-  d: z.unknown(), // Event data (varies by type)
-  s: z.number().int().nullable(), // Sequence number
-  t: z.string().nullable(), // Event type
-})
-
-export type GatewayEvent = z.infer<typeof GatewayEventSchema>
-
-/**
  * Voice State Schema (v1.0)
  * User's state in voice channel
  */

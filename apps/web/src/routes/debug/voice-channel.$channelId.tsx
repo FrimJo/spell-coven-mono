@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useServerFn } from '@tanstack/react-start'
 
 import { Button } from '@repo/ui/components/button'
 
@@ -8,38 +7,33 @@ export const Route = createFileRoute('/debug/voice-channel/$channelId')({
   component: DebugVoiceChannel,
 })
 
-interface VoiceChannelMember {
-  userId: string
-  username: string
-  avatar: string | null
-  channelId: string | null
-}
-
 function DebugVoiceChannel() {
   const { channelId } = Route.useParams()
-  const [members, setMembers] = useState<VoiceChannelMember[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const getVoiceChannelMembersFn = useServerFn(async () => {
-    const { getVoiceChannelMembers } = await import(
-      '@/server/handlers/discord-rooms.server'
-    )
-    return getVoiceChannelMembers({
-      data: {
-        guildId: process.env.VITE_DISCORD_GUILD_ID || '',
-        channelId,
-      },
-    })
-  })
+  // TODO: Implement getVoiceChannelMembers server function
+  // const getVoiceChannelMembersFn = useServerFn(async () => {
+  //   const { getVoiceChannelMembers } = await import(
+  //     '@/server/handlers/discord-rooms.server'
+  //   )
+  //   return getVoiceChannelMembers({
+  //     data: {
+  //       guildId: process.env.VITE_DISCORD_GUILD_ID || '',
+  //       channelId,
+  //     },
+  //   })
+  // })
 
   const handleFetch = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const result = await getVoiceChannelMembersFn()
-      setMembers(result.members || [])
-      console.log('Voice channel members:', result.members)
+      // TODO: Implement getVoiceChannelMembers server function
+      // const result = await getVoiceChannelMembersFn()
+      // setMembers(result.members || [])
+      // console.log('Voice channel members:', result.members)
+      setError('Not implemented')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       setError(message)
@@ -47,7 +41,7 @@ function DebugVoiceChannel() {
     } finally {
       setLoading(false)
     }
-  }, [getVoiceChannelMembersFn])
+  }, [])
 
   useEffect(() => {
     void handleFetch()
@@ -70,39 +64,10 @@ function DebugVoiceChannel() {
       )}
 
       <div className="rounded bg-slate-800 p-4">
-        <h2 className="mb-4 text-xl font-bold">Members ({members.length})</h2>
-
-        {members.length === 0 ? (
-          <p className="text-slate-400">No members in voice channel</p>
-        ) : (
-          <div className="space-y-2">
-            {members.map((member) => (
-              <div
-                key={member.userId}
-                className="flex items-center gap-3 rounded bg-slate-700 p-3"
-              >
-                {member.avatar && (
-                  <img
-                    src={`https://cdn.discordapp.com/avatars/${member.userId}/${member.avatar}.png`}
-                    alt={member.username}
-                    className="h-8 w-8 rounded-full"
-                  />
-                )}
-                <div>
-                  <p className="font-bold">{member.username}</p>
-                  <p className="text-sm text-slate-400">{member.userId}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="mt-8 rounded bg-slate-800 p-4">
-        <h2 className="mb-2 text-xl font-bold">Raw JSON</h2>
-        <pre className="overflow-auto rounded bg-slate-900 p-3 text-sm">
-          {JSON.stringify(members, null, 2)}
-        </pre>
+        <h2 className="mb-4 text-xl font-bold">Members</h2>
+        <p className="text-slate-400">
+          Not implemented - server function needs to be created
+        </p>
       </div>
     </div>
   )

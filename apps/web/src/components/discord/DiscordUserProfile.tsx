@@ -12,14 +12,10 @@ import { useDiscordUser } from '../../hooks/useDiscordUser.js'
  */
 
 export function DiscordUserProfile() {
-  const { isAuthenticated, logout } = useDiscordAuth()
+  const { logout } = useDiscordAuth()
   const { user, isLoading } = useDiscordUser()
 
-  if (!isAuthenticated || !user) {
-    return null
-  }
-
-  if (isLoading) {
+  if (!user || isLoading) {
     return (
       <div className="flex items-center space-x-2">
         <div className="h-8 w-8 animate-pulse rounded-full bg-gray-300 dark:bg-gray-700" />

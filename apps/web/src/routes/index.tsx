@@ -35,13 +35,17 @@ export const Route = createFileRoute('/')({
   validateSearch: zodValidator(landingSearchSchema),
 })
 
-function LandingPageRoute() {
+function LandingPageContent() {
   const navigate = useNavigate()
   const search = Route.useSearch()
   const [error, setError] = useState<string | null>(search.error || null)
   const { user } = useDiscordUser()
   const [inviteState, setInviteState] = useState<CreatorInviteState | null>(
-    () => sessionStorage.loadCreatorInviteState(),
+    () => {
+      // Only access sessionStorage on the client
+      if (typeof window === 'undefined') return null
+      return sessionStorage.loadCreatorInviteState()
+    },
   )
   const [showJoinDiscordModal, setShowJoinDiscordModal] = useState(false)
   const [pendingGameId, setPendingGameId] = useState<string | null>(null)
@@ -49,6 +53,7 @@ function LandingPageRoute() {
     null,
   )
 
+  // Server functions for room management
   const createRoomFn = useServerFn(createRoom)
   const createRoomMutation = useMutation({
     mutationFn: createRoomFn,
@@ -176,7 +181,7 @@ function LandingPageRoute() {
           roleId: inviteState.roleId,
           creatorId: inviteState.creatorId,
           shareUrlBase: window.location.origin,
-          maxSeats: inviteState.maxSeats,
+          maxSeats: inviteState.maxSeats ?? 4,
           tokenTtlSeconds: 30 * 60,
         },
       })
@@ -303,4 +308,8 @@ function LandingPageRoute() {
       </Dialog>
     </ErrorBoundary>
   )
+}
+
+function LandingPageRoute() {
+  return <LandingPageContent />
 }

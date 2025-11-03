@@ -4,6 +4,7 @@
       "mode": "auto"
     }
   ],
+  "eslint.codeActionsOnSave.rules": ["unused-imports/no-unused-imports"],
   "files.watcherExclude": {
     "**/routeTree.gen.ts": true
   },
@@ -14,6 +15,9 @@
     "**/routeTree.gen.ts": true
   },
   "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"

@@ -20,10 +20,10 @@ export {
 
 // Gateway types
 export type {
-  GatewayEvent,
+  GatewayReceivePayload as GatewayEvent,
   VoiceState,
   GatewayConnection,
-  GatewayEventType,
+  GatewayDispatchEvents as GatewayEventType,
   RtcConnection,
   StreamQuality,
   VideoStream,
@@ -54,23 +54,14 @@ export { RoomMetadataSchema, GameRoomSchema } from './rooms'
 // REST API schemas
 export type {
   CreateVoiceChannelRequest,
-  ChannelResponse,
   SendMessageRequest,
-  MessageResponse,
-  GuildChannelListResponse,
   DiscordErrorResponse,
   RateLimitResponse,
-  GuildMember,
 } from './rest-schemas'
 export {
   CreateVoiceChannelRequestSchema,
-  ChannelResponseSchema,
-  SendMessageRequestSchema,
-  MessageResponseSchema,
-  GuildChannelListResponseSchema,
   DiscordErrorResponseSchema,
   RateLimitResponseSchema,
-  GuildMemberSchema,
 } from './rest-schemas'
 
 // RTC types
@@ -115,3 +106,14 @@ export type {
   InternalEvent,
 } from './events'
 export { isMessageEnvelope, isInternalEvent } from './events'
+
+// Discord API types (from discord-api-types)
+export type {
+  APIVoiceState,
+  APIGuildMember,
+  APIUser,
+  APIChannel,
+  APIMessage,
+  APIRole,
+  APIGuild,
+} from './discord-api'
