@@ -5,6 +5,7 @@
  * the client_secret (token revocation, etc.)
  */
 
+import { env } from '@/env'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
@@ -44,13 +45,8 @@ export const revokeDiscordToken = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }): Promise<RevokeTokenResponse> => {
     // Get client credentials from environment
-    const clientId = process.env.VITE_DISCORD_CLIENT_ID
-    const clientSecret = process.env.DISCORD_CLIENT_SECRET
-
-    if (!clientId || !clientSecret) {
-      console.error('[Discord Auth] Missing OAuth credentials')
-      throw new Error('Server configuration error: Missing Discord credentials')
-    }
+    const clientId = env.VITE_DISCORD_CLIENT_ID
+    const clientSecret = env.DISCORD_CLIENT_SECRET
 
     // Prepare revocation request
     const params = new URLSearchParams({

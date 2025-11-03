@@ -1,5 +1,6 @@
 import type { CreatorInviteState } from '@/lib/session-storage'
 import { useCallback, useMemo, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 
 import { Badge } from '@repo/ui/components/badge'
 import { Button } from '@repo/ui/components/button'
@@ -176,7 +177,7 @@ export function RoomInvitePanel({
           stops working or you need more time.
         </p>
       </CardContent>
-      <CardFooter className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <CardFooter className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-xs text-slate-300/80">
           Room ID <span className="font-mono">{invite.channelId}</span>
         </div>
@@ -198,6 +199,11 @@ export function RoomInvitePanel({
             className="bg-purple-500/80 text-purple-100 hover:bg-purple-500"
           >
             {isRefreshingInvite ? 'Refreshing…' : 'Refresh Invite'}
+          </Button>
+          <Button asChild className="bg-purple-600 hover:bg-purple-700">
+            <Link to="/game/$gameId" params={{ gameId: invite.channelId }}>
+              Go to Game Room
+            </Link>
           </Button>
         </div>
       </CardFooter>

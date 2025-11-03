@@ -3,6 +3,7 @@
  */
 
 import { createHmac } from 'node:crypto'
+import { env } from '@/env'
 import { createServerFn } from '@tanstack/react-start'
 
 // ============================================================================
@@ -16,7 +17,7 @@ function createWebSocketAuthToken(
   userId: string,
   expirationSeconds: number,
 ): string {
-  const secret = process.env.HUB_SECRET || 'default-secret'
+  const secret = env.HUB_SECRET
   const issuedAt = Math.floor(Date.now() / 1000)
   const expiresAt = issuedAt + expirationSeconds
 

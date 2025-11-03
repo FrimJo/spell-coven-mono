@@ -32,7 +32,11 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   },
   loader: async () => {
     // Get guild ID from environment
-    const guildId = process.env.VITE_DISCORD_GUILD_ID || ''
+    const guildId = process.env.VITE_DISCORD_GUILD_ID
+
+    if (!guildId) {
+      throw new Error('Guild ID not found')
+    }
 
     // Auth is fetched on the client side where localStorage is available
     // Server-side loader cannot access client-only functions

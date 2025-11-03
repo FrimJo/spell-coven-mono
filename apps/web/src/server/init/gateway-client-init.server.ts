@@ -1,3 +1,4 @@
+import { env } from '@/env'
 import { createServerOnlyFn } from '@tanstack/react-start'
 import { WebSocket } from 'ws'
 
@@ -28,9 +29,9 @@ const MAX_RECONNECT_ATTEMPTS = 10
  * Connect to Gateway Service
  */
 function connectToGateway(): void {
-  const gatewayUrl = process.env.GATEWAY_WS_URL
-  const linkToken = process.env.LINK_TOKEN
-  const guildId = process.env.VITE_DISCORD_GUILD_ID
+  const gatewayUrl = env.GATEWAY_WS_URL
+  const linkToken = env.LINK_TOKEN
+  const guildId = env.VITE_DISCORD_GUILD_ID
 
   if (!gatewayUrl) {
     console.error(

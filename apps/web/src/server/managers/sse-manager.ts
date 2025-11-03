@@ -169,9 +169,7 @@ class SSEManager {
       this.connections.delete(connectionId)
     }
 
-    console.log(
-      `[SSE] Broadcast complete: sent ${event} to ${sentCount} connections`,
-    )
+    console.log(`[SSE] Broadcast complete: sent to ${sentCount} connections`)
   }
 
   /**
