@@ -1,16 +1,12 @@
 import type { IncomingMessage } from 'node:http'
 import { WebSocket, WebSocketServer } from 'ws'
 
+import type { GatewayEventData } from '@repo/discord-integration/clients'
+import type { GatewayServiceMessage } from '@repo/discord-integration/types'
+
 export interface ServerConfig {
   port: number
   linkToken: string
-}
-
-export interface GatewayMessage {
-  type: 'event' | 'command' | 'ack' | 'error'
-  data: unknown
-  requestId?: string
-  ts: number
 }
 
 /**
@@ -93,7 +89,7 @@ export class GatewayWebSocketServer {
 
     ws.on('message', (data) => {
       try {
-        const message = JSON.parse(data.toString()) as GatewayMessage
+        const message = JSON.parse(data.toString()) as GatewayServiceMessage
         this.handleMessage(ws, message)
       } catch (error) {
         console.error('[Gateway WS] Failed to parse message:', error)
@@ -114,12 +110,9 @@ export class GatewayWebSocketServer {
   /**
    * Handle incoming message from client
    */
-  private handleMessage(ws: WebSocket, message: GatewayMessage): void {
+  private handleMessage(ws: WebSocket, message: GatewayServiceMessage): void {
     if (message.type === 'command') {
-      const { command, payload } = message.data as {
-        command: string
-        payload: unknown
-      }
+      const { command, payload } = message.data
       console.log(`[Gateway WS] Received command: ${command}`)
 
       if (this.onCommandCallback) {
@@ -139,8 +132,11 @@ export class GatewayWebSocketServer {
   /**
    * Broadcast Discord event to all connected clients
    */
-  broadcast(event: string, payload: unknown): void {
-    const message: GatewayMessage = {
+  broadcast(
+    event: GatewayEventData['type'],
+    payload: GatewayEventData['data'],
+  ): void {
+    const message: GatewayServiceMessage = {
       type: 'event',
       data: { event, payload },
       ts: Date.now(),
@@ -172,7 +168,7 @@ export class GatewayWebSocketServer {
   /**
    * Send message to specific client
    */
-  private send(ws: WebSocket, message: GatewayMessage): void {
+  private send(ws: WebSocket, message: GatewayServiceMessage): void {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(message))
     }

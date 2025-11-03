@@ -13,7 +13,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as GameGameIdRouteImport } from './routes/game.$gameId'
 import { Route as DebugSessionStorageRouteImport } from './routes/debug/session-storage'
 import { Route as ApiStreamRouteImport } from './routes/api/stream'
-import { Route as ApiEventsRouteImport } from './routes/api/events'
 import { Route as AdminCleanupRouteImport } from './routes/admin/cleanup'
 import { Route as DebugVoiceChannelChannelIdRouteImport } from './routes/debug/voice-channel.$channelId'
 import { Route as AuthDiscordCallbackRouteImport } from './routes/auth/discord/callback'
@@ -38,11 +37,6 @@ const ApiStreamRoute = ApiStreamRouteImport.update({
   path: '/api/stream',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiEventsRoute = ApiEventsRouteImport.update({
-  id: '/api/events',
-  path: '/api/events',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminCleanupRoute = AdminCleanupRouteImport.update({
   id: '/admin/cleanup',
   path: '/admin/cleanup',
@@ -63,7 +57,6 @@ const AuthDiscordCallbackRoute = AuthDiscordCallbackRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin/cleanup': typeof AdminCleanupRoute
-  '/api/events': typeof ApiEventsRoute
   '/api/stream': typeof ApiStreamRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
@@ -73,7 +66,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/cleanup': typeof AdminCleanupRoute
-  '/api/events': typeof ApiEventsRoute
   '/api/stream': typeof ApiStreamRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
@@ -84,7 +76,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin/cleanup': typeof AdminCleanupRoute
-  '/api/events': typeof ApiEventsRoute
   '/api/stream': typeof ApiStreamRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
@@ -96,7 +87,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin/cleanup'
-    | '/api/events'
     | '/api/stream'
     | '/debug/session-storage'
     | '/game/$gameId'
@@ -106,7 +96,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin/cleanup'
-    | '/api/events'
     | '/api/stream'
     | '/debug/session-storage'
     | '/game/$gameId'
@@ -116,7 +105,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin/cleanup'
-    | '/api/events'
     | '/api/stream'
     | '/debug/session-storage'
     | '/game/$gameId'
@@ -127,7 +115,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminCleanupRoute: typeof AdminCleanupRoute
-  ApiEventsRoute: typeof ApiEventsRoute
   ApiStreamRoute: typeof ApiStreamRoute
   DebugSessionStorageRoute: typeof DebugSessionStorageRoute
   GameGameIdRoute: typeof GameGameIdRoute
@@ -165,13 +152,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/events': {
-      id: '/api/events'
-      path: '/api/events'
-      fullPath: '/api/events'
-      preLoaderRoute: typeof ApiEventsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/cleanup': {
       id: '/admin/cleanup'
       path: '/admin/cleanup'
@@ -199,7 +179,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminCleanupRoute: AdminCleanupRoute,
-  ApiEventsRoute: ApiEventsRoute,
   ApiStreamRoute: ApiStreamRoute,
   DebugSessionStorageRoute: DebugSessionStorageRoute,
   GameGameIdRoute: GameGameIdRoute,

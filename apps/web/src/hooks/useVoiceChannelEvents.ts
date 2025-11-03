@@ -1,18 +1,20 @@
 import { useEffect, useMemo, useRef } from 'react'
 
-export interface VoiceLeftEvent {
-  guildId: string
-  channelId: null
-  userId: string
-}
+import type {
+  VoiceJoinedEventPayload,
+  VoiceLeftEventPayload,
+} from '../types/sse-messages'
+import {
+  isSSEAckMessage,
+  isSSECustomEventMessage,
+  isSSEDiscordEventMessage,
+  isSSEErrorMessage,
+  SSEMessageSchema,
+} from '../types/sse-messages'
 
-export interface VoiceJoinedEvent {
-  guildId: string
-  channelId: string
-  userId: string
-  username: string
-  avatar: string | null
-}
+// Re-export for backwards compatibility
+export type VoiceLeftEvent = VoiceLeftEventPayload
+export type VoiceJoinedEvent = VoiceJoinedEventPayload
 
 interface UseVoiceChannelEventsOptions {
   jwtToken?: string
@@ -124,55 +126,76 @@ class VoiceChannelSSEManager {
 
       this.eventSource.onmessage = (event) => {
         try {
-          const message = JSON.parse(event.data)
+          const parsed = JSON.parse(event.data)
+
+          // Validate message with Zod schema
+          const result = SSEMessageSchema.safeParse(parsed)
+
+          if (!result.success) {
+            console.error(
+              '[VoiceChannelEvents] Invalid message format:',
+              result.error,
+            )
+            return
+          }
+
+          const message = result.data
           console.log('[VoiceChannelEvents] Received message:', message)
 
-          // Handle connection response (type: ack, event: connected)
-          if (message.type === 'ack' && message.event === 'connected') {
+          // Handle connection acknowledgment
+          if (isSSEAckMessage(message)) {
             console.log('[VoiceChannelEvents] Connection established')
             this.reconnectAttempts = 0
             return
           }
 
-          // Broadcast events to all listeners (type: event, event: voice.left or voice.joined)
-          if (message.type === 'event' && message.event === 'voice.left') {
-            const payload = message.payload as VoiceLeftEvent | undefined
-            if (payload) {
-              console.log(
-                '[VoiceChannelEvents] Received voice.left event for user:',
-                payload.userId,
-              )
-              this.listeners.forEach((listener) => {
-                listener.onVoiceLeft?.(payload)
-              })
-            }
-          }
-
-          if (message.type === 'event' && message.event === 'voice.joined') {
-            const payload = message.payload as VoiceJoinedEvent | undefined
-            if (payload) {
-              console.log(
-                '[VoiceChannelEvents] Received voice.joined event:',
-                payload.username,
-              )
-              this.listeners.forEach((listener) => {
-                listener.onVoiceJoined?.(payload)
-              })
-            }
-          }
-
-          // Handle errors
-          if (message.type === 'error') {
-            console.error(
-              '[VoiceChannelEvents] Received error message:',
-              message,
-            )
-            const error = new Error(
-              `WebSocket error: ${JSON.stringify(message)}`,
-            )
+          // Handle error messages
+          if (isSSEErrorMessage(message)) {
+            console.error('[VoiceChannelEvents] Server error:', message.message)
+            const error = new Error(message.message)
             this.listeners.forEach((listener) => {
               listener.onError?.(error)
             })
+            return
+          }
+
+          // Handle custom application events
+          if (isSSECustomEventMessage(message)) {
+            // Handle voice.left events
+            if (message.event === 'voice.left') {
+              const payload = message.payload as VoiceLeftEvent | undefined
+              if (payload) {
+                console.log(
+                  '[VoiceChannelEvents] Received voice.left event for user:',
+                  payload.userId,
+                )
+                this.listeners.forEach((listener) => {
+                  listener.onVoiceLeft?.(payload)
+                })
+              }
+            }
+
+            // Handle voice.joined events
+            if (message.event === 'voice.joined') {
+              const payload = message.payload as VoiceJoinedEvent | undefined
+              if (payload) {
+                console.log(
+                  '[VoiceChannelEvents] Received voice.joined event:',
+                  payload.username,
+                )
+                this.listeners.forEach((listener) => {
+                  listener.onVoiceJoined?.(payload)
+                })
+              }
+            }
+          }
+
+          // Handle raw Discord Gateway events (if needed in the future)
+          if (isSSEDiscordEventMessage(message)) {
+            console.log(
+              `[VoiceChannelEvents] Received Discord event: ${message.event}`,
+            )
+            // Can add handlers for raw Discord events here if needed
           }
         } catch (error) {
           console.error('[VoiceChannelEvents] Failed to parse message:', error)

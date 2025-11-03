@@ -1,6 +1,13 @@
-import type { GatewayEventData } from '@repo/discord-integration/clients'
 import { createServerOnlyFn } from '@tanstack/react-start'
 import { WebSocket } from 'ws'
+
+import type { GatewayServiceMessage } from '@repo/discord-integration/types'
+import {
+  GatewayServiceMessageSchema,
+  isAckMessage,
+  isErrorMessage,
+  isEventMessage,
+} from '@repo/discord-integration/types'
 
 import { sseManager } from '../managers/sse-manager.js'
 
@@ -10,13 +17,6 @@ import { sseManager } from '../managers/sse-manager.js'
  * Connects to the Discord Gateway Service via WebSocket and forwards
  * events to SSE clients.
  */
-
-interface GatewayMessage {
-  type: 'event' | 'command' | 'ack' | 'error'
-  data: unknown
-  requestId?: string
-  ts: number
-}
 
 let ws: WebSocket | null = null
 let isInitialized = false
@@ -33,7 +33,9 @@ function connectToGateway(): void {
   const guildId = process.env.VITE_DISCORD_GUILD_ID
 
   if (!gatewayUrl) {
-    console.error('[Gateway Client] Missing GATEWAY_WS_URL environment variable')
+    console.error(
+      '[Gateway Client] Missing GATEWAY_WS_URL environment variable',
+    )
     return
   }
 
@@ -69,29 +71,42 @@ function connectToGateway(): void {
 
   ws.on('message', (data: Buffer) => {
     try {
-      const message = JSON.parse(data.toString()) as GatewayMessage
+      const parsed = JSON.parse(data.toString())
+
+      // Validate message with Zod schema
+      const result = GatewayServiceMessageSchema.safeParse(parsed)
+
+      if (!result.success) {
+        console.error('[Gateway Client] Invalid message format:', result.error)
+        return
+      }
+
+      const message = result.data
 
       // Handle acknowledgment messages
-      if (message.type === 'ack') {
+      if (isAckMessage(message)) {
         console.log('[Gateway Client] Received ack:', message.data)
         return
       }
 
       // Handle error messages
-      if (message.type === 'error') {
-        console.error('[Gateway Client] Received error:', message.data)
+      if (isErrorMessage(message)) {
+        console.error(
+          '[Gateway Client] Received error:',
+          message.data.message,
+          message.data.code,
+        )
         return
       }
 
       // Handle Discord events
-      if (message.type === 'event') {
-        const eventData = message.data as { event: string; payload: unknown }
-        const { event, payload } = eventData
+      if (isEventMessage(message)) {
+        const { event, payload } = message.data
 
         console.log(`[Gateway Client] Received Discord event: ${event}`)
 
-        // Forward raw Discord event to SSE clients
-        sseManager.broadcastToGuild(guildId, event, payload)
+        // Forward raw Discord Gateway event to SSE clients
+        sseManager.broadcastDiscordEventToGuild(guildId, event, payload)
       }
     } catch (error) {
       console.error('[Gateway Client] Failed to parse message:', error)
@@ -129,7 +144,11 @@ function connectToGateway(): void {
 /**
  * Send command to Gateway Service
  */
-export function sendGatewayCommand(command: string, payload: unknown): void {
+export function sendGatewayCommand(
+  command: string,
+  payload: unknown,
+  requestId?: string,
+): void {
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     console.warn(
       '[Gateway Client] Cannot send command: not connected to Gateway Service',
@@ -137,9 +156,10 @@ export function sendGatewayCommand(command: string, payload: unknown): void {
     return
   }
 
-  const message: GatewayMessage = {
+  const message: GatewayServiceMessage = {
     type: 'command',
     data: { command, payload },
+    requestId,
     ts: Date.now(),
   }
 
@@ -195,7 +215,10 @@ export const initializeGatewayClient = createServerOnlyFn(async () => {
     isInitialized = true
     console.log('[Gateway Client] Gateway client initialized successfully')
   } catch (error) {
-    console.error('[Gateway Client] Failed to initialize Gateway client:', error)
+    console.error(
+      '[Gateway Client] Failed to initialize Gateway client:',
+      error,
+    )
     throw error
   }
 })
