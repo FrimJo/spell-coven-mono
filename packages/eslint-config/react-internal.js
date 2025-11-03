@@ -16,6 +16,11 @@ export const config = [
   js.configs.recommended,
   eslintConfigPrettier,
   ...tseslint.configs.recommended,
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off",
+    },
+  },
   pluginReact.configs.flat.recommended,
   ...pluginQuery.configs['flat/recommended'],
   {

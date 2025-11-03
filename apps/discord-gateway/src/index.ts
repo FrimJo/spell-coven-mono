@@ -1,4 +1,5 @@
-import { DiscordGatewayClient } from '@repo/discord-gateway'
+import type { GatewayEventData } from '@repo/discord-integration/clients'
+import { DiscordGatewayClient } from '@repo/discord-integration/clients'
 
 import { GatewayWebSocketServer } from './ws-server.js'
 
@@ -41,7 +42,7 @@ console.log(`[Gateway Service] Primary Guild ID: ${primaryGuildId}`)
 console.log(`[Gateway Service] WebSocket Port: ${wsPort}`)
 
 // Initialize Discord Gateway client
-const gatewayClient = new DiscordGatewayClient({ botToken })
+const gatewayClient = new DiscordGatewayClient(botToken)
 
 // Initialize WebSocket server for TanStack Start
 const wsServer = new GatewayWebSocketServer({
@@ -50,9 +51,9 @@ const wsServer = new GatewayWebSocketServer({
 })
 
 // Forward Discord events to connected clients
-gatewayClient.onEvent((event: string, data: unknown) => {
-  console.log(`[Gateway Service] Discord event: ${event}`)
-  wsServer.broadcast(event, data)
+gatewayClient.onAnyEvent((event: GatewayEventData) => {
+  console.log(`[Gateway Service] Discord event: ${event.type}`)
+  wsServer.broadcast(event.type, event.data)
 })
 
 // Handle commands from TanStack Start (future)

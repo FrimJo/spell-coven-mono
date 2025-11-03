@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "with-env": "dotenv -e ../../.env.development -e ../../.env.development.local -e .env.development -e .env.development.local --",
-    "dev": "tsx watch src/index.ts",
+    "dev": "bun run with-env -- tsx watch src/index.ts",
     "start": "node dist/index.js",
     "build": "tsc",
     "format": "bun run prettier --check . --ignore-path ./.prettierignore --ignore-path ./.gitignore --ignore-path ../../.gitignore",
@@ -15,7 +15,6 @@
     "check-types": "bun run tsc --noEmit"
   },
   "dependencies": {
-    "@repo/discord-gateway": "workspace:*",
     "@repo/discord-integration": "workspace:*",
     "ws": "^8.18.0"
   },

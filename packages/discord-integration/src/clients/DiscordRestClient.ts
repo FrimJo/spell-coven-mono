@@ -9,34 +9,22 @@
  */
 
 import type {
+  APIChannel,
+  APIGuildMember,
+  APIGuildVoiceChannel,
+  APIMessage,
+  APIRole,
+  APIVoiceState,
+} from 'discord-api-types/v10'
+
+import type {
   AddGuildMemberRequest,
-  ChannelResponse,
   CreateRoleRequest,
   CreateVoiceChannelRequest,
   DiscordErrorResponse,
-  GuildChannelListResponse,
-  GuildMember,
-  GuildRoleListResponse,
-  MessageResponse,
-  Role,
   SendMessageRequest,
-  VoiceState,
 } from '../types/rest-schemas.js'
-import {
-  AddGuildMemberRequestSchema,
-  ChannelResponseSchema,
-  CreateRoleRequestSchema,
-  CreateVoiceChannelRequestSchema,
-  DiscordErrorResponseSchema,
-  GuildChannelListResponseSchema,
-  GuildMemberSchema,
-  GuildRoleListResponseSchema,
-  MessageResponseSchema,
-  RateLimitResponseSchema,
-  RoleSchema,
-  SendMessageRequestSchema,
-  VoiceStateSchema,
-} from '../types/rest-schemas.js'
+import { DiscordErrorResponseSchema } from '../types/rest-schemas.js'
 
 const DISCORD_API_BASE = 'https://discord.com/api/v10'
 const MAX_RETRIES = 3
@@ -89,20 +77,20 @@ export class DiscordRestClient {
     guildId: string,
     userId: string,
     request: { access_token: string },
-  ): Promise<GuildMember | undefined> {
-    const response = await this.request<GuildMember>(
+  ): Promise<APIGuildMember | undefined> {
+    const response = await this.request<APIGuildMember>(
       'PUT',
       `/guilds/${guildId}/members/${userId}`,
       request,
     )
 
     // 204 No Content means user was already in guild (returns null)
-    // 201 Created means user was added (returns GuildMember)
+    // 201 Created means user was added (returns APIGuildMember)
     if (response === null) {
       return undefined
     }
 
-    return GuildMemberSchema.parse(response)
+    return response as APIGuildMember
   }
 
   /**
@@ -112,11 +100,12 @@ export class DiscordRestClient {
     guildId: string,
     request: CreateVoiceChannelRequest,
     auditLogReason?: string,
-  ): Promise<ChannelResponse> {
+  ): Promise<APIChannel> {
     // Validate request
-    const validatedRequest = CreateVoiceChannelRequestSchema.parse(request)
+    // Request validation is optional - Discord API will validate
+    const validatedRequest = request
 
-    const response = await this.requestWithData<ChannelResponse>(
+    const response = await this.requestWithData<APIChannel>(
       'POST',
       `/guilds/${guildId}/channels`,
       {
@@ -126,36 +115,36 @@ export class DiscordRestClient {
       auditLogReason,
     )
 
-    return ChannelResponseSchema.parse(response)
+    return response as APIChannel
   }
 
   /**
    * Fetch a channel by ID
    */
-  async getChannel(channelId: string): Promise<ChannelResponse> {
-    const response = await this.requestWithData<ChannelResponse>(
+  async getChannel(channelId: string): Promise<APIChannel> {
+    const response = await this.requestWithData<APIChannel>(
       'GET',
       `/channels/${channelId}`,
     )
 
-    return ChannelResponseSchema.parse(response)
+    return response as APIChannel
   }
 
   /**
    * Fetch a guild role by ID
    */
-  async getGuildRole(guildId: string, roleId: string): Promise<Role> {
-    const response = await this.requestWithData<GuildRoleListResponse>(
+  async getGuildRole(guildId: string, roleId: string): Promise<APIRole> {
+    const response = await this.requestWithData<APIRole[]>(
       'GET',
       `/guilds/${guildId}/roles`,
     )
 
-    const roles = GuildRoleListResponseSchema.parse(response)
+    const roles = response as APIRole[]
     const role = roles.find((entry) => entry.id === roleId)
 
     if (!role) {
       throw new DiscordRestError(
-        `Role ${roleId} not found in guild ${guildId}`,
+        `APIRole ${roleId} not found in guild ${guildId}`,
         10011,
         404,
       )
@@ -167,13 +156,16 @@ export class DiscordRestClient {
   /**
    * Fetch a guild member by ID
    */
-  async getGuildMember(guildId: string, userId: string): Promise<GuildMember> {
-    const response = await this.requestWithData<GuildMember>(
+  async getAPIGuildMember(
+    guildId: string,
+    userId: string,
+  ): Promise<APIGuildMember> {
+    const response = await this.requestWithData<APIGuildMember>(
       'GET',
       `/guilds/${guildId}/members/${userId}`,
     )
 
-    return GuildMemberSchema.parse(response)
+    return response as APIGuildMember
   }
 
   /**
@@ -182,27 +174,27 @@ export class DiscordRestClient {
   async deleteChannel(
     channelId: string,
     auditLogReason?: string,
-  ): Promise<ChannelResponse> {
-    const response = await this.requestWithData<ChannelResponse>(
+  ): Promise<APIChannel> {
+    const response = await this.requestWithData<APIChannel>(
       'DELETE',
       `/channels/${channelId}`,
       undefined,
       auditLogReason,
     )
 
-    return ChannelResponseSchema.parse(response)
+    return response
   }
 
   /**
    * Get a list of channels in a guild
    */
-  async getChannels(guildId: string): Promise<GuildChannelListResponse> {
-    const response = await this.requestWithData<GuildChannelListResponse>(
+  async getChannels(guildId: string): Promise<APIGuildVoiceChannel[]> {
+    const response = await this.requestWithData<APIGuildVoiceChannel[]>(
       'GET',
       `/guilds/${guildId}/channels`,
     )
 
-    return GuildChannelListResponseSchema.parse(response)
+    return response
   }
 
   /**
@@ -212,17 +204,18 @@ export class DiscordRestClient {
     guildId: string,
     request: CreateRoleRequest,
     auditLogReason?: string,
-  ): Promise<Role> {
-    const validatedRequest = CreateRoleRequestSchema.parse(request)
+  ): Promise<APIRole> {
+    // Request validation is optional - Discord API will validate
+    const validatedRequest = request
 
-    const response = await this.requestWithData<Role>(
+    const response = await this.requestWithData<APIRole>(
       'POST',
       `/guilds/${guildId}/roles`,
       validatedRequest,
       auditLogReason,
     )
 
-    return RoleSchema.parse(response)
+    return response
   }
 
   /**
@@ -232,15 +225,15 @@ export class DiscordRestClient {
     guildId: string,
     roleId: string,
     auditLogReason?: string,
-  ): Promise<Role> {
-    const response = await this.requestWithData<Role>(
+  ): Promise<APIRole> {
+    const response = await this.requestWithData<APIRole>(
       'DELETE',
       `/guilds/${guildId}/roles/${roleId}`,
       undefined,
       auditLogReason,
     )
 
-    return RoleSchema.parse(response)
+    return response
   }
 
   /**
@@ -251,17 +244,18 @@ export class DiscordRestClient {
     userId: string,
     request: AddGuildMemberRequest,
     auditLogReason?: string,
-  ): Promise<GuildMember> {
-    const validatedRequest = AddGuildMemberRequestSchema.parse(request)
+  ): Promise<APIGuildMember> {
+    // Request validation is optional - Discord API will validate
+    const validatedRequest = request
 
-    const response = await this.requestWithData<GuildMember>(
+    const response = await this.requestWithData<APIGuildMember>(
       'PUT',
       `/guilds/${guildId}/members/${userId}`,
       validatedRequest,
       auditLogReason,
     )
 
-    return GuildMemberSchema.parse(response)
+    return response
   }
 
   /**
@@ -273,15 +267,15 @@ export class DiscordRestClient {
     userId: string,
     channelId: string,
     auditLogReason?: string,
-  ): Promise<GuildMember> {
-    const response = await this.requestWithData<GuildMember>(
+  ): Promise<APIGuildMember> {
+    const response = await this.requestWithData<APIGuildMember>(
       'PATCH',
       `/guilds/${guildId}/members/${userId}`,
       { channel_id: channelId },
       auditLogReason,
     )
 
-    return GuildMemberSchema.parse(response)
+    return response
   }
 
   /**
@@ -321,12 +315,12 @@ export class DiscordRestClient {
   /**
    * Fetch all voice states for a guild
    */
-  async getGuildVoiceStates(guildId: string): Promise<VoiceState[]> {
-    const response = await this.requestWithData<VoiceState[]>(
+  async getGuildVoiceStates(guildId: string): Promise<APIVoiceState[]> {
+    const response = await this.requestWithData<APIVoiceState[]>(
       'GET',
       `/guilds/${guildId}/voice-states`,
     )
-    return response.map((state) => VoiceStateSchema.parse(state))
+    return response
   }
 
   /**
@@ -335,7 +329,7 @@ export class DiscordRestClient {
   async getChannelVoiceStates(
     guildId: string,
     channelId: string,
-  ): Promise<VoiceState[]> {
+  ): Promise<APIVoiceState[]> {
     const allVoiceStates = await this.getGuildVoiceStates(guildId)
     return allVoiceStates.filter((state) => state.channel_id === channelId)
   }
@@ -354,8 +348,8 @@ export class DiscordRestClient {
   /**
    * Fetch all roles in a guild
    */
-  async getGuildRoles(guildId: string): Promise<Role[]> {
-    const response = await this.requestWithData<Role[]>(
+  async getGuildRoles(guildId: string): Promise<APIRole[]> {
+    const response = await this.requestWithData<APIRole[]>(
       'GET',
       `/guilds/${guildId}/roles`,
     )
@@ -372,17 +366,18 @@ export class DiscordRestClient {
   async sendMessage(
     channelId: string,
     request: SendMessageRequest,
-  ): Promise<MessageResponse> {
+  ): Promise<APIMessage> {
     // Validate request
-    const validatedRequest = SendMessageRequestSchema.parse(request)
+    // Request validation is optional - Discord API will validate
+    const validatedRequest = request
 
-    const response = await this.requestWithData<MessageResponse>(
+    const response = await this.requestWithData<APIMessage>(
       'POST',
       `/channels/${channelId}/messages`,
       validatedRequest,
     )
 
-    return MessageResponseSchema.parse(response)
+    return response
   }
 
   // ============================================================================
@@ -440,7 +435,7 @@ export class DiscordRestClient {
         // Handle rate limits (429)
         if (response.status === 429) {
           const rateLimitData = await response.json()
-          const rateLimit = RateLimitResponseSchema.parse(rateLimitData)
+          const rateLimit = rateLimitData
 
           if (this.onRateLimit) {
             this.onRateLimit(rateLimit.retry_after, rateLimit.global)

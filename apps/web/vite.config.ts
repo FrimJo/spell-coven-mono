@@ -6,6 +6,8 @@ import { defineConfig } from 'vite'
 import mkcert from 'vite-plugin-mkcert'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 
+// WebSocket support is handled by TanStack Start's built-in WebSocket routes
+
 export default defineConfig(() => {
   return {
     // 🔴 important: include the trailing slash
@@ -24,10 +26,10 @@ export default defineConfig(() => {
       },
     },
     optimizeDeps: {
-      exclude: ['@repo/discord-gateway'],
+      exclude: [],
     },
     ssr: {
-      external: ['@repo/discord-gateway'],
+      external: [],
       noExternal: [],
     },
     // (optional) if you import files from ../../packages during dev:
@@ -41,6 +43,7 @@ export default defineConfig(() => {
       fs: {
         allow: ['..'], // allow monorepo workspace imports
       },
+      middlewareMode: false,
     },
   }
 })

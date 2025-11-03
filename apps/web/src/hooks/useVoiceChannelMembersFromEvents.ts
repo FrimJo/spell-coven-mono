@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import type {
   VoiceJoinedEvent,
@@ -35,11 +35,30 @@ export function useVoiceChannelMembersFromEvents({
   const [members, setMembers] = useState<VoiceChannelMember[]>([])
   const [error, setError] = useState<string | null>(null)
 
+  // Log when hook is enabled/disabled
+  useEffect(() => {
+    console.log('[VoiceChannelMembersFromEvents] Hook enabled:', {
+      enabled,
+      hasToken: !!jwtToken,
+      gameId,
+      userId,
+    })
+  }, [enabled, jwtToken, gameId, userId])
+
   // Handle voice.joined events
   const handleVoiceJoined = useCallback(
     (event: VoiceJoinedEvent) => {
+      console.log(
+        '[VoiceChannelMembersFromEvents] Received voice.joined event:',
+        { event, gameId, match: event.channelId === gameId },
+      )
+
       // Only track members in this specific channel
       if (event.channelId !== gameId) {
+        console.log(
+          '[VoiceChannelMembersFromEvents] Ignoring event - channel mismatch',
+          { eventChannelId: event.channelId, gameId },
+        )
         return
       }
 

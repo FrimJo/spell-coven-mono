@@ -6,15 +6,13 @@ import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
-import { useAuth } from '@/hooks/useAuth'
+import { useDiscordUser } from '@/hooks/useDiscordUser'
 import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
 import { useVoiceChannelMembersFromEvents } from '@/hooks/useVoiceChannelMembersFromEvents'
 import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken.js'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
 import { loadOpenCV } from '@/lib/opencv-loader'
-import { connectUserToVoiceChannel } from '@/server/handlers/discord-rooms.server'
-import { useServerFn } from '@tanstack/react-start'
 import { ArrowLeft, Check, Copy, Settings, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -37,7 +35,6 @@ import { VoiceDropoutModal } from './VoiceDropoutModal.js'
 
 interface GameRoomProps {
   gameId: string
-  guildId: string
   playerName: string
   onLeaveGame: () => void
   isLobbyOwner?: boolean
@@ -54,7 +51,6 @@ interface Player {
 
 function GameRoomContent({
   gameId,
-  guildId,
   playerName,
   onLeaveGame,
   isLobbyOwner = true,
@@ -88,7 +84,7 @@ function GameRoomContent({
     return unsubscribe
   }, [])
 
-  const { auth } = useAuth()
+  const { user: discordUser } = useDiscordUser()
 
   const { data: wsTokenData } = useWebSocketAuthToken()
 
@@ -96,9 +92,9 @@ function GameRoomContent({
   // Only enabled when both userId and wsAuthToken are available
   const { members: voiceChannelMembers } = useVoiceChannelMembersFromEvents({
     gameId,
-    userId: auth.userId,
+    userId: discordUser?.id || '',
     jwtToken: wsTokenData,
-    enabled: !!wsTokenData,
+    enabled: !!wsTokenData && !!discordUser,
   })
 
   useEffect(() => {
@@ -115,67 +111,22 @@ function GameRoomContent({
     }
   }, [voiceChannelMembers])
 
-  // Connect user to voice channel (required for loading to complete)
-  const connectToVoiceChannelFn = useServerFn(connectUserToVoiceChannel)
-
+  // Voice channel validation is now done in the route's beforeLoad hook
+  // If user is not in voice channel, they won't reach this component
   useEffect(() => {
-    if (!auth?.userId) return
+    // Emit loading events to complete the loading sequence
+    loadingEvents.emit({
+      step: 'voice-channel',
+      progress: 88,
+      message: 'Validating voice channel access...',
+    })
 
-    const connectToVoiceChannel = async () => {
-      try {
-        console.log('[GameRoom] Connecting to voice channel...')
-        loadingEvents.emit({
-          step: 'voice-channel',
-          progress: 88,
-          message: 'Connecting to voice channel...',
-        })
-
-        if (!guildId) {
-          console.error('[GameRoom] Guild ID not configured')
-          loadingEvents.emit({
-            step: 'voice-channel',
-            progress: 95,
-            message: 'Voice channel ready',
-          })
-          return
-        }
-
-        const result = await connectToVoiceChannelFn({
-          data: {
-            guildId,
-            channelId: gameId,
-            userId: auth.userId,
-          },
-        })
-
-        if (result.success) {
-          console.log('[GameRoom] Successfully connected to voice channel')
-        } else {
-          console.error(
-            '[GameRoom] Failed to connect to voice channel:',
-            result.error,
-          )
-          toast.error('Failed to connect to voice channel: ' + result.error)
-        }
-
-        loadingEvents.emit({
-          step: 'voice-channel',
-          progress: 95,
-          message: 'Voice channel ready',
-        })
-      } catch (error) {
-        console.error('[GameRoom] Error connecting to voice channel:', error)
-        toast.error('Error connecting to voice channel')
-        loadingEvents.emit({
-          step: 'voice-channel',
-          progress: 95,
-          message: 'Voice channel ready',
-        })
-      }
-    }
-
-    connectToVoiceChannel()
-  }, [auth?.userId, gameId, guildId, connectToVoiceChannelFn])
+    loadingEvents.emit({
+      step: 'voice-channel',
+      progress: 95,
+      message: 'Voice channel ready',
+    })
+  }, [])
 
   // Listen for voice channel events (for dropout detection)
   // Only enabled when wsAuthToken is available
@@ -463,7 +414,7 @@ function GameRoomContent({
               isLobbyOwner={isLobbyOwner}
               localPlayerName={playerName}
               onRemovePlayer={handleRemovePlayer}
-              ownerId={auth?.userId}
+              ownerId={discordUser?.id || undefined}
             />
             <CardPreview playerName={playerName} onClose={() => {}} />
           </div>

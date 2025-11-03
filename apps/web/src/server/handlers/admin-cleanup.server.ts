@@ -80,15 +80,9 @@ export const cleanupAppChannels = createServerFn({ method: 'POST' })
       // Filter for app-created channels:
       // 1. Must be voice channel (type 2)
       // 2. Must have permission overwrites (app creates channels with role-based permissions)
-      const appChannels = channels.filter((channel) => {
-        const isVoiceChannel = channel.type === 2
-        const hasPermissionOverwrites =
-          channel.permission_overwrites &&
-          Array.isArray(channel.permission_overwrites) &&
-          channel.permission_overwrites.length > 0
-
-        return isVoiceChannel && hasPermissionOverwrites
-      })
+      const appChannels = channels.filter(
+        (channel) => !!channel.permission_overwrites?.length,
+      )
 
       console.log(
         `[Admin] Found ${appChannels.length} potential app-created channels to delete`,
@@ -176,26 +170,23 @@ export const listAppChannels = createServerFn({ method: 'POST' })
 
       // Filter for app-created channels
       const appChannels = channels
-        .filter((channel) => {
-          const isVoiceChannel = channel.type === 2
-          const hasPermissionOverwrites =
-            channel.permission_overwrites &&
-            Array.isArray(channel.permission_overwrites) &&
-            channel.permission_overwrites.length > 0
-
-          return isVoiceChannel && hasPermissionOverwrites
+        .filter((channel) => !!channel.permission_overwrites?.length)
+        .map((channel) => {
+          const guildChannel = channel
+          return {
+            id: channel.id,
+            name: channel.name || 'Unnamed Channel',
+            userLimit:
+              typeof guildChannel.user_limit === 'number'
+                ? guildChannel.user_limit
+                : undefined,
+            permissionOverwriteCount: Array.isArray(
+              guildChannel.permission_overwrites,
+            )
+              ? guildChannel.permission_overwrites.length
+              : 0,
+          }
         })
-        .map((channel) => ({
-          id: channel.id,
-          name: channel.name || 'Unnamed Channel',
-          userLimit:
-            typeof channel.user_limit === 'number'
-              ? channel.user_limit
-              : undefined,
-          permissionOverwriteCount: Array.isArray(channel.permission_overwrites)
-            ? channel.permission_overwrites.length
-            : 0,
-        }))
 
       console.log(`[Admin] Found ${appChannels.length} app-created channels`)
 

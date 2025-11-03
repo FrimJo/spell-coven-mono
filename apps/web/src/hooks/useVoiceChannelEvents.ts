@@ -22,12 +22,12 @@ interface UseVoiceChannelEventsOptions {
 }
 
 /**
- * Singleton WebSocket manager for voice channel events
- * Ensures only one WebSocket connection is created even with multiple hook instances
+ * Singleton SSE manager for voice channel events
+ * Ensures only one SSE connection is created even with multiple hook instances
  */
-class VoiceChannelWebSocketManager {
-  private static instance: VoiceChannelWebSocketManager
-  private ws: WebSocket | null = null
+class VoiceChannelSSEManager {
+  private static instance: VoiceChannelSSEManager
+  private eventSource: EventSource | null = null
   private reconnectTimeout: NodeJS.Timeout | null = null
   private reconnectAttempts = 0
   private cleanupReconnectTimeout(): void {
@@ -47,11 +47,11 @@ class VoiceChannelWebSocketManager {
 
   private constructor() {}
 
-  static getInstance(): VoiceChannelWebSocketManager {
-    if (!VoiceChannelWebSocketManager.instance) {
-      VoiceChannelWebSocketManager.instance = new VoiceChannelWebSocketManager()
+  static getInstance(): VoiceChannelSSEManager {
+    if (!VoiceChannelSSEManager.instance) {
+      VoiceChannelSSEManager.instance = new VoiceChannelSSEManager()
     }
-    return VoiceChannelWebSocketManager.instance
+    return VoiceChannelSSEManager.instance
   }
 
   addListener(listener: {
@@ -75,22 +75,26 @@ class VoiceChannelWebSocketManager {
   setJwtToken(token: string | undefined): void {
     this.jwtToken = token || null
     // Reconnect if token changed and we're not connected
-    if (token && this.ws?.readyState !== WebSocket.OPEN) {
+    if (token && this.eventSource?.readyState !== EventSource.OPEN) {
       this.connect()
     }
   }
 
-  private connect(): void {
+  isConnected(): boolean {
+    return this.eventSource?.readyState === EventSource.OPEN
+  }
+
+  connect(): void {
     // Prevent multiple connection attempts (handles React StrictMode double-invoke)
     if (this.isConnecting) {
       return
     }
 
-    if (this.ws?.readyState === WebSocket.CONNECTING) {
+    if (this.eventSource?.readyState === EventSource.CONNECTING) {
       return
     }
 
-    if (this.ws?.readyState === WebSocket.OPEN) {
+    if (this.eventSource?.readyState === EventSource.OPEN) {
       return
     }
 
@@ -104,37 +108,28 @@ class VoiceChannelWebSocketManager {
     this.isConnecting = true
 
     try {
-      // Connect to TanStack Start WebSocket server on same origin
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const host = window.location.host // includes port
-      const wsUrl = `${protocol}//${host}/api/ws`
+      // Connect to SSE endpoint on same origin (per spec: /api/stream)
+      const sseUrl = `/api/stream`
 
-      console.log('[VoiceChannelEvents] Connecting to WebSocket:', wsUrl)
-      this.ws = new WebSocket(wsUrl)
+      console.log('[VoiceChannelEvents] Connecting to SSE:', sseUrl)
+      this.eventSource = new EventSource(sseUrl, {
+        withCredentials: true, // Include session cookie per spec
+      })
 
-      this.ws.onopen = () => {
-        console.log('[VoiceChannelEvents] WebSocket connected')
+      this.eventSource.onopen = () => {
+        console.log('[VoiceChannelEvents] SSE connected')
+        this.isConnecting = false
         this.reconnectAttempts = 0
-
-        // Send authentication message
-        const authMessage = {
-          v: 1,
-          type: 'auth',
-          token: this.jwtToken,
-        }
-
-        this.ws?.send(JSON.stringify(authMessage))
-        console.log('[VoiceChannelEvents] Sent authentication message')
       }
 
-      this.ws.onmessage = (event) => {
+      this.eventSource.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data)
           console.log('[VoiceChannelEvents] Received message:', message)
 
-          // Handle authentication response (type: ack, event: auth.ok)
-          if (message.type === 'ack' && message.event === 'auth.ok') {
-            console.log('[VoiceChannelEvents] Authentication successful')
+          // Handle connection response (type: ack, event: connected)
+          if (message.type === 'ack' && message.event === 'connected') {
+            console.log('[VoiceChannelEvents] Connection established')
             this.reconnectAttempts = 0
             return
           }
@@ -191,30 +186,12 @@ class VoiceChannelWebSocketManager {
         }
       }
 
-      this.ws.onerror = () => {
-        console.error('[VoiceChannelEvents] WebSocket error')
+      this.eventSource.onerror = () => {
+        console.error('[VoiceChannelEvents] SSE error')
         this.isConnecting = false
-        const wsError = new Error('WebSocket connection error')
-        this.listeners.forEach((listener) => {
-          listener.onError?.(wsError)
-        })
-      }
-
-      this.ws.onclose = (event) => {
-        console.log('[VoiceChannelEvents] WebSocket closed')
-        console.log('[VoiceChannelEvents] Close event:', {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean,
-        })
-        console.log(
-          '[VoiceChannelEvents] Listeners count:',
-          this.listeners.size,
-        )
-        console.log('[VoiceChannelEvents] Stack trace:', new Error().stack)
         this.cleanupReconnectTimeout()
-        this.ws = null
-        this.isConnecting = false
+        this.eventSource?.close()
+        this.eventSource = null
 
         // Attempt reconnection with exponential backoff
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
@@ -236,7 +213,7 @@ class VoiceChannelWebSocketManager {
             '[VoiceChannelEvents] Max reconnection attempts reached',
           )
           const maxRetriesError = new Error(
-            'WebSocket connection failed after max retries',
+            'SSE connection failed after max retries',
           )
           this.listeners.forEach((listener) => {
             listener.onError?.(maxRetriesError)
@@ -244,19 +221,30 @@ class VoiceChannelWebSocketManager {
         }
       }
     } catch (error) {
-      console.error('[VoiceChannelEvents] Failed to create WebSocket:', error)
-      const wsCreationError =
-        error instanceof Error ? error : new Error('Failed to create WebSocket')
+      console.error(
+        '[VoiceChannelEvents] Failed to create SSE connection:',
+        error,
+      )
+      this.isConnecting = false
+      const sseCreationError =
+        error instanceof Error
+          ? error
+          : new Error('Failed to create SSE connection')
       this.listeners.forEach((listener) => {
-        listener.onError?.(wsCreationError)
+        listener.onError?.(sseCreationError)
       })
     } finally {
       this.isConnecting = false
     }
   }
 
-  isConnected(): boolean {
-    return this.ws?.readyState === WebSocket.OPEN
+  disconnect(): void {
+    this.cleanupReconnectTimeout()
+    if (this.eventSource) {
+      this.eventSource.close()
+      this.eventSource = null
+    }
+    console.log('[VoiceChannelEvents] Disconnected from SSE')
   }
 
   reconnect(): void {
@@ -280,7 +268,7 @@ export function useVoiceChannelEvents({
   onVoiceJoined,
   onError,
 }: UseVoiceChannelEventsOptions) {
-  const manager = useMemo(() => VoiceChannelWebSocketManager.getInstance(), [])
+  const manager = useMemo(() => VoiceChannelSSEManager.getInstance(), [])
 
   // Store callbacks in refs so they can be updated without re-registering listener
   const callbacksRef = useRef({ onVoiceLeft, onVoiceJoined, onError })
