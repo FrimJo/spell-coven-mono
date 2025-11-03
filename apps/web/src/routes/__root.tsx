@@ -1,4 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query'
+import { env } from '@/env'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import {
   createRootRouteWithContext,
@@ -32,7 +33,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   },
   loader: async () => {
     // Get guild ID from environment
-    const guildId = process.env.VITE_DISCORD_GUILD_ID
+    const guildId = env.VITE_DISCORD_GUILD_ID
 
     if (!guildId) {
       throw new Error('Guild ID not found')

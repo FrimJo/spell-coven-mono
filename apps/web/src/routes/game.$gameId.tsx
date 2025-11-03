@@ -12,7 +12,6 @@ import { discordUserQueryOptions } from '@/hooks/useDiscordUser'
 import { sessionStorage } from '@/lib/session-storage'
 import {
   checkRoomExists,
-  checkUserInVoiceChannel,
   ensureUserInGuild,
 } from '@/server/handlers/discord-rooms.server'
 import {
@@ -79,6 +78,7 @@ export const Route = createFileRoute('/game/$gameId')({
           inChannel: false,
           error: error instanceof Error ? error.message : 'Unknown error',
         },
+        initialMembers: [],
       }
     }
 
@@ -94,16 +94,19 @@ export const Route = createFileRoute('/game/$gameId')({
       })
     }
 
-    const result = await checkUserInVoiceChannel({
-      data: {
-        userId: user.id,
-        channelId: gameId,
-      },
-    })
-
+    // Don't connect to voice channel here - it causes race condition
+    // The VOICE_STATE_UPDATE events arrive before browser connects to SSE
+    // Let GameRoom handle connection after SSE is established
+    
     return {
       isAuthenticated: true,
-      voiceChannelStatus: result,
+      voiceChannelStatus: {
+        inChannel: false,
+        error: null,
+      },
+      initialMembers: [],
+      userId: user.id,
+      gameId, // Pass gameId for GameRoom to use
     }
   },
   component: GameRoomRoute,
@@ -172,6 +175,7 @@ function GameRoomRoute() {
             onLeaveGame={handleLeaveGame}
             detectorType={detector as DetectorType | undefined}
             usePerspectiveWarp={usePerspectiveWarp}
+            initialMembers={loaderData.initialMembers}
           />
         </Suspense>
       )}

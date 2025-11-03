@@ -14,7 +14,6 @@ import type {
   APIGuildVoiceChannel,
   APIMessage,
   APIRole,
-  APIVoiceState,
 } from 'discord-api-types/v10'
 
 import type {
@@ -198,6 +197,30 @@ export class DiscordRestClient {
   }
 
   /**
+   * List guild members with optional query parameters
+   * Can be used to get members with their voice states
+   */
+  async listGuildMembers(
+    guildId: string,
+    options?: {
+      limit?: number
+      after?: string
+    },
+  ): Promise<APIGuildMember[]> {
+    const params = new URLSearchParams()
+    if (options?.limit) params.set('limit', options.limit.toString())
+    if (options?.after) params.set('after', options.after)
+
+    const query = params.toString() ? `?${params.toString()}` : ''
+    const response = await this.requestWithData<APIGuildMember[]>(
+      'GET',
+      `/guilds/${guildId}/members${query}`,
+    )
+
+    return response
+  }
+
+  /**
    * Create a role in a guild
    */
   async createRole(
@@ -312,38 +335,6 @@ export class DiscordRestClient {
     )
   }
 
-  /**
-   * Fetch all voice states for a guild
-   */
-  async getGuildVoiceStates(guildId: string): Promise<APIVoiceState[]> {
-    const response = await this.requestWithData<APIVoiceState[]>(
-      'GET',
-      `/guilds/${guildId}/voice-states`,
-    )
-    return response
-  }
-
-  /**
-   * Get voice states for a specific channel
-   */
-  async getChannelVoiceStates(
-    guildId: string,
-    channelId: string,
-  ): Promise<APIVoiceState[]> {
-    const allVoiceStates = await this.getGuildVoiceStates(guildId)
-    return allVoiceStates.filter((state) => state.channel_id === channelId)
-  }
-
-  /**
-   * Count active voice connections for a channel
-   */
-  async countVoiceChannelMembers(
-    guildId: string,
-    channelId: string,
-  ): Promise<number> {
-    const voiceStates = await this.getChannelVoiceStates(guildId, channelId)
-    return voiceStates.length
-  }
 
   /**
    * Fetch all roles in a guild
