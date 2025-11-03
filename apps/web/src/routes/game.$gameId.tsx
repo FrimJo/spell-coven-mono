@@ -4,6 +4,7 @@ import { DiscordAuthModal } from '@/components/discord/DiscordAuthModal'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
 import { JoinDiscordModal } from '@/components/JoinDiscordModal'
+import { env } from '@/env'
 import {
   discordTokenQueryOptions,
   useDiscordAuth,
@@ -97,7 +98,7 @@ export const Route = createFileRoute('/game/$gameId')({
     // Don't connect to voice channel here - it causes race condition
     // The VOICE_STATE_UPDATE events arrive before browser connects to SSE
     // Let GameRoom handle connection after SSE is established
-    
+
     return {
       isAuthenticated: true,
       voiceChannelStatus: {
@@ -122,7 +123,7 @@ function GameRoomRoute() {
   const { detector, usePerspectiveWarp } = Route.useSearch()
   const navigate = useNavigate()
   const { token: discordToken } = useDiscordAuth()
-  const guildId = import.meta.env.VITE_DISCORD_GUILD_ID
+  const guildId = env.VITE_DISCORD_GUILD_ID
   const [showAuthModal, setShowAuthModal] = useState(
     !loaderData.isAuthenticated,
   )

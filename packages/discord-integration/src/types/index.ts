@@ -22,6 +22,7 @@ export {
 export type {
   GatewayReceivePayload,
   GatewayDispatchEvents,
+  GatewaySendPayload,
 } from 'discord-api-types/v10'
 
 // Gateway types (local)

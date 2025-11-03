@@ -158,14 +158,11 @@ class VoiceChannelSSEManager {
             if (message.event === 'VOICE_STATE_UPDATE') {
               const voiceState = message.payload as APIVoiceState
 
-              console.log(
-                '[VoiceChannelEvents] VOICE_STATE_UPDATE:',
-                {
-                  userId: voiceState.user_id,
-                  channelId: voiceState.channel_id,
-                  username: voiceState.member?.user?.username,
-                },
-              )
+              console.log('[VoiceChannelEvents] VOICE_STATE_UPDATE:', {
+                userId: voiceState.user_id,
+                channelId: voiceState.channel_id,
+                username: voiceState.member?.user?.username,
+              })
 
               // Broadcast raw voice state to all listeners
               this.listeners.forEach((listener) => {
@@ -266,10 +263,7 @@ export function useVoiceChannelEvents({
   onVoiceStateUpdate,
   onError,
 }: UseVoiceChannelEventsOptions) {
-  const manager = useMemo(
-    () => VoiceChannelSSEManager.getInstance(),
-    [],
-  )
+  const manager = useMemo(() => VoiceChannelSSEManager.getInstance(), [])
 
   // Store callbacks in a ref to avoid recreating listener on every render
   const callbacksRef = useRef({ onVoiceStateUpdate, onError })

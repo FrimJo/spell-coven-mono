@@ -55,11 +55,6 @@ export function JoinDiscordModal({
     onVoiceStateUpdate: handleVoiceStateUpdate,
   })
 
-  // Only render on client-side
-  if (typeof window === 'undefined') {
-    return null
-  }
-
   // Determine which URL to use: deep link from invite or direct Discord URL
   const voiceChannelUrl = pendingInvite?.deepLink || discordUrl
 
