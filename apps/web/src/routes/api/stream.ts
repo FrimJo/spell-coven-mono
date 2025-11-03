@@ -28,7 +28,10 @@ export const Route = createFileRoute('/api/stream')({
           // For now, accept all connections (will add auth later)
 
           const userId = 'user-' + Math.random().toString(36).substr(2, 9)
-          const guildId = process.env.VITE_DISCORD_GUILD_ID || ''
+          const guildId = process.env.VITE_DISCORD_GUILD_ID
+          if (!guildId) {
+            throw new Error('VITE_DISCORD_GUILD_ID is not defined')
+          }
 
           console.log(`[SSE] Client connecting: user ${userId}`)
 

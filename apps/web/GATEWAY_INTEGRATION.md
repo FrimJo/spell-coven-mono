@@ -19,17 +19,20 @@ Browser Client
 ## Components
 
 ### 1. Discord Gateway Service (`apps/discord-gateway`)
+
 - **Purpose**: Standalone Node.js service that maintains persistent connection to Discord Gateway
 - **Port**: 8080 (configurable via `GATEWAY_WS_PORT`)
 - **Authentication**: Requires `LINK_TOKEN` for incoming WebSocket connections
 - **Events**: Forwards raw Discord events (e.g., `VOICE_STATE_UPDATE`) to connected clients
 
 ### 2. TanStack Start Backend (`apps/web`)
+
 - **Gateway Client**: WebSocket client that connects to Gateway Service
 - **SSE Manager**: Broadcasts events to browser clients via Server-Sent Events
 - **Location**: `/apps/web/src/server/init/gateway-client-init.server.ts`
 
 ### 3. Browser Client
+
 - **EventSource**: Connects to `/api/stream` endpoint
 - **Authentication**: Session cookie (HTTP-only, secure)
 - **Events**: Receives real-time Discord events (e.g., `voice.joined`, `voice.left`)
@@ -45,7 +48,9 @@ Browser Client
      "type": "event",
      "data": {
        "event": "VOICE_STATE_UPDATE",
-       "payload": { /* raw Discord data */ }
+       "payload": {
+         /* raw Discord data */
+       }
      },
      "ts": 1234567890
    }
@@ -67,6 +72,7 @@ Browser Client
 ## Environment Variables
 
 ### Gateway Service (`apps/discord-gateway/.env.development`)
+
 ```bash
 GATEWAY_WS_PORT=8080
 LINK_TOKEN=your-shared-secret-token-here
@@ -75,6 +81,7 @@ VITE_DISCORD_GUILD_ID=your-guild-id
 ```
 
 ### TanStack Start Backend (`apps/web/.env.development`)
+
 ```bash
 GATEWAY_WS_URL=ws://localhost:8080
 LINK_TOKEN=your-shared-secret-token-here
@@ -88,6 +95,7 @@ VITE_DISCORD_GUILD_ID=your-guild-id
 ### Development
 
 1. **Start Gateway Service** (Terminal 1):
+
    ```bash
    cd apps/discord-gateway
    bun run dev
@@ -104,11 +112,13 @@ The backend will automatically connect to the Gateway Service on startup.
 ## Connection Management
 
 ### Automatic Reconnection
+
 - Backend implements exponential backoff reconnection
 - Max 10 reconnection attempts
 - Delays: 1s, 2s, 4s, 8s, 16s, 30s (capped)
 
 ### Connection Status
+
 ```typescript
 import { getGatewayStatus } from '@/server/init/gateway-client-init.server'
 
@@ -118,6 +128,7 @@ console.log(status.reconnectAttempts) // number
 ```
 
 ### Manual Disconnect
+
 ```typescript
 import { disconnectGateway } from '@/server/init/gateway-client-init.server'
 
@@ -132,7 +143,7 @@ import { sendGatewayCommand } from '@/server/init/gateway-client-init.server'
 // Example: Send a Discord message
 sendGatewayCommand('send_message', {
   channelId: '123456789',
-  content: 'Hello from TanStack Start!'
+  content: 'Hello from TanStack Start!',
 })
 ```
 
@@ -150,6 +161,7 @@ See [discord-api-types](https://www.npmjs.com/package/discord-api-types) for ful
 ## Debugging
 
 ### Backend Logs
+
 ```
 [Gateway Client] Connecting to ws://localhost:8080...
 [Gateway Client] Connected to Gateway Service
@@ -158,6 +170,7 @@ See [discord-api-types](https://www.npmjs.com/package/discord-api-types) for ful
 ```
 
 ### Gateway Service Logs
+
 ```
 [Gateway WS] Client connected
 [Gateway Service] Discord event: VOICE_STATE_UPDATE
@@ -165,6 +178,7 @@ See [discord-api-types](https://www.npmjs.com/package/discord-api-types) for ful
 ```
 
 ### Browser Console
+
 ```javascript
 // EventSource connection
 [VoiceChannelEvents] Connecting to SSE: /api/stream
@@ -182,16 +196,19 @@ See [discord-api-types](https://www.npmjs.com/package/discord-api-types) for ful
 ## Troubleshooting
 
 ### Backend can't connect to Gateway Service
+
 - Check `GATEWAY_WS_URL` is correct (default: `ws://localhost:8080`)
 - Verify Gateway Service is running
 - Ensure `LINK_TOKEN` matches in both services
 
 ### Events not reaching browser
+
 - Check SSE connection in browser DevTools (Network tab)
 - Verify `VITE_DISCORD_GUILD_ID` matches in both services
 - Check backend logs for event forwarding
 
 ### Gateway Service not receiving Discord events
+
 - Verify `DISCORD_BOT_TOKEN` is valid
 - Check bot has necessary permissions in Discord
 - Ensure bot is in the guild specified by `VITE_DISCORD_GUILD_ID`

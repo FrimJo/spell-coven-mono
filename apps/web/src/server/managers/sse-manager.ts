@@ -4,6 +4,10 @@
  * Manages active SSE connections and broadcasts events to clients
  */
 
+import type { GatewayDispatchEvents } from '@repo/discord-integration/types'
+
+import type { CustomEventName } from '../../types/sse-messages'
+
 export interface SSEConnection {
   userId: string
   guildId: string
@@ -89,21 +93,55 @@ class SSEManager {
   }
 
   /**
-   * Broadcast event to specific guild only
+   * Broadcast custom event to specific guild only
    */
-  broadcastToGuild(guildId: string, event: string, payload: unknown): void {
+  broadcastCustomEventToGuild(
+    guildId: string,
+    event: CustomEventName,
+    payload: unknown,
+  ): void {
     const message = `data: ${JSON.stringify({
       v: 1,
-      type: 'event',
+      type: 'custom.event',
       event,
       payload,
       ts: Date.now(),
     })}\n\n`
 
     console.log(
-      `[SSE] Broadcasting ${event} to guild ${guildId}. Total connections: ${this.connections.size}`,
+      `[SSE] Broadcasting custom event ${event} to guild ${guildId}. Total connections: ${this.connections.size}`,
     )
 
+    this.sendToGuild(guildId, message)
+  }
+
+  /**
+   * Broadcast Discord Gateway event to specific guild only
+   */
+  broadcastDiscordEventToGuild(
+    guildId: string,
+    event: GatewayDispatchEvents,
+    payload: unknown,
+  ): void {
+    const message = `data: ${JSON.stringify({
+      v: 1,
+      type: 'discord.event',
+      event,
+      payload,
+      ts: Date.now(),
+    })}\n\n`
+
+    console.log(
+      `[SSE] Broadcasting Discord event ${event} to guild ${guildId}. Total connections: ${this.connections.size}`,
+    )
+
+    this.sendToGuild(guildId, message)
+  }
+
+  /**
+   * Send message to all connections in a guild
+   */
+  private sendToGuild(guildId: string, message: string): void {
     let sentCount = 0
     const failedConnections: string[] = []
 
@@ -116,7 +154,6 @@ class SSEManager {
         const encoder = new TextEncoder()
         connection.controller.enqueue(encoder.encode(message))
         sentCount++
-        console.log(`[SSE] Sent ${event} to user ${connection.userId}`)
       } catch (error) {
         console.error(
           `[SSE] Failed to send message to user ${connection.userId}:`,

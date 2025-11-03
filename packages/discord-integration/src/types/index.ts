@@ -18,21 +18,23 @@ export {
   DiscordUserResponseSchema,
 } from './auth'
 
-// Gateway types
+// Gateway types (from discord-api-types)
 export type {
-  GatewayReceivePayload as GatewayEvent,
+  GatewayReceivePayload,
+  GatewayDispatchEvents,
+} from 'discord-api-types/v10'
+
+// Gateway types (local)
+export type {
   VoiceState,
   GatewayConnection,
-  GatewayDispatchEvents as GatewayEventType,
   RtcConnection,
   StreamQuality,
   VideoStream,
 } from './gateway'
 export {
-  GatewayEventSchema,
   VoiceStateSchema,
   GatewayConnectionSchema,
-  GatewayEventTypeSchema,
   RtcConnectionSchema,
   StreamQualitySchema,
   VideoStreamSchema,
@@ -106,6 +108,26 @@ export type {
   InternalEvent,
 } from './events'
 export { isMessageEnvelope, isInternalEvent } from './events'
+
+// Gateway Service WebSocket Protocol types
+export type {
+  GatewayServiceMessage,
+  GatewayServiceEventMessage,
+  GatewayServiceCommandMessage,
+  GatewayServiceAckMessage,
+  GatewayServiceErrorMessage,
+} from './gateway-service'
+export {
+  GatewayServiceMessageSchema,
+  GatewayServiceEventMessageSchema,
+  GatewayServiceCommandMessageSchema,
+  GatewayServiceAckMessageSchema,
+  GatewayServiceErrorMessageSchema,
+  isEventMessage,
+  isCommandMessage,
+  isAckMessage,
+  isErrorMessage,
+} from './gateway-service'
 
 // Discord API types (from discord-api-types)
 export type {

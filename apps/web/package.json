@@ -12,7 +12,7 @@
     "format:fix": "bun run prettier --check . --ignore-path ./.prettierignore --ignore-path ./.gitignore --ignore-path ../../.gitignore --write",
     "lint": "bun run eslint . --max-warnings 0",
     "lint:fix": "bun run eslint . --max-warnings 0 --fix",
-    "check-types": "bun run tsc --noEmit",
+    "typecheck": "bun run tsc --noEmit",
     "e2e": "bun run playwright test",
     "e2e:ui": "bun run playwright test --ui"
   },
