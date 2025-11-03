@@ -1,10 +1,9 @@
 import type { CreatorInviteState } from '@/lib/session-storage'
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ErrorFallback } from '@/components/ErrorFallback'
+import { JoinDiscordModal } from '@/components/JoinDiscordModal'
 import { LandingPage } from '@/components/LandingPage'
 import { useDiscordUser } from '@/hooks/useDiscordUser'
-import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
-import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken'
 import { sessionStorage } from '@/lib/session-storage'
 import {
   createRoom,
@@ -14,17 +13,8 @@ import { useMutation } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
 import { zodValidator } from '@tanstack/zod-adapter'
-import { ExternalLink, Loader2 } from 'lucide-react'
 import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
-
-import { Button } from '@repo/ui/components/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@repo/ui/components/dialog'
 
 const landingSearchSchema = z.object({
   error: z.string().optional(),
@@ -64,42 +54,6 @@ function LandingPageContent() {
     mutationFn: refreshRoomInviteFn,
   })
 
-  const [userJoinedVoice, setUserJoinedVoice] = useState(false)
-
-  const { data: wsTokenData } = useWebSocketAuthToken({ userId: user?.id })
-
-  useEffect(() => {
-    console.log('[LandingPage] WebSocket token:', {
-      hasToken: !!wsTokenData,
-      modalOpen: showJoinDiscordModal,
-      pendingGameId,
-      userId: user?.id,
-    })
-  }, [wsTokenData, showJoinDiscordModal, pendingGameId, user?.id])
-
-  const handleVoiceJoined = useCallback(
-    (event: { userId: string }) => {
-      console.log('[LandingPage] Received voice.joined event:', event, {
-        modalOpen: showJoinDiscordModal,
-        pendingGameId,
-        userId: user?.id,
-        eventUserId: event.userId,
-        match: event.userId === user?.id,
-      })
-      if (showJoinDiscordModal && pendingGameId && event.userId === user?.id) {
-        console.log('[LandingPage] User joined voice channel - updating state')
-        setUserJoinedVoice(true)
-      }
-    },
-    [showJoinDiscordModal, pendingGameId, user?.id],
-  )
-
-  // Listen for voice.joined event to update modal status (only when modal is open)
-  useVoiceChannelEvents({
-    jwtToken: wsTokenData,
-    onVoiceJoined: handleVoiceJoined,
-  })
-
   const handleProceedToGame = () => {
     if (!pendingGameId || !user) return
 
@@ -111,7 +65,6 @@ function LandingPageContent() {
     })
     setShowJoinDiscordModal(false)
     setPendingGameId(null)
-    setUserJoinedVoice(false)
     navigate({ to: '/game/$gameId', params: { gameId: pendingGameId } })
   }
 
@@ -246,66 +199,13 @@ function LandingPageContent() {
         isRefreshingInvite={refreshRoomInviteMutation.isPending}
       />
 
-      {/* Join Discord Modal */}
-      <Dialog
+      {/* Join Discord Modal - Rendered via Portal */}
+      <JoinDiscordModal
         open={showJoinDiscordModal}
         onOpenChange={setShowJoinDiscordModal}
-      >
-        <DialogContent className="border-slate-800 bg-slate-900 sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-white">
-              🎮 Your Game Room is Ready!
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            {!userJoinedVoice ? (
-              <>
-                <p className="text-slate-300">
-                  To start playing, join the Discord voice channel:
-                </p>
-                {pendingInvite && (
-                  <a
-                    href={pendingInvite.deepLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Button
-                      className="w-full gap-2 bg-indigo-600 text-white hover:bg-indigo-700"
-                      size="lg"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Join Discord Voice Channel
-                    </Button>
-                  </a>
-                )}
-                <p className="text-center text-sm text-slate-400">
-                  Waiting for you to join...
-                  <br />
-                  <Loader2 className="mt-2 inline h-4 w-4 animate-spin" />
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="rounded-lg bg-green-500/10 p-4 text-center">
-                  <p className="text-lg font-semibold text-green-400">
-                    ✓ You&apos;re connected!
-                  </p>
-                  <p className="mt-2 text-sm text-slate-300">
-                    You&apos;ve joined the voice channel. Ready to play?
-                  </p>
-                </div>
-                <Button
-                  onClick={handleProceedToGame}
-                  className="w-full bg-purple-600 text-white hover:bg-purple-700"
-                  size="lg"
-                >
-                  Enter Game Room
-                </Button>
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+        pendingInvite={pendingInvite}
+        onProceedToGame={handleProceedToGame}
+      />
     </ErrorBoundary>
   )
 }

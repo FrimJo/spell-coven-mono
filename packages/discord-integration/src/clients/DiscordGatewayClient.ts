@@ -324,6 +324,10 @@ export class DiscordGatewayClient {
       return
     }
 
+    // Gateway Intents for bot account
+    // GUILD_VOICE_STATES (1 << 7) = 128 - Required for VOICE_STATE_UPDATE events
+    const GUILD_VOICE_STATES = 1 << 7
+
     const payload = {
       op: GatewayOpcodes.Identify,
       d: {
@@ -333,12 +337,12 @@ export class DiscordGatewayClient {
           browser: 'spell-coven',
           device: 'spell-coven',
         },
-        intents: 0, // No privileged intents needed for user account
+        intents: GUILD_VOICE_STATES, // Subscribe to voice state updates
       },
     }
 
     this.ws.send(JSON.stringify(payload))
-    console.log('[Gateway] Sent IDENTIFY')
+    console.log('[Gateway] Sent IDENTIFY with GUILD_VOICE_STATES intent')
   }
 
   /**

@@ -3,27 +3,25 @@
  * Handles room creation, validation, and voice channel access
  */
 
+import { env } from '@/env'
 import { createServerFn } from '@tanstack/react-start'
 
 import { DiscordRestClient } from '@repo/discord-integration/clients'
-
-const GUILD_ID = process.env.VITE_DISCORD_GUILD_ID || ''
-const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || ''
 
 export const ensureUserInGuild = createServerFn({ method: 'POST' })
   .inputValidator((data: { userId: string; accessToken: string }) => data)
   .handler(async ({ data: { userId, accessToken } }) => {
     try {
-      const client = new DiscordRestClient({ botToken: BOT_TOKEN })
+      const client = new DiscordRestClient({ botToken: env.DISCORD_BOT_TOKEN })
 
       console.log('[DEBUG] ensureUserInGuild called with:', {
-        guildId: GUILD_ID,
+        guildId: env.VITE_DISCORD_GUILD_ID,
         userId,
       })
 
       // First, verify the bot can access the guild
       try {
-        const channels = await client.getChannels(GUILD_ID)
+        const channels = await client.getChannels(env.VITE_DISCORD_GUILD_ID)
         console.log(
           '[DEBUG] Bot can access guild, found',
           channels.length,
@@ -34,9 +32,13 @@ export const ensureUserInGuild = createServerFn({ method: 'POST' })
         throw guildError
       }
 
-      const member = await client.ensureUserInGuild(GUILD_ID, userId, {
-        access_token: accessToken,
-      })
+      const member = await client.ensureUserInGuild(
+        env.VITE_DISCORD_GUILD_ID,
+        userId,
+        {
+          access_token: accessToken,
+        },
+      )
 
       if (member) {
         console.log('[DEBUG] User was added to guild')
@@ -62,15 +64,8 @@ export const checkRoomExists = createServerFn({ method: 'POST' })
   .handler(async ({ data: { channelId } }) => {
     // Lazy import to prevent bundling for browser
 
-    if (!BOT_TOKEN) {
-      return {
-        exists: false,
-        error: 'Discord bot not configured',
-      }
-    }
-
     try {
-      const client = new DiscordRestClient({ botToken: BOT_TOKEN })
+      const client = new DiscordRestClient({ botToken: env.DISCORD_BOT_TOKEN })
 
       // Try to fetch the channel
       const channel = await client.getChannel(channelId)
@@ -84,7 +79,7 @@ export const checkRoomExists = createServerFn({ method: 'POST' })
       }
 
       // Verify it's in the correct guild
-      if (channel.guild_id !== GUILD_ID) {
+      if (channel.guild_id !== env.VITE_DISCORD_GUILD_ID) {
         return {
           exists: false,
           error: 'Channel not found in this server',
@@ -112,18 +107,13 @@ export const checkUserInVoiceChannel = createServerFn({ method: 'POST' })
   .handler(async ({ data: { userId, channelId } }) => {
     // Lazy import to prevent bundling for browser
 
-    if (!BOT_TOKEN) {
-      return {
-        inChannel: false,
-        error: 'Discord bot not configured',
-      }
-    }
-
     try {
-      const client = new DiscordRestClient({ botToken: BOT_TOKEN })
+      const client = new DiscordRestClient({ botToken: env.DISCORD_BOT_TOKEN })
 
       // Get all voice states for the guild
-      const voiceStates = await client.getGuildVoiceStates(GUILD_ID)
+      const voiceStates = await client.getGuildVoiceStates(
+        env.VITE_DISCORD_GUILD_ID,
+      )
 
       // Find the user's voice state
       const userVoiceState = voiceStates.find(
@@ -177,46 +167,51 @@ export const createRoom = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { createHmac } = await import('node:crypto')
 
-    if (!BOT_TOKEN || !GUILD_ID) {
-      throw new Error('Discord bot not configured')
-    }
-
-    const client = new DiscordRestClient({ botToken: BOT_TOKEN })
+    const client = new DiscordRestClient({ botToken: env.DISCORD_BOT_TOKEN })
 
     try {
       // 1. Create role for the room
-      const role = await client.createRole(GUILD_ID, {
+      const role = await client.createRole(env.VITE_DISCORD_GUILD_ID, {
         name: data.name,
         permissions: '0', // No special permissions
         mentionable: false,
       })
 
       // 2. Create voice channel with role permissions
-      const channel = await client.createVoiceChannel(GUILD_ID, {
-        name: data.name,
-        user_limit: data.userLimit,
-        permission_overwrites: [
-          {
-            id: GUILD_ID, // @everyone role
-            type: 0,
-            allow: '0',
-            deny: '1024', // VIEW_CHANNEL
-          },
-          {
-            id: role.id,
-            type: 0,
-            allow: '3146752', // VIEW_CHANNEL + CONNECT + SPEAK
-            deny: '0',
-          },
-        ],
-      })
+      const channel = await client.createVoiceChannel(
+        env.VITE_DISCORD_GUILD_ID,
+        {
+          name: data.name,
+          user_limit: data.userLimit,
+          permission_overwrites: [
+            {
+              id: env.VITE_DISCORD_GUILD_ID, // @everyone role
+              type: 0,
+              allow: '0',
+              deny: '1024', // VIEW_CHANNEL
+            },
+            {
+              id: role.id,
+              type: 0,
+              allow: '3146752', // VIEW_CHANNEL + CONNECT + SPEAK
+              deny: '0',
+            },
+            {
+              id: env.DISCORD_BOT_USER_ID, // Bot user
+              type: 1, // Member type
+              allow: '1024', // VIEW_CHANNEL (so bot can fetch channel details)
+              deny: '0',
+            },
+          ],
+        },
+      )
 
       // 3. Generate invite token
       const issuedAt = Math.floor(Date.now() / 1000)
       const expiresAt = issuedAt + data.tokenTtlSeconds
 
       const payload = JSON.stringify({
-        guild_id: GUILD_ID,
+        guild_id: env.VITE_DISCORD_GUILD_ID,
         channel_id: channel.id,
         role_id: role.id,
         creator_id: data.creatorId,
@@ -225,20 +220,20 @@ export const createRoom = createServerFn({ method: 'POST' })
         expires_at: expiresAt,
       })
 
-      const secret = process.env.HUB_SECRET || 'default-secret'
+      const secret = env.HUB_SECRET
       const signature = createHmac('sha256', secret)
         .update(payload)
         .digest('hex')
 
       const token = `${Buffer.from(payload).toString('base64')}.${signature}`
       const shareUrl = `${data.shareUrlBase}/game/${channel.id}?t=${token}`
-      const deepLink = `https://discord.com/channels/${GUILD_ID}/${channel.id}`
+      const deepLink = `https://discord.com/channels/${env.VITE_DISCORD_GUILD_ID}/${channel.id}`
 
       return {
         room: {
           channelId: channel.id,
           roleId: role.id,
-          guildId: GUILD_ID,
+          guildId: env.VITE_DISCORD_GUILD_ID,
           deepLink,
         },
         invite: {
@@ -274,17 +269,13 @@ export const refreshRoomInvite = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { createHmac } = await import('node:crypto')
 
-    if (!GUILD_ID) {
-      throw new Error('Discord bot not configured')
-    }
-
     try {
       // Generate new invite token
       const issuedAt = Math.floor(Date.now() / 1000)
       const expiresAt = issuedAt + data.tokenTtlSeconds
 
       const payload = JSON.stringify({
-        guild_id: GUILD_ID,
+        guild_id: env.VITE_DISCORD_GUILD_ID,
         channel_id: data.channelId,
         role_id: data.roleId,
         creator_id: data.creatorId,
@@ -293,20 +284,20 @@ export const refreshRoomInvite = createServerFn({ method: 'POST' })
         expires_at: expiresAt,
       })
 
-      const secret = process.env.HUB_SECRET || 'default-secret'
+      const secret = env.HUB_SECRET
       const signature = createHmac('sha256', secret)
         .update(payload)
         .digest('hex')
 
       const token = `${Buffer.from(payload).toString('base64')}.${signature}`
       const shareUrl = `${data.shareUrlBase}/game/${data.channelId}?t=${token}`
-      const deepLink = `https://discord.com/channels/${GUILD_ID}/${data.channelId}`
+      const deepLink = `https://discord.com/channels/${env.VITE_DISCORD_GUILD_ID}/${data.channelId}`
 
       return {
         room: {
           channelId: data.channelId,
           roleId: data.roleId,
-          guildId: GUILD_ID,
+          guildId: env.VITE_DISCORD_GUILD_ID,
           deepLink,
         },
         invite: {

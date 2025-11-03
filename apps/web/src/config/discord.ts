@@ -1,14 +1,15 @@
 /**
- * Discord API Configuration
- * Type-safe access to Discord environment variables
+ * Discord Configuration
+ * Public configuration values for Discord integration
  */
+
+import { env } from '@/env'
 
 /**
  * Discord Client ID (public, safe to commit)
  * Get from Discord Developer Portal: https://discord.com/developers/applications
  */
-export const DISCORD_CLIENT_ID = import.meta.env
-  .VITE_DISCORD_CLIENT_ID as string
+export const clientId = env.VITE_DISCORD_CLIENT_ID
 
 /**
  * OAuth2 Redirect URI
@@ -56,13 +57,13 @@ export const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000 // 5 minutes
  * @throws {Error} if configuration is invalid
  */
 export function validateDiscordConfig(): void {
-  if (!DISCORD_CLIENT_ID) {
+  if (!clientId) {
     throw new Error(
       'VITE_DISCORD_CLIENT_ID environment variable is not set. Please add it to .env.development',
     )
   }
 
-  if (!/^\d+$/.test(DISCORD_CLIENT_ID)) {
+  if (!/^\d+$/.test(clientId)) {
     throw new Error(
       'VITE_DISCORD_CLIENT_ID must be a valid Discord Application ID (numeric string)',
     )

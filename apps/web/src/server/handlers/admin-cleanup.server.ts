@@ -1,23 +1,18 @@
+import { env } from '@/env'
 import { createServerFn } from '@tanstack/react-start'
 
 import { DiscordRestClient } from '@repo/discord-integration/clients'
 
 const getSecrets = () => {
-  const botToken = process.env.DISCORD_BOT_TOKEN
-  const guildId = process.env.VITE_DISCORD_GUILD_ID
-  const adminSecret = process.env.ADMIN_CLEANUP_SECRET
-
-  if (!botToken?.length) {
-    throw new Error('DISCORD_BOT_TOKEN environment variable is not defined')
-  }
-  if (!guildId?.length) {
-    throw new Error('VITE_DISCORD_GUILD_ID environment variable is not defined')
-  }
-  if (!adminSecret?.length) {
+  if (!env.ADMIN_CLEANUP_SECRET) {
     throw new Error('ADMIN_CLEANUP_SECRET environment variable is not defined')
   }
 
-  return { botToken, guildId, adminSecret }
+  return {
+    botToken: env.DISCORD_BOT_TOKEN,
+    guildId: env.VITE_DISCORD_GUILD_ID,
+    adminSecret: env.ADMIN_CLEANUP_SECRET,
+  }
 }
 
 export interface CleanupResult {

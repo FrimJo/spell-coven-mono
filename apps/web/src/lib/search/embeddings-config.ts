@@ -7,12 +7,13 @@
  * @module search/embeddings-config
  */
 
+import { env } from '@/env'
+
 /**
  * Get the embeddings version from environment
- * Defaults to 'v1.0' if not set
  */
 export function getEmbeddingsVersion(): string {
-  return import.meta.env.VITE_EMBEDDINGS_VERSION || 'v1.0'
+  return env.VITE_EMBEDDINGS_VERSION
 }
 
 /**

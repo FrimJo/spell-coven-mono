@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef } from 'react'
 
+import type { APIVoiceState } from '@repo/discord-integration/clients'
+
 import type {
   VoiceJoinedEventPayload,
   VoiceLeftEventPayload,
 } from '../types/sse-messages'
 import {
   isSSEAckMessage,
-  isSSECustomEventMessage,
   isSSEDiscordEventMessage,
   isSSEErrorMessage,
   SSEMessageSchema,
@@ -159,43 +160,49 @@ class VoiceChannelSSEManager {
             return
           }
 
-          // Handle custom application events
-          if (isSSECustomEventMessage(message)) {
-            // Handle voice.left events
-            if (message.event === 'voice.left') {
-              const payload = message.payload as VoiceLeftEvent | undefined
-              if (payload) {
-                console.log(
-                  '[VoiceChannelEvents] Received voice.left event for user:',
-                  payload.userId,
-                )
-                this.listeners.forEach((listener) => {
-                  listener.onVoiceLeft?.(payload)
-                })
-              }
-            }
-
-            // Handle voice.joined events
-            if (message.event === 'voice.joined') {
-              const payload = message.payload as VoiceJoinedEvent | undefined
-              if (payload) {
-                console.log(
-                  '[VoiceChannelEvents] Received voice.joined event:',
-                  payload.username,
-                )
-                this.listeners.forEach((listener) => {
-                  listener.onVoiceJoined?.(payload)
-                })
-              }
-            }
-          }
-
-          // Handle raw Discord Gateway events (if needed in the future)
+          // Handle raw Discord Gateway events
           if (isSSEDiscordEventMessage(message)) {
             console.log(
               `[VoiceChannelEvents] Received Discord event: ${message.event}`,
             )
-            // Can add handlers for raw Discord events here if needed
+
+            // Process VOICE_STATE_UPDATE events
+            if (message.event === 'VOICE_STATE_UPDATE') {
+              const voiceState = message.payload as APIVoiceState
+
+              // User joined a voice channel
+              if (voiceState.channel_id) {
+                console.log(
+                  '[VoiceChannelEvents] User joined voice channel:',
+                  voiceState.user_id,
+                )
+                const joinedEvent: VoiceJoinedEvent = {
+                  guildId: voiceState.guild_id || '',
+                  channelId: voiceState.channel_id,
+                  userId: voiceState.user_id,
+                  username: voiceState.member?.user?.username || 'Unknown User',
+                  avatar: voiceState.member?.user?.avatar || null,
+                }
+                this.listeners.forEach((listener) => {
+                  listener.onVoiceJoined?.(joinedEvent)
+                })
+              }
+              // User left a voice channel
+              else {
+                console.log(
+                  '[VoiceChannelEvents] User left voice channel:',
+                  voiceState.user_id,
+                )
+                const leftEvent: VoiceLeftEvent = {
+                  guildId: voiceState.guild_id || '',
+                  channelId: null,
+                  userId: voiceState.user_id,
+                }
+                this.listeners.forEach((listener) => {
+                  listener.onVoiceLeft?.(leftEvent)
+                })
+              }
+            }
           }
         } catch (error) {
           console.error('[VoiceChannelEvents] Failed to parse message:', error)

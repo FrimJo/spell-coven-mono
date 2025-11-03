@@ -6,7 +6,7 @@ import { DiscordTokenSchema } from '@repo/discord-integration/types'
 import { isTokenExpired } from '@repo/discord-integration/utils'
 
 import {
-  DISCORD_CLIENT_ID,
+  clientId,
   DISCORD_REDIRECT_URI,
   DISCORD_SCOPES,
 } from '../config/discord.js'
@@ -24,7 +24,7 @@ let _discordClient: DiscordOAuthClient | null = null
 export const getDiscordClient = createClientOnlyFn((): DiscordOAuthClient => {
   if (!_discordClient) {
     _discordClient = new DiscordOAuthClient({
-      clientId: DISCORD_CLIENT_ID,
+      clientId: clientId,
       redirectUri: DISCORD_REDIRECT_URI,
       scopes: DISCORD_SCOPES,
       storage: localStorage,

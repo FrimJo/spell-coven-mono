@@ -5,16 +5,15 @@
 
 // Top-level import for transformers (no SSR)
 import type { ProgressInfo } from '@huggingface/transformers'
-import { env, pipeline } from '@huggingface/transformers'
+import { env } from '@/env'
+import { env as hfEnv, pipeline } from '@huggingface/transformers'
 
 // Version of the embeddings data - configured via environment variable
-const EMBEDDINGS_VERSION = import.meta.env.VITE_EMBEDDINGS_VERSION || 'v1.3'
-
-const BLOB_STORAGE_URL =
-  import.meta.env.VITE_BLOB_STORAGE_URL || 'mtg-embeddings/'
+const EMBEDDINGS_VERSION = env.VITE_EMBEDDINGS_VERSION
+const BLOB_STORAGE_URL = env.VITE_BLOB_STORAGE_URL
 
 // Format: float32 (recommended, no quantization) or int8 (75% smaller, slight accuracy loss)
-const EMBEDDINGS_FORMAT = import.meta.env.VITE_EMBEDDINGS_FORMAT || 'float32'
+const EMBEDDINGS_FORMAT = env.VITE_EMBEDDINGS_FORMAT
 const EMB_EXT = EMBEDDINGS_FORMAT === 'float32' ? 'f32bin' : 'i8bin'
 const EMB_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/embeddings.${EMB_EXT}`
 const META_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/meta.json`
@@ -24,9 +23,7 @@ const META_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/meta.json`
 // Set to 1.2 for 20% boost (recommended for blurry webcam cards)
 // Set to 1.5 for 50% boost (aggressive, for very blurry conditions)
 // Must match the --contrast value used when building the embeddings database
-const QUERY_CONTRAST_ENHANCEMENT = parseFloat(
-  import.meta.env.VITE_QUERY_CONTRAST || '1.0',
-)
+const QUERY_CONTRAST_ENHANCEMENT = parseFloat(env.VITE_QUERY_CONTRAST)
 
 // Embedding dimension will be read from metadata at runtime
 // Default to 512 (ViT-B/32) but will be overridden by actual metadata
@@ -308,13 +305,13 @@ export async function loadModel(opts?: { onProgress?: (msg: string) => void }) {
     }
 
     // Enable browser caching - models download once, then cached in IndexedDB
-    env.useBrowserCache = true
-    env.allowRemoteModels = true
-    env.allowLocalModels = false
+    hfEnv.useBrowserCache = true
+    hfEnv.allowRemoteModels = true
+    hfEnv.allowLocalModels = false
 
     // Disable proxy mode to avoid worker issues
-    if (env.backends.onnx?.wasm) {
-      env.backends.onnx.wasm.proxy = false
+    if (hfEnv.backends.onnx?.wasm) {
+      hfEnv.backends.onnx.wasm.proxy = false
       console.log('[loadModel] WASM proxy disabled to avoid worker issues')
     }
 
