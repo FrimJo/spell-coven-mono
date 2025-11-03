@@ -491,6 +491,8 @@ function GameRoomContent({
             <VideoStreamGrid
               players={players}
               localPlayerName={playerName}
+              localPlayerId={discordUser?.id}
+              gameId={gameId}
               onLifeChange={handleLifeChange}
               enableCardDetection={true}
               detectorType={detectorType}
@@ -498,6 +500,7 @@ function GameRoomContent({
               onCardCrop={(canvas: HTMLCanvasElement) => {
                 query(canvas)
               }}
+              voiceJwtToken={wsTokenData}
             />
           </div>
         </div>
