@@ -3,12 +3,12 @@ import { useQuery } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 
 interface UseWebSocketAuthTokenOptions {
-  userId?: string
+  userId: string | undefined
 }
 
 export function useWebSocketAuthToken({
   userId,
-}: UseWebSocketAuthTokenOptions = {}) {
+}: UseWebSocketAuthTokenOptions) {
   const generateWsTokenFn = useServerFn(generateWebSocketAuthToken)
 
   return useQuery({

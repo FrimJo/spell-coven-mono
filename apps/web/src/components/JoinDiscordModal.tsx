@@ -6,6 +6,7 @@ import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken'
 import { ExternalLink, Loader2 } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
+import type { APIVoiceState } from '@repo/discord-integration/types'
 import { Button } from '@repo/ui/components/button'
 import {
   Dialog,
@@ -39,9 +40,9 @@ export function JoinDiscordModal({
   const [userJoinedVoice, setUserJoinedVoice] = useState(false)
 
   // Listen for voice.joined events when modal is open
-  const handleVoiceJoined = useCallback(
-    (event: { userId: string }) => {
-      if (open && event.userId === user?.id) {
+  const handleVoiceStateUpdate = useCallback(
+    (voiceState: APIVoiceState) => {
+      if (open && voiceState.user_id === user?.id) {
         console.log('[JoinDiscordModal] User joined voice channel')
         setUserJoinedVoice(true)
       }
@@ -51,7 +52,7 @@ export function JoinDiscordModal({
 
   useVoiceChannelEvents({
     jwtToken: wsTokenData,
-    onVoiceJoined: handleVoiceJoined,
+    onVoiceStateUpdate: handleVoiceStateUpdate,
   })
 
   // Only render on client-side

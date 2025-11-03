@@ -2,10 +2,6 @@ import { useEffect, useMemo, useRef } from 'react'
 
 import type { APIVoiceState } from '@repo/discord-integration/clients'
 
-import type {
-  VoiceJoinedEventPayload,
-  VoiceLeftEventPayload,
-} from '../types/sse-messages'
 import {
   isSSEAckMessage,
   isSSEDiscordEventMessage,
@@ -13,14 +9,9 @@ import {
   SSEMessageSchema,
 } from '../types/sse-messages'
 
-// Re-export for backwards compatibility
-export type VoiceLeftEvent = VoiceLeftEventPayload
-export type VoiceJoinedEvent = VoiceJoinedEventPayload
-
 interface UseVoiceChannelEventsOptions {
   jwtToken?: string
-  onVoiceLeft?: (event: VoiceLeftEvent) => void
-  onVoiceJoined?: (event: VoiceJoinedEvent) => void
+  onVoiceStateUpdate?: (voiceState: APIVoiceState) => void
   onError?: (error: Error) => void
 }
 
@@ -43,8 +34,7 @@ class VoiceChannelSSEManager {
   private jwtToken: string | null = null
   private isConnecting = false
   private listeners: Set<{
-    onVoiceLeft?: (event: VoiceLeftEvent) => void
-    onVoiceJoined?: (event: VoiceJoinedEvent) => void
+    onVoiceStateUpdate?: (voiceState: APIVoiceState) => void
     onError?: (error: Error) => void
   }> = new Set()
 
@@ -58,16 +48,14 @@ class VoiceChannelSSEManager {
   }
 
   addListener(listener: {
-    onVoiceLeft?: (event: VoiceLeftEvent) => void
-    onVoiceJoined?: (event: VoiceJoinedEvent) => void
+    onVoiceStateUpdate?: (voiceState: APIVoiceState) => void
     onError?: (error: Error) => void
   }): void {
     this.listeners.add(listener)
   }
 
   removeListener(listener: {
-    onVoiceLeft?: (event: VoiceLeftEvent) => void
-    onVoiceJoined?: (event: VoiceJoinedEvent) => void
+    onVoiceStateUpdate?: (voiceState: APIVoiceState) => void
     onError?: (error: Error) => void
   }): void {
     this.listeners.delete(listener)
@@ -170,38 +158,19 @@ class VoiceChannelSSEManager {
             if (message.event === 'VOICE_STATE_UPDATE') {
               const voiceState = message.payload as APIVoiceState
 
-              // User joined a voice channel
-              if (voiceState.channel_id) {
-                console.log(
-                  '[VoiceChannelEvents] User joined voice channel:',
-                  voiceState.user_id,
-                )
-                const joinedEvent: VoiceJoinedEvent = {
-                  guildId: voiceState.guild_id || '',
+              console.log(
+                '[VoiceChannelEvents] VOICE_STATE_UPDATE:',
+                {
+                  userId: voiceState.user_id,
                   channelId: voiceState.channel_id,
-                  userId: voiceState.user_id,
-                  username: voiceState.member?.user?.username || 'Unknown User',
-                  avatar: voiceState.member?.user?.avatar || null,
-                }
-                this.listeners.forEach((listener) => {
-                  listener.onVoiceJoined?.(joinedEvent)
-                })
-              }
-              // User left a voice channel
-              else {
-                console.log(
-                  '[VoiceChannelEvents] User left voice channel:',
-                  voiceState.user_id,
-                )
-                const leftEvent: VoiceLeftEvent = {
-                  guildId: voiceState.guild_id || '',
-                  channelId: null,
-                  userId: voiceState.user_id,
-                }
-                this.listeners.forEach((listener) => {
-                  listener.onVoiceLeft?.(leftEvent)
-                })
-              }
+                  username: voiceState.member?.user?.username,
+                },
+              )
+
+              // Broadcast raw voice state to all listeners
+              this.listeners.forEach((listener) => {
+                listener.onVoiceStateUpdate?.(voiceState)
+              })
             }
           }
         } catch (error) {
@@ -294,19 +263,21 @@ class VoiceChannelSSEManager {
  */
 export function useVoiceChannelEvents({
   jwtToken,
-  onVoiceLeft,
-  onVoiceJoined,
+  onVoiceStateUpdate,
   onError,
 }: UseVoiceChannelEventsOptions) {
-  const manager = useMemo(() => VoiceChannelSSEManager.getInstance(), [])
+  const manager = useMemo(
+    () => VoiceChannelSSEManager.getInstance(),
+    [],
+  )
 
-  // Store callbacks in refs so they can be updated without re-registering listener
-  const callbacksRef = useRef({ onVoiceLeft, onVoiceJoined, onError })
+  // Store callbacks in a ref to avoid recreating listener on every render
+  const callbacksRef = useRef({ onVoiceStateUpdate, onError })
   useEffect(() => {
-    callbacksRef.current = { onVoiceLeft, onVoiceJoined, onError }
-  }, [onVoiceLeft, onVoiceJoined, onError])
+    callbacksRef.current = { onVoiceStateUpdate, onError }
+  }, [onVoiceStateUpdate, onError])
 
-  // Update JWT token in manager
+  // Set JWT token when it changes
   useEffect(() => {
     if (jwtToken) {
       manager.setJwtToken(jwtToken)
@@ -316,10 +287,8 @@ export function useVoiceChannelEvents({
   // Register listener once and keep it registered (don't remove on unmount)
   useEffect(() => {
     const listener = {
-      onVoiceLeft: (event: VoiceLeftEvent) =>
-        callbacksRef.current.onVoiceLeft?.(event),
-      onVoiceJoined: (event: VoiceJoinedEvent) =>
-        callbacksRef.current.onVoiceJoined?.(event),
+      onVoiceStateUpdate: (voiceState: APIVoiceState) =>
+        callbacksRef.current.onVoiceStateUpdate?.(voiceState),
       onError: (error: Error) => callbacksRef.current.onError?.(error),
     }
     manager.addListener(listener)

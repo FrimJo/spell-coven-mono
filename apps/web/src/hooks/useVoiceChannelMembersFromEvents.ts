@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import type {
-  VoiceJoinedEvent,
-  VoiceLeftEvent,
-} from './useVoiceChannelEvents.js'
+import type { APIVoiceState } from '@repo/discord-integration/clients'
+
 import { useVoiceChannelEvents } from './useVoiceChannelEvents.js'
 
 export interface VoiceChannelMember {
@@ -45,64 +43,82 @@ export function useVoiceChannelMembersFromEvents({
     })
   }, [enabled, jwtToken, gameId, userId])
 
-  // Handle voice.joined events
-  const handleVoiceJoined = useCallback(
-    (event: VoiceJoinedEvent) => {
+  // Handle VOICE_STATE_UPDATE events
+  const handleVoiceStateUpdate = useCallback(
+    (voiceState: APIVoiceState) => {
       console.log(
-        '[VoiceChannelMembersFromEvents] Received voice.joined event:',
-        { event, gameId, match: event.channelId === gameId },
+        '[VoiceChannelMembersFromEvents] Received VOICE_STATE_UPDATE:',
+        { 
+          userId: voiceState.user_id,
+          channelId: voiceState.channel_id,
+          gameId,
+          match: voiceState.channel_id === gameId 
+        },
       )
 
-      // Only track members in this specific channel
-      if (event.channelId !== gameId) {
-        console.log(
-          '[VoiceChannelMembersFromEvents] Ignoring event - channel mismatch',
-          { eventChannelId: event.channelId, gameId },
-        )
-        return
-      }
-
-      console.log(
-        '[VoiceChannelMembersFromEvents] Member joined:',
-        event.username,
-      )
-
-      setMembers((prevMembers) => {
-        // Check if member already exists
-        const exists = prevMembers.some((m) => m.id === event.userId)
-        if (exists) {
-          return prevMembers
+      // User joined a voice channel
+      if (voiceState.channel_id) {
+        // Only track members in this specific channel
+        if (voiceState.channel_id !== gameId) {
+          console.log(
+            '[VoiceChannelMembersFromEvents] Ignoring event - channel mismatch',
+            { eventChannelId: voiceState.channel_id, gameId },
+          )
+          return
         }
 
-        // Add new member (max 4)
-        const newMembers = [
-          ...prevMembers,
-          {
-            id: event.userId,
-            username: event.username,
-            avatar: event.avatar,
-            isActive: event.userId === userId,
-          },
-        ].slice(0, 4)
+        const username = voiceState.member?.user?.username || 'Unknown User'
+        const avatar = voiceState.member?.user?.avatar || null
 
         console.log(
-          '[VoiceChannelMembersFromEvents] Members updated:',
-          newMembers.length,
+          '[VoiceChannelMembersFromEvents] Member joined:',
+          username,
         )
-        return newMembers
-      })
+
+        setMembers((prevMembers) => {
+          // Check if member already exists
+          const exists = prevMembers.some((m) => m.id === voiceState.user_id)
+          if (exists) {
+            return prevMembers
+          }
+
+          // Add new member (max 4)
+          const newMembers = [
+            ...prevMembers,
+            {
+              id: voiceState.user_id,
+              username,
+              avatar,
+              isActive: voiceState.user_id === userId,
+            },
+          ].slice(0, 4)
+
+          console.log(
+            '[VoiceChannelMembersFromEvents] Members updated:',
+            newMembers.length,
+          )
+          return newMembers
+        })
+      }
+      // User left a voice channel
+      else {
+        console.log(
+          '[VoiceChannelMembersFromEvents] Member left:',
+          voiceState.user_id,
+        )
+
+        setMembers((prevMembers) => {
+          const filtered = prevMembers.filter((m) => m.id !== voiceState.user_id)
+          console.log(
+            '[VoiceChannelMembersFromEvents] Members updated after leave:',
+            filtered.length,
+          )
+          return filtered
+        })
+      }
     },
     [gameId, userId],
   )
-
-  // Handle voice.left events
-  const handleVoiceLeft = useCallback((event: VoiceLeftEvent) => {
-    console.log('[VoiceChannelMembersFromEvents] Member left:', event.userId)
-
-    setMembers((prevMembers) =>
-      prevMembers.filter((m) => m.id !== event.userId),
-    )
-  }, [])
 
   // Handle errors
   const handleError = useCallback((err: Error) => {
@@ -113,8 +129,7 @@ export function useVoiceChannelMembersFromEvents({
   // Listen for voice channel events (only if token is available and enabled)
   useVoiceChannelEvents({
     jwtToken: enabled ? jwtToken : undefined,
-    onVoiceJoined: enabled ? handleVoiceJoined : undefined,
-    onVoiceLeft: enabled ? handleVoiceLeft : undefined,
+    onVoiceStateUpdate: enabled ? handleVoiceStateUpdate : undefined,
     onError: enabled ? handleError : undefined,
   })
 

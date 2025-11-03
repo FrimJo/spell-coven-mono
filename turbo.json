@@ -21,7 +21,9 @@
     "VITE_DISCORD_GUILD_ID",
     "GATEWAY_WS_PORT",
     "GATEWAY_WS_URL",
-    "LINK_TOKEN"
+    "LINK_TOKEN",
+    "BLOB_READ_WRITE_TOKEN",
+    "LOG_LEVEL"
   ],
   "tasks": {
     "build": {
