@@ -14,6 +14,7 @@ import type {
   APIGuildVoiceChannel,
   APIMessage,
   APIRole,
+  APIVoiceState,
 } from 'discord-api-types/v10'
 
 import type {
@@ -196,6 +197,15 @@ export class DiscordRestClient {
     return response
   }
 
+  async getVoiceState(guildId: string, userId: string): Promise<APIVoiceState> {
+    const response = await this.requestWithData<APIVoiceState>(
+      'GET',
+      `/guilds/${guildId}/voice-states/${userId}`,
+    )
+
+    return response
+  }
+
   /**
    * List guild members with optional query parameters
    * Can be used to get members with their voice states
@@ -282,7 +292,7 @@ export class DiscordRestClient {
   }
 
   /**
-   * Move a user to a voice channel (bot-only operation)
+   * Move a user to a voice channel (bot-only operation). Need to be connected to a voice channel
    * Requires MOVE_MEMBERS permission
    */
   async moveUserToVoiceChannel(
@@ -334,7 +344,6 @@ export class DiscordRestClient {
       auditLogReason,
     )
   }
-
 
   /**
    * Fetch all roles in a guild
