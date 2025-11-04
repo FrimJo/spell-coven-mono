@@ -6,8 +6,6 @@
 
 import type { GatewayDispatchEvents } from '@repo/discord-integration/types'
 
-import type { CustomEventName } from '../../types/sse-messages'
-
 export interface SSEConnection {
   userId: string
   guildId: string
@@ -90,29 +88,6 @@ class SSEManager {
     console.log(
       `[SSE] Broadcast complete: sent ${event} to ${sentCount} connections`,
     )
-  }
-
-  /**
-   * Broadcast custom event to specific guild only
-   */
-  broadcastCustomEventToGuild(
-    guildId: string,
-    event: CustomEventName,
-    payload: unknown,
-  ): void {
-    const message = `data: ${JSON.stringify({
-      v: 1,
-      type: 'custom.event',
-      event,
-      payload,
-      ts: Date.now(),
-    })}\n\n`
-
-    console.log(
-      `[SSE] Broadcasting custom event ${event} to guild ${guildId}. Total connections: ${this.connections.size}`,
-    )
-
-    this.sendToGuild(guildId, message)
   }
 
   /**
