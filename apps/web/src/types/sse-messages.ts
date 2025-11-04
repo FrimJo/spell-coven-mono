@@ -18,11 +18,6 @@ export const SSEMessageBaseSchema = z.object({
 })
 
 /**
- * Custom application event names
- */
-export type CustomEventName = 'voice.joined' | 'voice.left'
-
-/**
  * SSE Discord Gateway Event Message - Raw Discord events
  */
 export const SSEDiscordEventMessageSchema = SSEMessageBaseSchema.extend({
