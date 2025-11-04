@@ -42,7 +42,11 @@ export function JoinDiscordModal({
   // Listen for voice.joined events when modal is open
   const handleVoiceStateUpdate = useCallback(
     (voiceState: APIVoiceState) => {
-      if (open && voiceState.user_id === user?.id) {
+      if (
+        open &&
+        voiceState.user_id === user?.id &&
+        voiceState.channel_id != null
+      ) {
         console.log('[JoinDiscordModal] User joined voice channel')
         setUserJoinedVoice(true)
       }

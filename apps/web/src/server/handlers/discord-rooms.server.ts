@@ -56,6 +56,32 @@ export const ensureUserInGuild = createServerFn({ method: 'POST' })
     }
   })
 
+export const ensureUserInVoiceChannel = createServerFn({ method: 'GET' })
+  .inputValidator((data: { userId: string; targetChannelId: string }) => data)
+  .handler(async ({ data: { userId, targetChannelId } }) => {
+    try {
+      const client = new DiscordRestClient({ botToken: env.DISCORD_BOT_TOKEN })
+
+      const voiceState = await client.getVoiceState(
+        env.VITE_DISCORD_GUILD_ID,
+        userId,
+      )
+
+      // Not in any voice channel
+      if (!voiceState.channel_id)
+        return { inChannel: false, error: 'User is not in any voice channel' }
+
+      // Check if it's the channel we care about
+      return { inChannel: voiceState.channel_id === targetChannelId }
+    } catch (error) {
+      console.error('[Discord] Error in ensureUserInGuild:', error)
+      return {
+        inChannel: false,
+        error: 'Internal server error',
+      }
+    }
+  })
+
 /**
  * Check if a Discord voice channel (game room) exists
  */
@@ -100,7 +126,7 @@ export const checkRoomExists = createServerFn({ method: 'POST' })
   })
 
 /**
- * Connect a user to a voice channel
+ * Move a user to a voice channel. Need to be connected to another voice channel
  * Uses Discord bot to move the user to the specified voice channel
  */
 export const connectUserToVoiceChannel = createServerFn({ method: 'POST' })
@@ -122,13 +148,17 @@ export const connectUserToVoiceChannel = createServerFn({ method: 'POST' })
         'Auto-connecting user to game room voice channel',
       )
 
-      console.log('[connectUserToVoiceChannel] Successfully moved user to voice channel')
-      console.log('[connectUserToVoiceChannel] Discord will send VOICE_STATE_UPDATE event to Gateway')
+      console.log(
+        '[connectUserToVoiceChannel] Successfully moved user to voice channel',
+      )
+      console.log(
+        '[connectUserToVoiceChannel] Discord will send VOICE_STATE_UPDATE event to Gateway',
+      )
 
       return { success: true }
     } catch (error) {
       console.error('[connectUserToVoiceChannel] Error:', error)
-      
+
       // Provide helpful error messages
       let errorMessage = 'Failed to connect to voice channel'
       if (error instanceof Error) {
@@ -140,7 +170,7 @@ export const connectUserToVoiceChannel = createServerFn({ method: 'POST' })
           errorMessage = error.message
         }
       }
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -158,12 +188,16 @@ export const getInitialVoiceChannelMembers = createServerFn({ method: 'POST' })
     try {
       const client = new DiscordRestClient({ botToken: env.DISCORD_BOT_TOKEN })
 
-      console.log('[getInitialVoiceChannelMembers] Fetching members for channel:', channelId)
+      console.log(
+        '[getInitialVoiceChannelMembers] Fetching members for channel:',
+        channelId,
+      )
 
       // Get the channel to verify it exists
       const channel = await client.getChannel(channelId)
-      
-      if (channel.type !== 2) { // 2 = GUILD_VOICE
+
+      if (channel.type !== 2) {
+        // 2 = GUILD_VOICE
         return { members: [], error: 'Channel is not a voice channel' }
       }
 
@@ -172,23 +206,30 @@ export const getInitialVoiceChannelMembers = createServerFn({ method: 'POST' })
       // Voice states are only available through:
       // 1. Gateway VOICE_STATE_UPDATE events (which we're already using)
       // 2. Individual member lookups (expensive for large guilds)
-      // 
+      //
       // For now, we'll return an empty array and let the real-time events populate the list
       // This is actually the recommended approach by Discord
-      // 
+      //
       // Alternative: We could cache voice states from Gateway events in Redis/memory,
       // but that adds complexity. The auto-connect + real-time events should be sufficient.
-      
-      const membersInChannel: Array<{ id: string; username: string; avatar: string | null }> = []
 
-      console.log('[getInitialVoiceChannelMembers] Returning empty initial state (will be populated by Gateway events)')
-      
+      const membersInChannel: Array<{
+        id: string
+        username: string
+        avatar: string | null
+      }> = []
+
+      console.log(
+        '[getInitialVoiceChannelMembers] Returning empty initial state (will be populated by Gateway events)',
+      )
+
       return { members: membersInChannel, error: null }
     } catch (error) {
       console.error('[getInitialVoiceChannelMembers] Error:', error)
       return {
         members: [],
-        error: error instanceof Error ? error.message : 'Failed to fetch members',
+        error:
+          error instanceof Error ? error.message : 'Failed to fetch members',
       }
     }
   })

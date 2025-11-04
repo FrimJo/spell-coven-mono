@@ -14,6 +14,7 @@ import { sessionStorage } from '@/lib/session-storage'
 import {
   checkRoomExists,
   ensureUserInGuild,
+  ensureUserInVoiceChannel,
 } from '@/server/handlers/discord-rooms.server'
 import {
   createFileRoute,
@@ -83,17 +84,23 @@ export const Route = createFileRoute('/game/$gameId')({
       }
     }
 
-    const { error } = await ensureUserInGuild({
+    const { error: inGuildError } = await ensureUserInGuild({
       data: { userId: user.id, accessToken: token.accessToken },
     })
 
-    if (error) {
-      console.error('[Game] Error ensuring user in guild:', error)
+    if (inGuildError) {
+      console.error('[Game] Error ensuring user in guild:', inGuildError)
       throw redirect({
         to: '/',
-        search: { error: error || 'Failed to ensure user in guild' },
+        search: { error: inGuildError || 'Failed to ensure user in guild' },
       })
     }
+
+    const { inChannel, error: inChannelError } = await ensureUserInVoiceChannel(
+      {
+        data: { userId: user.id, targetChannelId: gameId },
+      },
+    )
 
     // Don't connect to voice channel here - it causes race condition
     // The VOICE_STATE_UPDATE events arrive before browser connects to SSE
@@ -102,8 +109,8 @@ export const Route = createFileRoute('/game/$gameId')({
     return {
       isAuthenticated: true,
       voiceChannelStatus: {
-        inChannel: false,
-        error: null,
+        inChannel,
+        error: inChannelError,
       },
       initialMembers: [],
       userId: user.id,
