@@ -1,6 +1,6 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { PeerConnectionState } from '@/lib/webrtc/types'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useWebcam } from '@/hooks/useWebcam'
 import {
   Camera,
@@ -114,48 +114,6 @@ export function VideoStreamGrid({
   // Find local player (not currently used but may be needed for future features)
   // const localPlayer = players.find((p) => p.name === localPlayerName)
 
-  // Debug logging for remote streams (only log when streams change, not on every render)
-  const prevRemoteStreamsRef = useRef<string>('')
-  const prevConnectionStatesRef = useRef<string>('')
-  useEffect(() => {
-    const remoteStreamsStr = JSON.stringify(
-      Array.from(remoteStreams.entries()).map(([id, stream]) => [
-        id,
-        {
-          hasStream: !!stream,
-          trackCount: stream?.getTracks().length || 0,
-        },
-      ]),
-    )
-    const connectionStatesStr = JSON.stringify(
-      Array.from(connectionStates.entries()),
-    )
-
-    // Only log if something actually changed
-    if (
-      remoteStreamsStr !== prevRemoteStreamsRef.current ||
-      connectionStatesStr !== prevConnectionStatesRef.current
-    ) {
-      const remotePlayers = players.filter(
-        (p) => p.name !== localPlayerName,
-      )
-      remotePlayers.forEach((player) => {
-        const remoteStream = remoteStreams.get(player.id)
-        const connectionState = connectionStates.get(player.id)
-        console.log(`[VideoStreamGrid] Player ${player.name} (${player.id}):`, {
-          hasRemoteStream: !!remoteStream,
-          connectionState,
-          remoteStreamTracks: remoteStream?.getTracks().length || 0,
-          remoteStreamsSize: remoteStreams.size,
-          remoteStreamsKeys: Array.from(remoteStreams.keys()),
-        })
-      })
-
-      prevRemoteStreamsRef.current = remoteStreamsStr
-      prevConnectionStatesRef.current = connectionStatesStr
-    }
-  }, [remoteStreams, connectionStates, players, localPlayerName])
-
   // Load available cameras when stream becomes active
   useEffect(() => {
     if (isVideoActive) {
@@ -174,21 +132,6 @@ export function VideoStreamGrid({
       setCameraPopoverOpen(false)
     }
   }
-
-  const toggleVideo = (playerId: string) => {
-    // For remote players, just update UI state
-    setStreamStates((prev) => {
-      const currentState = prev[playerId]
-      if (!currentState) return prev
-      return {
-        ...prev,
-        [playerId]: { ...currentState, video: !currentState.video },
-      }
-    })
-  }
-
-  // Suppress unused warning - function is available for future use
-  void toggleVideo
 
   const toggleLocalAudio = () => {
     if (videoRef.current && videoRef.current.srcObject) {
@@ -230,19 +173,6 @@ export function VideoStreamGrid({
 
   // Update remote video elements when streams change
   useEffect(() => {
-    console.log('[VideoStreamGrid] Remote streams changed:', {
-      streamCount: remoteStreams.size,
-      playerIds: Array.from(remoteStreams.keys()),
-      streams: Array.from(remoteStreams.entries()).map(([id, stream]) => ({
-        playerId: id,
-        hasStream: !!stream,
-        streamId: stream?.id,
-        videoTracks: stream?.getVideoTracks().length || 0,
-      })),
-    })
-    
-    const cleanupFunctions: Array<() => void> = []
-    
     for (const [playerId, stream] of remoteStreams) {
       const videoElement = remoteVideoRefs.current.get(playerId)
       const currentAttachedStream = attachedStreamsRef.current.get(playerId)
@@ -251,7 +181,6 @@ export function VideoStreamGrid({
       if (!stream) {
         if (videoElement && currentAttachedStream) {
           // Clear existing stream if we received null
-          console.log(`[VideoStreamGrid] Clearing stream for ${playerId} (received null stream)`)
           videoElement.srcObject = null
           attachedStreamsRef.current.set(playerId, null)
           setPlayingRemoteVideos((prev) => {
@@ -265,47 +194,18 @@ export function VideoStreamGrid({
       
       // Only update if stream has changed
       if (videoElement && stream !== currentAttachedStream) {
-        console.log(`[VideoStreamGrid] Setting stream for ${playerId} on video element`, {
-          currentStreamId: currentAttachedStream?.id,
-          newStreamId: stream?.id,
-          hasVideoTracks: stream.getVideoTracks().length > 0,
-          hasAudioTracks: stream.getAudioTracks().length > 0,
-        })
         videoElement.srcObject = stream
         attachedStreamsRef.current.set(playerId, stream)
         
-        // Track when video starts playing to hide placeholder
-        const handlePlaying = () => {
-          console.log(`[VideoStreamGrid] Video started playing for ${playerId}`)
-          setPlayingRemoteVideos((prev) => new Set(prev).add(playerId))
-        }
-        const handlePause = () => {
-          console.log(`[VideoStreamGrid] Video paused for ${playerId}`)
-          setPlayingRemoteVideos((prev) => {
-            const next = new Set(prev)
-            next.delete(playerId)
-            return next
-          })
-        }
-        
-        videoElement.addEventListener('playing', handlePlaying)
-        videoElement.addEventListener('pause', handlePause)
-        
         // Check if already playing
         if (!videoElement.paused && videoElement.readyState >= 2) {
-          handlePlaying()
+          setPlayingRemoteVideos((prev) => new Set(prev).add(playerId))
         }
-        
-        cleanupFunctions.push(() => {
-          videoElement.removeEventListener('playing', handlePlaying)
-          videoElement.removeEventListener('pause', handlePause)
-        })
         
         // Don't call play() here - let autoplay and onLoadedMetadata handle it
         // Calling play() here causes AbortError when srcObject is set multiple times
       } else if (videoElement && !stream) {
         if (currentAttachedStream) {
-          console.log(`[VideoStreamGrid] Clearing stream for ${playerId}`)
           videoElement.srcObject = null
           attachedStreamsRef.current.set(playerId, null)
           setPlayingRemoteVideos((prev) => {
@@ -314,78 +214,13 @@ export function VideoStreamGrid({
             return next
           })
         }
-      } else if (!videoElement && stream) {
-        console.warn(`[VideoStreamGrid] Stream available for ${playerId} but video element not found yet`)
       }
     }
     
     return () => {
-      cleanupFunctions.forEach((cleanup) => cleanup())
+      // Cleanup if needed
     }
   }, [remoteStreams])
-
-  // Track previous ref states to only log actual changes
-  const prevRefStatesRef = useRef<Map<string, boolean>>(new Map())
-  
-  // Store ref callbacks in a ref so they're truly stable across renders
-  // This prevents React from seeing them as "new" functions and unmounting/remounting
-  const refCallbacksRef = useRef<Map<string, (element: HTMLVideoElement | null) => void>>(new Map())
-  
-  // Ensure callbacks exist for all current players
-  useEffect(() => {
-    for (const player of players) {
-      if (!refCallbacksRef.current.has(player.id)) {
-        // Create callback once and store it in ref (never changes)
-        refCallbacksRef.current.set(player.id, (element: HTMLVideoElement | null) => {
-          const wasSet = prevRefStatesRef.current.get(player.id) ?? false
-          const isSet = element !== null
-          
-          // Only log when ref state actually changes (null -> element or element -> null)
-          if (isSet && !wasSet) {
-            console.log(`[VideoStreamGrid] Video element ref set for ${player.id}`)
-            prevRefStatesRef.current.set(player.id, true)
-            remoteVideoRefs.current.set(player.id, element)
-            // Don't set srcObject here - let useEffect handle it to avoid race conditions
-            // The useEffect will set it properly when the stream is available
-          } else if (!isSet && wasSet) {
-            console.log(`[VideoStreamGrid] Video element ref cleared for ${player.id}`)
-            prevRefStatesRef.current.set(player.id, false)
-            remoteVideoRefs.current.delete(player.id)
-            attachedStreamsRef.current.delete(player.id)
-          } else if (isSet && wasSet) {
-            // Element already set, just update the reference silently (no log spam)
-            remoteVideoRefs.current.set(player.id, element)
-          }
-          // else: element already null and was null, do nothing
-        })
-      }
-    }
-    
-    // Clean up callbacks for players that no longer exist
-    const currentPlayerIds = new Set(players.map(p => p.id))
-    for (const [playerId] of refCallbacksRef.current) {
-      if (!currentPlayerIds.has(playerId)) {
-        refCallbacksRef.current.delete(playerId)
-        prevRefStatesRef.current.delete(playerId)
-      }
-    }
-  }, [players])
-
-  // Helper to get stable video ref callback for a player
-  // This always returns the same function from the ref, ensuring React sees it as stable
-  const getRemoteVideoRef = useCallback((playerId: string) => {
-    // Get the stable callback from the ref (never changes)
-    const callback = refCallbacksRef.current.get(playerId)
-    if (!callback) {
-      // Fallback: create a temporary callback if somehow missing (shouldn't happen)
-      const tempCallback = (element: HTMLVideoElement | null) => {
-        remoteVideoRefs.current.set(playerId, element as any)
-      }
-      refCallbacksRef.current.set(playerId, tempCallback)
-      return tempCallback
-    }
-    return callback
-  }, [])
 
   return (
     <div className={`grid ${getGridClass()} h-full gap-4`}>
@@ -470,7 +305,14 @@ export function VideoStreamGrid({
               {/* Remote player video element */}
               {!isLocal && (
                 <video
-                  ref={getRemoteVideoRef(player.id)}
+                  ref={(element) => {
+                    if (element) {
+                      remoteVideoRefs.current.set(player.id, element)
+                    } else {
+                      remoteVideoRefs.current.delete(player.id)
+                      attachedStreamsRef.current.delete(player.id)
+                    }
+                  }}
                   autoPlay
                   playsInline
                   muted={true}
@@ -487,24 +329,12 @@ export function VideoStreamGrid({
                   onLoadedMetadata={() => {
                     const videoElement = remoteVideoRefs.current.get(player.id)
                     if (videoElement && remoteStream && videoElement.paused) {
-                      console.log(`[VideoStreamGrid] Video metadata loaded for ${player.id}, ensuring play`, {
-                        paused: videoElement.paused,
-                        readyState: videoElement.readyState,
-                        hasSrcObject: !!videoElement.srcObject,
-                        videoWidth: videoElement.videoWidth,
-                        videoHeight: videoElement.videoHeight,
-                      })
                       // Use requestAnimationFrame to ensure element is ready
                       requestAnimationFrame(() => {
                         videoElement.play().catch((error) => {
                           // AbortError is expected if srcObject changes during play, ignore it
                           if (error.name !== 'AbortError') {
-                            console.error(`[VideoStreamGrid] Failed to play after metadata loaded for ${player.id}:`, error, {
-                              name: error.name,
-                              message: error.message,
-                            })
-                          } else {
-                            console.log(`[VideoStreamGrid] Play was aborted for ${player.id} (expected if srcObject changed)`)
+                            console.error(`[VideoStreamGrid] Failed to play after metadata loaded for ${player.id}:`, error)
                           }
                         })
                       })
@@ -514,17 +344,10 @@ export function VideoStreamGrid({
                     // Fallback: ensure play when video can start playing
                     const videoElement = remoteVideoRefs.current.get(player.id)
                     if (videoElement && remoteStream && videoElement.paused) {
-                      console.log(`[VideoStreamGrid] Video can play for ${player.id}, ensuring playback`, {
-                        paused: videoElement.paused,
-                        readyState: videoElement.readyState,
-                        hasSrcObject: !!videoElement.srcObject,
-                      })
                       requestAnimationFrame(() => {
                         videoElement.play().catch((error) => {
                           if (error.name !== 'AbortError') {
                             console.error(`[VideoStreamGrid] Failed to play on canPlay for ${player.id}:`, error)
-                          } else {
-                            console.log(`[VideoStreamGrid] Play was aborted for ${player.id} (expected if srcObject changed)`)
                           }
                         })
                       })
@@ -532,12 +355,10 @@ export function VideoStreamGrid({
                   }}
                   onPlaying={() => {
                     // Direct handler to track when video actually starts playing
-                    console.log(`[VideoStreamGrid] Video playing event fired for ${player.id}`)
                     setPlayingRemoteVideos((prev) => new Set(prev).add(player.id))
                   }}
                   onPause={() => {
                     // Track when video pauses
-                    console.log(`[VideoStreamGrid] Video paused event fired for ${player.id}`)
                     setPlayingRemoteVideos((prev) => {
                       const next = new Set(prev)
                       next.delete(player.id)
@@ -545,14 +366,7 @@ export function VideoStreamGrid({
                     })
                   }}
                   onError={(e) => {
-                    const videoElement = remoteVideoRefs.current.get(player.id)
-                    console.error(`[VideoStreamGrid] Video error for ${player.id}:`, {
-                      error: e,
-                      code: videoElement?.error?.code,
-                      message: videoElement?.error?.message,
-                      networkState: videoElement?.networkState,
-                      readyState: videoElement?.readyState,
-                    })
+                    console.error(`[VideoStreamGrid] Video error for ${player.id}:`, e)
                   }}
                 />
               )}
@@ -581,7 +395,7 @@ export function VideoStreamGrid({
                         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-purple-500/20">
                           <Camera className="h-10 w-10 text-purple-400" />
                         </div>
-                        <p className="text-slate-400">{player.name}'s Table View</p>
+                        <p className="text-slate-400">{player.name}&apos;s Table View</p>
                         <p className="text-sm text-slate-500">
                           Camera feed of physical battlefield
                         </p>
