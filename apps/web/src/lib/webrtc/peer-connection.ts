@@ -54,13 +54,6 @@ export class PeerConnectionManager {
 
     // Setup event listeners
     this.setupEventListeners()
-    
-    // Immediately check and update state in case it changed during setup
-    const currentIceState = this.rtcPeerConnection.iceConnectionState
-    const currentAppState = this.mapIceStateToAppState(currentIceState)
-    if (currentAppState !== initialState) {
-      this.updateState(currentAppState)
-    }
   }
 
   /**
