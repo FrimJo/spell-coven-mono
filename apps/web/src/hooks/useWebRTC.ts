@@ -75,8 +75,6 @@ export function useWebRTC({
 
   const peerConnectionsRef = useRef<Map<string, PeerConnectionData>>(new Map())
   const localStreamRef = useRef<MediaStream | null>(null)
-  // Store offers that failed to send (for retry when player connects)
-  const pendingOffersRef = useRef<Map<string, RTCSessionDescriptionInit>>(new Map())
 
   // Update ref when state changes
   useEffect(() => {
@@ -398,29 +396,17 @@ export function useWebRTC({
           .createOffer()
           .then((offer) => {
             return sendOffer(player.id, offer)
-              .then(() => {
-                // Remove from pending offers if it was there
-                pendingOffersRef.current.delete(player.id)
-              })
-              .catch((error) => {
-                // If player is not connected yet, store offer for retry
-                const errorMessage = error instanceof Error ? error.message : String(error)
-                if (errorMessage.includes('not found or not connected')) {
-                  // Store the offer for retry when player connects
-                  pendingOffersRef.current.set(player.id, offer)
-                }
-                // Error logging is handled in useWebRTCSignaling.sendOffer
-              })
           })
           .catch((error) => {
-            // Handle offer creation failure
+            // Handle offer creation/sending failure
             const errorMessage = error instanceof Error ? error.message : String(error)
             if (!errorMessage.includes('not found or not connected')) {
               console.error(
-                `[WebRTC] Failed to create offer for ${player.id}:`,
+                `[WebRTC] Failed to create/send offer for ${player.id}:`,
                 error,
               )
             }
+            // If player is not connected yet, this is expected during connection establishment
           })
 
         newConnections.set(player.id, {
@@ -595,49 +581,7 @@ export function useWebRTC({
 
   // State updates are now event-driven via PeerConnectionManager.onStateChange callbacks
   // No polling needed - removed in US3
-
-  // Retry sending pending offers when players come online
-  useEffect(() => {
-    if (!localStreamRef.current) {
-      return
-    }
-
-    if (pendingOffersRef.current.size === 0) {
-      return
-    }
-
-    const onlinePlayerIds = new Set(
-      players
-        .filter((p) => {
-          return (
-            !isSelfConnection(localPlayerId, p.id) &&
-            p.isOnline === true // Only retry for explicitly online players
-          )
-        })
-        .map((p) => p.id),
-    )
-
-    // Retry sending offers for players who are now online
-    for (const [playerId, offer] of pendingOffersRef.current) {
-      if (onlinePlayerIds.has(playerId)) {
-        sendOffer(playerId, offer)
-          .then(() => {
-            pendingOffersRef.current.delete(playerId)
-          })
-          .catch((error) => {
-            const errorMessage = error instanceof Error ? error.message : String(error)
-            if (!errorMessage.includes('not found or not connected')) {
-              console.error(
-                `[WebRTC] Retry: Failed to send offer to ${playerId}:`,
-                error,
-              )
-              // Remove from pending if it's a different error
-              pendingOffersRef.current.delete(playerId)
-            }
-          })
-      }
-    }
-  }, [players, localPlayerId, sendOffer])
+  // Retry mechanism removed in US3 - offers are sent when connections are created
 
   // Update connections when players change (join/leave)
   useEffect(() => {
