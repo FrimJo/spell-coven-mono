@@ -20,6 +20,7 @@ import {
   isSSEWebRTCSignalingMessage,
   SSEMessageSchema,
 } from '@/types/sse-messages'
+import { isSelfConnection } from '@/lib/webrtc/utils'
 
 interface UseWebRTCSignalingOptions {
   roomId: string
@@ -100,7 +101,7 @@ export function useWebRTCSignaling({
         // Filter by roomId and ignore messages from self
         if (
           message.data.roomId !== roomId ||
-          message.data.from === localPlayerId
+          isSelfConnection(message.data.from, localPlayerId)
         ) {
           return
         }
@@ -211,10 +212,7 @@ export function useWebRTCSignaling({
   const sendIceCandidate = useCallback(
     async (to: string, candidate: RTCIceCandidateInit): Promise<void> => {
       // Prevent sending ICE candidates to ourselves
-      const normalizedTo = String(to)
-      const normalizedLocalPlayerId = String(localPlayerId || '')
-      
-      if (normalizedTo === normalizedLocalPlayerId) {
+      if (isSelfConnection(to, localPlayerId || '')) {
         console.error(
           `[WebRTC Signaling] ERROR: Attempted to send ICE candidate to local player ${to}! Ignoring.`,
         )
