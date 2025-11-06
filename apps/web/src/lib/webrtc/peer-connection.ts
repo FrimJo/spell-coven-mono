@@ -60,17 +60,9 @@ export class PeerConnectionManager {
    * Setup RTCPeerConnection event listeners
    */
   private setupEventListeners(): void {
-    // Handle ICE connection state changes
+    // Handle ICE connection state changes (primary source of truth)
     this.rtcPeerConnection.oniceconnectionstatechange = () => {
       const iceState = this.rtcPeerConnection.iceConnectionState
-      const appState = this.mapIceStateToAppState(iceState)
-      this.updateState(appState)
-    }
-    
-    // Also listen to connectionstatechange as a backup/additional check
-    this.rtcPeerConnection.onconnectionstatechange = () => {
-      const iceState = this.rtcPeerConnection.iceConnectionState
-      // Update state based on ICE connection state (primary source)
       const appState = this.mapIceStateToAppState(iceState)
       this.updateState(appState)
     }
