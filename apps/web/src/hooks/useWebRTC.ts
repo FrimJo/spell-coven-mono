@@ -593,37 +593,8 @@ export function useWebRTC({
     }
   }, [])
 
-  // Periodic state sync to ensure UI reflects actual connection states
-  useEffect(() => {
-    if (peerConnections.size === 0) {
-      return
-    }
-
-    const syncInterval = setInterval(() => {
-      setPeerConnections((prev) => {
-        let changed = false
-        const updated = new Map(prev)
-        
-        for (const [playerId, connectionData] of prev) {
-          const actualState = connectionData.manager.getState()
-          if (actualState !== connectionData.state) {
-            console.log(
-              `[WebRTC] State sync: ${playerId} was ${connectionData.state}, actually ${actualState}`,
-            )
-            updated.set(playerId, {
-              ...connectionData,
-              state: actualState,
-            })
-            changed = true
-          }
-        }
-        
-        return changed ? updated : prev
-      })
-    }, 2000) // Check every 2 seconds
-
-    return () => clearInterval(syncInterval)
-  }, [peerConnections])
+  // State updates are now event-driven via PeerConnectionManager.onStateChange callbacks
+  // No polling needed - removed in US3
 
   // Retry sending pending offers when players come online
   useEffect(() => {
