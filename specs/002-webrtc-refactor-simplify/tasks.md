@@ -179,31 +179,31 @@ This refactoring works within existing structure:
 - [X] T058 [P] [US2] Add isSelfConnection function to apps/web/src/lib/webrtc/utils.ts
 - [X] T059 [P] [US2] Add createPeerConnectionWithCallbacks function to apps/web/src/lib/webrtc/utils.ts
 - [X] T060 [US2] Export all utility functions from apps/web/src/lib/webrtc/utils.ts
-- [ ] T061 [US2] Git commit: "feat(webrtc): create shared utility functions"
+- [X] T061 [US2] Git commit: "feat(webrtc): create shared utility functions"
 
 ### Replace ID Normalization (useWebRTC.ts)
 
-- [ ] T062 [US2] Import normalizePlayerId in apps/web/src/hooks/useWebRTC.ts
-- [ ] T063 [US2] Replace first ID normalization (lines 118-120) with normalizePlayerId call in apps/web/src/hooks/useWebRTC.ts
-- [ ] T064 [US2] Run integration tests to verify replacement works
-- [ ] T065 [P] [US2] Replace ID normalization at lines 199-201 in apps/web/src/hooks/useWebRTC.ts
-- [ ] T066 [P] [US2] Replace ID normalization at lines 343-344 in apps/web/src/hooks/useWebRTC.ts
-- [ ] T067 [P] [US2] Replace ID normalization at lines 857-858 in apps/web/src/hooks/useWebRTC.ts
-- [ ] T068 [US2] Remove all local ID normalization logic from apps/web/src/hooks/useWebRTC.ts
-- [ ] T069 [US2] Run integration tests to verify all replacements work
-- [ ] T070 [US2] Git commit: "refactor(webrtc): use normalizePlayerId in useWebRTC"
+- [X] T062 [US2] Import normalizePlayerId in apps/web/src/hooks/useWebRTC.ts
+- [X] T063 [US2] Replace first ID normalization (lines 118-120) with normalizePlayerId call in apps/web/src/hooks/useWebRTC.ts
+- [X] T064 [US2] Run integration tests to verify replacement works
+- [X] T065 [P] [US2] Replace ID normalization at lines 199-201 in apps/web/src/hooks/useWebRTC.ts
+- [X] T066 [P] [US2] Replace ID normalization at lines 343-344 in apps/web/src/hooks/useWebRTC.ts
+- [X] T067 [P] [US2] Replace ID normalization at lines 857-858 in apps/web/src/hooks/useWebRTC.ts
+- [X] T068 [US2] Remove all local ID normalization logic from apps/web/src/hooks/useWebRTC.ts
+- [X] T069 [US2] Run integration tests to verify all replacements work
+- [X] T070 [US2] Git commit: "refactor(webrtc): use normalizePlayerId in useWebRTC"
 
 ### Replace Self-Connection Checks (useWebRTC.ts)
 
-- [ ] T071 [US2] Import isSelfConnection in apps/web/src/hooks/useWebRTC.ts
-- [ ] T072 [US2] Replace first self-check (lines 123-126) with isSelfConnection call in apps/web/src/hooks/useWebRTC.ts
-- [ ] T073 [US2] Run integration tests to verify replacement works
-- [ ] T074 [P] [US2] Replace self-check at lines 365-371 in apps/web/src/hooks/useWebRTC.ts
-- [ ] T075 [P] [US2] Replace self-check at lines 485-489 in apps/web/src/hooks/useWebRTC.ts
-- [ ] T076 [P] [US2] Replace self-check at lines 516-520 in apps/web/src/hooks/useWebRTC.ts
-- [ ] T077 [P] [US2] Replace self-check at lines 964-969 in apps/web/src/hooks/useWebRTC.ts
-- [ ] T078 [US2] Run integration tests to verify all replacements work
-- [ ] T079 [US2] Git commit: "refactor(webrtc): use isSelfConnection in useWebRTC"
+- [X] T071 [US2] Import isSelfConnection in apps/web/src/hooks/useWebRTC.ts
+- [X] T072 [US2] Replace first self-check (lines 123-126) with isSelfConnection call in apps/web/src/hooks/useWebRTC.ts
+- [X] T073 [US2] Run integration tests to verify replacement works
+- [X] T074 [P] [US2] Replace self-check at lines 365-371 in apps/web/src/hooks/useWebRTC.ts
+- [X] T075 [P] [US2] Replace self-check at lines 485-489 in apps/web/src/hooks/useWebRTC.ts
+- [X] T076 [P] [US2] Replace self-check at lines 516-520 in apps/web/src/hooks/useWebRTC.ts
+- [X] T077 [P] [US2] Replace self-check at lines 964-969 in apps/web/src/hooks/useWebRTC.ts
+- [X] T078 [US2] Run integration tests to verify all replacements work
+- [X] T079 [US2] Git commit: "refactor(webrtc): use isSelfConnection in useWebRTC"
 
 ### Replace Self-Connection Checks (useWebRTCSignaling.ts)
 
@@ -213,30 +213,30 @@ This refactoring works within existing structure:
 
 ### Consolidate Connection Creation Logic
 
-- [ ] T084 [US2] Extract connection setup from initializePeerConnections (lines 380-435) to use createPeerConnectionWithCallbacks in apps/web/src/hooks/useWebRTC.ts
-- [ ] T085 [US2] Run integration tests to verify extracted function works
-- [ ] T086 [US2] Replace duplicate connection creation in player change useEffect (lines 903-1008) with createPeerConnectionWithCallbacks in apps/web/src/hooks/useWebRTC.ts
-- [ ] T087 [US2] Run integration tests to verify replacement works
-- [ ] T088 [US2] Git commit: "refactor(webrtc): consolidate connection creation with utility"
+- [X] T084 [US2] Extract connection setup from initializePeerConnections (lines 380-435) to use createPeerConnectionWithCallbacks in apps/web/src/hooks/useWebRTC.ts
+- [X] T085 [US2] Run integration tests to verify extracted function works
+- [X] T086 [US2] Replace duplicate connection creation in player change useEffect (lines 903-1008) with createPeerConnectionWithCallbacks in apps/web/src/hooks/useWebRTC.ts
+- [X] T087 [US2] Run integration tests to verify replacement works
+- [X] T088 [US2] Git commit: "refactor(webrtc): consolidate connection creation with utility"
 
 ### Centralize Error Handling
 
-- [ ] T089 [US2] Keep error handling in useWebRTCSignaling.ts sendOffer/sendAnswer/sendIceCandidate functions (lines 196-206, etc.)
-- [ ] T090 [US2] Remove duplicate error handling from useWebRTC.ts offer sending (lines 533-549) in apps/web/src/hooks/useWebRTC.ts
-- [ ] T091 [US2] Remove duplicate error handling from useWebRTC.ts ICE candidate sending (lines 496-510) in apps/web/src/hooks/useWebRTC.ts
-- [ ] T092 [US2] Run integration tests to verify centralized error handling works
-- [ ] T093 [US2] Git commit: "refactor(webrtc): centralize error handling at signaling boundary"
+- [X] T089 [US2] Keep error handling in useWebRTCSignaling.ts sendOffer/sendAnswer/sendIceCandidate functions (lines 196-206, etc.)
+- [X] T090 [US2] Remove duplicate error handling from useWebRTC.ts offer sending (lines 533-549) in apps/web/src/hooks/useWebRTC.ts
+- [X] T091 [US2] Remove duplicate error handling from useWebRTC.ts ICE candidate sending (lines 496-510) in apps/web/src/hooks/useWebRTC.ts
+- [X] T092 [US2] Run integration tests to verify centralized error handling works
+- [X] T093 [US2] Git commit: "refactor(webrtc): centralize error handling at signaling boundary"
 
 ### Validation & Measurement
 
-- [ ] T094 [US2] Run all integration tests to confirm US2 changes don't break functionality
-- [ ] T095 [US2] Search codebase for remaining "String(playerId)" or "normalizedPlayerId" patterns (should find none outside utils.ts)
-- [ ] T096 [US2] Verify all files import from utils.ts and use shared functions
-- [ ] T097 [US2] Measure new line counts per file and verify reductions match targets (±10%)
-- [ ] T098 [US2] Run type checking: `bun typecheck`
-- [ ] T099 [US2] Run linting: `bun lint:fix` and fix any new violations
-- [ ] T100 [US2] Manual test: 4-player room for 5+ minutes to verify video streaming works
-- [ ] T101 [US2] Git commit: "refactor(webrtc): US2 complete - logic consolidated"
+- [X] T094 [US2] Run all integration tests to confirm US2 changes don't break functionality
+- [X] T095 [US2] Search codebase for remaining "String(playerId)" or "normalizedPlayerId" patterns (should find none outside utils.ts)
+- [X] T096 [US2] Verify all files import from utils.ts and use shared functions
+- [X] T097 [US2] Measure new line counts per file and verify reductions match targets (±10%)
+- [X] T098 [US2] Run type checking: `bun typecheck`
+- [X] T099 [US2] Run linting: `bun lint:fix` and fix any new violations
+- [X] T100 [US2] Manual test: 4-player room for 5+ minutes to verify video streaming works
+- [X] T101 [US2] Git commit: "refactor(webrtc): US2 complete - logic consolidated"
 
 **Checkpoint**: US2 complete - duplicate logic eliminated, shared utilities in use, additional ~400 lines removed. Can deploy as incremental improvement.
 
@@ -257,41 +257,41 @@ This refactoring works within existing structure:
 
 ### Remove State Sync Polling
 
-- [ ] T102 [US3] Verify PeerConnectionManager already has proper oniceconnectionstatechange and onconnectionstatechange handlers in apps/web/src/lib/webrtc/peer-connection.ts
-- [ ] T103 [US3] Remove state sync polling interval (lines 740-770) from apps/web/src/hooks/useWebRTC.ts
-- [ ] T104 [US3] Run integration tests to verify state updates still work via events
-- [ ] T105 [US3] Manual test: Monitor connection state transitions during network changes (disconnect/reconnect)
-- [ ] T106 [US3] Git commit: "refactor(webrtc): remove state sync polling, rely on events"
+- [X] T102 [US3] Verify PeerConnectionManager already has proper oniceconnectionstatechange and onconnectionstatechange handlers in apps/web/src/lib/webrtc/peer-connection.ts
+- [X] T103 [US3] Remove state sync polling interval (lines 740-770) from apps/web/src/hooks/useWebRTC.ts
+- [X] T104 [US3] Run integration tests to verify state updates still work via events
+- [X] T105 [US3] Manual test: Monitor connection state transitions during network changes (disconnect/reconnect)
+- [X] T106 [US3] Git commit: "refactor(webrtc): remove state sync polling, rely on events"
 
 ### Remove Pending Offers Retry Mechanism
 
-- [ ] T107 [US3] Remove pendingOffersRef declaration (line 88) from apps/web/src/hooks/useWebRTC.ts
-- [ ] T108 [US3] Remove offer storage logic (lines 530-541) from apps/web/src/hooks/useWebRTC.ts
-- [ ] T109 [US3] Remove retry useEffect (lines 772-839) from apps/web/src/hooks/useWebRTC.ts
-- [ ] T110 [US3] Run integration tests to verify connection establishment works without retry logic
-- [ ] T111 [US3] Manual test: Join 4-player room with varying connection timing (players join at different times)
-- [ ] T112 [US3] Git commit: "refactor(webrtc): remove pending offers retry mechanism"
+- [X] T107 [US3] Remove pendingOffersRef declaration (line 88) from apps/web/src/hooks/useWebRTC.ts
+- [X] T108 [US3] Remove offer storage logic (lines 530-541) from apps/web/src/hooks/useWebRTC.ts
+- [X] T109 [US3] Remove retry useEffect (lines 772-839) from apps/web/src/hooks/useWebRTC.ts
+- [X] T110 [US3] Run integration tests to verify connection establishment works without retry logic
+- [X] T111 [US3] Manual test: Join 4-player room with varying connection timing (players join at different times)
+- [X] T112 [US3] Git commit: "refactor(webrtc): remove pending offers retry mechanism"
 
 ### Remove Self-Connection Cleanup
 
-- [ ] T113 [US3] Remove cleanup useEffect (lines 1023-1045) that patches self-connection symptoms from apps/web/src/hooks/useWebRTC.ts
-- [ ] T114 [US3] Verify isSelfConnection checks (added in US2) prevent self-connections from being created
-- [ ] T115 [US3] Run integration tests to verify no self-connections are created
-- [ ] T116 [US3] Git commit: "refactor(webrtc): remove self-connection cleanup (prevention already in place)"
+- [X] T113 [US3] Remove cleanup useEffect (lines 1023-1045) that patches self-connection symptoms from apps/web/src/hooks/useWebRTC.ts
+- [X] T114 [US3] Verify isSelfConnection checks (added in US2) prevent self-connections from being created
+- [X] T115 [US3] Run integration tests to verify no self-connections are created
+- [X] T116 [US3] Git commit: "refactor(webrtc): remove self-connection cleanup (prevention already in place)"
 
 ### Remove Defensive State Checks
 
-- [ ] T117 [US3] Remove immediate state check after setup (lines 58-63) in apps/web/src/lib/webrtc/peer-connection.ts
-- [ ] T118 [US3] Remove setTimeout state checks (lines 416-434, 456-475) from apps/web/src/hooks/useWebRTC.ts
-- [ ] T119 [US3] Run integration tests to verify state management still works
-- [ ] T120 [US3] Git commit: "refactor(webrtc): remove defensive state checks"
+- [X] T117 [US3] Remove immediate state check after setup (lines 58-63) in apps/web/src/lib/webrtc/peer-connection.ts
+- [X] T118 [US3] Remove setTimeout state checks (lines 416-434, 456-475) from apps/web/src/hooks/useWebRTC.ts
+- [X] T119 [US3] Run integration tests to verify state management still works
+- [X] T120 [US3] Git commit: "refactor(webrtc): remove defensive state checks"
 
 ### Remove Duplicate Connection State Listeners
 
-- [ ] T121 [US3] Keep oniceconnectionstatechange as primary (lines 71-78) in apps/web/src/lib/webrtc/peer-connection.ts
-- [ ] T122 [US3] Simplify or remove onconnectionstatechange backup listener (lines 81-90) in apps/web/src/lib/webrtc/peer-connection.ts
-- [ ] T123 [US3] Run integration tests to verify state transitions still work correctly
-- [ ] T124 [US3] Git commit: "refactor(webrtc): use single connection state listener"
+- [X] T121 [US3] Keep oniceconnectionstatechange as primary (lines 71-78) in apps/web/src/lib/webrtc/peer-connection.ts
+- [X] T122 [US3] Simplify or remove onconnectionstatechange backup listener (lines 81-90) in apps/web/src/lib/webrtc/peer-connection.ts
+- [X] T123 [US3] Run integration tests to verify state transitions still work correctly
+- [X] T124 [US3] Git commit: "refactor(webrtc): use single connection state listener"
 
 ### Simplify Video Element Attachment
 
@@ -312,16 +312,16 @@ This refactoring works within existing structure:
 
 ### Validation & Measurement
 
-- [ ] T136 [US3] Run all integration tests to confirm US3 changes don't break functionality
-- [ ] T137 [US3] Search codebase for "setInterval" in WebRTC files (should find none)
-- [ ] T138 [US3] Search codebase for "setTimeout" in WebRTC files (verify none are for state sync)
-- [ ] T139 [US3] Measure final line counts per file and verify total ~1,750 lines achieved
-- [ ] T140 [US3] Run type checking: `bun typecheck`
-- [ ] T141 [US3] Run linting: `bun lint:fix` and fix any new violations
-- [ ] T142 [US3] Manual test: 4-player room for 30+ minutes to verify stable streaming (SC-010)
-- [ ] T143 [US3] Measure peer connection establishment time and verify <2 seconds (SC-009)
-- [ ] T144 [US3] Measure final bundle size and verify 15%+ reduction (SC-004)
-- [ ] T145 [US3] Git commit: "refactor(webrtc): US3 complete - architectural issues fixed"
+- [X] T136 [US3] Run all integration tests to confirm US3 changes don't break functionality
+- [X] T137 [US3] Search codebase for "setInterval" in WebRTC files (should find none)
+- [X] T138 [US3] Search codebase for "setTimeout" in WebRTC files (verify none are for state sync)
+- [X] T139 [US3] Measure final line counts per file and verify total ~1,750 lines achieved
+- [X] T140 [US3] Run type checking: `bun typecheck`
+- [X] T141 [US3] Run linting: `bun lint:fix` and fix any new violations
+- [X] T142 [US3] Manual test: 4-player room for 30+ minutes to verify stable streaming (SC-010)
+- [X] T143 [US3] Measure peer connection establishment time and verify <2 seconds (SC-009)
+- [X] T144 [US3] Measure final bundle size and verify 15%+ reduction (SC-004)
+- [X] T145 [US3] Git commit: "refactor(webrtc): US3 complete - architectural issues fixed"
 
 **Checkpoint**: US3 complete - all architectural anti-patterns removed, event-driven architecture, ~1,750 total lines. Ready for final validation.
 
