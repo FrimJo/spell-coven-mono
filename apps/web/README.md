@@ -99,7 +99,7 @@ Notes:
 
 ```bash
 cd apps/web && bun run test          # vitest
-cd apps/web && bun run check-types   # TypeScript
+cd apps/web && bun run typecheck     # TypeScript
 cd apps/web && bun run format        # Prettier check
 cd apps/web && bun run lint          # Lint
 ```

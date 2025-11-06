@@ -34,7 +34,7 @@ React hooks in `apps/web/src/hooks/` are the **ONLY** bridge between this packag
 ## Installation
 
 ```bash
-pnpm add @repo/discord-integration
+bun add @repo/discord-integration
 ```
 
 ## Usage
@@ -133,13 +133,13 @@ const user = DiscordUserSchema.parse(apiResponse)
 
 ```bash
 # Run unit tests
-pnpm test
+bun test
 
 # Run tests with UI
-pnpm test:ui
+bun test:ui
 
 # Type check
-pnpm type-check
+bun typecheck
 ```
 
 ## Security

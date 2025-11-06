@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2025-11-05
 
 ## Active Technologies
+- TypeScript 5.x (React 18+ with TanStack Start) + React, RTCPeerConnection (browser native), EventSource (SSE), TanStack Star (002-webrtc-refactor-simplify)
+- N/A (in-memory state management only) (002-webrtc-refactor-simplify)
 
 - TypeScript 5.x (ES2022 target), React 19 + Browser WebRTC APIs (RTCPeerConnection, RTCSessionDescription, RTCIceCandidate, MediaStream), TanStack Start (`@tanstack/react-start`), existing VideoStreamGrid componen (001-webrtc-video-streaming)
 
@@ -22,6 +24,7 @@ npm test && npm run lint
 TypeScript 5.x (ES2022 target), React 19: Follow standard conventions
 
 ## Recent Changes
+- 002-webrtc-refactor-simplify: Added TypeScript 5.x (React 18+ with TanStack Start) + React, RTCPeerConnection (browser native), EventSource (SSE), TanStack Star
 
 - 001-webrtc-video-streaming: Added TypeScript 5.x (ES2022 target), React 19 + Browser WebRTC APIs (RTCPeerConnection, RTCSessionDescription, RTCIceCandidate, MediaStream), TanStack Start (`@tanstack/react-start`), existing VideoStreamGrid componen
 

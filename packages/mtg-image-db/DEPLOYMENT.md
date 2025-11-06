@@ -171,5 +171,5 @@ make deploy MAJOR=1 MINOR=4
 
 # 6. Restart web app
 cd ../../apps/web
-pnpm dev
+bun dev
 ```
