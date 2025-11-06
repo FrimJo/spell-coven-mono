@@ -708,29 +708,8 @@ export function useWebRTC({
     })
   }, [players, roomId, localPlayerId, sendOffer, sendIceCandidate])
 
-  // Clean up any connections that were incorrectly created for the local player
-  useEffect(() => {
-    if (!localPlayerId) return
-
-    const normalizedLocalPlayerId = normalizePlayerId(localPlayerId)
-    let cleaned = false
-
-    setPeerConnections((prev) => {
-      const updated = new Map(prev)
-      for (const [playerId, connectionData] of prev) {
-        const normalizedPlayerId = normalizePlayerId(playerId)
-        if (isSelfConnection(normalizedLocalPlayerId, normalizedPlayerId)) {
-          console.error(
-            `[WebRTC] Found connection for local player ${playerId}, closing it`,
-          )
-          connectionData.manager.close()
-          updated.delete(playerId)
-          cleaned = true
-        }
-      }
-      return cleaned ? updated : prev
-    })
-  }, [localPlayerId, peerConnections])
+  // Self-connection prevention is now built into connection creation (US2)
+  // No cleanup needed - isSelfConnection checks prevent self-connections from being created
 
   // Derive connection states and remote streams maps
   // Use useMemo to ensure stable references and prevent unnecessary re-renders
