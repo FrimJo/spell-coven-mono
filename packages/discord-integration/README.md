@@ -47,7 +47,7 @@ import { DiscordOAuthClient } from '@repo/discord-integration/clients'
 const client = new DiscordOAuthClient({
   clientId: 'YOUR_CLIENT_ID',
   redirectUri: 'https://localhost:1234/auth/discord/callback',
-  scopes: ['identify', 'guilds', 'messages.read'],
+  scopes: ['identify', 'guilds', 'guilds.join'],
 })
 
 // Generate PKCE challenge

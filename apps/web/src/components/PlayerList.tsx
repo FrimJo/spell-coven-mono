@@ -19,6 +19,7 @@ interface Player {
   name: string
   life: number
   isActive: boolean
+  isOnline?: boolean // Whether player is connected to backend (SSE)
 }
 
 interface PlayerListProps {
@@ -61,10 +62,17 @@ export function PlayerList({
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <div
                     className={`h-2 w-2 flex-shrink-0 rounded-full ${
-                      player.isActive
-                        ? 'animate-pulse bg-green-400'
+                      player.isOnline !== false
+                        ? player.isActive
+                          ? 'animate-pulse bg-green-400'
+                          : 'bg-green-400'
                         : 'bg-slate-600'
                     }`}
+                    title={
+                      player.isOnline !== false
+                        ? 'Online'
+                        : 'Offline (not connected to backend)'
+                    }
                   />
                   <span className="truncate text-sm text-white">
                     {player.name}

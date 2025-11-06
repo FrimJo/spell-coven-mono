@@ -27,9 +27,9 @@
 
 **Purpose**: Create directory structure and type definitions
 
-- [ ] T001 Create WebRTC library directory structure at apps/web/src/lib/webrtc/
-- [ ] T002 [P] Create type definitions file apps/web/src/lib/webrtc/types.ts with PeerConnectionState enum and SignalingMessageType
-- [ ] T003 [P] Create signaling message types file apps/web/src/lib/webrtc/signaling.ts with SignalingPayload interfaces
+- [X] T001 Create WebRTC library directory structure at apps/web/src/lib/webrtc/
+- [X] T002 [P] Create type definitions file apps/web/src/lib/webrtc/types.ts with PeerConnectionState enum and SignalingMessageType
+- [X] T003 [P] Create signaling message types file apps/web/src/lib/webrtc/signaling.ts with SignalingPayload interfaces
 
 ---
 
@@ -39,12 +39,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create server function apps/web/src/server/handlers/webrtc-signaling.server.ts with sendSignalingMessage createServerFn
-- [ ] T005 [P] Implement signaling message validation in apps/web/src/server/handlers/webrtc-signaling.server.ts (validate roomId, to, message type, payload structure)
-- [ ] T006 [P] Implement backend routing logic in apps/web/src/server/handlers/webrtc-signaling.server.ts (route messages via SSE manager to target players)
-- [ ] T007 Create signaling hook apps/web/src/hooks/useWebRTCSignaling.ts with SSE subscription for receiving signaling messages
-- [ ] T008 [P] Implement sendOffer, sendAnswer, sendIceCandidate functions in apps/web/src/hooks/useWebRTCSignaling.ts using createServerFn
-- [ ] T009 [P] Implement SSE message filtering in apps/web/src/hooks/useWebRTCSignaling.ts (filter by roomId and from player, ignore self)
+- [X] T004 Create server function apps/web/src/server/handlers/webrtc-signaling.server.ts with sendSignalingMessage createServerFn
+- [X] T005 [P] Implement signaling message validation in apps/web/src/server/handlers/webrtc-signaling.server.ts (validate roomId, to, message type, payload structure)
+- [X] T006 [P] Implement backend routing logic in apps/web/src/server/handlers/webrtc-signaling.server.ts (route messages via SSE manager to target players)
+- [X] T007 Create signaling hook apps/web/src/hooks/useWebRTCSignaling.ts with SSE subscription for receiving signaling messages
+- [X] T008 [P] Implement sendOffer, sendAnswer, sendIceCandidate functions in apps/web/src/hooks/useWebRTCSignaling.ts using createServerFn
+- [X] T009 [P] Implement SSE message filtering in apps/web/src/hooks/useWebRTCSignaling.ts (filter by roomId and from player, ignore self)
 
 **Checkpoint**: Foundation ready - signaling infrastructure complete, user story implementation can now begin
 
@@ -58,20 +58,20 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Create peer connection manager apps/web/src/lib/webrtc/peer-connection.ts with RTCPeerConnection wrapper class
-- [ ] T011 [US1] Implement createPeerConnection function in apps/web/src/lib/webrtc/peer-connection.ts with STUN server configuration (stun:stun.l.google.com:19302)
-- [ ] T012 [US1] Implement addLocalStream method in apps/web/src/lib/webrtc/peer-connection.ts to add MediaStream tracks to peer connection
-- [ ] T013 [US1] Implement createOffer method in apps/web/src/lib/webrtc/peer-connection.ts to generate and set local description
-- [ ] T014 [US1] Implement handleOffer method in apps/web/src/lib/webrtc/peer-connection.ts to set remote description and create answer
-- [ ] T015 [US1] Implement handleAnswer method in apps/web/src/lib/webrtc/peer-connection.ts to set remote description
-- [ ] T016 [US1] Implement handleIceCandidate method in apps/web/src/lib/webrtc/peer-connection.ts to add ICE candidates to peer connection
-- [ ] T017 [US1] Implement ontrack handler in apps/web/src/lib/webrtc/peer-connection.ts to capture remote MediaStream
-- [ ] T018 [US1] Create useWebRTC hook apps/web/src/hooks/useWebRTC.ts with peer connection management for all players in room
-- [ ] T019 [US1] Implement initializePeerConnections function in apps/web/src/hooks/useWebRTC.ts to create connections for all remote players
-- [ ] T020 [US1] Implement offer/answer exchange logic in apps/web/src/hooks/useWebRTC.ts integrating with useWebRTCSignaling hook
-- [ ] T021 [US1] Implement ICE candidate exchange logic in apps/web/src/hooks/useWebRTC.ts for each peer connection
-- [ ] T022 [US1] Implement getLocalMediaStream function in apps/web/src/hooks/useWebRTC.ts to request camera/microphone permissions (FR-005)
-- [ ] T023 [US1] Integrate useWebRTC hook in apps/web/src/components/GameRoom.tsx to initialize connections when players join room
+- [X] T010 [US1] Create peer connection manager apps/web/src/lib/webrtc/peer-connection.ts with RTCPeerConnection wrapper class
+- [X] T011 [US1] Implement createPeerConnection function in apps/web/src/lib/webrtc/peer-connection.ts with STUN server configuration (stun:stun.l.google.com:19302)
+- [X] T012 [US1] Implement addLocalStream method in apps/web/src/lib/webrtc/peer-connection.ts to add MediaStream tracks to peer connection
+- [X] T013 [US1] Implement createOffer method in apps/web/src/lib/webrtc/peer-connection.ts to generate and set local description
+- [X] T014 [US1] Implement handleOffer method in apps/web/src/lib/webrtc/peer-connection.ts to set remote description and create answer
+- [X] T015 [US1] Implement handleAnswer method in apps/web/src/lib/webrtc/peer-connection.ts to set remote description
+- [X] T016 [US1] Implement handleIceCandidate method in apps/web/src/lib/webrtc/peer-connection.ts to add ICE candidates to peer connection
+- [X] T017 [US1] Implement ontrack handler in apps/web/src/lib/webrtc/peer-connection.ts to capture remote MediaStream
+- [X] T018 [US1] Create useWebRTC hook apps/web/src/hooks/useWebRTC.ts with peer connection management for all players in room
+- [X] T019 [US1] Implement initializePeerConnections function in apps/web/src/hooks/useWebRTC.ts to create connections for all remote players
+- [X] T020 [US1] Implement offer/answer exchange logic in apps/web/src/hooks/useWebRTC.ts integrating with useWebRTCSignaling hook
+- [X] T021 [US1] Implement ICE candidate exchange logic in apps/web/src/hooks/useWebRTC.ts for each peer connection
+- [X] T022 [US1] Implement getLocalMediaStream function in apps/web/src/hooks/useWebRTC.ts to request camera/microphone permissions (FR-005)
+- [X] T023 [US1] Integrate useWebRTC hook in apps/web/src/components/GameRoom.tsx to initialize connections when players join room
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - players can establish video connections and see each other's streams
 
@@ -85,11 +85,11 @@
 
 ### Implementation for User Story 4
 
-- [ ] T024 [US4] Modify apps/web/src/components/VideoStreamGrid.tsx to accept remote streams prop from useWebRTC hook
-- [ ] T025 [US4] Implement remote stream video element rendering in apps/web/src/components/VideoStreamGrid.tsx for each player with active peer connection
-- [ ] T026 [US4] Connect remote MediaStream from peer connections to video elements in apps/web/src/components/VideoStreamGrid.tsx using ref and srcObject
-- [ ] T027 [US4] Integrate connection state indicators in apps/web/src/components/VideoStreamGrid.tsx showing connected/connecting/disconnected status per player (FR-009)
-- [ ] T028 [US4] Ensure grid layout displays all players correctly (up to 4 players) in apps/web/src/components/VideoStreamGrid.tsx
+- [X] T024 [US4] Modify apps/web/src/components/VideoStreamGrid.tsx to accept remote streams prop from useWebRTC hook
+- [X] T025 [US4] Implement remote stream video element rendering in apps/web/src/components/VideoStreamGrid.tsx for each player with active peer connection
+- [X] T026 [US4] Connect remote MediaStream from peer connections to video elements in apps/web/src/components/VideoStreamGrid.tsx using ref and srcObject
+- [X] T027 [US4] Integrate connection state indicators in apps/web/src/components/VideoStreamGrid.tsx showing connected/connecting/disconnected status per player (FR-009)
+- [X] T028 [US4] Ensure grid layout displays all players correctly (up to 4 players) in apps/web/src/components/VideoStreamGrid.tsx
 
 **Checkpoint**: At this point, User Stories 1 AND 4 should work together - players see all other players' streams in grid layout
 

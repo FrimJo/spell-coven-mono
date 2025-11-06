@@ -73,8 +73,22 @@ export const ensureUserInVoiceChannel = createServerFn({ method: 'GET' })
 
       // Check if it's the channel we care about
       return { inChannel: voiceState.channel_id === targetChannelId }
-    } catch (error) {
-      console.error('[Discord] Error in ensureUserInGuild:', error)
+    } catch (error: unknown) {
+      // Handle "Unknown Voice State" error (404) - user is not in any voice channel
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 10065
+      ) {
+        // Discord error code 10065 = Unknown Voice State (user not in voice channel)
+        return {
+          inChannel: false,
+          error: 'User is not in any voice channel',
+        }
+      }
+
+      console.error('[Discord] Error in ensureUserInVoiceChannel:', error)
       return {
         inChannel: false,
         error: 'Internal server error',
@@ -112,15 +126,74 @@ export const checkRoomExists = createServerFn({ method: 'POST' })
         }
       }
 
+      // Extract roleId from permission overwrites
+      // Look for a role overwrite (type 0) that has allow permissions
+      let roleId: string | undefined
+      if (channel.permission_overwrites) {
+        const roleOverwrite = channel.permission_overwrites.find(
+          (overwrite) =>
+            overwrite.type === 0 && // Role type
+            overwrite.id !== env.VITE_DISCORD_GUILD_ID && // Not @everyone
+            overwrite.allow !== '0', // Has allow permissions
+        )
+        roleId = roleOverwrite?.id
+      }
+
       return {
         exists: true,
         channelName: channel.name || 'Game Room',
+        roleId,
       }
     } catch (error) {
       console.error('[checkRoomExists] Error checking room:', error)
       return {
         exists: false,
         error: error instanceof Error ? error.message : 'Failed to check room',
+      }
+    }
+  })
+
+/**
+ * Assign a role to a user in a guild
+ */
+export const assignRoleToUser = createServerFn({ method: 'POST' })
+  .inputValidator((data: { userId: string; roleId: string }) => data)
+  .handler(async ({ data: { userId, roleId } }) => {
+    try {
+      const client = new DiscordRestClient({ botToken: env.DISCORD_BOT_TOKEN })
+
+      console.log('[assignRoleToUser] Assigning role to user:', {
+        userId,
+        roleId,
+        guildId: env.VITE_DISCORD_GUILD_ID,
+      })
+
+      await client.addMemberRole(
+        env.VITE_DISCORD_GUILD_ID,
+        userId,
+        roleId,
+        'Assigning role for game room access',
+      )
+
+      console.log('[assignRoleToUser] Successfully assigned role to user')
+      return { success: true }
+    } catch (error) {
+      console.error('[assignRoleToUser] Error:', error)
+
+      let errorMessage = 'Failed to assign role'
+      if (error instanceof Error) {
+        if (error.message.includes('50013')) {
+          errorMessage = 'Bot lacks MANAGE_ROLES permission'
+        } else if (error.message.includes('10011')) {
+          errorMessage = 'Role not found'
+        } else {
+          errorMessage = error.message
+        }
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
       }
     }
   })
@@ -153,6 +226,14 @@ export const connectUserToVoiceChannel = createServerFn({ method: 'POST' })
       )
       console.log(
         '[connectUserToVoiceChannel] Discord will send VOICE_STATE_UPDATE event to Gateway',
+      )
+
+      // Broadcast current voice states for this channel to sync initial members
+      // This ensures all users see existing members when someone new joins
+      const { sseManager } = await import('../managers/sse-manager.js')
+      sseManager.broadcastChannelVoiceStates(
+        env.VITE_DISCORD_GUILD_ID,
+        channelId,
       )
 
       return { success: true }
@@ -291,7 +372,21 @@ export const createRoom = createServerFn({ method: 'POST' })
         },
       )
 
-      // 3. Generate invite token
+      // 3. Assign role to creator so they can access the channel
+      try {
+        await client.addMemberRole(
+          env.VITE_DISCORD_GUILD_ID,
+          data.creatorId,
+          role.id,
+          'Assigning room creator role for game room access',
+        )
+        console.log('[createRoom] Successfully assigned role to creator')
+      } catch (roleError) {
+        console.error('[createRoom] Failed to assign role to creator:', roleError)
+        // Don't fail room creation if role assignment fails - user can be moved via bot
+      }
+
+      // 4. Generate invite token
       const issuedAt = Math.floor(Date.now() / 1000)
       const expiresAt = issuedAt + data.tokenTtlSeconds
 
@@ -311,7 +406,7 @@ export const createRoom = createServerFn({ method: 'POST' })
         .digest('hex')
 
       const token = `${Buffer.from(payload).toString('base64')}.${signature}`
-      const shareUrl = `${data.shareUrlBase}/game/${channel.id}?t=${token}`
+      const shareUrl = `${data.shareUrlBase}/game/${channel.id}`
       const deepLink = `https://discord.com/channels/${env.VITE_DISCORD_GUILD_ID}/${channel.id}`
 
       return {
@@ -375,7 +470,7 @@ export const refreshRoomInvite = createServerFn({ method: 'POST' })
         .digest('hex')
 
       const token = `${Buffer.from(payload).toString('base64')}.${signature}`
-      const shareUrl = `${data.shareUrlBase}/game/${data.channelId}?t=${token}`
+      const shareUrl = `${data.shareUrlBase}/game/${data.channelId}`
       const deepLink = `https://discord.com/channels/${env.VITE_DISCORD_GUILD_ID}/${data.channelId}`
 
       return {

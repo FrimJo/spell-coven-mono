@@ -4,6 +4,7 @@ import type { APIVoiceState } from '@repo/discord-integration/clients'
 
 import {
   isSSEAckMessage,
+  isSSECustomEventMessage,
   isSSEDiscordEventMessage,
   isSSEErrorMessage,
   SSEMessageSchema,
@@ -11,8 +12,10 @@ import {
 
 interface UseVoiceChannelEventsOptions {
   jwtToken?: string
+  userId?: string
   onVoiceStateUpdate?: (voiceState: APIVoiceState) => void
   onError?: (error: Error) => void
+  onConnectionStatusUpdate?: (connectedUserIds: string[]) => void
 }
 
 /**
@@ -32,10 +35,12 @@ class VoiceChannelSSEManager {
   }
   private maxReconnectAttempts = 5
   private jwtToken: string | null = null
+  private userId: string | null = null
   private isConnecting = false
   private listeners: Set<{
     onVoiceStateUpdate?: (voiceState: APIVoiceState) => void
     onError?: (error: Error) => void
+    onConnectionStatusUpdate?: (connectedUserIds: string[]) => void
   }> = new Set()
 
   private constructor() {}
@@ -50,6 +55,7 @@ class VoiceChannelSSEManager {
   addListener(listener: {
     onVoiceStateUpdate?: (voiceState: APIVoiceState) => void
     onError?: (error: Error) => void
+    onConnectionStatusUpdate?: (connectedUserIds: string[]) => void
   }): void {
     this.listeners.add(listener)
   }
@@ -57,6 +63,7 @@ class VoiceChannelSSEManager {
   removeListener(listener: {
     onVoiceStateUpdate?: (voiceState: APIVoiceState) => void
     onError?: (error: Error) => void
+    onConnectionStatusUpdate?: (connectedUserIds: string[]) => void
   }): void {
     this.listeners.delete(listener)
     // Don't close connection - keep it alive for other potential listeners
@@ -67,6 +74,33 @@ class VoiceChannelSSEManager {
     this.jwtToken = token || null
     // Reconnect if token changed and we're not connected
     if (token && this.eventSource?.readyState !== EventSource.OPEN) {
+      this.connect()
+    }
+  }
+
+  setUserId(userId: string | undefined): void {
+    const newUserId = userId || null
+    
+    // If userId hasn't changed, don't do anything
+    if (this.userId === newUserId) {
+      return
+    }
+    
+    console.log('[VoiceChannelEvents] Setting userId:', {
+      oldUserId: this.userId,
+      newUserId,
+      isConnected: this.eventSource?.readyState === EventSource.OPEN,
+    })
+    
+    this.userId = newUserId
+    
+    // If we're already connected with a different userId, reconnect with the new one
+    if (newUserId && this.eventSource?.readyState === EventSource.OPEN) {
+      console.log('[VoiceChannelEvents] Reconnecting with new userId')
+      this.reconnect()
+    } else if (newUserId && this.jwtToken) {
+      // Connect if we have both userId and token
+      console.log('[VoiceChannelEvents] Connecting with userId and token')
       this.connect()
     }
   }
@@ -95,12 +129,22 @@ class VoiceChannelSSEManager {
       )
       return
     }
+    
+    if (!this.userId) {
+      console.log(
+        '[VoiceChannelEvents] No userId available, skipping connection attempt',
+      )
+      return
+    }
 
     this.isConnecting = true
 
     try {
       // Connect to SSE endpoint on same origin (per spec: /api/stream)
-      const sseUrl = `/api/stream`
+      // Include userId as query parameter if available
+      const sseUrl = this.userId
+        ? `/api/stream?userId=${encodeURIComponent(this.userId)}`
+        : `/api/stream`
 
       console.log('[VoiceChannelEvents] Connecting to SSE:', sseUrl)
       this.eventSource = new EventSource(sseUrl, {
@@ -169,6 +213,23 @@ class VoiceChannelSSEManager {
                 listener.onVoiceStateUpdate?.(voiceState)
               })
             }
+          }
+
+          // Handle custom events (including connection status)
+          if (isSSECustomEventMessage(message) && message.event === 'users.connection_status') {
+            const payload = message.payload as { connectedUserIds: string[] }
+            console.log(
+              `[VoiceChannelEvents] Users connection status received:`,
+              {
+                count: payload.connectedUserIds.length,
+                userIds: payload.connectedUserIds,
+                timestamp: payload.timestamp || Date.now(),
+              },
+            )
+            // Broadcast connection status to all listeners
+            this.listeners.forEach((listener) => {
+              listener.onConnectionStatusUpdate?.(payload.connectedUserIds)
+            })
           }
         } catch (error) {
           console.error('[VoiceChannelEvents] Failed to parse message:', error)
@@ -260,16 +321,26 @@ class VoiceChannelSSEManager {
  */
 export function useVoiceChannelEvents({
   jwtToken,
+  userId,
   onVoiceStateUpdate,
   onError,
+  onConnectionStatusUpdate,
 }: UseVoiceChannelEventsOptions) {
   const manager = useMemo(() => VoiceChannelSSEManager.getInstance(), [])
 
   // Store callbacks in a ref to avoid recreating listener on every render
-  const callbacksRef = useRef({ onVoiceStateUpdate, onError })
+  const callbacksRef = useRef({
+    onVoiceStateUpdate,
+    onError,
+    onConnectionStatusUpdate,
+  })
   useEffect(() => {
-    callbacksRef.current = { onVoiceStateUpdate, onError }
-  }, [onVoiceStateUpdate, onError])
+    callbacksRef.current = {
+      onVoiceStateUpdate,
+      onError,
+      onConnectionStatusUpdate,
+    }
+  }, [onVoiceStateUpdate, onError, onConnectionStatusUpdate])
 
   // Set JWT token when it changes
   useEffect(() => {
@@ -278,12 +349,21 @@ export function useVoiceChannelEvents({
     }
   }, [jwtToken, manager])
 
+  // Set user ID when it changes
+  useEffect(() => {
+    if (userId) {
+      manager.setUserId(userId)
+    }
+  }, [userId, manager])
+
   // Register listener once and keep it registered (don't remove on unmount)
   useEffect(() => {
     const listener = {
       onVoiceStateUpdate: (voiceState: APIVoiceState) =>
         callbacksRef.current.onVoiceStateUpdate?.(voiceState),
       onError: (error: Error) => callbacksRef.current.onError?.(error),
+      onConnectionStatusUpdate: (connectedUserIds: string[]) =>
+        callbacksRef.current.onConnectionStatusUpdate?.(connectedUserIds),
     }
     manager.addListener(listener)
     // Note: We intentionally don't remove the listener on unmount

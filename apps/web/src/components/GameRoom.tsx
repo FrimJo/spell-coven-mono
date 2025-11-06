@@ -1,6 +1,6 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { LoadingEvent } from '@/lib/loading-events'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   CardQueryProvider,
   useCardQueryContext,
@@ -8,6 +8,7 @@ import {
 import { useDiscordUser } from '@/hooks/useDiscordUser'
 import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
 import { useVoiceChannelMembersFromEvents } from '@/hooks/useVoiceChannelMembersFromEvents'
+import { useWebRTC } from '@/hooks/useWebRTC'
 import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken.js'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
@@ -52,6 +53,7 @@ interface Player {
   name: string
   life: number
   isActive: boolean
+  isOnline?: boolean // Whether player is connected to backend (SSE)
 }
 
 function GameRoomContent({
@@ -65,6 +67,12 @@ function GameRoomContent({
 }: GameRoomProps) {
   const { query } = useCardQueryContext()
   const [copied, setCopied] = useState(false)
+
+  // Compute shareable link (only on client)
+  const shareLink = useMemo(() => {
+    if (typeof window === 'undefined') return ''
+    return `${window.location.origin}/game/${gameId}`
+  }, [gameId])
 
   // Initialize players from initial members (from loader)
   const [players, setPlayers] = useState<Player[]>(
@@ -103,6 +111,37 @@ function GameRoomContent({
 
   const { data: wsTokenData } = useWebSocketAuthToken({
     userId: discordUser?.id,
+  })
+
+  // Log WebRTC hook prerequisites
+  useEffect(() => {
+    console.log('[GameRoom] WebRTC prerequisites:', {
+      hasDiscordUser: !!discordUser,
+      discordUserId: discordUser?.id,
+      hasWsToken: !!wsTokenData,
+      playersCount: players.length,
+      playerIds: players.map((p) => p.id),
+      enabled: !!(discordUser?.id && wsTokenData),
+    })
+  }, [discordUser, wsTokenData, players])
+
+  // WebRTC hook for peer-to-peer video streaming
+  const {
+    localStream,
+    remoteStreams,
+    connectionStates,
+    startVideo,
+    stopVideo,
+    toggleVideo: toggleWebRTCVideo,
+    toggleAudio: toggleWebRTCAudio,
+    switchCamera,
+    isVideoActive: isWebRTCVideoActive,
+    isAudioMuted: isWebRTCAudioMuted,
+  } = useWebRTC({
+    roomId: gameId,
+    localPlayerId: discordUser?.id || '',
+    players: players.map((p) => ({ id: p.id, name: p.name, isOnline: p.isOnline })),
+    enabled: !!discordUser?.id && !!wsTokenData,
   })
 
   const [hasConnectedToVoice, setHasConnectedToVoice] = useState(false)
@@ -164,6 +203,7 @@ function GameRoomContent({
           name: member.username,
           life: existing?.life ?? 20,
           isActive: member.isActive,
+          isOnline: member.isOnline, // Include online status from SSE connection
         }
       })
       return newPlayers
@@ -353,10 +393,10 @@ function GameRoomContent({
     setMediaDialogOpen(false)
   }
 
-  const handleCopyGameId = () => {
-    navigator.clipboard.writeText(gameId)
+  const handleCopyShareLink = () => {
+    navigator.clipboard.writeText(shareLink)
     setCopied(true)
-    toast.success('Game ID copied to clipboard!')
+    toast.success('Shareable link copied to clipboard!')
     setTimeout(() => setCopied(false), 2000)
   }
 
@@ -425,22 +465,31 @@ function GameRoomContent({
             <div className="h-6 w-px bg-slate-700" />
 
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-400">Game ID:</span>
-              <code className="rounded bg-slate-800 px-2 py-1 text-sm text-purple-400">
-                {gameId}
+              <span className="text-sm text-slate-400">Share Link:</span>
+              <code className="rounded bg-slate-800 px-2 py-1 text-sm text-purple-400 max-w-xs truncate">
+                {shareLink}
               </code>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopyGameId}
-                className="text-slate-400 hover:text-white"
-              >
-                {copied ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCopyShareLink}
+                      className="text-slate-400 hover:text-white"
+                    >
+                      {copied ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Copy shareable link</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
 
@@ -498,6 +547,10 @@ function GameRoomContent({
               onCardCrop={(canvas: HTMLCanvasElement) => {
                 query(canvas)
               }}
+              remoteStreams={remoteStreams}
+              connectionStates={connectionStates}
+              onLocalVideoStart={startVideo}
+              onLocalVideoStop={stopVideo}
             />
           </div>
         </div>
