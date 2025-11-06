@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { PeerConnectionManager } from '@/lib/webrtc/peer-connection'
 import type { PeerConnectionState } from '@/lib/webrtc/types'
+import { isSelfConnection, normalizePlayerId } from '@/lib/webrtc/utils'
 import type { SignalingMessageSSE } from '@/lib/webrtc/signaling'
 import { useWebRTCSignaling } from './useWebRTCSignaling'
 
@@ -98,11 +99,10 @@ export function useWebRTC({
       let connectionData = peerConnectionsRef.current.get(message.from)
       
       // Normalize IDs for comparison
-      const normalizedMessageFrom = String(message.from)
-      const normalizedLocalPlayerId = String(localPlayerId || '')
+      const normalizedMessageFrom = normalizePlayerId(message.from)
       
       // Don't process messages from ourselves
-      if (normalizedMessageFrom === normalizedLocalPlayerId) {
+      if (isSelfConnection(localPlayerId || '', normalizedMessageFrom)) {
         console.error(`[WebRTC] ERROR: Received signaling message from local player ${message.from}! Ignoring.`)
         return
       }
@@ -111,7 +111,7 @@ export function useWebRTC({
       // create a passive connection to handle it (even if we haven't started video)
       if (!connectionData && message.message.type === 'offer') {
         // Find the player to get their info (using normalized comparison)
-        const player = players.find((p) => String(p.id) === normalizedMessageFrom)
+        const player = players.find((p) => normalizePlayerId(p.id) === normalizedMessageFrom)
         if (!player) {
           // Still create the connection - player might join soon or be in process of joining
         }
@@ -158,9 +158,7 @@ export function useWebRTC({
         manager.onIceCandidate((candidate) => {
           if (candidate && sendIceCandidateRef.current) {
             // Double-check we're not sending to ourselves (using normalized comparison)
-            const normalizedMessageFrom = String(message.from)
-            const normalizedLocalPlayerId = String(localPlayerId)
-            if (normalizedMessageFrom === normalizedLocalPlayerId) {
+            if (isSelfConnection(localPlayerId, message.from)) {
               console.error(`[WebRTC] ERROR: Attempted to send ICE candidate to local player ${message.from} in passive connection! Skipping.`)
               return
             }
@@ -293,18 +291,16 @@ export function useWebRTC({
       }
       
       // Normalize IDs to strings for comparison (Discord IDs can be strings or numbers)
-      const normalizedLocalPlayerId = String(localPlayerId || '')
+      const normalizedLocalPlayerId = normalizePlayerId(localPlayerId || '')
       
       const remotePlayers = players.filter((p) => {
-        const normalizedPlayerId = String(p.id)
-        return normalizedPlayerId !== normalizedLocalPlayerId
+        return !isSelfConnection(localPlayerId || '', p.id)
       })
       const newConnections = new Map<string, PeerConnectionData>()
 
       for (const player of remotePlayers) {
         // Double-check this isn't the local player (using normalized comparison)
-        const normalizedPlayerId = String(player.id)
-        if (normalizedPlayerId === normalizedLocalPlayerId) {
+        if (isSelfConnection(localPlayerId || '', player.id)) {
           console.error(`[WebRTC] ERROR: Attempted to create connection for local player ${player.id}! Skipping.`)
           continue
         }
@@ -329,7 +325,7 @@ export function useWebRTC({
 
         // Capture normalized values for the ICE candidate callback
         const capturedPlayerId = player.id
-        const capturedNormalizedPlayerId = normalizedPlayerId
+        const capturedNormalizedPlayerId = normalizePlayerId(player.id)
         const capturedNormalizedLocalPlayerId = normalizedLocalPlayerId
 
         // Setup state change callback
@@ -413,7 +409,7 @@ export function useWebRTC({
         manager.onIceCandidate((candidate) => {
           if (candidate) {
             // Use captured normalized values to ensure correct comparison
-            if (capturedNormalizedPlayerId === capturedNormalizedLocalPlayerId) {
+            if (isSelfConnection(capturedNormalizedLocalPlayerId, capturedNormalizedPlayerId)) {
               console.error(`[WebRTC] ERROR: Attempted to send ICE candidate to local player ${capturedPlayerId}! Skipping.`)
               return
             }
@@ -433,8 +429,7 @@ export function useWebRTC({
 
         // Create offer and send it
         // Final safety check before creating offer (using normalized comparison)
-        const normalizedPlayerIdForOffer = String(player.id)
-        if (normalizedPlayerIdForOffer === normalizedLocalPlayerId) {
+        if (isSelfConnection(localPlayerId || '', player.id)) {
           console.error(`[WebRTC] ERROR: Attempted to create offer for local player ${player.id}! Skipping offer creation.`)
           continue
         }
@@ -685,13 +680,11 @@ export function useWebRTC({
       return
     }
 
-    const normalizedLocalPlayerId = String(localPlayerId)
     const onlinePlayerIds = new Set(
       players
         .filter((p) => {
-          const normalizedPlayerId = String(p.id)
           return (
-            normalizedPlayerId !== normalizedLocalPlayerId &&
+            !isSelfConnection(localPlayerId, p.id) &&
             p.isOnline === true // Only retry for explicitly online players
           )
         })
@@ -728,11 +721,9 @@ export function useWebRTC({
     }
 
     // Normalize IDs to strings for comparison
-    const normalizedLocalPlayerId = String(localPlayerId)
-    const currentPlayerIds = new Set(players.map((p) => String(p.id)))
+    const currentPlayerIds = new Set(players.map((p) => normalizePlayerId(p.id)))
     const remotePlayers = players.filter((p) => {
-      const normalizedPlayerId = String(p.id)
-      return normalizedPlayerId !== normalizedLocalPlayerId
+      return !isSelfConnection(localPlayerId, p.id)
     })
 
     setPeerConnections((prev) => {
@@ -742,7 +733,7 @@ export function useWebRTC({
       // Close connections for players who left
       for (const [playerId, connectionData] of prev) {
         // Normalize playerId for comparison
-        const normalizedPlayerId = String(playerId)
+        const normalizedPlayerId = normalizePlayerId(playerId)
         if (!currentPlayerIds.has(normalizedPlayerId)) {
           // Player left - close connection
           connectionData.manager.close()
@@ -754,8 +745,7 @@ export function useWebRTC({
       // Create connections for new players
       for (const player of remotePlayers) {
         // Double-check this isn't the local player (using normalized comparison)
-        const normalizedPlayerId = String(player.id)
-        if (normalizedPlayerId === normalizedLocalPlayerId) {
+        if (isSelfConnection(localPlayerId, player.id)) {
           console.error(`[WebRTC] ERROR: Attempted to create connection for local player ${player.id} in useEffect! Skipping.`)
           continue
         }
@@ -804,27 +794,26 @@ export function useWebRTC({
             })
           })
 
-          manager.onIceCandidate((candidate) => {
-            if (candidate) {
-              // Double-check we're not sending to ourselves (using normalized comparison)
-              const normalizedPlayerId = String(player.id)
-              if (normalizedPlayerId === normalizedLocalPlayerId) {
-                console.error(`[WebRTC] ERROR: Attempted to send ICE candidate to local player ${player.id} in useEffect! Skipping.`)
-                return
-              }
-              
-              sendIceCandidate(player.id, candidate).catch((error) => {
-                // If player is not connected yet, this is expected during connection establishment
-                const errorMessage = error instanceof Error ? error.message : String(error)
-                if (!errorMessage.includes('not found or not connected')) {
-                  console.error(
-                    `[WebRTC] Failed to send ICE candidate to ${player.id}:`,
-                    error,
-                  )
+            manager.onIceCandidate((candidate) => {
+              if (candidate) {
+                // Double-check we're not sending to ourselves (using normalized comparison)
+                if (isSelfConnection(localPlayerId, player.id)) {
+                  console.error(`[WebRTC] ERROR: Attempted to send ICE candidate to local player ${player.id} in useEffect! Skipping.`)
+                  return
                 }
-              })
-            }
-          })
+                
+                sendIceCandidate(player.id, candidate).catch((error) => {
+                  // If player is not connected yet, this is expected during connection establishment
+                  const errorMessage = error instanceof Error ? error.message : String(error)
+                  if (!errorMessage.includes('not found or not connected')) {
+                    console.error(
+                      `[WebRTC] Failed to send ICE candidate to ${player.id}:`,
+                      error,
+                    )
+                  }
+                })
+              }
+            })
 
           // Create and send offer
           manager
@@ -860,14 +849,14 @@ export function useWebRTC({
   useEffect(() => {
     if (!localPlayerId) return
 
-    const normalizedLocalPlayerId = String(localPlayerId)
+    const normalizedLocalPlayerId = normalizePlayerId(localPlayerId)
     let cleaned = false
 
     setPeerConnections((prev) => {
       const updated = new Map(prev)
       for (const [playerId, connectionData] of prev) {
-        const normalizedPlayerId = String(playerId)
-        if (normalizedPlayerId === normalizedLocalPlayerId) {
+        const normalizedPlayerId = normalizePlayerId(playerId)
+        if (isSelfConnection(normalizedLocalPlayerId, normalizedPlayerId)) {
           console.error(
             `[WebRTC] Found connection for local player ${playerId}, closing it`,
           )
@@ -885,12 +874,12 @@ export function useWebRTC({
   const { connectionStates, remoteStreams } = useMemo(() => {
     const states = new Map<string, PeerConnectionState>()
     const streams = new Map<string, MediaStream | null>()
-    const normalizedLocalPlayerId = String(localPlayerId)
+    const normalizedLocalPlayerId = normalizePlayerId(localPlayerId)
 
     for (const [playerId, connectionData] of peerConnections) {
       // Skip local player connections
-      const normalizedPlayerId = String(playerId)
-      if (normalizedPlayerId === normalizedLocalPlayerId) {
+      const normalizedPlayerId = normalizePlayerId(playerId)
+      if (isSelfConnection(normalizedLocalPlayerId, normalizedPlayerId)) {
         continue
       }
       states.set(playerId, connectionData.state)
