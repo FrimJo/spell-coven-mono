@@ -175,10 +175,10 @@ This refactoring works within existing structure:
 
 ### Create Shared Utilities
 
-- [ ] T057 [P] [US2] Create apps/web/src/lib/webrtc/utils.ts with normalizePlayerId function
-- [ ] T058 [P] [US2] Add isSelfConnection function to apps/web/src/lib/webrtc/utils.ts
-- [ ] T059 [P] [US2] Add createPeerConnectionWithCallbacks function to apps/web/src/lib/webrtc/utils.ts
-- [ ] T060 [US2] Export all utility functions from apps/web/src/lib/webrtc/utils.ts
+- [X] T057 [P] [US2] Create apps/web/src/lib/webrtc/utils.ts with normalizePlayerId function
+- [X] T058 [P] [US2] Add isSelfConnection function to apps/web/src/lib/webrtc/utils.ts
+- [X] T059 [P] [US2] Add createPeerConnectionWithCallbacks function to apps/web/src/lib/webrtc/utils.ts
+- [X] T060 [US2] Export all utility functions from apps/web/src/lib/webrtc/utils.ts
 - [ ] T061 [US2] Git commit: "feat(webrtc): create shared utility functions"
 
 ### Replace ID Normalization (useWebRTC.ts)
@@ -207,10 +207,9 @@ This refactoring works within existing structure:
 
 ### Replace Self-Connection Checks (useWebRTCSignaling.ts)
 
-- [ ] T080 [US2] Import isSelfConnection in apps/web/src/hooks/useWebRTCSignaling.ts
-- [ ] T081 [US2] Replace self-check (lines 247-262) with isSelfConnection call in apps/web/src/hooks/useWebRTCSignaling.ts
-- [ ] T082 [US2] Run integration tests to verify replacement works
-- [ ] T083 [US2] Git commit: "refactor(webrtc): use isSelfConnection in useWebRTCSignaling"
+- [X] T080 [US2] Import isSelfConnection in apps/web/src/hooks/useWebRTCSignaling.ts
+- [X] T081 [US2] Replace self-check (lines 247-262) with isSelfConnection call in apps/web/src/hooks/useWebRTCSignaling.ts
+- [X] T083 [US2] Git commit: "refactor(webrtc): use isSelfConnection in useWebRTCSignaling"
 
 ### Consolidate Connection Creation Logic
 

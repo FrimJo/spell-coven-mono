@@ -71,6 +71,7 @@ export function createPeerConnectionWithCallbacks(
   manager.onStateChange(onStateChange)
   manager.onRemoteStream(onRemoteStream)
   manager.onIceCandidate((candidate) => {
+    // Filter out null candidates - user callback only receives non-null candidates
     if (candidate) {
       onIceCandidate(candidate)
     }

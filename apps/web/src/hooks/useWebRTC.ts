@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { PeerConnectionManager } from '@/lib/webrtc/peer-connection'
 import type { PeerConnectionState } from '@/lib/webrtc/types'
-import { isSelfConnection, normalizePlayerId } from '@/lib/webrtc/utils'
+import { isSelfConnection, normalizePlayerId, createPeerConnectionWithCallbacks } from '@/lib/webrtc/utils'
 import type { SignalingMessageSSE } from '@/lib/webrtc/signaling'
 import { useWebRTCSignaling } from './useWebRTCSignaling'
 
@@ -290,9 +290,6 @@ export function useWebRTC({
         return
       }
       
-      // Normalize IDs to strings for comparison (Discord IDs can be strings or numbers)
-      const normalizedLocalPlayerId = normalizePlayerId(localPlayerId || '')
-      
       const remotePlayers = players.filter((p) => {
         return !isSelfConnection(localPlayerId || '', p.id)
       })
@@ -310,39 +307,85 @@ export function useWebRTC({
           continue
         }
 
-        // Create peer connection manager
-        const manager = new PeerConnectionManager({
+        // Capture values for callbacks
+        const capturedPlayerId = player.id
+
+        // Create peer connection using utility function
+        const manager = createPeerConnectionWithCallbacks({
           localPlayerId,
           remotePlayerId: player.id,
           roomId,
+          localStream: stream,
+          onStateChange: (state) => {
+            setPeerConnections((prev) => {
+              const updated = new Map(prev)
+              const existing = updated.get(capturedPlayerId)
+              if (existing) {
+                updated.set(capturedPlayerId, {
+                  ...existing,
+                  state,
+                })
+              }
+              return updated
+            })
+          },
+          onRemoteStream: (remoteStream) => {
+            setPeerConnections((prev) => {
+              const updated = new Map(prev)
+              const existing = updated.get(capturedPlayerId)
+              if (existing) {
+                // When we receive a remote stream, connection is likely established
+                // Check current state and update if needed
+                const currentState = manager.getState()
+                updated.set(capturedPlayerId, {
+                  ...existing,
+                  remoteStream,
+                  // Update state if it's not already connected and we have a stream
+                  state: currentState === 'connected' ? currentState : existing.state,
+                })
+                
+                // If we have a stream but state isn't connected, force check
+                if (remoteStream && currentState !== 'connected') {
+                  // The manager should update state via ICE events, but double-check
+                  setTimeout(() => {
+                    const latestState = manager.getState()
+                    if (latestState === 'connected') {
+                      setPeerConnections((current) => {
+                        const latest = new Map(current)
+                        const latestExisting = latest.get(capturedPlayerId)
+                        if (latestExisting) {
+                          latest.set(capturedPlayerId, {
+                            ...latestExisting,
+                            state: latestState,
+                          })
+                          return latest
+                        }
+                        return current
+                      })
+                    }
+                  }, 100)
+                }
+              }
+              return updated
+            })
+          },
+          onIceCandidate: (candidate) => {
+            sendIceCandidate(capturedPlayerId, candidate).catch((error) => {
+              // If player is not connected yet, this is expected during connection establishment
+              const errorMessage = error instanceof Error ? error.message : String(error)
+              if (!errorMessage.includes('not found or not connected')) {
+                console.error(
+                  `[WebRTC] Failed to send ICE candidate to ${capturedPlayerId}:`,
+                  error,
+                )
+              }
+            })
+          },
         })
 
         // Get initial state from manager (based on actual ICE connection state)
         const initialState = manager.getState()
 
-        // Add local stream
-        manager.addLocalStream(stream)
-
-        // Capture normalized values for the ICE candidate callback
-        const capturedPlayerId = player.id
-        const capturedNormalizedPlayerId = normalizePlayerId(player.id)
-        const capturedNormalizedLocalPlayerId = normalizedLocalPlayerId
-
-        // Setup state change callback
-        manager.onStateChange((state) => {
-          setPeerConnections((prev) => {
-            const updated = new Map(prev)
-            const existing = updated.get(capturedPlayerId)
-            if (existing) {
-              updated.set(capturedPlayerId, {
-                ...existing,
-                state,
-              })
-            }
-            return updated
-          })
-        })
-        
         // Check current state after setup (in case it changed during callback registration)
         // Use setTimeout to ensure this runs after any immediate state changes
         setTimeout(() => {
@@ -363,77 +406,7 @@ export function useWebRTC({
           }
         }, 0)
 
-        // Setup remote stream callback
-        manager.onRemoteStream((stream) => {
-          setPeerConnections((prev) => {
-            const updated = new Map(prev)
-            const existing = updated.get(capturedPlayerId)
-            if (existing) {
-              // When we receive a remote stream, connection is likely established
-              // Check current state and update if needed
-              const currentState = manager.getState()
-              updated.set(capturedPlayerId, {
-                ...existing,
-                remoteStream: stream,
-                // Update state if it's not already connected and we have a stream
-                state: currentState === 'connected' ? currentState : existing.state,
-              })
-              
-              // If we have a stream but state isn't connected, force check
-              if (stream && currentState !== 'connected') {
-                // The manager should update state via ICE events, but double-check
-                setTimeout(() => {
-                  const latestState = manager.getState()
-                  if (latestState === 'connected') {
-                    setPeerConnections((current) => {
-                      const latest = new Map(current)
-                      const latestExisting = latest.get(capturedPlayerId)
-                      if (latestExisting) {
-                        latest.set(capturedPlayerId, {
-                          ...latestExisting,
-                          state: latestState,
-                        })
-                        return latest
-                      }
-                      return current
-                    })
-                  }
-                }, 100)
-              }
-            }
-            return updated
-          })
-        })
-
-        // Setup ICE candidate callback - use captured values to avoid closure issues
-        manager.onIceCandidate((candidate) => {
-          if (candidate) {
-            // Use captured normalized values to ensure correct comparison
-            if (isSelfConnection(capturedNormalizedLocalPlayerId, capturedNormalizedPlayerId)) {
-              console.error(`[WebRTC] ERROR: Attempted to send ICE candidate to local player ${capturedPlayerId}! Skipping.`)
-              return
-            }
-            
-            sendIceCandidate(capturedPlayerId, candidate).catch((error) => {
-              // If player is not connected yet, this is expected during connection establishment
-              const errorMessage = error instanceof Error ? error.message : String(error)
-              if (!errorMessage.includes('not found or not connected')) {
-                console.error(
-                  `[WebRTC] Failed to send ICE candidate to ${capturedPlayerId}:`,
-                  error,
-                )
-              }
-            })
-          }
-        })
-
         // Create offer and send it
-        // Final safety check before creating offer (using normalized comparison)
-        if (isSelfConnection(localPlayerId || '', player.id)) {
-          console.error(`[WebRTC] ERROR: Attempted to create offer for local player ${player.id}! Skipping offer creation.`)
-          continue
-        }
-        
         manager
           .createOffer()
           .then((offer) => {
