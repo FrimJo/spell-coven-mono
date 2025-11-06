@@ -18,10 +18,10 @@ This guide consolidates the most relevant operational knowledge for agents worki
 7. **Data fetching discipline.** Fetch data inside effects only when strictly necessary, guard against race conditions, and clean up subscriptions or async work on unmount.
 
 ## Tooling & Commands
-- **Type checking:** `pnpm check-types`
-- **Lint (auto-fix):** `pnpm lint:fix`
-- **Format (auto-fix):** `pnpm format:fix`
-- **Run tests:** `pnpm test`
+- **Type checking:** `bun typescheck`
+- **Lint (auto-fix):** `bun lint:fix`
+- **Format (auto-fix):** `bun format:fix`
+- **Run tests:** `bun test`
 
 ## Decision Checklist
 Before adding an Effect, confirm all of the following:

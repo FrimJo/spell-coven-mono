@@ -2,7 +2,7 @@
  * Debug version of card identification e2e test
  *
  * This test uses chrome-devtools MCP server for interactive debugging.
- * Run with: pnpm test:e2e:debug
+ * Run with: bun test:e2e:debug
  *
  * Features:
  * - Takes snapshots at each step for inspection

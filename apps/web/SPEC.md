@@ -79,4 +79,4 @@ This spec defines the browser client that performs on-device visual search over 
 ## 7. Integration With Package
 
 - `packages/mtg-image-db` is the canonical source for dataset generation and export. This web client must not change those artifacts.
-- A helper script `pnpm --filter @repo/web prepare-assets` (or `pnpm -C apps/web run prepare-assets`) copies `index_out` artifacts into `apps/web/public/index_out/` for local dev and preview.
+- A helper script `bun --filter @repo/web prepare-assets` (or `bun -C apps/web run prepare-assets`) copies `index_out` artifacts into `apps/web/public/index_out/` for local dev and preview.

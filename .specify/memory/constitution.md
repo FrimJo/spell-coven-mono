@@ -183,8 +183,8 @@ Errors MUST include:
 ### Continuous Verification
 
 During development:
-- Run type checking OFTEN (`pnpm check-types`) to catch type errors early
-- Run linting OFTEN (`pnpm lint`) to maintain code quality and consistency
+- Run type checking OFTEN (`bun typecheck`) to catch type errors early
+- Run linting OFTEN (`bun lint`) to maintain code quality and consistency
 - Fix type and lint errors immediately rather than accumulating technical debt
 - Use Context7 (`mcp1_resolve-library-id` and `mcp1_get-library-docs`) to get up-to-date documentation for any npm package
 
@@ -193,9 +193,9 @@ During development:
 ### Quality Gates
 
 Before merging:
-- TypeScript type checking MUST pass (`pnpm check-types`)
-- Linting MUST pass (`pnpm lint`)
-- Formatting MUST pass (`pnpm format`)
+- TypeScript type checking MUST pass (`bun typecheck`)
+- Linting MUST pass (`bun lint`)
+- Formatting MUST pass (`bun format`)
 - Specifications MUST be updated if behavior changes
 - Data contracts MUST be versioned if schemas change
 
