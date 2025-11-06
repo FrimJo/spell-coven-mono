@@ -9,9 +9,10 @@ import {
   discordTokenQueryOptions,
   useDiscordAuth,
 } from '@/hooks/useDiscordAuth'
-import { discordUserQueryOptions } from '@/hooks/useDiscordUser'
+import { discordUserQueryOptions, useDiscordUser } from '@/hooks/useDiscordUser'
 import { sessionStorage } from '@/lib/session-storage'
 import {
+  assignRoleToUser,
   checkRoomExists,
   ensureUserInGuild,
   ensureUserInVoiceChannel,
@@ -58,6 +59,7 @@ export const Route = createFileRoute('/game/$gameId')({
 
     return {
       roomName: result.channelName || 'Game Room',
+      roleId: result.roleId,
     }
   },
   loader: async ({ params, context }) => {
@@ -81,6 +83,7 @@ export const Route = createFileRoute('/game/$gameId')({
           error: error instanceof Error ? error.message : 'Unknown error',
         },
         initialMembers: [],
+        username: undefined, // No username when not authenticated
       }
     }
 
@@ -96,16 +99,30 @@ export const Route = createFileRoute('/game/$gameId')({
       })
     }
 
+    // Get roleId from room check (already validated in beforeLoad, but we need roleId here)
+    const roomCheck = await checkRoomExists({ data: { channelId: gameId } })
+    const roleId = roomCheck.exists ? roomCheck.roleId : undefined
+
+    // Assign role to user if roleId is available
+    if (roleId) {
+      console.log('[Game] Assigning role to user:', { userId: user.id, roleId })
+      const roleResult = await assignRoleToUser({
+        data: { userId: user.id, roleId },
+      })
+      if (!roleResult.success) {
+        console.warn(
+          '[Game] Failed to assign role (non-fatal):',
+          roleResult.error,
+        )
+        // Don't fail - user might already have the role or bot might not have permission
+      }
+    }
+
     const { inChannel, error: inChannelError } = await ensureUserInVoiceChannel(
       {
         data: { userId: user.id, targetChannelId: gameId },
       },
     )
-
-    // Don't connect to voice channel here - it causes race condition
-    // The VOICE_STATE_UPDATE events arrive before browser connects to SSE
-    // Let GameRoom handle connection after SSE is established
-
     return {
       isAuthenticated: true,
       voiceChannelStatus: {
@@ -114,6 +131,7 @@ export const Route = createFileRoute('/game/$gameId')({
       },
       initialMembers: [],
       userId: user.id,
+      username: user.username, // Discord username - required for authenticated users
       gameId, // Pass gameId for GameRoom to use
     }
   },
@@ -138,8 +156,13 @@ function GameRoomRoute() {
     loaderData.isAuthenticated && !loaderData.voiceChannelStatus.inChannel,
   )
 
-  const state = sessionStorage.loadGameState()
-  const playerName = state?.playerName ?? 'Guest'
+  // Get Discord user for username (fallback if loader data doesn't have it)
+  const { user: discordUser } = useDiscordUser()
+  
+  // Use Discord username from loader or hook - never fallback to 'Guest' for authenticated users
+  const playerName = loaderData.isAuthenticated
+    ? (loaderData.username || discordUser?.username || 'User')
+    : (sessionStorage.loadGameState()?.playerName ?? 'Guest')
 
   const handleProceedToGame = useCallback(() => {
     setShowJoinDiscordModal(false)

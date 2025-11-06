@@ -53,6 +53,7 @@ export function VoiceDropoutModal({
 
   useVoiceChannelEvents({
     jwtToken: wsTokenData,
+    userId: user?.id,
     onVoiceStateUpdate: handleVoiceStateUpdate,
   })
   return (

@@ -35,7 +35,7 @@ export type SSEDiscordEventMessage = z.infer<
  */
 export const SSECustomEventMessageSchema = SSEMessageBaseSchema.extend({
   type: z.literal('custom.event'),
-  event: z.enum(['voice.joined', 'voice.left']), // Custom event names
+  event: z.enum(['voice.joined', 'voice.left', 'users.connection_status']), // Custom event names
   payload: z.unknown(), // Custom event payload
 })
 
@@ -64,6 +64,26 @@ export const SSEErrorMessageSchema = SSEMessageBaseSchema.extend({
 export type SSEErrorMessage = z.infer<typeof SSEErrorMessageSchema>
 
 /**
+ * SSE WebRTC Signaling Message - WebRTC signaling events
+ */
+export const SSEWebRTCSignalingMessageSchema = SSEMessageBaseSchema.extend({
+  type: z.literal('webrtc-signaling'),
+  event: z.literal('signaling-message'),
+  data: z.object({
+    from: z.string(),
+    roomId: z.string(),
+    message: z.object({
+      type: z.enum(['offer', 'answer', 'ice-candidate']),
+      payload: z.unknown(),
+    }),
+  }),
+})
+
+export type SSEWebRTCSignalingMessage = z.infer<
+  typeof SSEWebRTCSignalingMessageSchema
+>
+
+/**
  * Discriminated union of all SSE message types
  */
 export const SSEMessageSchema = z.discriminatedUnion('type', [
@@ -71,6 +91,7 @@ export const SSEMessageSchema = z.discriminatedUnion('type', [
   SSECustomEventMessageSchema,
   SSEAckMessageSchema,
   SSEErrorMessageSchema,
+  SSEWebRTCSignalingMessageSchema,
 ])
 
 export type SSEMessage = z.infer<typeof SSEMessageSchema>
@@ -96,6 +117,12 @@ export function isSSEAckMessage(msg: SSEMessage): msg is SSEAckMessage {
 
 export function isSSEErrorMessage(msg: SSEMessage): msg is SSEErrorMessage {
   return msg.type === 'error'
+}
+
+export function isSSEWebRTCSignalingMessage(
+  msg: SSEMessage,
+): msg is SSEWebRTCSignalingMessage {
+  return msg.type === 'webrtc-signaling'
 }
 
 /**

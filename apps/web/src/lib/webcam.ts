@@ -871,24 +871,12 @@ export async function setupWebcam(args: {
       const devices = await navigator.mediaDevices.enumerateDevices()
       const cameras = devices.filter((d) => d.kind === 'videoinput')
 
-      // In development mode, add mock video file as a camera option
-      if (import.meta.env.DEV) {
-        const mockCamera: MediaDeviceInfo = {
-          deviceId: 'video-file:/card_demo.webm',
-          kind: 'videoinput',
-          label: 'Mock Webcam (Demo Video)',
-          groupId: 'mock-group',
-          toJSON: () => ({
-            deviceId: 'video-file:/card_demo.webm',
-            kind: 'videoinput',
-            label: 'Mock Webcam (Demo Video)',
-            groupId: 'mock-group',
-          }),
-        }
-        cameras.unshift(mockCamera) // Add at the beginning
-      }
+      // Filter out mock video file devices
+      const realCameras = cameras.filter(
+        (camera) => !camera.deviceId.startsWith('video-file:'),
+      )
 
-      return cameras
+      return realCameras
     },
     getCurrentDeviceId() {
       return currentDeviceId

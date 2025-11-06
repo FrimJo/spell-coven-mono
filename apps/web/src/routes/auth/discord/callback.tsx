@@ -43,13 +43,29 @@ export const Route = createFileRoute('/auth/discord/callback')({
     // If state parameter is available, decode and redirect immediately
     if (search.state) {
       try {
+        // Decode the state parameter (base64 encoded return URL)
         const returnUrl = atob(search.state)
+        // Redirect throws a Response object - this is intentional and should propagate
         throw redirect({ to: returnUrl })
       } catch (err) {
-        if (err instanceof Error && err.message.includes('redirect')) {
+        // TanStack Router's redirect() throws a Response-like object to trigger navigation
+        // Check if this is a redirect (has status and is a Response-like object)
+        if (
+          err &&
+          typeof err === 'object' &&
+          ('status' in err || (err as any).type === 'redirect')
+        ) {
+          // This is a redirect Response, re-throw it to allow navigation
           throw err
         }
-        console.error('Failed to decode state parameter:', err)
+        // If atob() failed (invalid base64), log the error
+        if (err instanceof DOMException && err.name === 'InvalidCharacterError') {
+          console.error('Failed to decode state parameter: Invalid base64 encoding')
+          // Continue without redirect if decode fails
+        } else {
+          // Unknown error, re-throw to be safe
+          throw err
+        }
       }
     }
   },

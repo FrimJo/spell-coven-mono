@@ -23,16 +23,16 @@ export const DISCORD_REDIRECT_URI =
 /**
  * OAuth2 Scopes
  * Phase 1: Authentication only
+ * 
+ * Valid Discord OAuth2 scopes:
+ * - identify: Get user's Discord username, avatar, ID
+ * - guilds: See which Discord servers the user is in
+ * - guilds.join: Add user to guild (required for ensureUserInGuild)
  */
 export const DISCORD_SCOPES: string[] = [
   'identify', // Get user's Discord username, avatar, ID
   'guilds', // See which Discord servers the user is in
   'guilds.join', // Add user to guild (required for ensureUserInGuild)
-  'messages.read', // Read messages in channels
-  'rpc.voice.read', // Read voice state
-  'rpc.video.read', // Read video state
-  'rpc', // Voice/video connection
-  'rpc.activities.write', // Update user activity
 ]
 
 /**

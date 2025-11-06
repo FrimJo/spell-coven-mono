@@ -9,6 +9,7 @@ export interface VoiceChannelMember {
   username: string
   avatar: string | null
   isActive: boolean
+  isOnline?: boolean // Whether user is connected to SSE (backend)
 }
 
 interface UseVoiceChannelMembersFromEventsProps {
@@ -32,6 +33,7 @@ export function useVoiceChannelMembersFromEvents({
 }: UseVoiceChannelMembersFromEventsProps) {
   const [members, setMembers] = useState<VoiceChannelMember[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [connectedUserIds, setConnectedUserIds] = useState<Set<string>>(new Set())
 
   // Log when hook is enabled/disabled
   useEffect(() => {
@@ -125,12 +127,43 @@ export function useVoiceChannelMembersFromEvents({
     setError(err.message)
   }, [])
 
+  // Handle connection status updates
+  const handleConnectionStatusUpdate = useCallback(
+    (connectedUserIds: string[]) => {
+      console.log(
+        '[VoiceChannelMembersFromEvents] Connection status update:',
+        {
+          count: connectedUserIds.length,
+          userIds: connectedUserIds,
+          currentMembers: members.map((m) => m.id),
+        },
+      )
+      setConnectedUserIds(new Set(connectedUserIds))
+    },
+    [members],
+  )
+
   // Listen for voice channel events (only if token is available and enabled)
   useVoiceChannelEvents({
     jwtToken: enabled ? jwtToken : undefined,
+    userId: enabled ? userId : undefined,
     onVoiceStateUpdate: enabled ? handleVoiceStateUpdate : undefined,
     onError: enabled ? handleError : undefined,
+    onConnectionStatusUpdate: enabled
+      ? handleConnectionStatusUpdate
+      : undefined,
   })
 
-  return useMemo(() => ({ members, error }), [members, error])
+  // Update members with online status
+  const membersWithOnlineStatus = useMemo(() => {
+    return members.map((member) => ({
+      ...member,
+      isOnline: connectedUserIds.has(member.id),
+    }))
+  }, [members, connectedUserIds])
+
+  return useMemo(
+    () => ({ members: membersWithOnlineStatus, error }),
+    [membersWithOnlineStatus, error],
+  )
 }

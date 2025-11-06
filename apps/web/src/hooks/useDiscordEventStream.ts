@@ -28,6 +28,7 @@ export interface RoomDeletedEvent {
 }
 
 interface UseDiscordEventStreamOptions {
+  userId?: string // Discord user ID - required for SSE endpoint connection
   onVoiceLeft?: (event: VoiceLeftEvent) => void
   onVoiceJoined?: (event: VoiceJoinedEvent) => void
   onRoomCreated?: (event: RoomCreatedEvent) => void
@@ -57,6 +58,7 @@ interface UseDiscordEventStreamOptions {
  */
 export function useDiscordEventStream(options: UseDiscordEventStreamOptions) {
   const {
+    userId,
     onVoiceLeft,
     onVoiceJoined,
     onRoomCreated,
@@ -90,10 +92,17 @@ export function useDiscordEventStream(options: UseDiscordEventStreamOptions) {
       return
     }
 
+    // userId is required for SSE endpoint connection
+    if (!userId) {
+      console.warn('[Discord Events] userId required but not provided, skipping SSE connection')
+      return
+    }
+
     console.log('[Discord Events] Connecting to SSE stream...')
 
-    // Create EventSource connection
-    const eventSource = new EventSource('/api/stream', {
+    // Create EventSource connection with userId query parameter
+    const sseUrl = `/api/stream?userId=${encodeURIComponent(userId)}`
+    const eventSource = new EventSource(sseUrl, {
       withCredentials: true, // Include session cookie
     })
 
@@ -160,5 +169,5 @@ export function useDiscordEventStream(options: UseDiscordEventStreamOptions) {
       console.log('[Discord Events] Closing SSE connection')
       eventSource.close()
     }
-  }, [enabled])
+  }, [enabled, userId])
 }

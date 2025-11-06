@@ -56,6 +56,7 @@ export function JoinDiscordModal({
 
   useVoiceChannelEvents({
     jwtToken: wsTokenData,
+    userId: user?.id,
     onVoiceStateUpdate: handleVoiceStateUpdate,
   })
 

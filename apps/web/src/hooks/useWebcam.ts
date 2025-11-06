@@ -250,13 +250,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
 
           // Auto-start if requested
           if (autoStartRef.current) {
-            // In development, use demo video as default if no deviceId specified
-            const defaultDeviceId =
-              !deviceIdRef.current && import.meta.env.DEV
-                ? 'video-file:/card_demo.webm'
-                : deviceIdRef.current
-
-            await webcamController.current.startVideo(defaultDeviceId)
+            await webcamController.current.startVideo(deviceIdRef.current)
             await webcamController.current.populateCameraSelect(
               cameraSelectRef.current,
             )
@@ -289,13 +283,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
         return
       }
       try {
-        // In development, use demo video as default if no deviceId specified
-        const finalDeviceId =
-          !deviceId && import.meta.env.DEV
-            ? 'video-file:/card_demo.webm'
-            : deviceId || null
-
-        await webcamController.current.startVideo(finalDeviceId)
+        await webcamController.current.startVideo(deviceId || null)
         await webcamController.current.populateCameraSelect(
           cameraSelectRef.current,
         )
@@ -340,25 +328,13 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     }
     const devices = await navigator.mediaDevices.enumerateDevices()
     const cameras = devices.filter((d) => d.kind === 'videoinput')
+    
+    // Filter out mock video file devices
+    const realCameras = cameras.filter(
+      (camera) => !camera.deviceId.startsWith('video-file:'),
+    )
 
-    // In development mode, add mock video file as a camera option
-    if (import.meta.env.DEV) {
-      const mockCamera: MediaDeviceInfo = {
-        deviceId: 'video-file:/card_demo.webm',
-        kind: 'videoinput',
-        label: 'Mock Webcam (Demo Video)',
-        groupId: 'mock-group',
-        toJSON: () => ({
-          deviceId: 'video-file:/card_demo.webm',
-          kind: 'videoinput',
-          label: 'Mock Webcam (Demo Video)',
-          groupId: 'mock-group',
-        }),
-      }
-      cameras.unshift(mockCamera) // Add at the beginning
-    }
-
-    return cameras
+    return realCameras
   }
 
   const getCurrentDeviceId = () => {
