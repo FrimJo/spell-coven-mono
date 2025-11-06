@@ -51,14 +51,8 @@ export function useWebRTCSignaling({
   // Subscribe to SSE events for signaling messages
   useEffect(() => {
     if (!enabled) {
-      console.log('[WebRTC Signaling] Hook disabled, skipping SSE connection')
       return
     }
-
-    console.log('[WebRTC Signaling] Connecting to SSE for signaling:', {
-      roomId,
-      localPlayerId,
-    })
 
     // Connect to SSE endpoint with userId (localPlayerId) as query parameter
     // The endpoint requires userId for proper connection registration
@@ -70,7 +64,7 @@ export function useWebRTCSignaling({
     eventSourceRef.current = eventSource
 
     eventSource.onopen = () => {
-      console.log('[WebRTC Signaling] SSE connection opened for signaling')
+      // Connection opened successfully
     }
 
     eventSource.onmessage = (event) => {
@@ -85,7 +79,7 @@ export function useWebRTCSignaling({
         let parsed
         try {
           parsed = JSON.parse(event.data)
-        } catch (parseError) {
+        } catch {
           // Not a JSON message, skip it (could be ping/heartbeat)
           return
         }
@@ -93,12 +87,6 @@ export function useWebRTCSignaling({
         const result = SSEMessageSchema.safeParse(parsed)
 
         if (!result.success) {
-          console.warn(
-            '[WebRTC Signaling] Invalid SSE message format:',
-            result.error,
-            'Message data:',
-            event.data,
-          )
           return
         }
 
@@ -129,10 +117,6 @@ export function useWebRTCSignaling({
           },
         }
 
-        console.log(
-          `[WebRTC Signaling] Received ${signalingMessage.message.type} from ${signalingMessage.from}`,
-        )
-
         // Call callback with signaling message
         onMessageRef.current?.(signalingMessage)
       } catch (error) {
@@ -143,13 +127,8 @@ export function useWebRTCSignaling({
     eventSource.onerror = (error) => {
       // SSE connections are aborted during page reload/navigation - this is expected
       // Only log if the connection was actually established before the error
-      if (eventSource.readyState === EventSource.CONNECTING) {
-        console.warn('[WebRTC Signaling] SSE connection error during connection:', error)
-      } else if (eventSource.readyState === EventSource.OPEN) {
+      if (eventSource.readyState === EventSource.OPEN) {
         console.error('[WebRTC Signaling] SSE connection error after connection:', error)
-      } else {
-        // EventSource.CLOSED - connection was closed, likely due to page reload
-        console.log('[WebRTC Signaling] SSE connection closed (likely page reload)')
       }
     }
 
@@ -164,14 +143,6 @@ export function useWebRTCSignaling({
    */
   const sendOffer = useCallback(
     async (to: string, offer: RTCSessionDescriptionInit): Promise<void> => {
-      console.log(`[WebRTC Signaling] sendOffer called:`, {
-        to,
-        roomId,
-        from: localPlayerId,
-        offerType: offer.type,
-        hasSDP: !!offer.sdp,
-      })
-      
       if (!isSDPPayload({ type: 'offer', sdp: offer.sdp || '' })) {
         throw new Error('Invalid offer format')
       }
@@ -194,15 +165,11 @@ export function useWebRTCSignaling({
       if (!result.success) {
         const errorMessage = result.error || 'Failed to send offer'
         // If player is not connected yet, this is expected during connection establishment
-        if (errorMessage.includes('not found or not connected')) {
-          console.warn(`[WebRTC Signaling] Player ${to} not connected to SSE yet, offer will be sent when they connect`)
-        } else {
+        if (!errorMessage.includes('not found or not connected')) {
           console.error(`[WebRTC Signaling] Failed to send offer to ${to}:`, errorMessage)
         }
         throw new Error(errorMessage)
       }
-      
-      console.log(`[WebRTC Signaling] Offer sent successfully to ${to}`)
     },
     [roomId, localPlayerId, sendSignalingMessageFn],
   )
@@ -246,13 +213,6 @@ export function useWebRTCSignaling({
       // Prevent sending ICE candidates to ourselves
       const normalizedTo = String(to)
       const normalizedLocalPlayerId = String(localPlayerId || '')
-      
-      // Reduced logging for ICE candidates (they're very frequent)
-      const logKey = `ice-signaling-${to}`
-      const logCount = (window as any)[logKey] = ((window as any)[logKey] || 0) + 1
-      if (logCount <= 3) {
-        console.log(`[WebRTC Signaling] sendIceCandidate #${logCount} to ${to}`)
-      }
       
       if (normalizedTo === normalizedLocalPlayerId) {
         console.error(
