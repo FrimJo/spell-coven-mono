@@ -33,49 +33,6 @@ let enablePerspectiveWarp = true
 let currentFrameCanvas: HTMLCanvasElement | null = null
 
 // ============================================================================
-// Performance Monitoring
-// ============================================================================
-
-interface PerformanceMetrics {
-  inferenceTimeMs: number[]
-  detectionCount: number[]
-  slowInferenceCount: number
-}
-
-let performanceMetrics: PerformanceMetrics = {
-  inferenceTimeMs: [],
-  detectionCount: [],
-  slowInferenceCount: 0,
-}
-
-const SLOW_INFERENCE_THRESHOLD_MS = 1000
-
-/**
- * Log performance metrics summary
- */
-function logPerformanceMetrics() {
-  if (performanceMetrics.inferenceTimeMs.length === 0) return
-
-  // Performance metrics calculation (for future use)
-  void (
-    performanceMetrics.inferenceTimeMs.reduce((a, b) => a + b, 0) /
-    performanceMetrics.inferenceTimeMs.length
-  )
-  void Math.max(...performanceMetrics.inferenceTimeMs)
-  void Math.min(...performanceMetrics.inferenceTimeMs)
-
-  // Reset metrics
-  performanceMetrics = {
-    inferenceTimeMs: [],
-    detectionCount: [],
-    slowInferenceCount: 0,
-  }
-}
-
-// Log metrics every 30 seconds
-setInterval(logPerformanceMetrics, 30000)
-
-// ============================================================================
 // Canvas and Video Elements
 // ============================================================================
 
@@ -272,26 +229,8 @@ async function detectCards(clickPoint?: { x: number; y: number }) {
       overlayEl.width,
       overlayEl.height,
     )
-    const detectionDuration = performance.now() - detectionStart
-    console.log(
-      `[detectCards] Detector.detect() took ${detectionDuration.toFixed(0)}ms`,
-    )
 
     detectedCards = result.cards
-    console.log('[detectCards] Detection result:', {
-      cardsFound: detectedCards.length,
-      rawDetectionCount: result.rawDetectionCount,
-      inferenceTimeMs: result.inferenceTimeMs,
-    })
-
-    // Track performance metrics
-    performanceMetrics.inferenceTimeMs.push(result.inferenceTimeMs)
-    performanceMetrics.detectionCount.push(detectedCards.length)
-
-    // Track slow inferences
-    if (result.inferenceTimeMs > SLOW_INFERENCE_THRESHOLD_MS) {
-      performanceMetrics.slowInferenceCount++
-    }
 
     // Clear overlay - no detection boxes shown
     overlayCtx!.clearRect(0, 0, overlayEl.width, overlayEl.height)
@@ -363,12 +302,6 @@ function cropCardFromBoundingBox(
   const cardWidth = (box.xmax - box.xmin) * canvasToUse.width
   const cardHeight = (box.ymax - box.ymin) * canvasToUse.height
 
-  console.log('[Webcam] Bounding box details:', {
-    normalized: box,
-    canvasSize: { width: canvasToUse.width, height: canvasToUse.height },
-    pixels: { x, y, width: cardWidth, height: cardHeight },
-  })
-
   // Extract the full card region from the bounding box
   const canvasCtx = canvasToUse.getContext('2d', { willReadFrequently: true })!
   const cardImageData = canvasCtx.getImageData(x, y, cardWidth, cardHeight)
@@ -411,38 +344,6 @@ function cropCardFromBoundingBox(
     scaledHeight,
   )
 
-  console.log('[Webcam] Resize with aspect ratio preservation:', {
-    original: `${cardWidth.toFixed(1)}x${cardHeight.toFixed(1)}`,
-    scaled: `${scaledWidth.toFixed(1)}x${scaledHeight.toFixed(1)}`,
-    offset: `(${offsetX.toFixed(1)}, ${offsetY.toFixed(1)})`,
-    scale: scale.toFixed(3),
-  })
-
-  // Log cropped images as blobs for debugging
-  // 1. Log the extracted card region (before resize)
-  tempCanvas.toBlob((blob) => {
-    if (blob) {
-      const url = URL.createObjectURL(blob)
-      console.log('[Webcam] Extracted card region (before resize):', {
-        url,
-        dimensions: `${cardWidth}x${cardHeight}`,
-        blob,
-      })
-    }
-  }, 'image/png')
-
-  // 2. Log the final query image (336×336)
-  croppedCanvas.toBlob((blob) => {
-    if (blob) {
-      const url = URL.createObjectURL(blob)
-      console.log('[Webcam] Query image for database (336×336):', {
-        url,
-        dimensions: `${CROPPED_CARD_WIDTH}x${CROPPED_CARD_HEIGHT}`,
-        blob,
-      })
-    }
-  }, 'image/png')
-
   return true
 }
 
@@ -456,7 +357,6 @@ function cropCardFromBoundingBox(
 async function cropCardAt(x: number, y: number): Promise<boolean> {
   // Need detected cards to crop
   if (!detectedCards.length) {
-    console.warn('[Webcam] No cards detected - cannot crop')
     return false
   }
 
@@ -464,11 +364,6 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
   // Priority: 1) Click inside box, 2) Smallest box, 3) Highest confidence
   let bestIndex = -1
   let bestScore = -Infinity
-
-  console.log('[Webcam] Finding detection at click:', {
-    click: { x, y },
-    totalDetections: detectedCards.length,
-  })
 
   // Second pass: find best detection at click
   for (let i = 0; i < detectedCards.length; i++) {
@@ -551,16 +446,6 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
       cardWidthPx,
       cardHeightPx,
     )
-    detectionCropCanvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob)
-        console.log('[Webcam] Detection crop image:', {
-          url,
-          dimensions: `${cardWidthPx}x${cardHeightPx}`,
-          blob,
-        })
-      }
-    }, 'image/png')
   }
 
   // T022: Use warped canvas if available (from SlimSAM perspective correction) and enabled
@@ -581,18 +466,6 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
       CROPPED_CARD_HEIGHT,
     )
 
-    croppedCanvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob)
-        console.log('[Webcam] Query image for database (from warped canvas):', {
-          url,
-          dimensions: `${croppedCanvas.width}x${croppedCanvas.height}`,
-          blob,
-        })
-        setTimeout(() => URL.revokeObjectURL(url), 1000)
-      }
-    }, 'image/png')
-
     return true
   }
 
@@ -612,17 +485,6 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
         // Step 2: Apply perspective correction to get canonical 336×336 image
         const warpedCanvas = await warpCardToCanonical(sourceCanvas, quad)
 
-        warpedCanvas.toBlob((blob) => {
-          if (blob) {
-            const url = URL.createObjectURL(blob)
-            console.log('[Webcam] Perspective corrected card image:', {
-              url,
-              dimensions: `${warpedCanvas.width}x${warpedCanvas.height}`,
-              blob,
-            })
-          }
-        }, 'image/png')
-
         // Copy warped canvas to cropped canvas
         croppedCanvas.width = CROPPED_CARD_WIDTH
         croppedCanvas.height = CROPPED_CARD_HEIGHT
@@ -638,21 +500,6 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
           CROPPED_CARD_WIDTH,
           CROPPED_CARD_HEIGHT,
         )
-
-        croppedCanvas.toBlob((blob) => {
-          if (blob) {
-            const url = URL.createObjectURL(blob)
-            console.log(
-              '[Webcam] Query image for database (after OpenCV warp):',
-              {
-                url,
-                dimensions: `${croppedCanvas.width}x${croppedCanvas.height}`,
-                blob,
-              },
-            )
-            setTimeout(() => URL.revokeObjectURL(url), 1000)
-          }
-        }, 'image/png')
 
         return true
       }
@@ -789,8 +636,8 @@ export async function setupWebcam(args: {
   let mouseWarmupHandler: ((evt: MouseEvent) => void) | null = null
   mouseWarmupHandler = () => {
     // Warm up the model on first mouse move
-    warmModel().catch((err) => {
-      console.warn('[Webcam] Model warmup failed:', err)
+    warmModel().catch(() => {
+      // Model warmup failed - non-critical, will initialize on first detection
     })
     // Remove listener after first trigger to avoid repeated warmups
     if (mouseWarmupHandler) {
@@ -805,28 +652,6 @@ export async function setupWebcam(args: {
       if (currentStream) {
         currentStream.getTracks().forEach((t) => t.stop())
         currentStream = null
-      }
-
-      // Handle video file source (for testing/demo)
-      if (deviceId?.startsWith('video-file:')) {
-        const videoPath = deviceId.replace('video-file:', '')
-        // Clear srcObject when switching to file-based source
-        videoEl.srcObject = null
-        videoEl.src = videoPath
-        videoEl.loop = true
-        videoEl.muted = true
-        currentDeviceId = deviceId
-        return new Promise<void>((resolve) => {
-          videoEl.onloadedmetadata = () => {
-            void videoEl.play()
-            if (!animationStarted) {
-              animationStarted = true
-              // DISABLED: No automatic detection - only detect on click
-              // startDetection()
-            }
-            resolve()
-          }
-        })
       }
 
       // Handle regular webcam
@@ -870,13 +695,7 @@ export async function setupWebcam(args: {
     async getCameras() {
       const devices = await navigator.mediaDevices.enumerateDevices()
       const cameras = devices.filter((d) => d.kind === 'videoinput')
-
-      // Filter out mock video file devices
-      const realCameras = cameras.filter(
-        (camera) => !camera.deviceId.startsWith('video-file:'),
-      )
-
-      return realCameras
+      return cameras
     },
     getCurrentDeviceId() {
       return currentDeviceId
