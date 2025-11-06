@@ -71,19 +71,12 @@ export class PeerConnectionManager {
     this.rtcPeerConnection.oniceconnectionstatechange = () => {
       const iceState = this.rtcPeerConnection.iceConnectionState
       const appState = this.mapIceStateToAppState(iceState)
-      console.log(
-        `[PeerConnection] ICE connection state changed: ${iceState} → app state: ${appState} for ${this.metadata.remotePlayerId}`,
-      )
       this.updateState(appState)
     }
     
     // Also listen to connectionstatechange as a backup/additional check
     this.rtcPeerConnection.onconnectionstatechange = () => {
-      const connectionState = this.rtcPeerConnection.connectionState
       const iceState = this.rtcPeerConnection.iceConnectionState
-      console.log(
-        `[PeerConnection] Connection state: ${connectionState}, ICE state: ${iceState} for ${this.metadata.remotePlayerId}`,
-      )
       // Update state based on ICE connection state (primary source)
       const appState = this.mapIceStateToAppState(iceState)
       this.updateState(appState)
@@ -91,47 +84,16 @@ export class PeerConnectionManager {
 
     // Handle remote stream tracks
     this.rtcPeerConnection.ontrack = (event) => {
-      console.log(
-        `[PeerConnection] Received remote track: ${event.track.kind} from ${this.metadata.remotePlayerId}`,
-        {
-          trackId: event.track.id,
-          trackKind: event.track.kind,
-          trackEnabled: event.track.enabled,
-          trackReadyState: event.track.readyState,
-          streamsCount: event.streams.length,
-          streamIds: event.streams.map((s) => s.id),
-        },
-      )
-
       const stream = event.streams[0]
       if (stream) {
-        console.log(
-          `[PeerConnection] Setting remote stream for ${this.metadata.remotePlayerId}:`,
-          {
-            streamId: stream.id,
-            videoTracks: stream.getVideoTracks().length,
-            audioTracks: stream.getAudioTracks().length,
-            active: stream.active,
-          },
-        )
         this.remoteStream = stream
-        console.log(
-          `[PeerConnection] Calling ${this.remoteStreamCallbacks.size} remote stream callbacks for ${this.metadata.remotePlayerId}`,
-        )
         this.remoteStreamCallbacks.forEach((callback) => callback(stream))
-      } else {
-        console.warn(
-          `[PeerConnection] Received track event but no stream found for ${this.metadata.remotePlayerId}`,
-        )
       }
     }
 
     // Handle ICE candidates
     this.rtcPeerConnection.onicecandidate = (event) => {
       if (event.candidate) {
-        console.log(
-          `[PeerConnection] ICE candidate generated for ${this.metadata.remotePlayerId}`,
-        )
         // ICE candidates are handled by the hook, not here
       }
     }
@@ -172,13 +134,8 @@ export class PeerConnectionManager {
       return
     }
 
-    const oldState = this.metadata.state
     this.metadata.state = newState
     this.metadata.lastStateChange = Date.now()
-
-    console.log(
-      `[PeerConnection] State transition: ${oldState} → ${newState} for ${this.metadata.remotePlayerId}`,
-    )
 
     // Notify state change callbacks
     this.stateChangeCallbacks.forEach((callback) => callback(newState))
@@ -194,10 +151,6 @@ export class PeerConnectionManager {
     stream.getTracks().forEach((track) => {
       this.rtcPeerConnection.addTrack(track, stream)
     })
-
-    console.log(
-      `[PeerConnection] Added local stream with ${stream.getTracks().length} tracks`,
-    )
   }
 
   /**
@@ -206,7 +159,6 @@ export class PeerConnectionManager {
    */
   removeLocalStream(): void {
     if (!this.localStream) {
-      console.log('[PeerConnection] No local stream to remove')
       return
     }
 
@@ -215,12 +167,10 @@ export class PeerConnectionManager {
     senders.forEach((sender) => {
       if (sender.track && this.localStream?.getTracks().includes(sender.track)) {
         this.rtcPeerConnection.removeTrack(sender)
-        console.log(`[PeerConnection] Removed local ${sender.track.kind} track`)
       }
     })
 
     this.localStream = null
-    console.log('[PeerConnection] Removed local stream (connection remains open for receiving)')
   }
 
   /**
@@ -230,10 +180,6 @@ export class PeerConnectionManager {
     try {
       const offer = await this.rtcPeerConnection.createOffer()
       await this.rtcPeerConnection.setLocalDescription(offer)
-
-      console.log(
-        `[PeerConnection] Created offer for ${this.metadata.remotePlayerId}`,
-      )
 
       return offer
     } catch (error) {
@@ -254,10 +200,6 @@ export class PeerConnectionManager {
       const answer = await this.rtcPeerConnection.createAnswer()
       await this.rtcPeerConnection.setLocalDescription(answer)
 
-      console.log(
-        `[PeerConnection] Created answer for offer from ${this.metadata.remotePlayerId}`,
-      )
-
       return answer
     } catch (error) {
       console.error('[PeerConnection] Failed to handle offer:', error)
@@ -273,10 +215,6 @@ export class PeerConnectionManager {
       await this.rtcPeerConnection.setRemoteDescription(
         new RTCSessionDescription(answer),
       )
-
-      console.log(
-        `[PeerConnection] Set remote description from answer for ${this.metadata.remotePlayerId}`,
-      )
     } catch (error) {
       console.error('[PeerConnection] Failed to handle answer:', error)
       throw error
@@ -290,10 +228,6 @@ export class PeerConnectionManager {
     try {
       await this.rtcPeerConnection.addIceCandidate(
         new RTCIceCandidate(candidate),
-      )
-
-      console.log(
-        `[PeerConnection] Added ICE candidate for ${this.metadata.remotePlayerId}`,
       )
     } catch (error) {
       console.error('[PeerConnection] Failed to add ICE candidate:', error)
@@ -316,9 +250,6 @@ export class PeerConnectionManager {
 
     try {
       await videoSender.replaceTrack(newTrack)
-      console.log(
-        `[PeerConnection] Replaced video track for ${this.metadata.remotePlayerId}`,
-      )
     } catch (error) {
       console.error('[PeerConnection] Failed to replace video track:', error)
       throw error
@@ -379,9 +310,6 @@ export class PeerConnectionManager {
     // Immediately call with existing remote stream if available
     // This handles the case where stream was received before callback was registered
     if (this.remoteStream) {
-      console.log(
-        `[PeerConnection] Calling immediate callback for existing remote stream for ${this.metadata.remotePlayerId}`,
-      )
       callback(this.remoteStream)
     }
     
@@ -411,10 +339,6 @@ export class PeerConnectionManager {
    * Close peer connection and cleanup
    */
   close(): void {
-    console.log(
-      `[PeerConnection] Closing connection to ${this.metadata.remotePlayerId}`,
-    )
-
     // Stop local stream tracks
     if (this.localStream) {
       this.localStream.getTracks().forEach((track) => {
