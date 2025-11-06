@@ -201,6 +201,29 @@ export class PeerConnectionManager {
   }
 
   /**
+   * Remove local media stream from peer connection
+   * This stops sending local tracks but keeps the connection alive to receive remote streams
+   */
+  removeLocalStream(): void {
+    if (!this.localStream) {
+      console.log('[PeerConnection] No local stream to remove')
+      return
+    }
+
+    // Remove all tracks from the peer connection
+    const senders = this.rtcPeerConnection.getSenders()
+    senders.forEach((sender) => {
+      if (sender.track && this.localStream?.getTracks().includes(sender.track)) {
+        this.rtcPeerConnection.removeTrack(sender)
+        console.log(`[PeerConnection] Removed local ${sender.track.kind} track`)
+      }
+    })
+
+    this.localStream = null
+    console.log('[PeerConnection] Removed local stream (connection remains open for receiving)')
+  }
+
+  /**
    * Create offer and set local description
    */
   async createOffer(): Promise<RTCSessionDescriptionInit> {

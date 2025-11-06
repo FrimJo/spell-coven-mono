@@ -396,7 +396,7 @@ export function useWebRTC({
         const capturedNormalizedLocalPlayerId = normalizedLocalPlayerId
 
         // Setup state change callback
-        const unsubscribeState = manager.onStateChange((state) => {
+        manager.onStateChange((state) => {
           console.log(
             `[WebRTC] State changed for ${capturedPlayerId}: ${state}`,
           )
@@ -434,7 +434,7 @@ export function useWebRTC({
         }, 0)
 
         // Setup remote stream callback
-        const unsubscribeStream = manager.onRemoteStream((stream) => {
+        manager.onRemoteStream((stream) => {
           console.log(
             `[WebRTC] Received remote stream for ${capturedPlayerId}`,
           )
@@ -479,7 +479,7 @@ export function useWebRTC({
         })
 
         // Setup ICE candidate callback - use captured values to avoid closure issues
-        const unsubscribeIce = manager.onIceCandidate((candidate) => {
+        manager.onIceCandidate((candidate) => {
           if (candidate) {
             // Use captured normalized values to ensure correct comparison
             if (capturedNormalizedPlayerId === capturedNormalizedLocalPlayerId) {
@@ -603,9 +603,11 @@ export function useWebRTC({
   }, [getLocalMediaStream, initializePeerConnections, players, localPlayerId])
 
   /**
-   * Stop video - stop local stream and close connections
+   * Stop video - stop local stream but keep connections open for receiving remote streams
    */
   const stopVideo = useCallback(() => {
+    console.log('[WebRTC] stopVideo() called - stopping local stream but keeping connections open')
+    
     // Stop local stream tracks
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => {
@@ -613,14 +615,22 @@ export function useWebRTC({
       })
       setLocalStream(null)
       setIsVideoActive(false)
+      
+      // Remove local stream from all peer connections but keep connections alive
+      // This allows us to continue receiving remote streams
+      for (const [playerId, connectionData] of peerConnectionsRef.current) {
+        try {
+          // Remove local stream from this connection but don't close it
+          connectionData.manager.removeLocalStream()
+          console.log(`[WebRTC] Removed local stream from connection to ${playerId}`)
+        } catch (error) {
+          console.error(`[WebRTC] Failed to remove local stream from ${playerId}:`, error)
+        }
+      }
     }
 
-    // Close all peer connections
-    for (const [playerId, connectionData] of peerConnectionsRef.current) {
-      connectionData.manager.close()
-    }
-
-    setPeerConnections(new Map())
+    // Don't close peer connections - we want to keep receiving remote streams
+    // Connections will be cleaned up when component unmounts or player leaves
   }, [])
 
   /**
@@ -714,7 +724,7 @@ export function useWebRTC({
   useEffect(() => {
     return () => {
       // Close all peer connections
-      for (const [playerId, connectionData] of peerConnectionsRef.current) {
+      for (const [, connectionData] of peerConnectionsRef.current) {
         connectionData.manager.close()
       }
 
