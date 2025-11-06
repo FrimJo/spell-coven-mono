@@ -370,26 +370,6 @@ export function useWebRTC({
         // Get initial state from manager (based on actual ICE connection state)
         const initialState = manager.getState()
 
-        // Check current state after setup (in case it changed during callback registration)
-        // Use setTimeout to ensure this runs after any immediate state changes
-        setTimeout(() => {
-          const currentState = manager.getState()
-          if (currentState !== initialState) {
-            setPeerConnections((prev) => {
-              const updated = new Map(prev)
-              const existing = updated.get(capturedPlayerId)
-              if (existing && existing.state !== currentState) {
-                updated.set(capturedPlayerId, {
-                  ...existing,
-                  state: currentState,
-                })
-                return updated
-              }
-              return prev
-            })
-          }
-        }, 0)
-
         // Create offer and send it
         // Error handling is centralized in useWebRTCSignaling.sendOffer
         manager
