@@ -163,15 +163,8 @@ export function useWebRTC({
               return
             }
             
-            sendIceCandidateRef.current(message.from, candidate).catch((error) => {
-              // If player is not connected yet, this is expected during connection establishment
-              const errorMessage = error instanceof Error ? error.message : String(error)
-              if (!errorMessage.includes('not found or not connected')) {
-                console.error(
-                  `[WebRTC] Failed to send ICE candidate to ${message.from}:`,
-                  error,
-                )
-              }
+            sendIceCandidateRef.current(message.from, candidate).catch(() => {
+              // Error logging is handled in useWebRTCSignaling.sendIceCandidate
             })
           }
         })
@@ -370,15 +363,8 @@ export function useWebRTC({
             })
           },
           onIceCandidate: (candidate) => {
-            sendIceCandidate(capturedPlayerId, candidate).catch((error) => {
-              // If player is not connected yet, this is expected during connection establishment
-              const errorMessage = error instanceof Error ? error.message : String(error)
-              if (!errorMessage.includes('not found or not connected')) {
-                console.error(
-                  `[WebRTC] Failed to send ICE candidate to ${capturedPlayerId}:`,
-                  error,
-                )
-              }
+            sendIceCandidate(capturedPlayerId, candidate).catch(() => {
+              // Error logging is handled in useWebRTCSignaling.sendIceCandidate
             })
           },
         })
@@ -407,6 +393,7 @@ export function useWebRTC({
         }, 0)
 
         // Create offer and send it
+        // Error handling is centralized in useWebRTCSignaling.sendOffer
         manager
           .createOffer()
           .then((offer) => {
@@ -421,13 +408,8 @@ export function useWebRTC({
                 if (errorMessage.includes('not found or not connected')) {
                   // Store the offer for retry when player connects
                   pendingOffersRef.current.set(player.id, offer)
-                } else {
-                  console.error(
-                    `[WebRTC] Failed to send offer to ${player.id}:`,
-                    error,
-                  )
                 }
-                throw error // Re-throw to prevent success path
+                // Error logging is handled in useWebRTCSignaling.sendOffer
               })
           })
           .catch((error) => {
@@ -775,15 +757,8 @@ export function useWebRTC({
                   return
                 }
                 
-                sendIceCandidate(player.id, candidate).catch((error) => {
-                  // If player is not connected yet, this is expected during connection establishment
-                  const errorMessage = error instanceof Error ? error.message : String(error)
-                  if (!errorMessage.includes('not found or not connected')) {
-                    console.error(
-                      `[WebRTC] Failed to send ICE candidate to ${player.id}:`,
-                      error,
-                    )
-                  }
+                sendIceCandidate(player.id, candidate).catch(() => {
+                  // Error logging is handled in useWebRTCSignaling.sendIceCandidate
                 })
               }
             })
