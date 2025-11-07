@@ -14,7 +14,7 @@ export const ensureUserInGuild = createServerFn({ method: 'POST' })
     try {
       const client = new DiscordRestClient({ botToken: env.DISCORD_BOT_TOKEN })
 
-      console.log('[DEBUG] ensureUserInGuild called with:', {
+      console.log('[ensureUserInGuild] Checking if user is in guild:', {
         guildId: env.VITE_DISCORD_GUILD_ID,
         userId,
       })
@@ -23,12 +23,15 @@ export const ensureUserInGuild = createServerFn({ method: 'POST' })
       try {
         const channels = await client.getChannels(env.VITE_DISCORD_GUILD_ID)
         console.log(
-          '[DEBUG] Bot can access guild, found',
+          '[ensureUserInGuild] Bot can access guild, found',
           channels.length,
           'channels',
         )
       } catch (guildError) {
-        console.error('[DEBUG] Bot cannot access guild:', guildError)
+        console.error(
+          '[ensureUserInGuild] Bot cannot access guild:',
+          guildError,
+        )
         throw guildError
       }
 
@@ -40,18 +43,20 @@ export const ensureUserInGuild = createServerFn({ method: 'POST' })
         },
       )
 
-      if (member) {
-        console.log('[DEBUG] User was added to guild')
+      const alreadyPresent = !member
+      if (alreadyPresent) {
+        console.log('[ensureUserInGuild] User was already in guild')
       } else {
-        console.log('[DEBUG] User was already in guild')
+        console.log('[ensureUserInGuild] User was added to guild')
       }
 
-      return { inGuild: true }
+      return { success: true, alreadyPresent }
     } catch (error) {
-      console.error('[Discord] Error in ensureUserInGuild:', error)
+      console.error('[ensureUserInGuild] Error:', error)
       return {
-        inGuild: false,
+        success: false,
         error: 'Internal server error',
+        alreadyPresent: false,
       }
     }
   })
@@ -62,17 +67,44 @@ export const ensureUserInVoiceChannel = createServerFn({ method: 'GET' })
     try {
       const client = new DiscordRestClient({ botToken: env.DISCORD_BOT_TOKEN })
 
+      console.log(
+        '[ensureUserInVoiceChannel] Checking if user is in voice channel:',
+        {
+          userId,
+          targetChannelId,
+        },
+      )
+
       const voiceState = await client.getVoiceState(
         env.VITE_DISCORD_GUILD_ID,
         userId,
       )
 
       // Not in any voice channel
-      if (!voiceState.channel_id)
-        return { inChannel: false, error: 'User is not in any voice channel' }
+      if (!voiceState.channel_id) {
+        console.log(
+          '[ensureUserInVoiceChannel] User is not in any voice channel',
+        )
+        return {
+          success: false,
+          error: 'User is not in any voice channel',
+          alreadyPresent: false,
+        }
+      }
 
       // Check if it's the channel we care about
-      return { inChannel: voiceState.channel_id === targetChannelId }
+      const alreadyPresent = voiceState.channel_id === targetChannelId
+      if (alreadyPresent) {
+        console.log(
+          '[ensureUserInVoiceChannel] User is already in target voice channel',
+        )
+      } else {
+        console.log(
+          '[ensureUserInVoiceChannel] User is in different voice channel',
+        )
+      }
+
+      return { success: alreadyPresent, alreadyPresent }
     } catch (error: unknown) {
       // Handle "Unknown Voice State" error (404) - user is not in any voice channel
       if (
@@ -82,30 +114,48 @@ export const ensureUserInVoiceChannel = createServerFn({ method: 'GET' })
         error.code === 10065
       ) {
         // Discord error code 10065 = Unknown Voice State (user not in voice channel)
+        console.log(
+          '[ensureUserInVoiceChannel] User has no voice state (not in any channel)',
+        )
         return {
-          inChannel: false,
+          success: false,
           error: 'User is not in any voice channel',
+          alreadyPresent: false,
         }
       }
 
-      console.error('[Discord] Error in ensureUserInVoiceChannel:', error)
+      console.error('[ensureUserInVoiceChannel] Error:', error)
       return {
-        inChannel: false,
+        success: false,
         error: 'Internal server error',
+        alreadyPresent: false,
       }
     }
   })
+
+type CheckRoomExistsResult =
+  | {
+      exists: true
+      channelName: string
+      roleId: string | undefined
+    }
+  | {
+      exists: false
+      error?: string
+    }
 
 /**
  * Check if a Discord voice channel (game room) exists
  */
 export const checkRoomExists = createServerFn({ method: 'POST' })
   .inputValidator((data: { channelId: string }) => data)
-  .handler(async ({ data: { channelId } }) => {
+  .handler(async ({ data: { channelId } }): Promise<CheckRoomExistsResult> => {
     // Lazy import to prevent bundling for browser
 
     try {
-      const client = new DiscordRestClient({ botToken: env.DISCORD_BOT_TOKEN })
+      const client = new DiscordRestClient({
+        botToken: env.DISCORD_BOT_TOKEN,
+      })
 
       // Try to fetch the channel
       const channel = await client.getChannel(channelId)
@@ -141,7 +191,7 @@ export const checkRoomExists = createServerFn({ method: 'POST' })
 
       return {
         exists: true,
-        channelName: channel.name || 'Game Room',
+        channelName: channel.name,
         roleId,
       }
     } catch (error) {
@@ -154,20 +204,35 @@ export const checkRoomExists = createServerFn({ method: 'POST' })
   })
 
 /**
- * Assign a role to a user in a guild
+ * Ensure a user has a role in a guild (assign if not already assigned)
+ * Returns success if user already has role or if role was successfully assigned
  */
-export const assignRoleToUser = createServerFn({ method: 'POST' })
+export const ensureUserHasRole = createServerFn({ method: 'POST' })
   .inputValidator((data: { userId: string; roleId: string }) => data)
   .handler(async ({ data: { userId, roleId } }) => {
     try {
       const client = new DiscordRestClient({ botToken: env.DISCORD_BOT_TOKEN })
 
-      console.log('[assignRoleToUser] Assigning role to user:', {
+      console.log('[ensureUserHasRole] Checking if user has role:', {
         userId,
         roleId,
         guildId: env.VITE_DISCORD_GUILD_ID,
       })
 
+      // Fetch guild member to check current roles
+      const member = await client.getAPIGuildMember(
+        env.VITE_DISCORD_GUILD_ID,
+        userId,
+      )
+
+      // Check if user already has the role
+      if (member.roles?.includes(roleId)) {
+        console.log('[ensureUserHasRole] User already has role')
+        return { success: true, alreadyPresent: true }
+      }
+
+      // Assign role if not already assigned
+      console.log('[ensureUserHasRole] Assigning role to user')
       await client.addMemberRole(
         env.VITE_DISCORD_GUILD_ID,
         userId,
@@ -175,12 +240,12 @@ export const assignRoleToUser = createServerFn({ method: 'POST' })
         'Assigning role for game room access',
       )
 
-      console.log('[assignRoleToUser] Successfully assigned role to user')
-      return { success: true }
+      console.log('[ensureUserHasRole] Successfully assigned role to user')
+      return { success: true, alreadyPresent: false }
     } catch (error) {
-      console.error('[assignRoleToUser] Error:', error)
+      console.error('[ensureUserHasRole] Error:', error)
 
-      let errorMessage = 'Failed to assign role'
+      let errorMessage = 'Failed to ensure user has role'
       if (error instanceof Error) {
         if (error.message.includes('50013')) {
           errorMessage = 'Bot lacks MANAGE_ROLES permission'
@@ -194,6 +259,7 @@ export const assignRoleToUser = createServerFn({ method: 'POST' })
       return {
         success: false,
         error: errorMessage,
+        alreadyPresent: false,
       }
     }
   })
@@ -228,14 +294,6 @@ export const connectUserToVoiceChannel = createServerFn({ method: 'POST' })
         '[connectUserToVoiceChannel] Discord will send VOICE_STATE_UPDATE event to Gateway',
       )
 
-      // Broadcast current voice states for this channel to sync initial members
-      // This ensures all users see existing members when someone new joins
-      const { sseManager } = await import('../managers/sse-manager.js')
-      sseManager.broadcastChannelVoiceStates(
-        env.VITE_DISCORD_GUILD_ID,
-        channelId,
-      )
-
       return { success: true }
     } catch (error) {
       console.error('[connectUserToVoiceChannel] Error:', error)
@@ -261,59 +319,99 @@ export const connectUserToVoiceChannel = createServerFn({ method: 'POST' })
 
 /**
  * Get current members in a voice channel
- * This fetches the initial state when a user joins the game room
+ * Fetches fresh data from Discord REST API - no caching
+ * This ensures we always have the current state when a user joins
  */
 export const getInitialVoiceChannelMembers = createServerFn({ method: 'POST' })
   .inputValidator((data: { channelId: string }) => data)
-  .handler(async ({ data: { channelId } }) => {
-    try {
-      const client = new DiscordRestClient({ botToken: env.DISCORD_BOT_TOKEN })
-
-      console.log(
-        '[getInitialVoiceChannelMembers] Fetching members for channel:',
-        channelId,
-      )
-
-      // Get the channel to verify it exists
-      const channel = await client.getChannel(channelId)
-
-      if (channel.type !== 2) {
-        // 2 = GUILD_VOICE
-        return { members: [], error: 'Channel is not a voice channel' }
-      }
-
-      // Note: Discord's REST API doesn't provide a direct way to list voice channel members
-      // The List Guild Members endpoint doesn't include voice states
-      // Voice states are only available through:
-      // 1. Gateway VOICE_STATE_UPDATE events (which we're already using)
-      // 2. Individual member lookups (expensive for large guilds)
-      //
-      // For now, we'll return an empty array and let the real-time events populate the list
-      // This is actually the recommended approach by Discord
-      //
-      // Alternative: We could cache voice states from Gateway events in Redis/memory,
-      // but that adds complexity. The auto-connect + real-time events should be sufficient.
-
-      const membersInChannel: Array<{
+  .handler(
+    async ({
+      data: { channelId },
+    }): Promise<{
+      members: Array<{
         id: string
         username: string
         avatar: string | null
-      }> = []
+      }>
+      error?: string | null
+    }> => {
+      try {
+        const client = new DiscordRestClient({
+          botToken: env.DISCORD_BOT_TOKEN,
+        })
 
-      console.log(
-        '[getInitialVoiceChannelMembers] Returning empty initial state (will be populated by Gateway events)',
-      )
+        console.log(
+          '[getInitialVoiceChannelMembers] Fetching members for channel:',
+          channelId,
+        )
 
-      return { members: membersInChannel, error: null }
-    } catch (error) {
-      console.error('[getInitialVoiceChannelMembers] Error:', error)
-      return {
-        members: [],
-        error:
-          error instanceof Error ? error.message : 'Failed to fetch members',
+        // Get the channel to verify it exists and get guild ID
+        const channel = await client.getChannel(channelId)
+
+        if (channel.type !== 2) {
+          // 2 = GUILD_VOICE
+          return { members: [], error: 'Channel is not a voice channel' }
+        }
+
+        const guildId = channel.guild_id
+        if (!guildId) {
+          return { members: [], error: 'Channel has no guild' }
+        }
+
+        // Fetch all voice states for the guild to find who's in the target channel
+        // Note: Discord API doesn't return voice_state in listGuildMembers,
+        // so we need to fetch voice states separately
+        const voiceStates = await client.getChannelVoiceStates(
+          guildId,
+          channelId,
+        )
+
+        // Now fetch member details for each user in the voice channel
+        const allMembers: Array<{
+          id: string
+          username: string
+          avatar: string | null
+        }> = []
+
+        for (const voiceState of voiceStates) {
+          if (!voiceState.user_id) continue
+
+          try {
+            const member = await client.getAPIGuildMember(
+              guildId,
+              voiceState.user_id,
+            )
+            if (member.user) {
+              allMembers.push({
+                id: member.user.id,
+                username: member.user.username,
+                avatar: member.user.avatar,
+              })
+            }
+          } catch (error) {
+            // Skip members that can't be fetched
+            console.warn(
+              `[getInitialVoiceChannelMembers] Failed to fetch member ${voiceState.user_id}:`,
+              error,
+            )
+          }
+        }
+
+        console.log(
+          `[getInitialVoiceChannelMembers] Found ${allMembers.length} members in channel ${channelId}`,
+        )
+
+        return { members: allMembers, error: null }
+      } catch (error) {
+        console.error('[getInitialVoiceChannelMembers] Error:', error)
+        return {
+          members: [],
+          error:
+            error instanceof Error ? error.message : 'Failed to fetch members',
+        }
       }
-    }
-  })
+    },
+  )
 
 /**
  * Create a new game room with voice channel and role
@@ -382,7 +480,10 @@ export const createRoom = createServerFn({ method: 'POST' })
         )
         console.log('[createRoom] Successfully assigned role to creator')
       } catch (roleError) {
-        console.error('[createRoom] Failed to assign role to creator:', roleError)
+        console.error(
+          '[createRoom] Failed to assign role to creator:',
+          roleError,
+        )
         // Don't fail room creation if role assignment fails - user can be moved via bot
       }
 
