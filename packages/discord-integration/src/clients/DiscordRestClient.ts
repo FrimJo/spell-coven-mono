@@ -207,6 +207,50 @@ export class DiscordRestClient {
   }
 
   /**
+   * Get all voice states for users in a specific voice channel
+   */
+  async getChannelVoiceStates(
+    guildId: string,
+    channelId: string,
+  ): Promise<APIVoiceState[]> {
+    // Fetch all guild members and filter by channel
+    let allVoiceStates: APIVoiceState[] = []
+    let after: string | undefined
+    let hasMore = true
+
+    while (hasMore) {
+      const members = await this.listGuildMembers(guildId, {
+        limit: 1000,
+        after,
+      })
+
+      if (members.length === 0) {
+        hasMore = false
+        break
+      }
+
+      // Filter members who have voice state and are in the target channel
+      for (const member of members) {
+        // Get voice state for this member
+        try {
+          const voiceState = await this.getVoiceState(guildId, member.user!.id)
+          if (voiceState.channel_id === channelId) {
+            allVoiceStates.push(voiceState)
+          }
+        } catch (error) {
+          // Skip members without voice state
+        }
+      }
+
+      // Pagination: set after to last member's ID for next request
+      after = members[members.length - 1]?.user?.id
+      hasMore = members.length === 1000 // Full page means there might be more
+    }
+
+    return allVoiceStates
+  }
+
+  /**
    * List guild members with optional query parameters
    * Can be used to get members with their voice states
    */

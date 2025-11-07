@@ -16,66 +16,9 @@ export interface SSEConnection {
   createdAt: number
 }
 
-/**
- * Voice state cache: channelId -> Map<userId, APIVoiceState>
- */
-class VoiceStateCache {
-  private cache = new Map<string, Map<string, APIVoiceState>>()
-
-  /**
-   * Update voice state for a user
-   */
-  update(voiceState: APIVoiceState): void {
-    if (!voiceState.channel_id) {
-      // User left - remove from all channels
-      for (const [channelId, users] of this.cache.entries()) {
-        users.delete(voiceState.user_id)
-        if (users.size === 0) {
-          this.cache.delete(channelId)
-        }
-      }
-      return
-    }
-
-    // User joined or updated - add/update in channel
-    if (!this.cache.has(voiceState.channel_id)) {
-      this.cache.set(voiceState.channel_id, new Map())
-    }
-    const channelUsers = this.cache.get(voiceState.channel_id)!
-    channelUsers.set(voiceState.user_id, voiceState)
-  }
-
-  /**
-   * Get all voice states for a channel
-   */
-  getChannelStates(channelId: string): APIVoiceState[] {
-    const channelUsers = this.cache.get(channelId)
-    if (!channelUsers) {
-      return []
-    }
-    return Array.from(channelUsers.values())
-  }
-
-  /**
-   * Get all channel IDs that have cached voice states
-   */
-  getAllChannels(): string[] {
-    return Array.from(this.cache.keys())
-  }
-
-  /**
-   * Clear all cached states (for testing/debugging)
-   */
-  clear(): void {
-    this.cache.clear()
-  }
-}
 
 class SSEManager {
   private connections = new Map<string, SSEConnection>()
-  private voiceStateCache = new VoiceStateCache()
-  private syncInterval: NodeJS.Timeout | null = null
-  private readonly SYNC_INTERVAL_MS = 30000 // 30 seconds
 
   /**
    * Register a new SSE connection
@@ -104,11 +47,6 @@ class SSEManager {
     const connectedUserIds = this.getConnectedUserIdsForGuild(guildId)
     this.broadcastUserConnectionStatus(guildId, Array.from(connectedUserIds))
 
-    // Start periodic sync if not already running
-    if (wasEmpty) {
-      this.startPeriodicSync()
-    }
-
     return connectionId
   }
 
@@ -130,10 +68,6 @@ class SSEManager {
         this.broadcastUserConnectionStatus(guildId, Array.from(connectedUserIds))
       }
 
-      // Stop periodic sync if no connections remain
-      if (this.connections.size === 0) {
-        this.stopPeriodicSync()
-      }
     }
   }
 
@@ -185,15 +119,6 @@ class SSEManager {
     event: GatewayDispatchEvents,
     payload: unknown,
   ): void {
-    // Track voice states for caching
-    if (event === 'VOICE_STATE_UPDATE') {
-      const voiceState = payload as APIVoiceState
-      this.voiceStateCache.update(voiceState)
-      console.log(
-        `[SSE] Updated voice state cache: user ${voiceState.user_id} in channel ${voiceState.channel_id}`,
-      )
-    }
-
     const message = `data: ${JSON.stringify({
       v: 1,
       type: 'discord.event',
@@ -207,36 +132,6 @@ class SSEManager {
     )
 
     this.sendToGuild(guildId, message)
-  }
-
-  /**
-   * Broadcast current voice states for a channel to all connections in the guild
-   * Called when a user connects to voice channel to sync initial state
-   * This ensures all clients see existing members when someone new joins
-   */
-  broadcastChannelVoiceStates(guildId: string, channelId: string): void {
-    const voiceStates = this.voiceStateCache.getChannelStates(channelId)
-    if (voiceStates.length === 0) {
-      return
-    }
-
-    console.log(
-      `[SSE] Broadcasting ${voiceStates.length} voice states for channel ${channelId} to guild ${guildId}`,
-    )
-
-    // Send each voice state as a separate event so clients can process them
-    // This syncs all existing members when someone new connects
-    for (const voiceState of voiceStates) {
-      const message = `data: ${JSON.stringify({
-        v: 1,
-        type: 'discord.event',
-        event: 'VOICE_STATE_UPDATE',
-        payload: voiceState,
-        ts: Date.now(),
-      })}\n\n`
-
-      this.sendToGuild(guildId, message)
-    }
   }
 
   /**
@@ -397,87 +292,6 @@ class SSEManager {
     )
   }
 
-  /**
-   * Start periodic sync of voice states to prevent drift
-   * Broadcasts cached voice states for all active channels every SYNC_INTERVAL_MS
-   */
-  private startPeriodicSync(): void {
-    if (this.syncInterval) {
-      return // Already running
-    }
-
-    console.log(
-      `[SSE] Starting periodic voice state sync (every ${this.SYNC_INTERVAL_MS}ms)`,
-    )
-
-    this.syncInterval = setInterval(() => {
-      this.syncAllVoiceStates()
-    }, this.SYNC_INTERVAL_MS)
-  }
-
-  /**
-   * Stop periodic sync
-   */
-  private stopPeriodicSync(): void {
-    if (this.syncInterval) {
-      clearInterval(this.syncInterval)
-      this.syncInterval = null
-      console.log('[SSE] Stopped periodic voice state sync')
-    }
-  }
-
-  /**
-   * Sync all voice states for all active channels
-   * Broadcasts cached states to prevent drift from missed events
-   */
-  private syncAllVoiceStates(): void {
-    if (this.connections.size === 0) {
-      return
-    }
-
-    // Get all unique guild IDs from active connections
-    const guildIds = new Set<string>()
-    for (const connection of this.connections.values()) {
-      guildIds.add(connection.guildId)
-    }
-
-    // Get all channels with cached voice states
-    const channelsWithStates = this.voiceStateCache.getAllChannels()
-
-    if (channelsWithStates.length === 0) {
-      return
-    }
-
-    console.log(
-      `[SSE] Periodic sync: broadcasting voice states for ${channelsWithStates.length} channels`,
-    )
-
-    // Broadcast voice states for each channel to its guild
-    for (const channelId of channelsWithStates) {
-      const voiceStates = this.voiceStateCache.getChannelStates(channelId)
-      if (voiceStates.length === 0) {
-        continue
-      }
-
-      // Find which guild this channel belongs to
-      // We'll broadcast to all guilds since we don't track channel->guild mapping
-      // This is safe because clients filter by channelId
-      for (const guildId of guildIds) {
-        for (const voiceState of voiceStates) {
-          const message = `data: ${JSON.stringify({
-            v: 1,
-            type: 'discord.event',
-            event: 'VOICE_STATE_UPDATE',
-            payload: voiceState,
-            ts: Date.now(),
-            sync: true, // Flag to indicate this is a sync event
-          })}\n\n`
-
-          this.sendToGuild(guildId, message)
-        }
-      }
-    }
-  }
 }
 
 // Singleton instance

@@ -5,17 +5,15 @@ import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
 import { JoinDiscordModal } from '@/components/JoinDiscordModal'
 import { env } from '@/env'
-import {
-  discordTokenQueryOptions,
-  useDiscordAuth,
-} from '@/hooks/useDiscordAuth'
-import { discordUserQueryOptions, useDiscordUser } from '@/hooks/useDiscordUser'
+import { discordTokenQueryOptions } from '@/hooks/useDiscordAuth'
+import { discordUserQueryOptions } from '@/hooks/useDiscordUser'
 import { sessionStorage } from '@/lib/session-storage'
 import {
-  assignRoleToUser,
   checkRoomExists,
+  ensureUserHasRole,
   ensureUserInGuild,
   ensureUserInVoiceChannel,
+  getInitialVoiceChannelMembers,
 } from '@/server/handlers/discord-rooms.server'
 import {
   createFileRoute,
@@ -42,6 +40,21 @@ const gameSearchSchema = z.object({
     .describe('Enable perspective correction (corner refinement + warp)'),
 })
 
+type GameLoaderData =
+  | {
+      isAuthenticated: false
+      voiceChannelStatus: { inChannel: false }
+      initialMembers: never[]
+      username: undefined
+    }
+  | {
+      isAuthenticated: true
+      voiceChannelStatus: { inChannel: boolean }
+      userId: string
+      username: string
+      gameId: string
+    }
+
 export const Route = createFileRoute('/game/$gameId')({
   beforeLoad: async ({ params }) => {
     const { gameId } = params
@@ -57,12 +70,44 @@ export const Route = createFileRoute('/game/$gameId')({
       })
     }
 
+    // Validate roleId exists - required for voice channel access
+    if (!result.roleId) {
+      console.error(
+        '[Game] Room has no roleId - cannot grant voice channel access',
+      )
+      throw redirect({
+        to: '/',
+        search: {
+          error: 'Game room is misconfigured - missing role permissions',
+        },
+      })
+    }
+
+    // VALIDATION STEP 2: Fetch initial voice channel members
+    const { members: initialMembers, error } =
+      await getInitialVoiceChannelMembers({
+        data: { channelId: gameId },
+      })
+
+    // Validate roleId exists - required for voice channel access
+    if (error) {
+      console.error(
+        '[Game] Error fetching initial voice channel members:',
+        error,
+      )
+      throw redirect({
+        to: '/',
+        search: { error },
+      })
+    }
+
     return {
-      roomName: result.channelName || 'Game Room',
+      roomName: result.channelName,
       roleId: result.roleId,
+      initialMembers: initialMembers,
     }
   },
-  loader: async ({ params, context }) => {
+  loader: async ({ params, context }): Promise<GameLoaderData> => {
     const { gameId } = params
     let user, token
     try {
@@ -76,60 +121,77 @@ export const Route = createFileRoute('/game/$gameId')({
         discordUserQueryOptions(token.accessToken),
       )
     } catch (error) {
+      console.error('[Game] Error fetching user:', error)
       return {
         isAuthenticated: false,
         voiceChannelStatus: {
           inChannel: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
         },
         initialMembers: [],
         username: undefined, // No username when not authenticated
       }
     }
 
-    const { error: inGuildError } = await ensureUserInGuild({
+    // Ensure user is in guild
+    const guildResult = await ensureUserInGuild({
       data: { userId: user.id, accessToken: token.accessToken },
     })
 
-    if (inGuildError) {
-      console.error('[Game] Error ensuring user in guild:', inGuildError)
+    if (!guildResult.success) {
+      console.error('[Game] Error ensuring user in guild:', guildResult.error)
       throw redirect({
         to: '/',
-        search: { error: inGuildError || 'Failed to ensure user in guild' },
+        search: {
+          error: guildResult.error || 'Failed to ensure user in guild',
+        },
       })
+    } else if (guildResult.alreadyPresent) {
+      console.log('[Game] User was already in guild')
+    } else {
+      console.log('[Game] User was added to guild')
     }
 
-    // Get roleId from room check (already validated in beforeLoad, but we need roleId here)
-    const roomCheck = await checkRoomExists({ data: { channelId: gameId } })
-    const roleId = roomCheck.exists ? roomCheck.roleId : undefined
+    const roleResult = await ensureUserHasRole({
+      data: { userId: user.id, roleId: context.roleId },
+    })
 
-    // Assign role to user if roleId is available
-    if (roleId) {
-      console.log('[Game] Assigning role to user:', { userId: user.id, roleId })
-      const roleResult = await assignRoleToUser({
-        data: { userId: user.id, roleId },
+    if (!roleResult.success) {
+      console.error('[Game] Failed to ensure user has role:', roleResult.error)
+      throw redirect({
+        to: '/',
+        search: {
+          error: roleResult.error || 'Failed to grant voice channel access',
+        },
       })
-      if (!roleResult.success) {
-        console.warn(
-          '[Game] Failed to assign role (non-fatal):',
-          roleResult.error,
-        )
-        // Don't fail - user might already have the role or bot might not have permission
-      }
+    } else if (roleResult.alreadyPresent) {
+      console.log('[Game] User already had role')
+    } else {
+      console.log('[Game] Successfully assigned role to user')
     }
 
-    const { inChannel, error: inChannelError } = await ensureUserInVoiceChannel(
-      {
-        data: { userId: user.id, targetChannelId: gameId },
-      },
-    )
+    // Ensure user is in voice channel
+    const voiceChannelResult = await ensureUserInVoiceChannel({
+      data: { userId: user.id, targetChannelId: gameId },
+    })
+
+    if (!voiceChannelResult.success) {
+      console.warn(
+        '[Game] User is not in target voice channel:',
+        voiceChannelResult.error,
+      )
+      // Don't fail - user might join manually or bot will move them
+    } else if (voiceChannelResult.alreadyPresent) {
+      console.log('[Game] User is already in target voice channel')
+    } else {
+      console.log('[Game] User is in a different voice channel')
+    }
+
     return {
       isAuthenticated: true,
       voiceChannelStatus: {
-        inChannel,
-        error: inChannelError,
+        inChannel:
+          voiceChannelResult.success && voiceChannelResult.alreadyPresent,
       },
-      initialMembers: [],
       userId: user.id,
       username: user.username, // Discord username - required for authenticated users
       gameId, // Pass gameId for GameRoom to use
@@ -145,9 +207,9 @@ export const Route = createFileRoute('/game/$gameId')({
 function GameRoomRoute() {
   const { gameId } = Route.useParams()
   const loaderData = Route.useLoaderData()
+  const { initialMembers } = Route.useRouteContext()
   const { detector, usePerspectiveWarp } = Route.useSearch()
   const navigate = useNavigate()
-  const { token: discordToken } = useDiscordAuth()
   const guildId = env.VITE_DISCORD_GUILD_ID
   const [showAuthModal, setShowAuthModal] = useState(
     !loaderData.isAuthenticated,
@@ -156,13 +218,10 @@ function GameRoomRoute() {
     loaderData.isAuthenticated && !loaderData.voiceChannelStatus.inChannel,
   )
 
-  // Get Discord user for username (fallback if loader data doesn't have it)
-  const { user: discordUser } = useDiscordUser()
-  
-  // Use Discord username from loader or hook - never fallback to 'Guest' for authenticated users
-  const playerName = loaderData.isAuthenticated
-    ? (loaderData.username || discordUser?.username || 'User')
-    : (sessionStorage.loadGameState()?.playerName ?? 'Guest')
+  const gameRoomConfig =
+    !showAuthModal && !showJoinDiscordModal && loaderData.isAuthenticated
+      ? ({ showGameRoom: true, playerName: loaderData.username } as const)
+      : ({ showGameRoom: false, playerName: null } as const)
 
   const handleProceedToGame = useCallback(() => {
     setShowJoinDiscordModal(false)
@@ -173,13 +232,24 @@ function GameRoomRoute() {
     navigate({ to: '/' })
   }
 
-  // VALIDATION STEP 2: Show auth modal if not authenticated
-  if (!discordToken) {
+  if (showAuthModal) {
     return (
       <DiscordAuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         returnUrl={`/game/${gameId}`}
+      />
+    )
+  }
+
+  if (showJoinDiscordModal) {
+    return (
+      <JoinDiscordModal
+        open={showJoinDiscordModal}
+        onOpenChange={setShowJoinDiscordModal}
+        discordUrl={`https://discord.com/channels/${guildId}/${gameId}`}
+        onProceedToGame={handleProceedToGame}
+        title="🎮 Game Room Ready!"
       />
     )
   }
@@ -192,7 +262,7 @@ function GameRoomRoute() {
       onReset={() => window.location.reload()}
     >
       {/* Only render GameRoom if user is in voice channel (modal is closed) */}
-      {!showJoinDiscordModal && (
+      {gameRoomConfig.showGameRoom && (
         <Suspense
           fallback={
             <div className="flex h-screen items-center justify-center">
@@ -202,23 +272,14 @@ function GameRoomRoute() {
         >
           <GameRoom
             gameId={gameId}
-            playerName={playerName}
+            playerName={gameRoomConfig.playerName}
             onLeaveGame={handleLeaveGame}
             detectorType={detector as DetectorType | undefined}
             usePerspectiveWarp={usePerspectiveWarp}
-            initialMembers={loaderData.initialMembers}
+            initialMembers={initialMembers}
           />
         </Suspense>
       )}
-
-      {/* Join Discord Modal - shown when user is not in voice channel */}
-      <JoinDiscordModal
-        open={showJoinDiscordModal}
-        onOpenChange={setShowJoinDiscordModal}
-        discordUrl={`https://discord.com/channels/${guildId}/${gameId}`}
-        onProceedToGame={handleProceedToGame}
-        title="🎮 Game Room Ready!"
-      />
     </ErrorBoundary>
   )
 }
