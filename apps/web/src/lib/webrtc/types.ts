@@ -17,7 +17,7 @@ export type PeerConnectionState =
 /**
  * Signaling message type
  */
-export type SignalingMessageType = 'offer' | 'answer' | 'ice-candidate'
+export type SignalingMessageType = 'offer' | 'answer' | 'ice-candidate' | 'track-state'
 
 /**
  * Peer connection configuration

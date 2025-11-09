@@ -187,9 +187,47 @@ export function useWebRTCSignaling({
     [roomId, localPlayerId, sendSignalingMessageFn],
   )
 
+  /**
+   * Send track state change to target player (or broadcast to all if no target)
+   */
+  const sendTrackState = useCallback(
+    async (kind: 'video' | 'audio', enabled: boolean, to?: string): Promise<void> => {
+      // If no target specified, we'll need to broadcast to all players
+      // For now, require explicit target
+      if (!to) {
+        throw new Error('Target player ID required for track state message')
+      }
+
+      const result = await sendSignalingMessageFn({
+        data: {
+          roomId,
+          from: localPlayerId,
+          to,
+          message: {
+            type: 'track-state',
+            payload: {
+              kind,
+              enabled,
+            },
+          },
+        },
+      })
+
+      if (!result.success) {
+        console.error(
+          `[WebRTC Signaling] Failed to send track state to ${to}:`,
+          result.error,
+        )
+        throw new Error(result.error || 'Failed to send track state')
+      }
+    },
+    [roomId, localPlayerId, sendSignalingMessageFn],
+  )
+
   return {
     sendOffer,
     sendAnswer,
     sendIceCandidate,
+    sendTrackState,
   }
 }

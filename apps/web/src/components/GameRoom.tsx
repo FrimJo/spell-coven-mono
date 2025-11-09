@@ -102,6 +102,7 @@ function GameRoomContent({
     localStream,
     remoteStreams,
     connectionStates,
+    peerConnections,
     startVideo,
     stopVideo,
     toggleVideo: toggleWebRTCVideo,
@@ -109,6 +110,7 @@ function GameRoomContent({
     switchCamera,
     isVideoActive: isWebRTCVideoActive,
     isAudioMuted: isWebRTCAudioMuted,
+    isVideoEnabled: isWebRTCVideoEnabled,
   } = useWebRTC({
     roomId: roomId,
     localPlayerId: userId,
@@ -433,8 +435,11 @@ function GameRoomContent({
               }}
               remoteStreams={remoteStreams}
               connectionStates={connectionStates}
+              peerConnections={peerConnections}
               onLocalVideoStart={startVideo}
               onLocalVideoStop={stopVideo}
+              onToggleVideo={toggleWebRTCVideo}
+              isWebRTCVideoActive={isWebRTCVideoEnabled}
             />
           </div>
         </div>

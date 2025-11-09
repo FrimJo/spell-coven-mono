@@ -28,6 +28,11 @@ interface Player {
   name: string
 }
 
+interface PeerConnectionData {
+  videoEnabled: boolean
+  audioEnabled: boolean
+}
+
 interface VideoStreamGridProps {
   players: Player[]
   localPlayerName: string
@@ -43,10 +48,16 @@ interface VideoStreamGridProps {
   remoteStreams?: Map<string, MediaStream | null>
   /** Connection states from WebRTC (player ID -> PeerConnectionState) */
   connectionStates?: Map<string, PeerConnectionState>
+  /** Peer connection data with track states (player ID -> data) */
+  peerConnections?: Map<string, PeerConnectionData>
   /** Callback when local video starts (for WebRTC integration) */
   onLocalVideoStart?: () => Promise<void>
   /** Callback when local video stops (for WebRTC integration) */
   onLocalVideoStop?: () => void
+  /** Callback to toggle video track enabled/disabled (for WebRTC integration) */
+  onToggleVideo?: () => void
+  /** Whether WebRTC video is active (track enabled) */
+  isWebRTCVideoActive?: boolean
 }
 
 interface StreamState {
@@ -63,8 +74,11 @@ export function VideoStreamGrid({
   onCardCrop,
   remoteStreams = new Map(),
   connectionStates = new Map(),
+  peerConnections = new Map(),
   onLocalVideoStart,
   onLocalVideoStop,
+  onToggleVideo,
+  isWebRTCVideoActive = true,
 }: VideoStreamGridProps) {
   // Initialize webcam with card detection
   const {
@@ -290,11 +304,14 @@ export function VideoStreamGrid({
         const state = streamStates[player.id] || { video: true, audio: true }
         const remoteStream = remoteStreams.get(player.id)
         const connectionState = connectionStates.get(player.id)
+        const peerData = peerConnections.get(player.id)
 
-        // For local player, video is enabled if video is active
-        // For remote players, use UI state and check if stream is available
-        const videoEnabled = isLocal ? isVideoActive : state.video && !!remoteStream
-        const audioEnabled = isLocal ? true : state.audio
+        // For local player, video is enabled based on WebRTC track state (after initial start)
+        // For remote players, use track state from peer connection if available, otherwise fall back to streamStates
+        const videoEnabled = isLocal 
+          ? (hasStartedVideo ? isWebRTCVideoActive : isVideoActive)
+          : (peerData?.videoEnabled ?? state.video) && !!remoteStream
+        const audioEnabled = isLocal ? true : (peerData?.audioEnabled ?? state.audio)
 
         // Check if remote video is actually playing (for hiding placeholder)
         const isRemoteVideoPlaying =
@@ -525,15 +542,15 @@ export function VideoStreamGrid({
                     data-testid="video-toggle-button"
                     size="sm"
                     variant={
-                      isVideoActive || !hasStartedVideo
+                      (hasStartedVideo ? isWebRTCVideoActive : isVideoActive) || !hasStartedVideo
                         ? 'outline'
                         : 'destructive'
                     }
                     onClick={async () => {
-                      if (!isVideoActive) {
+                      if (!hasStartedVideo) {
+                        // First time: start video and WebRTC
                         await startVideo()
                         setHasStartedVideo(true)
-                        // Also start WebRTC connections if callback provided
                         if (onLocalVideoStart) {
                           try {
                             await onLocalVideoStart()
@@ -545,20 +562,19 @@ export function VideoStreamGrid({
                           }
                         }
                       } else {
-                        stopVideo()
-                        // Stop WebRTC connections if callback provided
-                        if (onLocalVideoStop) {
-                          onLocalVideoStop()
+                        // After first start: just toggle the track enabled state
+                        if (onToggleVideo) {
+                          onToggleVideo()
                         }
                       }
                     }}
                     className={`h-10 w-10 p-0 ${
-                      isVideoActive || !hasStartedVideo
+                      (hasStartedVideo ? isWebRTCVideoActive : isVideoActive) || !hasStartedVideo
                         ? 'border-slate-700 text-white hover:bg-slate-800'
                         : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
                     }`}
                   >
-                    {isVideoActive ? (
+                    {(hasStartedVideo ? isWebRTCVideoActive : isVideoActive) ? (
                       <Video className="h-5 w-5" />
                     ) : (
                       <VideoOff className="h-5 w-5" />

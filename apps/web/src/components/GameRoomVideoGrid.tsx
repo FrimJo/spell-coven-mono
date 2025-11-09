@@ -6,6 +6,11 @@ import { Loader2 } from 'lucide-react'
 
 import { VideoStreamGrid } from './VideoStreamGrid'
 
+interface PeerConnectionData {
+  videoEnabled: boolean
+  audioEnabled: boolean
+}
+
 interface GameRoomVideoGridProps {
   roomId: string
   userId: string
@@ -15,8 +20,11 @@ interface GameRoomVideoGridProps {
   onCardCrop: (canvas: HTMLCanvasElement) => void
   remoteStreams: Map<string, MediaStream | null>
   connectionStates: Map<string, PeerConnectionState>
+  peerConnections: Map<string, PeerConnectionData>
   onLocalVideoStart: () => Promise<void>
   onLocalVideoStop: () => void
+  onToggleVideo: () => void
+  isWebRTCVideoActive: boolean
 }
 
 function VideoGridContent({
@@ -28,8 +36,11 @@ function VideoGridContent({
   onCardCrop,
   remoteStreams,
   connectionStates,
+  peerConnections,
   onLocalVideoStart,
   onLocalVideoStop,
+  onToggleVideo,
+  isWebRTCVideoActive,
 }: GameRoomVideoGridProps) {
   const { members: voiceChannelMembers } = useVoiceChannelMembersFromEvents({
     gameId: roomId,
@@ -49,8 +60,11 @@ function VideoGridContent({
       onCardCrop={onCardCrop}
       remoteStreams={remoteStreams}
       connectionStates={connectionStates}
+      peerConnections={peerConnections}
       onLocalVideoStart={onLocalVideoStart}
       onLocalVideoStop={onLocalVideoStop}
+      onToggleVideo={onToggleVideo}
+      isWebRTCVideoActive={isWebRTCVideoActive}
     />
   )
 }

@@ -6,6 +6,7 @@
 import type { SignalingMessageSSE } from '@/lib/webrtc/signaling'
 import type { PeerConnectionState } from '@/lib/webrtc/types'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { isTrackStatePayload } from '@/lib/webrtc/signaling'
 import { PeerConnectionManager } from '@/lib/webrtc/peer-connection'
 import {
   createPeerConnectionWithCallbacks,
@@ -26,6 +27,8 @@ interface PeerConnectionData {
   manager: PeerConnectionManager
   state: PeerConnectionState
   remoteStream: MediaStream | null
+  videoEnabled: boolean
+  audioEnabled: boolean
 }
 
 interface UseWebRTCReturn {
@@ -51,6 +54,8 @@ interface UseWebRTCReturn {
   isVideoActive: boolean
   /** Whether local audio is muted */
   isAudioMuted: boolean
+  /** Whether local video track is enabled */
+  isVideoEnabled: boolean
 }
 
 /**
@@ -67,6 +72,7 @@ export function useWebRTC({
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [isVideoActive, setIsVideoActive] = useState(false)
   const [isAudioMuted, setIsAudioMuted] = useState(false)
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true)
 
   const peerConnectionsRef = useRef<Map<string, PeerConnectionData>>(new Map())
   const localStreamRef = useRef<MediaStream | null>(null)
@@ -188,6 +194,8 @@ export function useWebRTC({
           manager,
           state: initialState,
           remoteStream: null,
+          videoEnabled: true,
+          audioEnabled: true,
         }
 
         peerConnectionsRef.current.set(message.from, newConnectionData)
@@ -250,13 +258,41 @@ export function useWebRTC({
               console.error('[WebRTC] Failed to handle ICE candidate:', error)
             })
         }
+      } else if (message.message.type === 'track-state') {
+        // Handle incoming track state change
+        const payload = message.message.payload
+        if (isTrackStatePayload(payload)) {
+          console.log(
+            `[WebRTC] Received track-state from ${message.from}:`,
+            payload,
+          )
+          setPeerConnections((current) => {
+            const updated = new Map(current)
+            const existing = updated.get(message.from)
+            if (existing) {
+              updated.set(message.from, {
+                ...existing,
+                videoEnabled: payload.kind === 'video' ? payload.enabled : existing.videoEnabled,
+                audioEnabled: payload.kind === 'audio' ? payload.enabled : existing.audioEnabled,
+              })
+              console.log(
+                `[WebRTC] Updated peer ${message.from} track state:`,
+                {
+                  videoEnabled: payload.kind === 'video' ? payload.enabled : existing.videoEnabled,
+                  audioEnabled: payload.kind === 'audio' ? payload.enabled : existing.audioEnabled,
+                },
+              )
+            }
+            return updated
+          })
+        }
       }
     },
     [localPlayerId, roomId, playerIds],
   )
 
   // Setup signaling hook with callback
-  const { sendOffer, sendAnswer, sendIceCandidate } = useWebRTCSignaling({
+  const { sendOffer, sendAnswer, sendIceCandidate, sendTrackState } = useWebRTCSignaling({
     roomId,
     localPlayerId,
     onSignalingMessage: handleSignalingMessage,
@@ -412,6 +448,8 @@ export function useWebRTC({
           manager,
           state: initialState,
           remoteStream: null,
+          videoEnabled: true,
+          audioEnabled: true,
         })
       }
 
@@ -488,13 +526,38 @@ export function useWebRTC({
     const videoTracks = localStreamRef.current.getVideoTracks()
     const enabled = !videoTracks[0]?.enabled
 
+    console.log(`[WebRTC] Toggling video: ${enabled ? 'ON' : 'OFF'}`)
+
     videoTracks.forEach((track) => {
       track.enabled = enabled
     })
 
+    // Update local state
+    setIsVideoEnabled(enabled)
+
+    // Broadcast track state change to all connected peers
+    const connectedPeers = Array.from(peerConnectionsRef.current.entries())
+      .filter(([, data]) => data.state === 'connected')
+    
+    console.log(
+      `[WebRTC] Broadcasting track state to ${connectedPeers.length} connected peers`,
+      connectedPeers.map(([id]) => id),
+    )
+
+    for (const [playerId, connectionData] of peerConnectionsRef.current) {
+      if (connectionData.state === 'connected') {
+        sendTrackState('video', enabled, playerId).catch((error) => {
+          console.error(
+            `[WebRTC] Failed to send video track state to ${playerId}:`,
+            error,
+          )
+        })
+      }
+    }
+
     // Note: This doesn't stop the stream, just disables video tracks
     // The UI will show "video off" when tracks are disabled
-  }, [])
+  }, [sendTrackState])
 
   /**
    * Toggle audio muted/unmuted
@@ -705,6 +768,8 @@ export function useWebRTC({
             manager,
             state: initialState,
             remoteStream: null,
+            videoEnabled: true,
+            audioEnabled: true,
           })
           changed = true
         }
@@ -749,5 +814,6 @@ export function useWebRTC({
     switchCamera,
     isVideoActive,
     isAudioMuted,
+    isVideoEnabled,
   }
 }
