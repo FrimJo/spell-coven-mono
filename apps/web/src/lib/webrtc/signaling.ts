@@ -24,9 +24,17 @@ export interface IceCandidatePayload {
 }
 
 /**
+ * Signaling payload for track state changes (video/audio enabled/disabled)
+ */
+export interface TrackStatePayload {
+  kind: 'video' | 'audio'
+  enabled: boolean
+}
+
+/**
  * Union type for all signaling payloads
  */
-export type SignalingPayload = SDPPayload | IceCandidatePayload
+export type SignalingPayload = SDPPayload | IceCandidatePayload | TrackStatePayload
 
 /**
  * Signaling message structure (client → server)
@@ -71,9 +79,21 @@ export const IceCandidatePayloadSchema = z.object({
 })
 
 /**
- * Zod schema for signaling payload (union of SDP and ICE candidate)
+ * Zod schema for track state payload
  */
-export const SignalingPayloadSchema = z.union([SDPPayloadSchema, IceCandidatePayloadSchema])
+export const TrackStatePayloadSchema = z.object({
+  kind: z.enum(['video', 'audio']),
+  enabled: z.boolean(),
+})
+
+/**
+ * Zod schema for signaling payload (union of SDP, ICE candidate, and track state)
+ */
+export const SignalingPayloadSchema = z.union([
+  SDPPayloadSchema,
+  IceCandidatePayloadSchema,
+  TrackStatePayloadSchema,
+])
 
 /**
  * Zod schema for signaling message request
@@ -83,7 +103,7 @@ export const SignalingMessageRequestSchema = z.object({
   from: z.string().min(1, 'Sender ID must not be empty'),
   to: z.string().min(1, 'Target ID must not be empty'),
   message: z.object({
-    type: z.enum(['offer', 'answer', 'ice-candidate']),
+    type: z.enum(['offer', 'answer', 'ice-candidate', 'track-state']),
     payload: SignalingPayloadSchema,
   }),
 })
@@ -104,5 +124,14 @@ export function isIceCandidatePayload(
   payload: SignalingPayload,
 ): payload is IceCandidatePayload {
   return IceCandidatePayloadSchema.safeParse(payload).success
+}
+
+/**
+ * Type guard for track state payload
+ */
+export function isTrackStatePayload(
+  payload: SignalingPayload,
+): payload is TrackStatePayload {
+  return TrackStatePayloadSchema.safeParse(payload).success
 }
 
