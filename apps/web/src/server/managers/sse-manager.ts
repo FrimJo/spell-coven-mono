@@ -4,10 +4,7 @@
  * Manages active SSE connections and broadcasts events to clients
  */
 
-import type {
-  APIVoiceState,
-  GatewayDispatchEvents,
-} from '@repo/discord-integration/types'
+import type { GatewayDispatchEvents } from '@repo/discord-integration/types'
 
 export interface SSEConnection {
   userId: string
@@ -15,7 +12,6 @@ export interface SSEConnection {
   controller: ReadableStreamDefaultController<Uint8Array>
   createdAt: number
 }
-
 
 class SSEManager {
   private connections = new Map<string, SSEConnection>()
@@ -29,8 +25,7 @@ class SSEManager {
     controller: ReadableStreamDefaultController<Uint8Array>,
   ): string {
     const connectionId = `${userId}-${Date.now()}`
-    const wasEmpty = this.connections.size === 0
-    
+
     this.connections.set(connectionId, {
       userId,
       guildId,
@@ -58,16 +53,18 @@ class SSEManager {
       const connection = this.connections.get(connectionId)
       const userId = connection?.userId
       const guildId = connection?.guildId
-      
+
       console.log(`[SSE] Removing connection for user ${userId}`)
       this.connections.delete(connectionId)
 
       // Broadcast updated connection status to remaining connections
       if (guildId) {
         const connectedUserIds = this.getConnectedUserIdsForGuild(guildId)
-        this.broadcastUserConnectionStatus(guildId, Array.from(connectedUserIds))
+        this.broadcastUserConnectionStatus(
+          guildId,
+          Array.from(connectedUserIds),
+        )
       }
-
     }
   }
 
@@ -286,12 +283,11 @@ class SSEManager {
     })}\n\n`
 
     this.sendToGuild(guildId, message)
-    
+
     console.log(
       `[SSE] Broadcasted connection status: ${connectedUserIds.length} users online in guild ${guildId}`,
     )
   }
-
 }
 
 // Singleton instance

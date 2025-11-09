@@ -1,8 +1,9 @@
 /**
- * WebRTC Signaling Types
- * Type definitions for signaling messages exchanged via SSE + createServerFn
+ * WebRTC Signaling Types & Schemas
+ * Type definitions and Zod schemas for signaling messages exchanged via SSE + createServerFn
  */
 
+import { z } from 'zod'
 import type { SignalingMessageType } from './types'
 
 /**
@@ -53,12 +54,47 @@ export interface SignalingMessageSSE {
 }
 
 /**
+ * Zod schema for SDP payload (offer/answer)
+ */
+export const SDPPayloadSchema = z.object({
+  type: z.enum(['offer', 'answer']),
+  sdp: z.string().min(1, 'SDP must not be empty'),
+})
+
+/**
+ * Zod schema for ICE candidate payload
+ */
+export const IceCandidatePayloadSchema = z.object({
+  candidate: z.string().min(1, 'Candidate must not be empty'),
+  sdpMLineIndex: z.number().int().nullable(),
+  sdpMid: z.string().nullable(),
+})
+
+/**
+ * Zod schema for signaling payload (union of SDP and ICE candidate)
+ */
+export const SignalingPayloadSchema = z.union([SDPPayloadSchema, IceCandidatePayloadSchema])
+
+/**
+ * Zod schema for signaling message request
+ */
+export const SignalingMessageRequestSchema = z.object({
+  roomId: z.string().min(1, 'Room ID must not be empty'),
+  from: z.string().min(1, 'Sender ID must not be empty'),
+  to: z.string().min(1, 'Target ID must not be empty'),
+  message: z.object({
+    type: z.enum(['offer', 'answer', 'ice-candidate']),
+    payload: SignalingPayloadSchema,
+  }),
+})
+
+/**
  * Type guard for SDP payload
  */
 export function isSDPPayload(
   payload: SignalingPayload,
 ): payload is SDPPayload {
-  return 'sdp' in payload && ('type' in payload && (payload.type === 'offer' || payload.type === 'answer'))
+  return SDPPayloadSchema.safeParse(payload).success
 }
 
 /**
@@ -67,6 +103,6 @@ export function isSDPPayload(
 export function isIceCandidatePayload(
   payload: SignalingPayload,
 ): payload is IceCandidatePayload {
-  return 'candidate' in payload && 'sdpMLineIndex' in payload
+  return IceCandidatePayloadSchema.safeParse(payload).success
 }
 

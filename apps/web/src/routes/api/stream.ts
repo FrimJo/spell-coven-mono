@@ -1,5 +1,3 @@
-import { z } from 'zod'
-
 import { env } from '@/env'
 import { createFileRoute } from '@tanstack/react-router'
 
@@ -23,22 +21,17 @@ function encodeSSE(data: string): Uint8Array {
 }
 
 export const Route = createFileRoute('/api/stream')({
-  validateSearch: z.object({
-    userId: z.string().optional(), // Discord user ID from client
-  }),
   server: {
     handlers: {
-      GET: async ({ search, request }) => {
-        console.log('[SSE] Request received with search params:', search)
+      GET: async ({ request }) => {
         console.log('[SSE] Request URL:', request.url)
-        
-        // Parse query params manually if validateSearch didn't work
+
+        // Parse query params from request URL
         const url = new URL(request.url)
-        const userIdParam = url.searchParams.get('userId') || search?.userId
-        
+        const userIdParam = url.searchParams.get('userId')
+
         console.log('[SSE] Parsed userId from URL:', userIdParam)
-        console.log('[SSE] Search object:', search)
-        
+
         try {
           // TODO: Verify session from cookie and get user ID from session
           // For now, accept userId from query parameter (temporary)
@@ -48,17 +41,16 @@ export const Route = createFileRoute('/api/stream')({
           if (!userIdParam) {
             console.error('[SSE] REJECTED: No userId in request', {
               urlSearchParams: url.searchParams.get('userId'),
-              searchParam: search?.userId,
             })
             return new Response(
               JSON.stringify({ error: 'userId query parameter is required' }),
-              { 
+              {
                 status: 400,
-                headers: { 'Content-Type': 'application/json' }
-              }
+                headers: { 'Content-Type': 'application/json' },
+              },
             )
           }
-          
+
           const userId = userIdParam
           const guildId = env.VITE_DISCORD_GUILD_ID
 
@@ -123,10 +115,13 @@ export const Route = createFileRoute('/api/stream')({
           })
         } catch (error) {
           console.error('[SSE] Unexpected error:', error)
-          console.error('[SSE] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+          console.error(
+            '[SSE] Error stack:',
+            error instanceof Error ? error.stack : 'No stack trace',
+          )
           return new Response(
-            `Internal Server Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 
-            { status: 500 }
+            `Internal Server Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            { status: 500 },
           )
         }
       },

@@ -3,48 +3,11 @@
  * Handles routing of WebRTC signaling messages between players via SSE
  */
 
+import type { SignalingMessageRequest } from '@/lib/webrtc/signaling.js'
+import { SignalingMessageRequestSchema } from '@/lib/webrtc/signaling.js'
 import { createServerFn } from '@tanstack/react-start'
-import { z } from 'zod'
 
 import { sseManager } from '../managers/sse-manager.js'
-import type {
-  IceCandidatePayload,
-  SDPPayload,
-  SignalingMessageRequest,
-} from '@/lib/webrtc/signaling.js'
-import {
-  isIceCandidatePayload,
-  isSDPPayload,
-} from '@/lib/webrtc/signaling.js'
-
-/**
- * Validation schema for signaling message request
- */
-const SignalingMessageRequestSchema = z.object({
-  roomId: z.string().min(1),
-  from: z.string().min(1), // Sender's player ID
-  to: z.string().min(1), // Target player ID
-  message: z.object({
-    type: z.enum(['offer', 'answer', 'ice-candidate']),
-    payload: z.unknown(),
-  }),
-})
-
-/**
- * Validate signaling payload based on message type
- */
-function validateSignalingPayload(
-  type: 'offer' | 'answer' | 'ice-candidate',
-  payload: unknown,
-): payload is SDPPayload | IceCandidatePayload {
-  if (type === 'offer' || type === 'answer') {
-    return isSDPPayload(payload as SDPPayload)
-  }
-  if (type === 'ice-candidate') {
-    return isIceCandidatePayload(payload as IceCandidatePayload)
-  }
-  return false
-}
 
 /**
  * Send WebRTC signaling message to target player
@@ -67,14 +30,6 @@ export const sendSignalingMessage = createServerFn({ method: 'POST' })
         return {
           success: false,
           error: 'Cannot send signaling message to self',
-        }
-      }
-
-      // Validate payload structure matches message type
-      if (!validateSignalingPayload(message.type, message.payload)) {
-        return {
-          success: false,
-          error: `Invalid payload structure for message type: ${message.type}`,
         }
       }
 
@@ -121,9 +76,7 @@ export const sendSignalingMessage = createServerFn({ method: 'POST' })
       console.error('[WebRTC Signaling] Error routing message:', error)
       return {
         success: false,
-        error:
-          error instanceof Error ? error.message : 'Internal server error',
+        error: error instanceof Error ? error.message : 'Internal server error',
       }
     }
   })
-

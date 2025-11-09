@@ -80,20 +80,20 @@ class VoiceChannelSSEManager {
 
   setUserId(userId: string | undefined): void {
     const newUserId = userId || null
-    
+
     // If userId hasn't changed, don't do anything
     if (this.userId === newUserId) {
       return
     }
-    
+
     console.log('[VoiceChannelEvents] Setting userId:', {
       oldUserId: this.userId,
       newUserId,
       isConnected: this.eventSource?.readyState === EventSource.OPEN,
     })
-    
+
     this.userId = newUserId
-    
+
     // If we're already connected with a different userId, reconnect with the new one
     if (newUserId && this.eventSource?.readyState === EventSource.OPEN) {
       console.log('[VoiceChannelEvents] Reconnecting with new userId')
@@ -129,7 +129,7 @@ class VoiceChannelSSEManager {
       )
       return
     }
-    
+
     if (!this.userId) {
       console.log(
         '[VoiceChannelEvents] No userId available, skipping connection attempt',
@@ -216,14 +216,17 @@ class VoiceChannelSSEManager {
           }
 
           // Handle custom events (including connection status)
-          if (isSSECustomEventMessage(message) && message.event === 'users.connection_status') {
-            const payload = message.payload as { connectedUserIds: string[] }
+          if (
+            isSSECustomEventMessage(message) &&
+            message.event === 'users.connection_status'
+          ) {
+            const payload = message.payload
             console.log(
               `[VoiceChannelEvents] Users connection status received:`,
               {
                 count: payload.connectedUserIds.length,
                 userIds: payload.connectedUserIds,
-                timestamp: payload.timestamp || Date.now(),
+                timestamp: payload.timestamp,
               },
             )
             // Broadcast connection status to all listeners

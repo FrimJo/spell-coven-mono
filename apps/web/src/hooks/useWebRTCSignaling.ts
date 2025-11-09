@@ -3,30 +3,25 @@
  * Handles sending and receiving WebRTC signaling messages via SSE + createServerFn
  */
 
-import { useCallback, useEffect, useRef } from 'react'
-import { useServerFn } from '@tanstack/react-start'
-
-import { sendSignalingMessage } from '@/server/handlers/webrtc-signaling.server'
 import type {
   IceCandidatePayload,
   SDPPayload,
   SignalingMessageSSE,
 } from '@/lib/webrtc/signaling'
-import {
-  isIceCandidatePayload,
-  isSDPPayload,
-} from '@/lib/webrtc/signaling'
+import { useCallback, useEffect, useRef } from 'react'
+import { isIceCandidatePayload, isSDPPayload } from '@/lib/webrtc/signaling'
+import { isSelfConnection } from '@/lib/webrtc/utils'
+import { sendSignalingMessage } from '@/server/handlers/webrtc-signaling.server'
 import {
   isSSEWebRTCSignalingMessage,
   SSEMessageSchema,
 } from '@/types/sse-messages'
-import { isSelfConnection } from '@/lib/webrtc/utils'
+import { useServerFn } from '@tanstack/react-start'
 
 interface UseWebRTCSignalingOptions {
   roomId: string
   localPlayerId: string
   onSignalingMessage?: (message: SignalingMessageSSE) => void
-  enabled?: boolean
 }
 
 /**
@@ -38,7 +33,6 @@ export function useWebRTCSignaling({
   roomId,
   localPlayerId,
   onSignalingMessage,
-  enabled = true,
 }: UseWebRTCSignalingOptions) {
   const eventSourceRef = useRef<EventSource | null>(null)
   const onMessageRef = useRef(onSignalingMessage)
@@ -51,10 +45,6 @@ export function useWebRTCSignaling({
 
   // Subscribe to SSE events for signaling messages
   useEffect(() => {
-    if (!enabled) {
-      return
-    }
-
     // Connect to SSE endpoint with userId (localPlayerId) as query parameter
     // The endpoint requires userId for proper connection registration
     const sseUrl = `/api/stream?userId=${encodeURIComponent(localPlayerId)}`
@@ -129,7 +119,10 @@ export function useWebRTCSignaling({
       // SSE connections are aborted during page reload/navigation - this is expected
       // Only log if the connection was actually established before the error
       if (eventSource.readyState === EventSource.OPEN) {
-        console.error('[WebRTC Signaling] SSE connection error after connection:', error)
+        console.error(
+          '[WebRTC Signaling] SSE connection error after connection:',
+          error,
+        )
       }
     }
 
@@ -137,7 +130,7 @@ export function useWebRTCSignaling({
       eventSource.close()
       eventSourceRef.current = null
     }
-  }, [roomId, localPlayerId, enabled])
+  }, [roomId, localPlayerId])
 
   /**
    * Send offer message to target player
@@ -167,7 +160,10 @@ export function useWebRTCSignaling({
         const errorMessage = result.error || 'Failed to send offer'
         // If player is not connected yet, this is expected during connection establishment
         if (!errorMessage.includes('not found or not connected')) {
-          console.error(`[WebRTC Signaling] Failed to send offer to ${to}:`, errorMessage)
+          console.error(
+            `[WebRTC Signaling] Failed to send offer to ${to}:`,
+            errorMessage,
+          )
         }
         throw new Error(errorMessage)
       }
@@ -258,4 +254,3 @@ export function useWebRTCSignaling({
     sendIceCandidate,
   }
 }
-

@@ -3,25 +3,22 @@
  * Manages peer-to-peer WebRTC connections for all players in a room
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-
-import { PeerConnectionManager } from '@/lib/webrtc/peer-connection'
-import type { PeerConnectionState } from '@/lib/webrtc/types'
-import { isSelfConnection, normalizePlayerId, createPeerConnectionWithCallbacks } from '@/lib/webrtc/utils'
 import type { SignalingMessageSSE } from '@/lib/webrtc/signaling'
-import { useWebRTCSignaling } from './useWebRTCSignaling'
+import type { PeerConnectionState } from '@/lib/webrtc/types'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { PeerConnectionManager } from '@/lib/webrtc/peer-connection'
+import {
+  createPeerConnectionWithCallbacks,
+  isSelfConnection,
+  normalizePlayerId,
+} from '@/lib/webrtc/utils'
 
-interface RoomParticipant {
-  id: string
-  name: string
-  isOnline?: boolean // Whether player is connected to SSE (backend)
-}
+import { useWebRTCSignaling } from './useWebRTCSignaling'
 
 interface UseWebRTCOptions {
   roomId: string
   localPlayerId: string
-  players: RoomParticipant[]
-  enabled?: boolean
+  playerIds: string[]
 }
 
 interface PeerConnectionData {
@@ -62,8 +59,7 @@ interface UseWebRTCReturn {
 export function useWebRTC({
   roomId,
   localPlayerId,
-  players,
-  enabled = true,
+  playerIds: playerIds,
 }: UseWebRTCOptions): UseWebRTCReturn {
   const [peerConnections, setPeerConnections] = useState<
     Map<string, PeerConnectionData>
@@ -71,7 +67,6 @@ export function useWebRTC({
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [isVideoActive, setIsVideoActive] = useState(false)
   const [isAudioMuted, setIsAudioMuted] = useState(false)
-
 
   const peerConnectionsRef = useRef<Map<string, PeerConnectionData>>(new Map())
   const localStreamRef = useRef<MediaStream | null>(null)
@@ -86,8 +81,12 @@ export function useWebRTC({
   }, [localStream])
 
   // Store sendAnswer in a ref so it can be used in the callback
-  const sendAnswerRef = useRef<((to: string, answer: RTCSessionDescriptionInit) => Promise<void>) | null>(null)
-  const sendIceCandidateRef = useRef<((to: string, candidate: RTCIceCandidateInit) => Promise<void>) | null>(null)
+  const sendAnswerRef = useRef<
+    ((to: string, answer: RTCSessionDescriptionInit) => Promise<void>) | null
+  >(null)
+  const sendIceCandidateRef = useRef<
+    ((to: string, candidate: RTCIceCandidateInit) => Promise<void>) | null
+  >(null)
 
   /**
    * Handle incoming signaling messages
@@ -95,25 +94,29 @@ export function useWebRTC({
   const handleSignalingMessage = useCallback(
     (message: SignalingMessageSSE) => {
       let connectionData = peerConnectionsRef.current.get(message.from)
-      
+
       // Normalize IDs for comparison
       const normalizedMessageFrom = normalizePlayerId(message.from)
-      
+
       // Don't process messages from ourselves
-      if (isSelfConnection(localPlayerId || '', normalizedMessageFrom)) {
-        console.error(`[WebRTC] ERROR: Received signaling message from local player ${message.from}! Ignoring.`)
+      if (isSelfConnection(localPlayerId, normalizedMessageFrom)) {
+        console.error(
+          `[WebRTC] ERROR: Received signaling message from local player ${message.from}! Ignoring.`,
+        )
         return
       }
-      
-        // If we receive an offer from a peer we don't have a connection for yet,
+
+      // If we receive an offer from a peer we don't have a connection for yet,
       // create a passive connection to handle it (even if we haven't started video)
       if (!connectionData && message.message.type === 'offer') {
         // Find the player to get their info (using normalized comparison)
-        const player = players.find((p) => normalizePlayerId(p.id) === normalizedMessageFrom)
+        const player = playerIds.find(
+          (playerId) => normalizePlayerId(playerId) === normalizedMessageFrom,
+        )
         if (!player) {
           // Still create the connection - player might join soon or be in process of joining
         }
-        
+
         // Create a passive peer connection (no local stream yet)
         // This allows receiving remote streams even if we haven't started our own video
         const manager = new PeerConnectionManager({
@@ -157,10 +160,12 @@ export function useWebRTC({
           if (candidate && sendIceCandidateRef.current) {
             // Double-check we're not sending to ourselves (using normalized comparison)
             if (isSelfConnection(localPlayerId, message.from)) {
-              console.error(`[WebRTC] ERROR: Attempted to send ICE candidate to local player ${message.from} in passive connection! Skipping.`)
+              console.error(
+                `[WebRTC] ERROR: Attempted to send ICE candidate to local player ${message.from} in passive connection! Skipping.`,
+              )
               return
             }
-            
+
             sendIceCandidateRef.current(message.from, candidate).catch(() => {
               // Error logging is handled in useWebRTCSignaling.sendIceCandidate
             })
@@ -178,7 +183,7 @@ export function useWebRTC({
           state: initialState,
           remoteStream: null,
         }
-        
+
         peerConnectionsRef.current.set(message.from, newConnectionData)
         setPeerConnections((prev) => {
           const updated = new Map(prev)
@@ -204,7 +209,10 @@ export function useWebRTC({
               // Send answer via signaling using ref
               if (sendAnswerRef.current) {
                 sendAnswerRef.current(message.from, answer).catch((error) => {
-                  console.error(`[WebRTC] Failed to send answer to ${message.from}:`, error)
+                  console.error(
+                    `[WebRTC] Failed to send answer to ${message.from}:`,
+                    error,
+                  )
                 })
               }
             })
@@ -238,7 +246,7 @@ export function useWebRTC({
         }
       }
     },
-    [localPlayerId, roomId, players],
+    [localPlayerId, roomId, playerIds],
   )
 
   // Setup signaling hook with callback
@@ -246,7 +254,6 @@ export function useWebRTC({
     roomId,
     localPlayerId,
     onSignalingMessage: handleSignalingMessage,
-    enabled,
   })
 
   // Update sendAnswer and sendIceCandidate refs when they change
@@ -280,31 +287,33 @@ export function useWebRTC({
       if (!localPlayerId) {
         return
       }
-      
-      const remotePlayers = players.filter((p) => {
-        return !isSelfConnection(localPlayerId || '', p.id)
+
+      const remotePlayers = playerIds.filter((playerId) => {
+        return !isSelfConnection(localPlayerId, playerId)
       })
       const newConnections = new Map<string, PeerConnectionData>()
 
-      for (const player of remotePlayers) {
+      for (const playerId of remotePlayers) {
         // Double-check this isn't the local player (using normalized comparison)
-        if (isSelfConnection(localPlayerId || '', player.id)) {
-          console.error(`[WebRTC] ERROR: Attempted to create connection for local player ${player.id}! Skipping.`)
+        if (isSelfConnection(localPlayerId, playerId)) {
+          console.error(
+            `[WebRTC] ERROR: Attempted to create connection for local player ${playerId}! Skipping.`,
+          )
           continue
         }
-        
+
         // Skip if connection already exists
-        if (peerConnectionsRef.current.has(player.id)) {
+        if (peerConnectionsRef.current.has(playerId)) {
           continue
         }
 
         // Capture values for callbacks
-        const capturedPlayerId = player.id
+        const capturedPlayerId = playerId
 
         // Create peer connection using utility function
         const manager = createPeerConnectionWithCallbacks({
           localPlayerId,
-          remotePlayerId: player.id,
+          remotePlayerId: playerId,
           roomId,
           localStream: stream,
           onStateChange: (state) => {
@@ -332,9 +341,12 @@ export function useWebRTC({
                   ...existing,
                   remoteStream,
                   // Update state if it's not already connected and we have a stream
-                  state: currentState === 'connected' ? currentState : existing.state,
+                  state:
+                    currentState === 'connected'
+                      ? currentState
+                      : existing.state,
                 })
-                
+
                 // If we have a stream but state isn't connected, force check
                 if (remoteStream && currentState !== 'connected') {
                   // The manager should update state via ICE events, but double-check
@@ -375,21 +387,22 @@ export function useWebRTC({
         manager
           .createOffer()
           .then((offer) => {
-            return sendOffer(player.id, offer)
+            return sendOffer(playerId, offer)
           })
           .catch((error) => {
             // Handle offer creation/sending failure
-            const errorMessage = error instanceof Error ? error.message : String(error)
+            const errorMessage =
+              error instanceof Error ? error.message : String(error)
             if (!errorMessage.includes('not found or not connected')) {
               console.error(
-                `[WebRTC] Failed to create/send offer for ${player.id}:`,
+                `[WebRTC] Failed to create/send offer for ${playerId}:`,
                 error,
               )
             }
             // If player is not connected yet, this is expected during connection establishment
           })
 
-        newConnections.set(player.id, {
+        newConnections.set(playerId, {
           manager,
           state: initialState,
           remoteStream: null,
@@ -406,7 +419,7 @@ export function useWebRTC({
         })
       }
     },
-    [roomId, localPlayerId, players, sendOffer, sendIceCandidate],
+    [roomId, localPlayerId, playerIds, sendOffer, sendIceCandidate],
   )
 
   /**
@@ -438,7 +451,7 @@ export function useWebRTC({
       })
       setLocalStream(null)
       setIsVideoActive(false)
-      
+
       // Remove local stream from all peer connections but keep connections alive
       // This allows us to continue receiving remote streams
       for (const [playerId, connectionData] of peerConnectionsRef.current) {
@@ -446,7 +459,10 @@ export function useWebRTC({
           // Remove local stream from this connection but don't close it
           connectionData.manager.removeLocalStream()
         } catch (error) {
-          console.error(`[WebRTC] Failed to remove local stream from ${playerId}:`, error)
+          console.error(
+            `[WebRTC] Failed to remove local stream from ${playerId}:`,
+            error,
+          )
         }
       }
     }
@@ -495,52 +511,49 @@ export function useWebRTC({
   /**
    * Switch camera device
    */
-  const switchCamera = useCallback(
-    async (deviceId: string) => {
-      if (!localStreamRef.current) {
-        throw new Error('No local stream available')
+  const switchCamera = useCallback(async (deviceId: string) => {
+    if (!localStreamRef.current) {
+      throw new Error('No local stream available')
+    }
+
+    try {
+      // Get new stream with selected camera
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: deviceId } },
+        audio: true,
+      })
+
+      const newVideoTrack = newStream.getVideoTracks()[0]
+      if (!newVideoTrack) {
+        throw new Error('No video track in new stream')
       }
 
-      try {
-        // Get new stream with selected camera
-        const newStream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: { exact: deviceId } },
-          audio: true,
-        })
-
-        const newVideoTrack = newStream.getVideoTracks()[0]
-        if (!newVideoTrack) {
-          throw new Error('No video track in new stream')
+      // Replace video track in all peer connections
+      for (const [playerId, connectionData] of peerConnectionsRef.current) {
+        try {
+          await connectionData.manager.replaceVideoTrack(newVideoTrack)
+        } catch (error) {
+          console.error(
+            `[WebRTC] Failed to replace track for ${playerId}:`,
+            error,
+          )
         }
-
-        // Replace video track in all peer connections
-        for (const [playerId, connectionData] of peerConnectionsRef.current) {
-          try {
-            await connectionData.manager.replaceVideoTrack(newVideoTrack)
-          } catch (error) {
-            console.error(
-              `[WebRTC] Failed to replace track for ${playerId}:`,
-              error,
-            )
-          }
-        }
-
-        // Stop old video track
-        const oldVideoTrack = localStreamRef.current.getVideoTracks()[0]
-        if (oldVideoTrack) {
-          oldVideoTrack.stop()
-        }
-
-        // Update local stream reference
-        setLocalStream(newStream)
-        localStreamRef.current = newStream
-      } catch (error) {
-        console.error('[WebRTC] Failed to switch camera:', error)
-        throw error
       }
-    },
-    [],
-  )
+
+      // Stop old video track
+      const oldVideoTrack = localStreamRef.current.getVideoTracks()[0]
+      if (oldVideoTrack) {
+        oldVideoTrack.stop()
+      }
+
+      // Update local stream reference
+      setLocalStream(newStream)
+      localStreamRef.current = newStream
+    } catch (error) {
+      console.error('[WebRTC] Failed to switch camera:', error)
+      throw error
+    }
+  }, [])
 
   // Cleanup on unmount or when players change
   useEffect(() => {
@@ -571,9 +584,11 @@ export function useWebRTC({
     }
 
     // Normalize IDs to strings for comparison
-    const currentPlayerIds = new Set(players.map((p) => normalizePlayerId(p.id)))
-    const remotePlayers = players.filter((p) => {
-      return !isSelfConnection(localPlayerId, p.id)
+    const currentPlayerIds = new Set(
+      playerIds.map((playerId) => normalizePlayerId(playerId)),
+    )
+    const remotePlayers = playerIds.filter((playerId) => {
+      return !isSelfConnection(localPlayerId, playerId)
     })
 
     setPeerConnections((prev) => {
@@ -593,18 +608,20 @@ export function useWebRTC({
       }
 
       // Create connections for new players
-      for (const player of remotePlayers) {
+      for (const playerId of remotePlayers) {
         // Double-check this isn't the local player (using normalized comparison)
-        if (isSelfConnection(localPlayerId, player.id)) {
-          console.error(`[WebRTC] ERROR: Attempted to create connection for local player ${player.id} in useEffect! Skipping.`)
+        if (isSelfConnection(localPlayerId, playerId)) {
+          console.error(
+            `[WebRTC] ERROR: Attempted to create connection for local player ${playerId} in useEffect! Skipping.`,
+          )
           continue
         }
-        
-        if (!updated.has(player.id)) {
+
+        if (!updated.has(playerId)) {
           // New player - create connection
           const manager = new PeerConnectionManager({
             localPlayerId,
-            remotePlayerId: player.id,
+            remotePlayerId: playerId,
             roomId,
           })
 
@@ -619,9 +636,9 @@ export function useWebRTC({
           manager.onStateChange((state) => {
             setPeerConnections((current) => {
               const updated = new Map(current)
-              const existing = updated.get(player.id)
+              const existing = updated.get(playerId)
               if (existing) {
-                updated.set(player.id, {
+                updated.set(playerId, {
                   ...existing,
                   state,
                 })
@@ -633,9 +650,9 @@ export function useWebRTC({
           manager.onRemoteStream((stream) => {
             setPeerConnections((current) => {
               const updated = new Map(current)
-              const existing = updated.get(player.id)
+              const existing = updated.get(playerId)
               if (existing) {
-                updated.set(player.id, {
+                updated.set(playerId, {
                   ...existing,
                   remoteStream: stream,
                 })
@@ -644,38 +661,41 @@ export function useWebRTC({
             })
           })
 
-            manager.onIceCandidate((candidate) => {
-              if (candidate) {
-                // Double-check we're not sending to ourselves (using normalized comparison)
-                if (isSelfConnection(localPlayerId, player.id)) {
-                  console.error(`[WebRTC] ERROR: Attempted to send ICE candidate to local player ${player.id} in useEffect! Skipping.`)
-                  return
-                }
-                
-                sendIceCandidate(player.id, candidate).catch(() => {
-                  // Error logging is handled in useWebRTCSignaling.sendIceCandidate
-                })
+          manager.onIceCandidate((candidate) => {
+            if (candidate) {
+              // Double-check we're not sending to ourselves (using normalized comparison)
+              if (isSelfConnection(localPlayerId, playerId)) {
+                console.error(
+                  `[WebRTC] ERROR: Attempted to send ICE candidate to local player ${playerId} in useEffect! Skipping.`,
+                )
+                return
               }
-            })
+
+              sendIceCandidate(playerId, candidate).catch(() => {
+                // Error logging is handled in useWebRTCSignaling.sendIceCandidate
+              })
+            }
+          })
 
           // Create and send offer
           manager
             .createOffer()
             .then((offer) => {
-              return sendOffer(player.id, offer)
+              return sendOffer(playerId, offer)
             })
             .catch((error) => {
               // If player is not connected yet, this is expected during connection establishment
-              const errorMessage = error instanceof Error ? error.message : String(error)
+              const errorMessage =
+                error instanceof Error ? error.message : String(error)
               if (!errorMessage.includes('not found or not connected')) {
                 console.error(
-                  `[WebRTC] Failed to create/send offer to ${player.id}:`,
+                  `[WebRTC] Failed to create/send offer to ${playerId}:`,
                   error,
                 )
               }
             })
 
-          updated.set(player.id, {
+          updated.set(playerId, {
             manager,
             state: initialState,
             remoteStream: null,
@@ -686,7 +706,7 @@ export function useWebRTC({
 
       return changed ? updated : prev
     })
-  }, [players, roomId, localPlayerId, sendOffer, sendIceCandidate])
+  }, [playerIds, roomId, localPlayerId, sendOffer, sendIceCandidate])
 
   // Self-connection prevention is now built into connection creation (US2)
   // No cleanup needed - isSelfConnection checks prevent self-connections from being created
@@ -725,4 +745,3 @@ export function useWebRTC({
     isAudioMuted,
   }
 }
-

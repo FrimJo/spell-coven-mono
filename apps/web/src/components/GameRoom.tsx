@@ -1,3 +1,4 @@
+import type { VoiceChannelMember } from '@/hooks/useVoiceChannelMembersFromEvents'
 import type { DetectorType } from '@/lib/detectors'
 import type { LoadingEvent } from '@/lib/loading-events'
 import { useEffect, useMemo, useState } from 'react'
@@ -13,6 +14,7 @@ import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken.js'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
 import { loadOpenCV } from '@/lib/opencv-loader'
+import { getRouteApi } from '@tanstack/react-router'
 import { ArrowLeft, Check, Copy, Settings, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -34,30 +36,31 @@ import { TurnTracker } from './TurnTracker.js'
 import { VideoStreamGrid } from './VideoStreamGrid.js'
 import { VoiceDropoutModal } from './VoiceDropoutModal.js'
 
+const GameRoomRoute = getRouteApi('/game/$gameId')
+
+function useGameRoomLoaderData() {
+  const loaderData = GameRoomRoute.useLoaderData()
+  if (!loaderData.isAuthenticated) {
+    throw new Error('User is not authenticated')
+  }
+  if (!loaderData.voiceChannelStatus.inChannel) {
+    throw new Error('User is not in voice channel')
+  }
+  return loaderData
+}
+
 interface GameRoomProps {
-  gameId: string
+  roomId: string
   playerName: string
   onLeaveGame: () => void
   isLobbyOwner?: boolean
   detectorType?: DetectorType
   usePerspectiveWarp?: boolean
-  initialMembers?: Array<{
-    id: string
-    username: string
-    avatar: string | null
-  }>
-}
-
-interface Player {
-  id: string
-  name: string
-  life: number
-  isActive: boolean
-  isOnline?: boolean // Whether player is connected to backend (SSE)
+  initialMembers?: Array<VoiceChannelMember>
 }
 
 function GameRoomContent({
-  gameId,
+  roomId,
   playerName,
   onLeaveGame,
   isLobbyOwner = true,
@@ -65,24 +68,15 @@ function GameRoomContent({
   usePerspectiveWarp = true,
   initialMembers = [],
 }: GameRoomProps) {
+  const { userId } = useGameRoomLoaderData()
   const { query } = useCardQueryContext()
   const [copied, setCopied] = useState(false)
 
   // Compute shareable link (only on client)
   const shareLink = useMemo(() => {
     if (typeof window === 'undefined') return ''
-    return `${window.location.origin}/game/${gameId}`
-  }, [gameId])
-
-  // Initialize players from initial members (from loader)
-  const [players, setPlayers] = useState<Player[]>(
-    initialMembers.map((member, index) => ({
-      id: member.id,
-      name: member.username,
-      life: 20,
-      isActive: index === 0,
-    })),
-  )
+    return `${window.location.origin}/game/${roomId}`
+  }, [roomId])
 
   const [isLoading, setIsLoading] = useState(true)
   // HOOK: Dialog open state
@@ -109,21 +103,28 @@ function GameRoomContent({
 
   const { user: discordUser } = useDiscordUser()
 
-  const { data: wsTokenData } = useWebSocketAuthToken({
-    userId: discordUser?.id,
+  const { data: wsTokenData } = useWebSocketAuthToken({ userId })
+
+  // Fetch voice channel members via real-time events
+  // Only enabled when both userId and wsAuthToken are available
+  // This will update the list when new members join or leave
+  const { members: voiceChannelMembers } = useVoiceChannelMembersFromEvents({
+    gameId: roomId,
+    userId: userId,
+    initialMembers: initialMembers,
   })
 
   // Log WebRTC hook prerequisites
   useEffect(() => {
     console.log('[GameRoom] WebRTC prerequisites:', {
       hasDiscordUser: !!discordUser,
-      discordUserId: discordUser?.id,
+      discordUserId: userId,
       hasWsToken: !!wsTokenData,
-      playersCount: players.length,
-      playerIds: players.map((p) => p.id),
-      enabled: !!(discordUser?.id && wsTokenData),
+      playersCount: voiceChannelMembers.length,
+      playerIds: voiceChannelMembers.map((p) => p.id),
+      enabled: !!(userId && wsTokenData),
     })
-  }, [discordUser, wsTokenData, players])
+  }, [discordUser, userId, voiceChannelMembers, wsTokenData])
 
   // WebRTC hook for peer-to-peer video streaming
   const {
@@ -138,77 +139,10 @@ function GameRoomContent({
     isVideoActive: isWebRTCVideoActive,
     isAudioMuted: isWebRTCAudioMuted,
   } = useWebRTC({
-    roomId: gameId,
-    localPlayerId: discordUser?.id || '',
-    players: players.map((p) => ({ id: p.id, name: p.name, isOnline: p.isOnline })),
-    enabled: !!discordUser?.id && !!wsTokenData,
+    roomId: roomId,
+    localPlayerId: userId,
+    playerIds: voiceChannelMembers.map((member) => member.id),
   })
-
-  const [hasConnectedToVoice, setHasConnectedToVoice] = useState(false)
-
-  // Auto-connect to voice channel AFTER SSE is established
-  useEffect(() => {
-    const connectToVoice = async () => {
-      if (!discordUser?.id || !wsTokenData || hasConnectedToVoice) {
-        return
-      }
-
-      console.log(
-        '[GameRoom] SSE connected, auto-connecting to voice channel...',
-      )
-      setHasConnectedToVoice(true)
-
-      // Import the server function dynamically
-      const { connectUserToVoiceChannel } = await import(
-        '@/server/handlers/discord-rooms.server'
-      )
-
-      const result = await connectUserToVoiceChannel({
-        data: { userId: discordUser.id, channelId: gameId },
-      })
-
-      if (result.success) {
-        console.log('[GameRoom] Successfully connected to voice channel')
-      } else {
-        console.warn(
-          '[GameRoom] Failed to connect to voice channel:',
-          result.error,
-        )
-      }
-    }
-
-    connectToVoice()
-  }, [discordUser?.id, wsTokenData, gameId, hasConnectedToVoice])
-
-  // Fetch voice channel members via real-time events
-  // Only enabled when both userId and wsAuthToken are available
-  // This will update the list when new members join or leave
-  const { members: voiceChannelMembers } = useVoiceChannelMembersFromEvents({
-    gameId,
-    userId: discordUser?.id,
-    jwtToken: wsTokenData,
-    enabled: !!wsTokenData && !!discordUser,
-  })
-
-  useEffect(() => {
-    // Update players when voice channel members change
-    // This handles real-time joins/leaves after initial load
-
-    setPlayers((prevPlayers) => {
-      const newPlayers = voiceChannelMembers.map((member) => {
-        // Preserve life total for existing players
-        const existing = prevPlayers.find((p) => p.id === member.id)
-        return {
-          id: member.id,
-          name: member.username,
-          life: existing?.life ?? 20,
-          isActive: member.isActive,
-          isOnline: member.isOnline, // Include online status from SSE connection
-        }
-      })
-      return newPlayers
-    })
-  }, [voiceChannelMembers])
 
   // Voice channel validation is now done in the route's beforeLoad hook
   // If user is not in voice channel, they won't reach this component
@@ -235,14 +169,11 @@ function GameRoomContent({
       console.log('[GameRoom] VOICE_STATE_UPDATE received:', {
         userId: voiceState.user_id,
         channelId: voiceState.channel_id,
-        currentUserId: discordUser?.id,
+        currentUserId: userId,
       })
 
       // Only handle events for the current user
-      if (
-        voiceState.user_id === discordUser?.id &&
-        voiceState.channel_id === null
-      ) {
+      if (voiceState.user_id === userId && voiceState.channel_id === null) {
         console.log('[GameRoom] Current user left voice channel')
         setVoiceDropoutOpen(true)
         toast.warning('You have been removed from the voice channel')
@@ -400,25 +331,13 @@ function GameRoomContent({
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const handleLifeChange = (playerId: string, newLife: number) => {
-    setPlayers(
-      players.map((p) => (p.id === playerId ? { ...p, life: newLife } : p)),
-    )
-  }
-
   const handleNextTurn = () => {
-    const currentIndex = players.findIndex((p) => p.isActive)
-    const nextIndex = (currentIndex + 1) % players.length
-    setPlayers(
-      players.map((p, i) => ({
-        ...p,
-        isActive: i === nextIndex,
-      })),
-    )
+    // TODO: Implement turn advancement with peer-to-peer game state
+    // This will broadcast to other players via SSE
   }
 
   const handleRemovePlayer = (playerId: string) => {
-    setPlayers(players.filter((p) => p.id !== playerId))
+    throw new Error('Not implemented')
     toast.success('Player removed from game')
   }
 
@@ -466,7 +385,7 @@ function GameRoomContent({
 
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-400">Share Link:</span>
-              <code className="rounded bg-slate-800 px-2 py-1 text-sm text-purple-400 max-w-xs truncate">
+              <code className="max-w-xs truncate rounded bg-slate-800 px-2 py-1 text-sm text-purple-400">
                 {shareLink}
               </code>
               <TooltipProvider>
@@ -496,7 +415,9 @@ function GameRoomContent({
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-slate-400">
               <Users className="h-4 w-4" />
-              <span className="text-sm">{players.length}/4 Players</span>
+              <span className="text-sm">
+                {voiceChannelMembers.length}/4 Players
+              </span>
             </div>
 
             <TooltipProvider>
@@ -524,13 +445,22 @@ function GameRoomContent({
         <div className="flex h-full gap-4 p-4">
           {/* Left Sidebar - Turn Tracker & Player List */}
           <div className="w-64 flex-shrink-0 space-y-4 overflow-y-auto">
-            <TurnTracker players={players} onNextTurn={handleNextTurn} />
+            <TurnTracker
+              players={voiceChannelMembers.map((member) => ({
+                id: member.id,
+                name: member.username,
+              }))}
+              onNextTurn={handleNextTurn}
+            />
             <PlayerList
-              players={players}
+              players={voiceChannelMembers.map((member) => ({
+                id: member.id,
+                name: member.username,
+              }))}
               isLobbyOwner={isLobbyOwner}
               localPlayerName={playerName}
               onRemovePlayer={handleRemovePlayer}
-              ownerId={discordUser?.id || undefined}
+              ownerId={userId || undefined}
             />
             <CardPreview playerName={playerName} onClose={() => {}} />
           </div>
@@ -538,9 +468,11 @@ function GameRoomContent({
           {/* Main Area - Video Stream Grid */}
           <div className="flex-1 overflow-hidden">
             <VideoStreamGrid
-              players={players}
+              players={voiceChannelMembers.map((member) => ({
+                id: member.id,
+                name: member.username,
+              }))}
               localPlayerName={playerName}
-              onLifeChange={handleLifeChange}
               enableCardDetection={true}
               detectorType={detectorType}
               usePerspectiveWarp={usePerspectiveWarp}

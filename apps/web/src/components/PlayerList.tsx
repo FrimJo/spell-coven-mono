@@ -17,8 +17,6 @@ import { Card } from '@repo/ui/components/card'
 interface Player {
   id: string
   name: string
-  life: number
-  isActive: boolean
   isOnline?: boolean // Whether player is connected to backend (SSE)
 }
 
@@ -53,19 +51,13 @@ export function PlayerList({
             return (
               <div
                 key={player.id}
-                className={`flex items-center justify-between rounded-lg p-2 transition-colors ${
-                  player.isActive
-                    ? 'border border-purple-500/30 bg-purple-500/10'
-                    : 'border border-slate-800 bg-slate-800/50'
-                }`}
+                className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-800/50 p-2 transition-colors"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <div
                     className={`h-2 w-2 flex-shrink-0 rounded-full ${
                       player.isOnline !== false
-                        ? player.isActive
-                          ? 'animate-pulse bg-green-400'
-                          : 'bg-green-400'
+                        ? 'animate-pulse bg-green-400'
                         : 'bg-slate-600'
                     }`}
                     title={
@@ -88,11 +80,6 @@ export function PlayerList({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 text-xs text-slate-400">
-                    <Heart className="h-3 w-3 text-red-400" />
-                    <span>{player.life}</span>
-                  </div>
-
                   {isLobbyOwner && !isLocal && !isOwner && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>

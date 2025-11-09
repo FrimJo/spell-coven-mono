@@ -3,7 +3,9 @@
  * Handles room creation, validation, and voice channel access
  */
 
+import type { VoiceChannelMember } from '@/hooks/useVoiceChannelMembersFromEvents'
 import { env } from '@/env'
+import { sseManager } from '@/server/managers/sse-manager'
 import { createServerFn } from '@tanstack/react-start'
 
 import { DiscordRestClient } from '@repo/discord-integration/clients'
@@ -61,19 +63,20 @@ export const ensureUserInGuild = createServerFn({ method: 'POST' })
     }
   })
 
-export const ensureUserInVoiceChannel = createServerFn({ method: 'GET' })
+/**
+ * Check if a user is in a specific voice channel (read-only, no side effects)
+ * Single source of truth for voice channel status checks
+ */
+export const checkUserInVoiceChannel = createServerFn({ method: 'POST' })
   .inputValidator((data: { userId: string; targetChannelId: string }) => data)
   .handler(async ({ data: { userId, targetChannelId } }) => {
     try {
       const client = new DiscordRestClient({ botToken: env.DISCORD_BOT_TOKEN })
 
-      console.log(
-        '[ensureUserInVoiceChannel] Checking if user is in voice channel:',
-        {
-          userId,
-          targetChannelId,
-        },
-      )
+      console.log('[checkUserInVoiceChannel] Checking voice channel status:', {
+        userId,
+        targetChannelId,
+      })
 
       const voiceState = await client.getVoiceState(
         env.VITE_DISCORD_GUILD_ID,
@@ -82,29 +85,24 @@ export const ensureUserInVoiceChannel = createServerFn({ method: 'GET' })
 
       // Not in any voice channel
       if (!voiceState.channel_id) {
-        console.log(
-          '[ensureUserInVoiceChannel] User is not in any voice channel',
-        )
+        console.log('[checkUserInVoiceChannel] User is not in any voice channel')
         return {
-          success: false,
-          error: 'User is not in any voice channel',
-          alreadyPresent: false,
+          inChannel: false,
+          channelId: null,
         }
       }
 
       // Check if it's the channel we care about
-      const alreadyPresent = voiceState.channel_id === targetChannelId
-      if (alreadyPresent) {
-        console.log(
-          '[ensureUserInVoiceChannel] User is already in target voice channel',
-        )
-      } else {
-        console.log(
-          '[ensureUserInVoiceChannel] User is in different voice channel',
-        )
-      }
+      const inTargetChannel = voiceState.channel_id === targetChannelId
+      console.log('[checkUserInVoiceChannel] Voice channel status:', {
+        inTargetChannel,
+        currentChannelId: voiceState.channel_id,
+      })
 
-      return { success: alreadyPresent, alreadyPresent }
+      return {
+        inChannel: inTargetChannel,
+        channelId: voiceState.channel_id,
+      }
     } catch (error: unknown) {
       // Handle "Unknown Voice State" error (404) - user is not in any voice channel
       if (
@@ -113,22 +111,50 @@ export const ensureUserInVoiceChannel = createServerFn({ method: 'GET' })
         'code' in error &&
         error.code === 10065
       ) {
-        // Discord error code 10065 = Unknown Voice State (user not in voice channel)
         console.log(
-          '[ensureUserInVoiceChannel] User has no voice state (not in any channel)',
+          '[checkUserInVoiceChannel] User has no voice state (not in any channel)',
         )
         return {
-          success: false,
-          error: 'User is not in any voice channel',
-          alreadyPresent: false,
+          inChannel: false,
+          channelId: null,
         }
       }
 
-      console.error('[ensureUserInVoiceChannel] Error:', error)
+      console.error('[checkUserInVoiceChannel] Error:', error)
+      return {
+        inChannel: false,
+        channelId: null,
+      }
+    }
+  })
+
+/**
+ * Ensure user is in a specific voice channel (legacy wrapper for backward compatibility)
+ * Uses checkUserInVoiceChannel internally
+ */
+export const ensureUserInVoiceChannel = createServerFn({ method: 'GET' })
+  .inputValidator((data: { userId: string; targetChannelId: string }) => data)
+  .handler(async ({ data: { userId, targetChannelId } }) => {
+    const checkFn = checkUserInVoiceChannel
+    const result = await checkFn({
+      data: { userId, targetChannelId },
+    })
+
+    // Transform result to legacy format for backward compatibility
+    if (result.inChannel) {
+      console.log(
+        '[ensureUserInVoiceChannel] User is already in target voice channel',
+      )
+      return { success: true, alreadyPresent: true }
+    } else if (result.channelId) {
+      console.log('[ensureUserInVoiceChannel] User is in different voice channel')
+      return { success: false, alreadyPresent: false, error: 'User is in different voice channel' }
+    } else {
+      console.log('[ensureUserInVoiceChannel] User is not in any voice channel')
       return {
         success: false,
-        error: 'Internal server error',
         alreadyPresent: false,
+        error: 'User is not in any voice channel',
       }
     }
   })
@@ -328,11 +354,7 @@ export const getInitialVoiceChannelMembers = createServerFn({ method: 'POST' })
     async ({
       data: { channelId },
     }): Promise<{
-      members: Array<{
-        id: string
-        username: string
-        avatar: string | null
-      }>
+      members: Array<VoiceChannelMember>
       error?: string | null
     }> => {
       try {
@@ -366,12 +388,11 @@ export const getInitialVoiceChannelMembers = createServerFn({ method: 'POST' })
           channelId,
         )
 
+        // Get currently connected user IDs from SSE manager
+        const connectedUserIds = sseManager.getConnectedUserIdsForGuild(guildId)
+
         // Now fetch member details for each user in the voice channel
-        const allMembers: Array<{
-          id: string
-          username: string
-          avatar: string | null
-        }> = []
+        const allMembers: Array<VoiceChannelMember> = []
 
         for (const voiceState of voiceStates) {
           if (!voiceState.user_id) continue
@@ -386,6 +407,7 @@ export const getInitialVoiceChannelMembers = createServerFn({ method: 'POST' })
                 id: member.user.id,
                 username: member.user.username,
                 avatar: member.user.avatar,
+                isOnline: connectedUserIds.has(member.user.id),
               })
             }
           } catch (error) {
