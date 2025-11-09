@@ -7,15 +7,19 @@ import {
   isSSECustomEventMessage,
   isSSEDiscordEventMessage,
   isSSEErrorMessage,
+  isSSEWebRTCSignalingMessage,
   SSEMessageSchema,
+  type SSEWebRTCSignalingMessage,
 } from '../types/sse-messages'
 
 interface UseVoiceChannelEventsOptions {
   jwtToken?: string
   userId?: string
+  channelId?: string
   onVoiceStateUpdate?: (voiceState: APIVoiceState) => void
   onError?: (error: Error) => void
   onConnectionStatusUpdate?: (connectedUserIds: string[]) => void
+  onWebRTCSignaling?: (message: SSEWebRTCSignalingMessage) => void
 }
 
 /**
@@ -36,11 +40,14 @@ class VoiceChannelSSEManager {
   private maxReconnectAttempts = 5
   private jwtToken: string | null = null
   private userId: string | null = null
+  private channelId: string | null = null
   private isConnecting = false
+  private isIntentionalDisconnect = false
   private listeners: Set<{
     onVoiceStateUpdate?: (voiceState: APIVoiceState) => void
     onError?: (error: Error) => void
     onConnectionStatusUpdate?: (connectedUserIds: string[]) => void
+    onWebRTCSignaling?: (message: SSEWebRTCSignalingMessage) => void
   }> = new Set()
 
   private constructor() {}
@@ -56,6 +63,7 @@ class VoiceChannelSSEManager {
     onVoiceStateUpdate?: (voiceState: APIVoiceState) => void
     onError?: (error: Error) => void
     onConnectionStatusUpdate?: (connectedUserIds: string[]) => void
+    onWebRTCSignaling?: (message: SSEWebRTCSignalingMessage) => void
   }): void {
     this.listeners.add(listener)
   }
@@ -64,45 +72,41 @@ class VoiceChannelSSEManager {
     onVoiceStateUpdate?: (voiceState: APIVoiceState) => void
     onError?: (error: Error) => void
     onConnectionStatusUpdate?: (connectedUserIds: string[]) => void
+    onWebRTCSignaling?: (message: SSEWebRTCSignalingMessage) => void
   }): void {
     this.listeners.delete(listener)
-    // Don't close connection - keep it alive for other potential listeners
-    // The connection will be reused if new listeners are added
   }
 
   setJwtToken(token: string | undefined): void {
     this.jwtToken = token || null
-    // Reconnect if token changed and we're not connected
-    if (token && this.eventSource?.readyState !== EventSource.OPEN) {
-      this.connect()
-    }
   }
 
   setUserId(userId: string | undefined): void {
     const newUserId = userId || null
 
-    // If userId hasn't changed, don't do anything
     if (this.userId === newUserId) {
       return
     }
 
-    console.log('[VoiceChannelEvents] Setting userId:', {
-      oldUserId: this.userId,
-      newUserId,
-      isConnected: this.eventSource?.readyState === EventSource.OPEN,
-    })
+    if (this.userId !== null && newUserId !== this.userId && this.eventSource) {
+      this.disconnect()
+    }
 
     this.userId = newUserId
+  }
 
-    // If we're already connected with a different userId, reconnect with the new one
-    if (newUserId && this.eventSource?.readyState === EventSource.OPEN) {
-      console.log('[VoiceChannelEvents] Reconnecting with new userId')
-      this.reconnect()
-    } else if (newUserId && this.jwtToken) {
-      // Connect if we have both userId and token
-      console.log('[VoiceChannelEvents] Connecting with userId and token')
-      this.connect()
+  setChannelId(channelId: string | undefined): void {
+    const newChannelId = channelId || null
+
+    if (this.channelId === newChannelId) {
+      return
     }
+
+    if (this.channelId !== null && newChannelId !== this.channelId && this.eventSource) {
+      this.disconnect()
+    }
+
+    this.channelId = newChannelId
   }
 
   isConnected(): boolean {
@@ -110,7 +114,10 @@ class VoiceChannelSSEManager {
   }
 
   connect(): void {
-    // Prevent multiple connection attempts (handles React StrictMode double-invoke)
+    if (this.eventSource) {
+      this.disconnect()
+    }
+
     if (this.isConnecting) {
       return
     }
@@ -123,36 +130,20 @@ class VoiceChannelSSEManager {
       return
     }
 
-    if (!this.jwtToken) {
-      console.log(
-        '[VoiceChannelEvents] No JWT token available, skipping connection attempt',
-      )
-      return
-    }
-
-    if (!this.userId) {
-      console.log(
-        '[VoiceChannelEvents] No userId available, skipping connection attempt',
-      )
+    if (!this.jwtToken || !this.userId || !this.channelId) {
       return
     }
 
     this.isConnecting = true
+    this.isIntentionalDisconnect = false
 
     try {
-      // Connect to SSE endpoint on same origin (per spec: /api/stream)
-      // Include userId as query parameter if available
-      const sseUrl = this.userId
-        ? `/api/stream?userId=${encodeURIComponent(this.userId)}`
-        : `/api/stream`
-
-      console.log('[VoiceChannelEvents] Connecting to SSE:', sseUrl)
+      const sseUrl = `/api/stream?userId=${encodeURIComponent(this.userId)}&channelId=${encodeURIComponent(this.channelId)}`
       this.eventSource = new EventSource(sseUrl, {
-        withCredentials: true, // Include session cookie per spec
+        withCredentials: true,
       })
 
       this.eventSource.onopen = () => {
-        console.log('[VoiceChannelEvents] SSE connected')
         this.isConnecting = false
         this.reconnectAttempts = 0
       }
@@ -165,26 +156,17 @@ class VoiceChannelSSEManager {
           const result = SSEMessageSchema.safeParse(parsed)
 
           if (!result.success) {
-            console.error(
-              '[VoiceChannelEvents] Invalid message format:',
-              result.error,
-            )
             return
           }
 
           const message = result.data
-          console.log('[VoiceChannelEvents] Received message:', message)
 
-          // Handle connection acknowledgment
           if (isSSEAckMessage(message)) {
-            console.log('[VoiceChannelEvents] Connection established')
             this.reconnectAttempts = 0
             return
           }
 
-          // Handle error messages
           if (isSSEErrorMessage(message)) {
-            console.error('[VoiceChannelEvents] Server error:', message.message)
             const error = new Error(message.message)
             this.listeners.forEach((listener) => {
               listener.onError?.(error)
@@ -192,54 +174,36 @@ class VoiceChannelSSEManager {
             return
           }
 
-          // Handle raw Discord Gateway events
           if (isSSEDiscordEventMessage(message)) {
-            console.log(
-              `[VoiceChannelEvents] Received Discord event: ${message.event}`,
-            )
-
-            // Process VOICE_STATE_UPDATE events
             if (message.event === 'VOICE_STATE_UPDATE') {
               const voiceState = message.payload as APIVoiceState
-
-              console.log('[VoiceChannelEvents] VOICE_STATE_UPDATE:', {
-                userId: voiceState.user_id,
-                channelId: voiceState.channel_id,
-                username: voiceState.member?.user?.username,
-              })
-
-              // Broadcast raw voice state to all listeners
               this.listeners.forEach((listener) => {
                 listener.onVoiceStateUpdate?.(voiceState)
               })
             }
           }
 
-          // Handle custom events (including connection status)
           if (
             isSSECustomEventMessage(message) &&
             message.event === 'users.connection_status'
           ) {
             const payload = message.payload
-            console.log(
-              `[VoiceChannelEvents] Users connection status received:`,
-              {
-                count: payload.connectedUserIds.length,
-                userIds: payload.connectedUserIds,
-                timestamp: payload.timestamp,
-              },
-            )
-            // Broadcast connection status to all listeners
             this.listeners.forEach((listener) => {
               listener.onConnectionStatusUpdate?.(payload.connectedUserIds)
             })
           }
+
+          // Handle WebRTC signaling messages
+          if (isSSEWebRTCSignalingMessage(message)) {
+            this.listeners.forEach((listener) => {
+              listener.onWebRTCSignaling?.(message)
+            })
+          }
         } catch (error) {
-          console.error('[VoiceChannelEvents] Failed to parse message:', error)
           const parseError =
             error instanceof Error
               ? error
-              : new Error('Failed to parse WebSocket message')
+              : new Error('Failed to parse SSE message')
           this.listeners.forEach((listener) => {
             listener.onError?.(parseError)
           })
@@ -247,13 +211,16 @@ class VoiceChannelSSEManager {
       }
 
       this.eventSource.onerror = () => {
-        console.error('[VoiceChannelEvents] SSE error')
         this.isConnecting = false
         this.cleanupReconnectTimeout()
         this.eventSource?.close()
         this.eventSource = null
 
-        // Attempt reconnection with exponential backoff
+        if (this.isIntentionalDisconnect) {
+          this.isIntentionalDisconnect = false
+          return
+        }
+
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
           const delay = Math.min(
             1000 * Math.pow(2, this.reconnectAttempts),
@@ -261,17 +228,10 @@ class VoiceChannelSSEManager {
           )
           this.reconnectAttempts++
 
-          console.log(
-            `[VoiceChannelEvents] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
-          )
-
           this.reconnectTimeout = setTimeout(() => {
             this.connect()
           }, delay)
         } else {
-          console.error(
-            '[VoiceChannelEvents] Max reconnection attempts reached',
-          )
           const maxRetriesError = new Error(
             'SSE connection failed after max retries',
           )
@@ -281,11 +241,6 @@ class VoiceChannelSSEManager {
         }
       }
     } catch (error) {
-      console.error(
-        '[VoiceChannelEvents] Failed to create SSE connection:',
-        error,
-      )
-      this.isConnecting = false
       const sseCreationError =
         error instanceof Error
           ? error
@@ -299,12 +254,14 @@ class VoiceChannelSSEManager {
   }
 
   disconnect(): void {
+    this.isIntentionalDisconnect = true
     this.cleanupReconnectTimeout()
     if (this.eventSource) {
       this.eventSource.close()
       this.eventSource = null
     }
-    console.log('[VoiceChannelEvents] Disconnected from SSE')
+    this.isConnecting = false
+    this.reconnectAttempts = 0
   }
 
   reconnect(): void {
@@ -325,41 +282,50 @@ class VoiceChannelSSEManager {
 export function useVoiceChannelEvents({
   jwtToken,
   userId,
+  channelId,
   onVoiceStateUpdate,
   onError,
   onConnectionStatusUpdate,
+  onWebRTCSignaling,
 }: UseVoiceChannelEventsOptions) {
-  const manager = useMemo(() => VoiceChannelSSEManager.getInstance(), [])
+  const manager = useMemo(() => {
+    const instance = VoiceChannelSSEManager.getInstance()
+    if (instance.isConnected()) {
+      instance.disconnect()
+    }
+    return instance
+  }, [])
 
-  // Store callbacks in a ref to avoid recreating listener on every render
   const callbacksRef = useRef({
     onVoiceStateUpdate,
     onError,
     onConnectionStatusUpdate,
+    onWebRTCSignaling,
   })
   useEffect(() => {
     callbacksRef.current = {
       onVoiceStateUpdate,
       onError,
       onConnectionStatusUpdate,
+      onWebRTCSignaling,
     }
-  }, [onVoiceStateUpdate, onError, onConnectionStatusUpdate])
+  }, [onVoiceStateUpdate, onError, onConnectionStatusUpdate, onWebRTCSignaling])
 
-  // Set JWT token when it changes
   useEffect(() => {
-    if (jwtToken) {
-      manager.setJwtToken(jwtToken)
+    manager.disconnect()
+    manager.setJwtToken(jwtToken)
+    manager.setUserId(userId)
+    manager.setChannelId(channelId)
+    
+    if (jwtToken && userId && channelId) {
+      manager.connect()
     }
-  }, [jwtToken, manager])
 
-  // Set user ID when it changes
-  useEffect(() => {
-    if (userId) {
-      manager.setUserId(userId)
+    return () => {
+      manager.disconnect()
     }
-  }, [userId, manager])
+  }, [jwtToken, userId, channelId, manager])
 
-  // Register listener once and keep it registered (don't remove on unmount)
   useEffect(() => {
     const listener = {
       onVoiceStateUpdate: (voiceState: APIVoiceState) =>
@@ -367,11 +333,10 @@ export function useVoiceChannelEvents({
       onError: (error: Error) => callbacksRef.current.onError?.(error),
       onConnectionStatusUpdate: (connectedUserIds: string[]) =>
         callbacksRef.current.onConnectionStatusUpdate?.(connectedUserIds),
+      onWebRTCSignaling: (message: SSEWebRTCSignalingMessage) =>
+        callbacksRef.current.onWebRTCSignaling?.(message),
     }
     manager.addListener(listener)
-    // Note: We intentionally don't remove the listener on unmount
-    // The WebSocket connection should persist for the lifetime of the app
-    // and be reused by other components that need it
   }, [manager])
 
   return useMemo(

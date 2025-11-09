@@ -94,6 +94,7 @@ export function useVoiceChannelMembersFromSSE({
   // Subscribe to SSE events
   useDiscordEventStream({
     userId, // Pass userId for SSE endpoint connection
+    channelId: gameId, // Pass channelId (room ID) for SSE endpoint connection
     onVoiceJoined: handleVoiceJoined,
     onVoiceLeft: handleVoiceLeft,
     onError: handleError,

@@ -13,7 +13,9 @@ interface TurnTrackerProps {
   onNextTurn: () => void
 }
 
-export function TurnTracker({ onNextTurn }: TurnTrackerProps) {
+export function TurnTracker({ players, onNextTurn }: TurnTrackerProps) {
+  const hasPlayers = players.length > 0
+
   return (
     <Card className="border-slate-800 bg-slate-900 p-4">
       <div className="space-y-3">
@@ -26,6 +28,7 @@ export function TurnTracker({ onNextTurn }: TurnTrackerProps) {
           onClick={onNextTurn}
           className="w-full bg-purple-600 text-white hover:bg-purple-700"
           size="sm"
+          disabled={!hasPlayers}
         >
           <RotateCw className="mr-2 h-4 w-4" />
           Next Turn

@@ -1,6 +1,6 @@
 /**
  * WebRTC Signaling Hook
- * Handles sending and receiving WebRTC signaling messages via SSE + createServerFn
+ * Handles sending and receiving WebRTC signaling messages via shared SSE connection
  */
 
 import type {
@@ -12,11 +12,10 @@ import { useCallback, useEffect, useRef } from 'react'
 import { isIceCandidatePayload, isSDPPayload } from '@/lib/webrtc/signaling'
 import { isSelfConnection } from '@/lib/webrtc/utils'
 import { sendSignalingMessage } from '@/server/handlers/webrtc-signaling.server'
-import {
-  isSSEWebRTCSignalingMessage,
-  SSEMessageSchema,
-} from '@/types/sse-messages'
 import { useServerFn } from '@tanstack/react-start'
+
+import { useVoiceChannelEvents } from './useVoiceChannelEvents'
+import { useWebSocketAuthToken } from './useWebSocketAuthToken'
 
 interface UseWebRTCSignalingOptions {
   roomId: string
@@ -25,8 +24,8 @@ interface UseWebRTCSignalingOptions {
 }
 
 /**
- * Hook for WebRTC signaling via SSE + createServerFn
- * Subscribes to SSE events for incoming signaling messages
+ * Hook for WebRTC signaling via shared SSE connection
+ * Uses the singleton SSE manager from useVoiceChannelEvents
  * Provides functions to send offer/answer/ICE candidate messages
  */
 export function useWebRTCSignaling({
@@ -34,103 +33,43 @@ export function useWebRTCSignaling({
   localPlayerId,
   onSignalingMessage,
 }: UseWebRTCSignalingOptions) {
-  const eventSourceRef = useRef<EventSource | null>(null)
   const onMessageRef = useRef(onSignalingMessage)
   const sendSignalingMessageFn = useServerFn(sendSignalingMessage)
+  const { data: jwtToken } = useWebSocketAuthToken({ userId: localPlayerId })
 
-  // Update callback ref when it changes
   useEffect(() => {
     onMessageRef.current = onSignalingMessage
   }, [onSignalingMessage])
 
-  // Subscribe to SSE events for signaling messages
-  useEffect(() => {
-    // Connect to SSE endpoint with userId (localPlayerId) as query parameter
-    // The endpoint requires userId for proper connection registration
-    const sseUrl = `/api/stream?userId=${encodeURIComponent(localPlayerId)}`
-    const eventSource = new EventSource(sseUrl, {
-      withCredentials: true,
-    })
-
-    eventSourceRef.current = eventSource
-
-    eventSource.onopen = () => {
-      // Connection opened successfully
-    }
-
-    eventSource.onmessage = (event) => {
-      try {
-        // Skip heartbeat/comment messages (they start with ':')
-        // EventSource handles these automatically, but some might slip through
-        if (!event.data || event.data.trim().startsWith(':')) {
-          return
-        }
-
-        // Skip non-JSON messages
-        let parsed
-        try {
-          parsed = JSON.parse(event.data)
-        } catch {
-          // Not a JSON message, skip it (could be ping/heartbeat)
-          return
-        }
-
-        const result = SSEMessageSchema.safeParse(parsed)
-
-        if (!result.success) {
-          return
-        }
-
-        const message = result.data
-
-        // Filter for WebRTC signaling messages
-        if (!isSSEWebRTCSignalingMessage(message)) {
-          return
-        }
-
-        // Filter by roomId and ignore messages from self
-        if (
-          message.data.roomId !== roomId ||
-          isSelfConnection(message.data.from, localPlayerId)
-        ) {
-          return
-        }
-
-        // Extract signaling message data
-        const signalingMessage: SignalingMessageSSE = {
-          from: message.data.from,
-          roomId: message.data.roomId,
-          message: {
-            type: message.data.message.type,
-            payload: message.data.message.payload as
-              | SDPPayload
-              | IceCandidatePayload,
-          },
-        }
-
-        // Call callback with signaling message
-        onMessageRef.current?.(signalingMessage)
-      } catch (error) {
-        console.error('[WebRTC Signaling] Failed to parse SSE message:', error)
+  // Use shared SSE connection for WebRTC signaling messages
+  useVoiceChannelEvents({
+    jwtToken,
+    userId: localPlayerId,
+    channelId: roomId,
+    onWebRTCSignaling: (message) => {
+      // Filter by roomId and ignore messages from self
+      if (
+        message.data.roomId !== roomId ||
+        isSelfConnection(message.data.from, localPlayerId)
+      ) {
+        return
       }
-    }
 
-    eventSource.onerror = (error) => {
-      // SSE connections are aborted during page reload/navigation - this is expected
-      // Only log if the connection was actually established before the error
-      if (eventSource.readyState === EventSource.OPEN) {
-        console.error(
-          '[WebRTC Signaling] SSE connection error after connection:',
-          error,
-        )
+      // Extract signaling message data
+      const signalingMessage: SignalingMessageSSE = {
+        from: message.data.from,
+        roomId: message.data.roomId,
+        message: {
+          type: message.data.message.type,
+          payload: message.data.message.payload as
+            | SDPPayload
+            | IceCandidatePayload,
+        },
       }
-    }
 
-    return () => {
-      eventSource.close()
-      eventSourceRef.current = null
-    }
-  }, [roomId, localPlayerId])
+      onMessageRef.current?.(signalingMessage)
+    },
+  })
 
   /**
    * Send offer message to target player

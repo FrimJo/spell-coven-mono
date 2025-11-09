@@ -167,6 +167,11 @@ export function VideoStreamGrid({
     new Set(),
   )
 
+  // Track event listeners for cleanup
+  const trackHandlersRef = useRef<
+    Map<string, Array<{ track: MediaStreamTrack; handler: () => void }>>
+  >(new Map())
+
   // Update remote video elements when streams change
   useEffect(() => {
     for (const [playerId, stream] of remoteStreams) {
@@ -211,10 +216,70 @@ export function VideoStreamGrid({
           })
         }
       }
+
+      // Monitor video track enabled state changes
+      if (stream) {
+        // First, clean up old handlers for this player
+        const oldHandlers = trackHandlersRef.current.get(playerId)
+        if (oldHandlers) {
+          oldHandlers.forEach(({ track, handler }) => {
+            track.removeEventListener('enabledchange', handler)
+          })
+        }
+
+        // Add new handlers
+        const videoTracks = stream.getVideoTracks()
+        const newHandlers: Array<{ track: MediaStreamTrack; handler: () => void }> =
+          []
+
+        videoTracks.forEach((track) => {
+          const handleTrackChange = () => {
+            // When video track is disabled, update stream state
+            if (!track.enabled) {
+              setStreamStates((prev) => {
+                const currentState = prev[playerId]
+                if (!currentState) return prev
+                return {
+                  ...prev,
+                  [playerId]: { ...currentState, video: false },
+                }
+              })
+              // Stop showing the video as playing
+              setPlayingRemoteVideos((prev) => {
+                const next = new Set(prev)
+                next.delete(playerId)
+                return next
+              })
+            } else {
+              // When video track is enabled, update stream state
+              setStreamStates((prev) => {
+                const currentState = prev[playerId]
+                if (!currentState) return prev
+                return {
+                  ...prev,
+                  [playerId]: { ...currentState, video: true },
+                }
+              })
+            }
+          }
+
+          track.addEventListener('enabledchange', handleTrackChange)
+          newHandlers.push({ track, handler: handleTrackChange })
+        })
+
+        // Store handlers for cleanup
+        trackHandlersRef.current.set(playerId, newHandlers)
+      }
     }
 
     return () => {
-      // Cleanup if needed
+      // Cleanup event listeners on unmount
+      trackHandlersRef.current.forEach((handlers) => {
+        handlers.forEach(({ track, handler }) => {
+          track.removeEventListener('enabledchange', handler)
+        })
+      })
+      trackHandlersRef.current.clear()
     }
   }, [remoteStreams])
 
@@ -226,9 +291,9 @@ export function VideoStreamGrid({
         const remoteStream = remoteStreams.get(player.id)
         const connectionState = connectionStates.get(player.id)
 
-        // For local player, video is always enabled (card detection mode)
+        // For local player, video is enabled if video is active
         // For remote players, use UI state and check if stream is available
-        const videoEnabled = isLocal ? true : state.video && !!remoteStream
+        const videoEnabled = isLocal ? isVideoActive : state.video && !!remoteStream
         const audioEnabled = isLocal ? true : state.audio
 
         // Check if remote video is actually playing (for hiding placeholder)
@@ -382,20 +447,6 @@ export function VideoStreamGrid({
               {/* Placeholder UI */}
               {videoEnabled ? (
                 <>
-                  {/* Show placeholder for local player when video is not active */}
-                  {isLocal && !isVideoActive && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
-                      <div className="space-y-3 text-center">
-                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-purple-500/20">
-                          <Camera className="h-10 w-10 text-purple-400" />
-                        </div>
-                        <p className="text-slate-400">Your Table View</p>
-                        <p className="text-sm text-slate-500">
-                          Click camera button below to start video
-                        </p>
-                      </div>
-                    </div>
-                  )}
                   {/* Show placeholder for remote player when stream exists but video is not playing yet */}
                   {!isLocal && remoteStream && !isRemoteVideoPlaying && (
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">

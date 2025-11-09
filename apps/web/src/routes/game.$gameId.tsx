@@ -1,6 +1,5 @@
 import type { DetectorType } from '@/lib/detectors'
 import { Suspense, useCallback, useState } from 'react'
-import { useServerFn } from '@tanstack/react-start'
 import { DiscordAuthModal } from '@/components/discord/DiscordAuthModal'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
@@ -15,15 +14,18 @@ import {
   ensureUserHasRole,
   ensureUserInGuild,
   ensureUserInVoiceChannel,
-  getInitialVoiceChannelMembers,
+  getConnectedUserIds,
 } from '@/server/handlers/discord-rooms.server'
+import { queryOptions } from '@tanstack/react-query'
 import {
   createFileRoute,
   redirect,
   stripSearchParams,
   useNavigate,
 } from '@tanstack/react-router'
+import { useServerFn } from '@tanstack/react-start'
 import { zodValidator } from '@tanstack/zod-adapter'
+import { Loader2 } from 'lucide-react'
 import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
 
@@ -55,10 +57,20 @@ type GameLoaderData =
       userId: string
       username: string
       gameId: string
+      connectedUserIds: string[]
     }
 
+export const connectedUserIdsQueryOptions = (channelId: string) =>
+  queryOptions({
+    queryKey: ['connectedUserIds', env.VITE_DISCORD_GUILD_ID, channelId],
+    queryFn: () =>
+      getConnectedUserIds({
+        data: { guildId: env.VITE_DISCORD_GUILD_ID, channelId },
+      }),
+  })
+
 export const Route = createFileRoute('/game/$gameId')({
-  beforeLoad: async ({ params }) => {
+  beforeLoad: async ({ params, context }) => {
     const { gameId } = params
 
     // VALIDATION STEP 1: Check if room exists
@@ -85,28 +97,17 @@ export const Route = createFileRoute('/game/$gameId')({
       })
     }
 
-    // VALIDATION STEP 2: Fetch initial voice channel members
-    const { members: initialMembers, error } =
-      await getInitialVoiceChannelMembers({
-        data: { channelId: gameId },
-      })
-
-    // Validate roleId exists - required for voice channel access
-    if (error) {
-      console.error(
-        '[Game] Error fetching initial voice channel members:',
-        error,
+    const { userIds: connectedUserIds } =
+      await context.queryClient.ensureQueryData(
+        connectedUserIdsQueryOptions(gameId),
       )
-      throw redirect({
-        to: '/',
-        search: { error },
-      })
-    }
+
+    console.log({ connectedUserIds })
 
     return {
       roomName: result.channelName,
       roleId: result.roleId,
-      initialMembers: initialMembers,
+      connectedUserIds: Array.from(connectedUserIds),
     }
   },
   loader: async ({ params, context }): Promise<GameLoaderData> => {
@@ -197,9 +198,28 @@ export const Route = createFileRoute('/game/$gameId')({
       userId: user.id,
       username: user.username, // Discord username - required for authenticated users
       gameId, // Pass gameId for GameRoom to use
+      connectedUserIds: context.connectedUserIds,
     }
   },
   component: GameRoomRoute,
+  pendingComponent: () => (
+    <div className="flex h-screen items-center justify-center bg-slate-950">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="relative">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-500/20">
+            <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+          </div>
+          <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/10" />
+        </div>
+        <div className="space-y-1 text-center">
+          <h2 className="text-lg font-medium text-slate-200">
+            Loading in Game Room
+          </h2>
+          <p className="text-sm text-slate-400">Setting up your session...</p>
+        </div>
+      </div>
+    </div>
+  ),
   validateSearch: zodValidator(gameSearchSchema),
   search: {
     middlewares: [stripSearchParams(defaultValues)],
@@ -209,7 +229,6 @@ export const Route = createFileRoute('/game/$gameId')({
 function GameRoomRoute() {
   const { gameId } = Route.useParams()
   const loaderData = Route.useLoaderData()
-  const { initialMembers } = Route.useRouteContext()
   const { detector, usePerspectiveWarp } = Route.useSearch()
   const navigate = useNavigate()
   const guildId = env.VITE_DISCORD_GUILD_ID
@@ -282,6 +301,7 @@ function GameRoomRoute() {
         open={showJoinDiscordModal}
         onOpenChange={setShowJoinDiscordModal}
         discordUrl={`https://discord.com/channels/${guildId}/${gameId}`}
+        channelId={gameId}
         onProceedToGame={handleProceedToGame}
         title="🎮 Game Room Ready!"
         isCheckingVoiceChannel={isCheckingVoiceChannel}
@@ -311,7 +331,6 @@ function GameRoomRoute() {
             onLeaveGame={handleLeaveGame}
             detectorType={detector as DetectorType | undefined}
             usePerspectiveWarp={usePerspectiveWarp}
-            initialMembers={initialMembers}
           />
         </Suspense>
       )}

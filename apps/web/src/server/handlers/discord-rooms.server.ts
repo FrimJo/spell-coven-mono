@@ -85,7 +85,9 @@ export const checkUserInVoiceChannel = createServerFn({ method: 'POST' })
 
       // Not in any voice channel
       if (!voiceState.channel_id) {
-        console.log('[checkUserInVoiceChannel] User is not in any voice channel')
+        console.log(
+          '[checkUserInVoiceChannel] User is not in any voice channel',
+        )
         return {
           inChannel: false,
           channelId: null,
@@ -147,8 +149,14 @@ export const ensureUserInVoiceChannel = createServerFn({ method: 'GET' })
       )
       return { success: true, alreadyPresent: true }
     } else if (result.channelId) {
-      console.log('[ensureUserInVoiceChannel] User is in different voice channel')
-      return { success: false, alreadyPresent: false, error: 'User is in different voice channel' }
+      console.log(
+        '[ensureUserInVoiceChannel] User is in different voice channel',
+      )
+      return {
+        success: false,
+        alreadyPresent: false,
+        error: 'User is in different voice channel',
+      }
     } else {
       console.log('[ensureUserInVoiceChannel] User is not in any voice channel')
       return {
@@ -342,6 +350,47 @@ export const connectUserToVoiceChannel = createServerFn({ method: 'POST' })
       }
     }
   })
+
+/**
+ * Get currently connected user IDs for a specific channel (room) from SSE manager
+ */
+export const getConnectedUserIds = createServerFn({ method: 'POST' })
+  .inputValidator((data: { guildId: string; channelId: string }) => data)
+  .handler(
+    async ({
+      data: { guildId, channelId },
+    }): Promise<{
+      userIds: Set<string>
+      error?: string | null
+    }> => {
+      try {
+        console.log(
+          '[getConnectedUserIds] Fetching connected users for channel:',
+          channelId,
+        )
+
+        const connectedUserIds = sseManager.getConnectedUserIdsForChannel(
+          guildId,
+          channelId,
+        )
+
+        console.log(
+          `[getConnectedUserIds] Found ${connectedUserIds.size} connected users in channel ${channelId}`,
+        )
+
+        return { userIds: connectedUserIds, error: null }
+      } catch (error) {
+        console.error('[getConnectedUserIds] Error:', error)
+        return {
+          userIds: new Set(),
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to fetch connected users',
+        }
+      }
+    },
+  )
 
 /**
  * Get current members in a voice channel

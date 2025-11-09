@@ -12,13 +12,14 @@ import {
   isSelfConnection,
   normalizePlayerId,
 } from '@/lib/webrtc/utils'
+import { connectedUserIdsQueryOptions } from '@/routes/game.$gameId'
+import { useSuspenseQuery } from '@tanstack/react-query'
 
 import { useWebRTCSignaling } from './useWebRTCSignaling'
 
 interface UseWebRTCOptions {
   roomId: string
   localPlayerId: string
-  playerIds: string[]
 }
 
 interface PeerConnectionData {
@@ -59,7 +60,6 @@ interface UseWebRTCReturn {
 export function useWebRTC({
   roomId,
   localPlayerId,
-  playerIds: playerIds,
 }: UseWebRTCOptions): UseWebRTCReturn {
   const [peerConnections, setPeerConnections] = useState<
     Map<string, PeerConnectionData>
@@ -70,6 +70,12 @@ export function useWebRTC({
 
   const peerConnectionsRef = useRef<Map<string, PeerConnectionData>>(new Map())
   const localStreamRef = useRef<MediaStream | null>(null)
+
+  const { data: connectedUserIds } = useSuspenseQuery(
+    connectedUserIdsQueryOptions(roomId),
+  )
+
+  const playerIds = Array.from(connectedUserIds.userIds)
 
   // Update ref when state changes
   useEffect(() => {
