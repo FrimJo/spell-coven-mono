@@ -6,8 +6,6 @@ import {
   Camera,
   Mic,
   MicOff,
-  Minus,
-  Plus,
   SwitchCamera,
   Video,
   VideoOff,
@@ -28,14 +26,11 @@ import {
 interface Player {
   id: string
   name: string
-  life: number
-  isActive: boolean
 }
 
 interface VideoStreamGridProps {
   players: Player[]
   localPlayerName: string
-  onLifeChange: (playerId: string, newLife: number) => void
   /** Enable card detection with green borders and click-to-crop */
   enableCardDetection?: boolean
   /** Detector type to use (opencv, detr, owl-vit) */
@@ -62,7 +57,6 @@ interface StreamState {
 export function VideoStreamGrid({
   players,
   localPlayerName,
-  onLifeChange,
   enableCardDetection = true, // Always enabled by default
   detectorType,
   usePerspectiveWarp = true,
@@ -167,16 +161,18 @@ export function VideoStreamGrid({
 
   // Track which streams are already attached to avoid unnecessary updates
   const attachedStreamsRef = useRef<Map<string, MediaStream | null>>(new Map())
-  
+
   // Track which remote videos are actually playing
-  const [playingRemoteVideos, setPlayingRemoteVideos] = useState<Set<string>>(new Set())
+  const [playingRemoteVideos, setPlayingRemoteVideos] = useState<Set<string>>(
+    new Set(),
+  )
 
   // Update remote video elements when streams change
   useEffect(() => {
     for (const [playerId, stream] of remoteStreams) {
       const videoElement = remoteVideoRefs.current.get(playerId)
       const currentAttachedStream = attachedStreamsRef.current.get(playerId)
-      
+
       // Skip null/undefined streams - wait for actual stream
       if (!stream) {
         if (videoElement && currentAttachedStream) {
@@ -191,17 +187,17 @@ export function VideoStreamGrid({
         }
         continue
       }
-      
+
       // Only update if stream has changed
       if (videoElement && stream !== currentAttachedStream) {
         videoElement.srcObject = stream
         attachedStreamsRef.current.set(playerId, stream)
-        
+
         // Check if already playing
         if (!videoElement.paused && videoElement.readyState >= 2) {
           setPlayingRemoteVideos((prev) => new Set(prev).add(playerId))
         }
-        
+
         // Don't call play() here - let autoplay and onLoadedMetadata handle it
         // Calling play() here causes AbortError when srcObject is set multiple times
       } else if (videoElement && !stream) {
@@ -216,7 +212,7 @@ export function VideoStreamGrid({
         }
       }
     }
-    
+
     return () => {
       // Cleanup if needed
     }
@@ -234,9 +230,10 @@ export function VideoStreamGrid({
         // For remote players, use UI state and check if stream is available
         const videoEnabled = isLocal ? true : state.video && !!remoteStream
         const audioEnabled = isLocal ? true : state.audio
-        
+
         // Check if remote video is actually playing (for hiding placeholder)
-        const isRemoteVideoPlaying = !isLocal && remoteStream && playingRemoteVideos.has(player.id)
+        const isRemoteVideoPlaying =
+          !isLocal && remoteStream && playingRemoteVideos.has(player.id)
 
         return (
           <Card
@@ -334,7 +331,10 @@ export function VideoStreamGrid({
                         videoElement.play().catch((error) => {
                           // AbortError is expected if srcObject changes during play, ignore it
                           if (error.name !== 'AbortError') {
-                            console.error(`[VideoStreamGrid] Failed to play after metadata loaded for ${player.id}:`, error)
+                            console.error(
+                              `[VideoStreamGrid] Failed to play after metadata loaded for ${player.id}:`,
+                              error,
+                            )
                           }
                         })
                       })
@@ -347,7 +347,10 @@ export function VideoStreamGrid({
                       requestAnimationFrame(() => {
                         videoElement.play().catch((error) => {
                           if (error.name !== 'AbortError') {
-                            console.error(`[VideoStreamGrid] Failed to play on canPlay for ${player.id}:`, error)
+                            console.error(
+                              `[VideoStreamGrid] Failed to play on canPlay for ${player.id}:`,
+                              error,
+                            )
                           }
                         })
                       })
@@ -355,7 +358,9 @@ export function VideoStreamGrid({
                   }}
                   onPlaying={() => {
                     // Direct handler to track when video actually starts playing
-                    setPlayingRemoteVideos((prev) => new Set(prev).add(player.id))
+                    setPlayingRemoteVideos((prev) =>
+                      new Set(prev).add(player.id),
+                    )
                   }}
                   onPause={() => {
                     // Track when video pauses
@@ -366,7 +371,10 @@ export function VideoStreamGrid({
                     })
                   }}
                   onError={(e) => {
-                    console.error(`[VideoStreamGrid] Video error for ${player.id}:`, e)
+                    console.error(
+                      `[VideoStreamGrid] Video error for ${player.id}:`,
+                      e,
+                    )
                   }}
                 />
               )}
@@ -395,7 +403,9 @@ export function VideoStreamGrid({
                         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-purple-500/20">
                           <Camera className="h-10 w-10 text-purple-400" />
                         </div>
-                        <p className="text-slate-400">{player.name}&apos;s Table View</p>
+                        <p className="text-slate-400">
+                          {player.name}&apos;s Table View
+                        </p>
                         <p className="text-sm text-slate-500">
                           Camera feed of physical battlefield
                         </p>
@@ -415,19 +425,12 @@ export function VideoStreamGrid({
               {/* Player Info Badge */}
               <div className="absolute left-3 top-3 z-10 rounded-lg border border-slate-800 bg-slate-950/90 px-3 py-2 backdrop-blur-sm">
                 <div className="flex items-center gap-2">
-                  <div
-                    className={`h-2 w-2 rounded-full ${player.isActive ? 'animate-pulse bg-green-400' : 'bg-slate-600'}`}
-                  />
                   <span className="text-white">{player.name}</span>
                   {isLocal && (
                     <span className="rounded bg-purple-500/30 px-1.5 py-0.5 text-xs text-purple-300">
                       You
                     </span>
                   )}
-                </div>
-                <div className="mt-1 text-xs text-slate-400">
-                  Life: {player.life}
-                  {player.isActive && ' • Active Turn'}
                 </div>
               </div>
 
@@ -464,37 +467,9 @@ export function VideoStreamGrid({
                 )}
               </div>
 
-              {/* Life Counter Controls (Local Player Only) */}
-              {isLocal && (
-                <div className="absolute bottom-4 left-4 z-10 rounded-lg border border-slate-800 bg-slate-950/90 px-3 py-2 backdrop-blur-sm">
-                  <div className="mb-2 text-center">
-                    <div className="text-2xl text-white">{player.life}</div>
-                    <div className="text-xs text-slate-400">Life</div>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onLifeChange(player.id, player.life - 1)}
-                      className="h-8 w-8 border-red-500/30 p-0 text-red-400 hover:bg-red-500/10"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onLifeChange(player.id, player.life + 1)}
-                      className="h-8 w-8 border-green-500/30 p-0 text-green-400 hover:bg-green-500/10"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-
               {/* Media Controls Overlay - Always visible for local player */}
               {isLocal && (
-                <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/95 px-3 py-2 backdrop-blur-sm shadow-lg">
+                <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/95 px-3 py-2 shadow-lg backdrop-blur-sm">
                   <Button
                     data-testid="video-toggle-button"
                     size="sm"
@@ -512,7 +487,10 @@ export function VideoStreamGrid({
                           try {
                             await onLocalVideoStart()
                           } catch (error) {
-                            console.error('[VideoStreamGrid] Failed to start WebRTC:', error)
+                            console.error(
+                              '[VideoStreamGrid] Failed to start WebRTC:',
+                              error,
+                            )
                           }
                         }
                       } else {

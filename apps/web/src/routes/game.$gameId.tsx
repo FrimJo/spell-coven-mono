@@ -1,5 +1,6 @@
 import type { DetectorType } from '@/lib/detectors'
 import { Suspense, useCallback, useState } from 'react'
+import { useServerFn } from '@tanstack/react-start'
 import { DiscordAuthModal } from '@/components/discord/DiscordAuthModal'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
@@ -10,6 +11,7 @@ import { discordUserQueryOptions } from '@/hooks/useDiscordUser'
 import { sessionStorage } from '@/lib/session-storage'
 import {
   checkRoomExists,
+  checkUserInVoiceChannel,
   ensureUserHasRole,
   ensureUserInGuild,
   ensureUserInVoiceChannel,
@@ -217,15 +219,47 @@ function GameRoomRoute() {
   const [showJoinDiscordModal, setShowJoinDiscordModal] = useState(
     loaderData.isAuthenticated && !loaderData.voiceChannelStatus.inChannel,
   )
+  const [isCheckingVoiceChannel, setIsCheckingVoiceChannel] = useState(false)
+
+  const checkVoiceChannelFn = useServerFn(checkUserInVoiceChannel)
 
   const gameRoomConfig =
     !showAuthModal && !showJoinDiscordModal && loaderData.isAuthenticated
       ? ({ showGameRoom: true, playerName: loaderData.username } as const)
       : ({ showGameRoom: false, playerName: null } as const)
 
-  const handleProceedToGame = useCallback(() => {
-    setShowJoinDiscordModal(false)
-  }, [])
+  const handleProceedToGame = useCallback(async () => {
+    if (!loaderData.isAuthenticated) return
+
+    setIsCheckingVoiceChannel(true)
+    try {
+      // Refresh voice channel status after user manually joined Discord
+      const result = await checkVoiceChannelFn({
+        data: {
+          userId: loaderData.userId,
+          targetChannelId: gameId,
+        },
+      })
+
+      console.log('[GameRoomRoute] Voice channel check result:', result)
+
+      if (result.inChannel) {
+        // User is now in the voice channel, proceed to game
+        setShowJoinDiscordModal(false)
+      } else {
+        // User still not in voice channel, show error
+        console.warn(
+          '[GameRoomRoute] User still not in voice channel after joining Discord',
+        )
+        // Keep modal open and show error message
+      }
+    } catch (error) {
+      console.error('[GameRoomRoute] Error checking voice channel:', error)
+      // Keep modal open on error
+    } finally {
+      setIsCheckingVoiceChannel(false)
+    }
+  }, [loaderData, gameId, checkVoiceChannelFn])
 
   const handleLeaveGame = () => {
     sessionStorage.clearGameState()
@@ -250,6 +284,7 @@ function GameRoomRoute() {
         discordUrl={`https://discord.com/channels/${guildId}/${gameId}`}
         onProceedToGame={handleProceedToGame}
         title="🎮 Game Room Ready!"
+        isCheckingVoiceChannel={isCheckingVoiceChannel}
       />
     )
   }
@@ -271,7 +306,7 @@ function GameRoomRoute() {
           }
         >
           <GameRoom
-            gameId={gameId}
+            roomId={gameId}
             playerName={gameRoomConfig.playerName}
             onLeaveGame={handleLeaveGame}
             detectorType={detector as DetectorType | undefined}

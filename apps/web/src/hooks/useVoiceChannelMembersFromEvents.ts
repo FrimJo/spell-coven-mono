@@ -3,20 +3,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { APIVoiceState } from '@repo/discord-integration/clients'
 
 import { useVoiceChannelEvents } from './useVoiceChannelEvents.js'
+import { useWebSocketAuthToken } from './useWebSocketAuthToken.js'
 
 export interface VoiceChannelMember {
   id: string
   username: string
   avatar: string | null
-  isActive: boolean
-  isOnline?: boolean // Whether user is connected to SSE (backend)
+  isOnline: boolean // Whether user is connected to SSE (backend)
 }
 
 interface UseVoiceChannelMembersFromEventsProps {
   gameId: string
-  userId?: string | undefined
-  jwtToken?: string
+  userId: string
   enabled?: boolean
+  initialMembers?: VoiceChannelMember[]
 }
 
 /**
@@ -28,22 +28,23 @@ interface UseVoiceChannelMembersFromEventsProps {
 export function useVoiceChannelMembersFromEvents({
   gameId,
   userId,
-  jwtToken,
-  enabled = !!jwtToken,
+  initialMembers = [],
 }: UseVoiceChannelMembersFromEventsProps) {
-  const [members, setMembers] = useState<VoiceChannelMember[]>([])
+  const { data: jwtToken } = useWebSocketAuthToken({ userId })
+  const [members, setMembers] = useState(initialMembers)
   const [error, setError] = useState<string | null>(null)
-  const [connectedUserIds, setConnectedUserIds] = useState<Set<string>>(new Set())
+  const [connectedUserIds, setConnectedUserIds] = useState<Set<string>>(
+    new Set(),
+  )
 
   // Log when hook is enabled/disabled
   useEffect(() => {
     console.log('[VoiceChannelMembersFromEvents] Hook enabled:', {
-      enabled,
       hasToken: !!jwtToken,
       gameId,
       userId,
     })
-  }, [enabled, jwtToken, gameId, userId])
+  }, [jwtToken, gameId, userId])
 
   // Handle VOICE_STATE_UPDATE events
   const handleVoiceStateUpdate = useCallback(
@@ -89,6 +90,7 @@ export function useVoiceChannelMembersFromEvents({
               username,
               avatar,
               isActive: voiceState.user_id === userId,
+              isOnline: connectedUserIds.has(voiceState.user_id),
             },
           ].slice(0, 4)
 
@@ -118,7 +120,7 @@ export function useVoiceChannelMembersFromEvents({
         })
       }
     },
-    [gameId, userId],
+    [gameId, userId, connectedUserIds],
   )
 
   // Handle errors
@@ -130,19 +132,17 @@ export function useVoiceChannelMembersFromEvents({
   // Handle connection status updates
   const handleConnectionStatusUpdate = useCallback(
     (connectedUserIds: string[]) => {
-      console.log(
-        '[VoiceChannelMembersFromEvents] Connection status update:',
-        {
-          count: connectedUserIds.length,
-          userIds: connectedUserIds,
-          currentMembers: members.map((m) => m.id),
-        },
-      )
+      console.log('[VoiceChannelMembersFromEvents] Connection status update:', {
+        count: connectedUserIds.length,
+        userIds: connectedUserIds,
+        currentMembers: members.map((m) => m.id),
+      })
       setConnectedUserIds(new Set(connectedUserIds))
     },
     [members],
   )
 
+  const enabled = !!jwtToken
   // Listen for voice channel events (only if token is available and enabled)
   useVoiceChannelEvents({
     jwtToken: enabled ? jwtToken : undefined,

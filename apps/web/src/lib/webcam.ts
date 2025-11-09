@@ -223,7 +223,6 @@ async function detectCards(clickPoint?: { x: number; y: number }) {
     }
 
     // Run detection using pluggable detector
-    const detectionStart = performance.now()
     const result = await detector.detect(
       tempCanvas,
       overlayEl.width,

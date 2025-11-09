@@ -33,11 +33,36 @@ export type SSEDiscordEventMessage = z.infer<
 /**
  * SSE Custom Event Message - Application-specific events
  */
-export const SSECustomEventMessageSchema = SSEMessageBaseSchema.extend({
-  type: z.literal('custom.event'),
-  event: z.enum(['voice.joined', 'voice.left', 'users.connection_status']), // Custom event names
-  payload: z.unknown(), // Custom event payload
-})
+export const SSECustomEventMessageSchema = z.discriminatedUnion('event', [
+  SSEMessageBaseSchema.extend({
+    type: z.literal('custom.event'),
+    event: z.enum(['voice.joined']),
+    payload: z.object({
+      guildId: z.string(),
+      channelId: z.string(),
+      userId: z.string(),
+      username: z.string(),
+      avatar: z.string().optional(),
+    }),
+  }),
+  SSEMessageBaseSchema.extend({
+    type: z.literal('custom.event'),
+    event: z.enum(['voice.left']),
+    payload: z.object({
+      guildId: z.string(),
+      channelId: z.string(),
+      userId: z.string(),
+    }),
+  }),
+  SSEMessageBaseSchema.extend({
+    type: z.literal('custom.event'),
+    event: z.enum(['users.connection_status']),
+    payload: z.object({
+      connectedUserIds: z.array(z.string()),
+      timestamp: z.number(),
+    }),
+  }),
+])
 
 export type SSECustomEventMessage = z.infer<typeof SSECustomEventMessageSchema>
 

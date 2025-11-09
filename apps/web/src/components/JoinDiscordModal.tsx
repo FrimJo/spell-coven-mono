@@ -22,9 +22,11 @@ interface JoinDiscordModalProps {
   pendingInvite?: CreatorInviteState | null
   /** Direct Discord URL (used in game route) */
   discordUrl?: string
-  onProceedToGame: () => void
+  onProceedToGame: () => void | Promise<void>
   /** Custom title for the modal */
   title?: string
+  /** Whether the "Enter Game Room" button should show loading state */
+  isCheckingVoiceChannel?: boolean
 }
 
 export function JoinDiscordModal({
@@ -34,6 +36,7 @@ export function JoinDiscordModal({
   discordUrl,
   onProceedToGame,
   title = '🎮 Your Game Room is Ready!',
+  isCheckingVoiceChannel = false,
 }: JoinDiscordModalProps) {
   const { user } = useDiscordUser()
   const { data: wsTokenData } = useWebSocketAuthToken({ userId: user?.id })
@@ -110,8 +113,16 @@ export function JoinDiscordModal({
                 onClick={onProceedToGame}
                 className="w-full bg-purple-600 text-white hover:bg-purple-700"
                 size="lg"
+                disabled={isCheckingVoiceChannel}
               >
-                Enter Game Room
+                {isCheckingVoiceChannel ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Enter Game Room'
+                )}
               </Button>
             </>
           )}

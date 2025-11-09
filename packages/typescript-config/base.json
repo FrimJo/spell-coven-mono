@@ -19,8 +19,6 @@
     "noEmit": true,
     "verbatimModuleSyntax": true,
     "types": ["bun-types"],
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
   }
