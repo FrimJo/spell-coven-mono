@@ -29,15 +29,16 @@ export const Route = createFileRoute('/api/stream')({
         // Parse query params from request URL
         const url = new URL(request.url)
         const userIdParam = url.searchParams.get('userId')
+        const channelIdParam = url.searchParams.get('channelId')
 
-        console.log('[SSE] Parsed userId from URL:', userIdParam)
+        console.log('[SSE] Parsed params from URL:', { userId: userIdParam, channelId: channelIdParam })
 
         try {
           // TODO: Verify session from cookie and get user ID from session
           // For now, accept userId from query parameter (temporary)
           // In production, this should come from authenticated session
 
-          // EXPLICITLY require userId - NO FALLBACKS
+          // EXPLICITLY require userId and channelId - NO FALLBACKS
           if (!userIdParam) {
             console.error('[SSE] REJECTED: No userId in request', {
               urlSearchParams: url.searchParams.get('userId'),
@@ -51,7 +52,21 @@ export const Route = createFileRoute('/api/stream')({
             )
           }
 
+          if (!channelIdParam) {
+            console.error('[SSE] REJECTED: No channelId in request', {
+              urlSearchParams: url.searchParams.get('channelId'),
+            })
+            return new Response(
+              JSON.stringify({ error: 'channelId query parameter is required' }),
+              {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' },
+              },
+            )
+          }
+
           const userId = userIdParam
+          const channelId = channelIdParam
           const guildId = env.VITE_DISCORD_GUILD_ID
 
           console.log(`[SSE] Client connecting: user ${userId}`)
@@ -64,8 +79,8 @@ export const Route = createFileRoute('/api/stream')({
             start(controller) {
               try {
                 // Register connection with SSE manager
-                connectionId = sseManager.register(userId, guildId, controller)
-                console.log(`[SSE] Client authenticated: ${userId}`)
+                connectionId = sseManager.register(userId, guildId, channelId, controller)
+                console.log(`[SSE] Client authenticated: ${userId} in channel ${channelId}`)
 
                 // Send initial connection acknowledgment
                 const ackMessage = `data: ${JSON.stringify({

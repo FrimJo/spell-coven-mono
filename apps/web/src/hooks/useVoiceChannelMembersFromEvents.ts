@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { getInitialVoiceChannelMembers } from '@/server/handlers/discord-rooms.server.js'
+import { queryOptions, useSuspenseQuery } from '@tanstack/react-query'
 
 import type { APIVoiceState } from '@repo/discord-integration/clients'
 
@@ -16,8 +18,22 @@ interface UseVoiceChannelMembersFromEventsProps {
   gameId: string
   userId: string
   enabled?: boolean
-  initialMembers?: VoiceChannelMember[]
 }
+
+const voiceChannelMembersQueryOptions = (gameId: string) =>
+  queryOptions({
+    queryKey: ['game', gameId, 'voice-channel-members'] as const,
+    queryFn: async ({ queryKey }) => {
+      const [_, gameId] = queryKey
+      const result = await getInitialVoiceChannelMembers({
+        data: { channelId: gameId },
+      })
+      if (result.error) {
+        throw new Error(result.error)
+      }
+      return result.members
+    },
+  })
 
 /**
  * Hook to track voice channel members using real-time gateway events
@@ -28,23 +44,18 @@ interface UseVoiceChannelMembersFromEventsProps {
 export function useVoiceChannelMembersFromEvents({
   gameId,
   userId,
-  initialMembers = [],
 }: UseVoiceChannelMembersFromEventsProps) {
   const { data: jwtToken } = useWebSocketAuthToken({ userId })
-  const [members, setMembers] = useState(initialMembers)
+
+  const { data: initialMembers } = useSuspenseQuery(
+    voiceChannelMembersQueryOptions(gameId),
+  )
+
+  const [members, setMembers] = useState<VoiceChannelMember[]>(initialMembers)
   const [error, setError] = useState<string | null>(null)
   const [connectedUserIds, setConnectedUserIds] = useState<Set<string>>(
     new Set(),
   )
-
-  // Log when hook is enabled/disabled
-  useEffect(() => {
-    console.log('[VoiceChannelMembersFromEvents] Hook enabled:', {
-      hasToken: !!jwtToken,
-      gameId,
-      userId,
-    })
-  }, [jwtToken, gameId, userId])
 
   // Handle VOICE_STATE_UPDATE events
   const handleVoiceStateUpdate = useCallback(
@@ -147,6 +158,7 @@ export function useVoiceChannelMembersFromEvents({
   useVoiceChannelEvents({
     jwtToken: enabled ? jwtToken : undefined,
     userId: enabled ? userId : undefined,
+    channelId: enabled ? gameId : undefined,
     onVoiceStateUpdate: enabled ? handleVoiceStateUpdate : undefined,
     onError: enabled ? handleError : undefined,
     onConnectionStatusUpdate: enabled

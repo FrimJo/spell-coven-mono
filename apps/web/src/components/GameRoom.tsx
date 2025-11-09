@@ -1,4 +1,3 @@
-import type { VoiceChannelMember } from '@/hooks/useVoiceChannelMembersFromEvents'
 import type { DetectorType } from '@/lib/detectors'
 import type { LoadingEvent } from '@/lib/loading-events'
 import { useEffect, useMemo, useState } from 'react'
@@ -6,16 +5,14 @@ import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
-import { useDiscordUser } from '@/hooks/useDiscordUser'
 import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
-import { useVoiceChannelMembersFromEvents } from '@/hooks/useVoiceChannelMembersFromEvents'
 import { useWebRTC } from '@/hooks/useWebRTC'
 import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken.js'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
 import { loadOpenCV } from '@/lib/opencv-loader'
 import { getRouteApi } from '@tanstack/react-router'
-import { ArrowLeft, Check, Copy, Settings, Users } from 'lucide-react'
+import { ArrowLeft, Check, Copy, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 
 import type { APIVoiceState } from '@repo/discord-integration/types'
@@ -28,17 +25,16 @@ import {
   TooltipTrigger,
 } from '@repo/ui/components/tooltip'
 
-import { CardPreview } from './CardPreview.js'
 import { GameRoomLoader } from './GameRoomLoader.js'
+import { GameRoomPlayerCount } from './GameRoomPlayerCount.js'
+import { GameRoomSidebar } from './GameRoomSidebar.js'
+import { GameRoomVideoGrid } from './GameRoomVideoGrid.js'
 import { MediaSetupDialog } from './MediaSetupDialog.js'
-import { PlayerList } from './PlayerList.js'
-import { TurnTracker } from './TurnTracker.js'
-import { VideoStreamGrid } from './VideoStreamGrid.js'
 import { VoiceDropoutModal } from './VoiceDropoutModal.js'
 
 const GameRoomRoute = getRouteApi('/game/$gameId')
 
-function useGameRoomLoaderData() {
+export function useGameRoomLoaderData() {
   const loaderData = GameRoomRoute.useLoaderData()
   if (!loaderData.isAuthenticated) {
     throw new Error('User is not authenticated')
@@ -56,7 +52,6 @@ interface GameRoomProps {
   isLobbyOwner?: boolean
   detectorType?: DetectorType
   usePerspectiveWarp?: boolean
-  initialMembers?: Array<VoiceChannelMember>
 }
 
 function GameRoomContent({
@@ -66,7 +61,6 @@ function GameRoomContent({
   isLobbyOwner = true,
   detectorType,
   usePerspectiveWarp = true,
-  initialMembers = [],
 }: GameRoomProps) {
   const { userId } = useGameRoomLoaderData()
   const { query } = useCardQueryContext()
@@ -101,30 +95,7 @@ function GameRoomContent({
     return unsubscribe
   }, [])
 
-  const { user: discordUser } = useDiscordUser()
-
   const { data: wsTokenData } = useWebSocketAuthToken({ userId })
-
-  // Fetch voice channel members via real-time events
-  // Only enabled when both userId and wsAuthToken are available
-  // This will update the list when new members join or leave
-  const { members: voiceChannelMembers } = useVoiceChannelMembersFromEvents({
-    gameId: roomId,
-    userId: userId,
-    initialMembers: initialMembers,
-  })
-
-  // Log WebRTC hook prerequisites
-  useEffect(() => {
-    console.log('[GameRoom] WebRTC prerequisites:', {
-      hasDiscordUser: !!discordUser,
-      discordUserId: userId,
-      hasWsToken: !!wsTokenData,
-      playersCount: voiceChannelMembers.length,
-      playerIds: voiceChannelMembers.map((p) => p.id),
-      enabled: !!(userId && wsTokenData),
-    })
-  }, [discordUser, userId, voiceChannelMembers, wsTokenData])
 
   // WebRTC hook for peer-to-peer video streaming
   const {
@@ -141,7 +112,6 @@ function GameRoomContent({
   } = useWebRTC({
     roomId: roomId,
     localPlayerId: userId,
-    playerIds: voiceChannelMembers.map((member) => member.id),
   })
 
   // Voice channel validation is now done in the route's beforeLoad hook
@@ -165,6 +135,8 @@ function GameRoomContent({
   // Only enabled when wsAuthToken is available
   useVoiceChannelEvents({
     jwtToken: wsTokenData,
+    userId: userId,
+    channelId: roomId,
     onVoiceStateUpdate: (voiceState: APIVoiceState) => {
       console.log('[GameRoom] VOICE_STATE_UPDATE received:', {
         userId: voiceState.user_id,
@@ -413,12 +385,7 @@ function GameRoomContent({
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-slate-400">
-              <Users className="h-4 w-4" />
-              <span className="text-sm">
-                {voiceChannelMembers.length}/4 Players
-              </span>
-            </div>
+            <GameRoomPlayerCount roomId={roomId} userId={userId} />
 
             <TooltipProvider>
               <Tooltip>
@@ -444,36 +411,21 @@ function GameRoomContent({
       <div className="flex-1 overflow-hidden">
         <div className="flex h-full gap-4 p-4">
           {/* Left Sidebar - Turn Tracker & Player List */}
-          <div className="w-64 flex-shrink-0 space-y-4 overflow-y-auto">
-            <TurnTracker
-              players={voiceChannelMembers.map((member) => ({
-                id: member.id,
-                name: member.username,
-              }))}
-              onNextTurn={handleNextTurn}
-            />
-            <PlayerList
-              players={voiceChannelMembers.map((member) => ({
-                id: member.id,
-                name: member.username,
-              }))}
-              isLobbyOwner={isLobbyOwner}
-              localPlayerName={playerName}
-              onRemovePlayer={handleRemovePlayer}
-              ownerId={userId || undefined}
-            />
-            <CardPreview playerName={playerName} onClose={() => {}} />
-          </div>
+          <GameRoomSidebar
+            roomId={roomId}
+            userId={userId}
+            playerName={playerName}
+            isLobbyOwner={isLobbyOwner}
+            onNextTurn={handleNextTurn}
+            onRemovePlayer={handleRemovePlayer}
+          />
 
           {/* Main Area - Video Stream Grid */}
           <div className="flex-1 overflow-hidden">
-            <VideoStreamGrid
-              players={voiceChannelMembers.map((member) => ({
-                id: member.id,
-                name: member.username,
-              }))}
-              localPlayerName={playerName}
-              enableCardDetection={true}
+            <GameRoomVideoGrid
+              roomId={roomId}
+              userId={userId}
+              playerName={playerName}
               detectorType={detectorType}
               usePerspectiveWarp={usePerspectiveWarp}
               onCardCrop={(canvas: HTMLCanvasElement) => {

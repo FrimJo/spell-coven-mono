@@ -22,6 +22,8 @@ interface JoinDiscordModalProps {
   pendingInvite?: CreatorInviteState | null
   /** Direct Discord URL (used in game route) */
   discordUrl?: string
+  /** Channel ID (game ID) for SSE connection */
+  channelId?: string
   onProceedToGame: () => void | Promise<void>
   /** Custom title for the modal */
   title?: string
@@ -34,6 +36,7 @@ export function JoinDiscordModal({
   onOpenChange,
   pendingInvite,
   discordUrl,
+  channelId,
   onProceedToGame,
   title = '🎮 Your Game Room is Ready!',
   isCheckingVoiceChannel = false,
@@ -41,6 +44,9 @@ export function JoinDiscordModal({
   const { user } = useDiscordUser()
   const { data: wsTokenData } = useWebSocketAuthToken({ userId: user?.id })
   const [userJoinedVoice, setUserJoinedVoice] = useState(false)
+
+  // Extract channelId from pendingInvite if not provided directly
+  const effectiveChannelId = channelId || pendingInvite?.channelId
 
   // Listen for voice.joined events when modal is open
   const handleVoiceStateUpdate = useCallback(
@@ -60,6 +66,7 @@ export function JoinDiscordModal({
   useVoiceChannelEvents({
     jwtToken: wsTokenData,
     userId: user?.id,
+    channelId: effectiveChannelId,
     onVoiceStateUpdate: handleVoiceStateUpdate,
   })
 

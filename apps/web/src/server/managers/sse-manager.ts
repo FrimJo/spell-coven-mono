@@ -9,6 +9,7 @@ import type { GatewayDispatchEvents } from '@repo/discord-integration/types'
 export interface SSEConnection {
   userId: string
   guildId: string
+  channelId: string
   controller: ReadableStreamDefaultController<Uint8Array>
   createdAt: number
 }
@@ -22,6 +23,7 @@ class SSEManager {
   register(
     userId: string,
     guildId: string,
+    channelId: string,
     controller: ReadableStreamDefaultController<Uint8Array>,
   ): string {
     const connectionId = `${userId}-${Date.now()}`
@@ -29,18 +31,26 @@ class SSEManager {
     this.connections.set(connectionId, {
       userId,
       guildId,
+      channelId,
       controller,
       createdAt: Date.now(),
     })
 
     console.log(
-      `[SSE] Added connection for user ${userId}. Total: ${this.connections.size}`,
+      `[SSE] Added connection for user ${userId} in channel ${channelId}. Total: ${this.connections.size}`,
     )
 
-    // Broadcast user connected event to all other connections in the guild
+    // Broadcast user connected event to all other connections in the channel
     // This allows clients to track who's online/offline
-    const connectedUserIds = this.getConnectedUserIdsForGuild(guildId)
-    this.broadcastUserConnectionStatus(guildId, Array.from(connectedUserIds))
+    const connectedUserIds = this.getConnectedUserIdsForChannel(
+      guildId,
+      channelId,
+    )
+    this.broadcastUserConnectionStatus(
+      guildId,
+      channelId,
+      Array.from(connectedUserIds),
+    )
 
     return connectionId
   }
@@ -58,10 +68,14 @@ class SSEManager {
       this.connections.delete(connectionId)
 
       // Broadcast updated connection status to remaining connections
-      if (guildId) {
-        const connectedUserIds = this.getConnectedUserIdsForGuild(guildId)
+      if (guildId && connection?.channelId) {
+        const connectedUserIds = this.getConnectedUserIdsForChannel(
+          guildId,
+          connection.channelId,
+        )
         this.broadcastUserConnectionStatus(
           guildId,
+          connection.channelId,
           Array.from(connectedUserIds),
         )
       }
@@ -264,11 +278,38 @@ class SSEManager {
   }
 
   /**
-   * Broadcast user connection status (online/offline) to all connections in a guild
+   * Get connected user IDs for a specific channel (room)
+   */
+  getConnectedUserIdsForChannel(
+    guildId: string,
+    channelId: string,
+  ): Set<string> {
+    const userIds = new Set<string>()
+    for (const connection of this.connections.values()) {
+      if (
+        connection.guildId === guildId &&
+        connection.channelId === channelId
+      ) {
+        userIds.add(connection.userId)
+      }
+    }
+    console.log({
+      userIds,
+      userIdsSize: userIds.size,
+      connections: Array.from(this.connections.values()),
+      guildId,
+      channelId,
+    })
+    return userIds
+  }
+
+  /**
+   * Broadcast user connection status (online/offline) to all connections in a channel
    * This allows clients to track which users are connected to the backend
    */
   private broadcastUserConnectionStatus(
     guildId: string,
+    channelId: string,
     connectedUserIds: string[],
   ): void {
     const message = `data: ${JSON.stringify({
@@ -282,10 +323,53 @@ class SSEManager {
       ts: Date.now(),
     })}\n\n`
 
-    this.sendToGuild(guildId, message)
+    this.sendToChannel(guildId, channelId, message)
 
     console.log(
-      `[SSE] Broadcasted connection status: ${connectedUserIds.length} users online in guild ${guildId}`,
+      `[SSE] Broadcasted connection status: ${connectedUserIds.length} users online in channel ${channelId}`,
+    )
+  }
+
+  /**
+   * Send message to all connections in a specific channel
+   */
+  private sendToChannel(
+    guildId: string,
+    channelId: string,
+    message: string,
+  ): void {
+    let sentCount = 0
+    const failedConnections: string[] = []
+
+    for (const [connectionId, connection] of this.connections) {
+      if (
+        connection.guildId !== guildId ||
+        connection.channelId !== channelId
+      ) {
+        continue
+      }
+
+      try {
+        const encoder = new TextEncoder()
+        connection.controller.enqueue(encoder.encode(message))
+        sentCount++
+      } catch (error) {
+        console.error(
+          `[SSE] Failed to send message to user ${connection.userId}:`,
+          error instanceof Error ? error.message : String(error),
+        )
+        failedConnections.push(connectionId)
+      }
+    }
+
+    // Clean up failed connections
+    for (const connectionId of failedConnections) {
+      console.log(`[SSE] Removing failed connection: ${connectionId}`)
+      this.connections.delete(connectionId)
+    }
+
+    console.log(
+      `[SSE] Broadcast complete: sent to ${sentCount} connections in channel ${channelId}`,
     )
   }
 }
