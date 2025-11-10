@@ -1,3 +1,5 @@
+import { Button } from '@repo/ui/components/button'
+
 interface ErrorFallbackProps {
   error?: Error
   resetErrorBoundary?: () => void
@@ -12,12 +14,12 @@ export function ErrorFallback({
       <h1 className="text-2xl font-bold text-white">Something went wrong</h1>
       {error && <p className="text-gray-400">{error.message}</p>}
       {resetErrorBoundary && (
-        <button
+        <Button
           onClick={resetErrorBoundary}
-          className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+          className="bg-blue-500 text-white hover:bg-blue-600"
         >
           Try again
-        </button>
+        </Button>
       )}
     </div>
   )

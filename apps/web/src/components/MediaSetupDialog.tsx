@@ -277,13 +277,19 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
         analyserRef.current = analyser
 
         const dataArray = new Uint8Array(analyser.frequencyBinCount)
+        let lastUpdateTime = 0
+        const UPDATE_INTERVAL = 100 // Update every 100ms instead of every frame
 
         const updateLevel = () => {
           if (!analyserRef.current) return
 
-          analyserRef.current.getByteFrequencyData(dataArray)
-          const average = dataArray.reduce((a, b) => a + b) / dataArray.length
-          setAudioLevel(Math.min(100, (average / 255) * 100 * 2)) // Amplify a bit
+          const now = Date.now()
+          if (now - lastUpdateTime >= UPDATE_INTERVAL) {
+            analyserRef.current.getByteFrequencyData(dataArray)
+            const average = dataArray.reduce((a, b) => a + b) / dataArray.length
+            setAudioLevel(Math.min(100, (average / 255) * 100 * 2)) // Amplify a bit
+            lastUpdateTime = now
+          }
 
           animationFrameRef.current = requestAnimationFrame(updateLevel)
         }

@@ -350,24 +350,16 @@ function GameRoomContent({
       <header className="flex-shrink-0 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onLeaveGame}
-                    className="text-slate-400 hover:text-white"
-                  >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Leave
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Leave game room</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onLeaveGame}
+              className="text-slate-400 hover:text-white"
+              title="Leave game room"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Leave
+            </Button>
 
             <div className="h-6 w-px bg-slate-700" />
 
@@ -376,49 +368,33 @@ function GameRoomContent({
               <code className="max-w-xs truncate rounded bg-slate-800 px-2 py-1 text-sm text-purple-400">
                 {shareLink}
               </code>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleCopyShareLink}
-                      className="text-slate-400 hover:text-white"
-                    >
-                      {copied ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Copy shareable link</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCopyShareLink}
+                className="text-slate-400 hover:text-white"
+                title="Copy shareable link"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <GameRoomPlayerCount roomId={roomId} userId={userId} />
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-slate-400 hover:text-white"
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Game settings</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-slate-400 hover:text-white"
+              title="Game settings"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </header>
