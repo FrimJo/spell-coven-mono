@@ -205,87 +205,123 @@ export function usePeerJS({
   }, [onError])
 
   /**
-   * Initialize Peer instance
+   * Initialize Peer instance with retry logic for ID conflicts
    */
   const initializePeer = useCallback(async () => {
-    try {
-      console.log('[usePeerJS] Initializing peer with ID:', localPlayerId)
+    let retryCount = 0
+    const maxRetries = 3
+    const baseDelay = 1000 // 1 second
+    let isRetrying = false
 
-      const peerConfig = {
-        host: 'localhost',
-        port: 9000,
-        path: '/peerjs',
-        secure: false, // Set to true in production with HTTPS
-      }
+    const attemptConnection = () => {
+      try {
+        console.log('[usePeerJS] Initializing peer with ID:', localPlayerId)
 
-      console.log('[usePeerJS] Connecting to PeerServer:', peerConfig)
-      const peer = new Peer(localPlayerId, peerConfig)
-
-      // Handle incoming calls
-      peer.on('call', (call: MediaConnection) => {
-        console.log('[usePeerJS] Incoming call from:', call.peer)
-
-        if (!localStreamRef.current?.stream) {
-          console.warn('[usePeerJS] No local stream available for call')
-          call.close()
-          return
+        const peerConfig = {
+          host: 'localhost',
+          port: 9000,
+          path: '/peerjs',
+          secure: false, // Set to true in production with HTTPS
         }
 
-        // Answer the call with local stream
-        call.answer(localStreamRef.current.stream)
+        console.log('[usePeerJS] Connecting to PeerServer:', peerConfig)
+        const peer = new Peer(localPlayerId, peerConfig)
 
-        // Handle remote stream
-        call.on('stream', (remoteStream: MediaStream) => {
-          console.log('[usePeerJS] Received remote stream from:', call.peer)
-          setRemoteStreams((prev) => new Map(prev).set(call.peer, remoteStream))
-          setConnectionStates((prev) =>
-            new Map(prev).set(call.peer, 'connected'),
-          )
+        // Handle successful connection
+        peer.on('open', (id) => {
+          console.log('[usePeerJS] Peer connection opened with ID:', id)
+          peerRef.current = peer
+          setIsInitialized(true)
+          console.log('[usePeerJS] Peer initialized successfully')
         })
 
-        // Handle call errors
-        call.on('error', (err) => {
-          logError(err, { context: 'incomingCall', peerId: call.peer })
-          setConnectionStates((prev) =>
-            new Map(prev).set(call.peer, 'failed'),
-          )
-        })
+        // Handle incoming calls
+        peer.on('call', (call: MediaConnection) => {
+          console.log('[usePeerJS] Incoming call from:', call.peer)
 
-        // Handle call close
-        call.on('close', () => {
-          console.log('[usePeerJS] Call closed with:', call.peer)
-          setRemoteStreams((prev) => {
-            const next = new Map(prev)
-            next.delete(call.peer)
-            return next
+          if (!localStreamRef.current?.stream) {
+            console.warn('[usePeerJS] No local stream available for call')
+            call.close()
+            return
+          }
+
+          // Answer the call with local stream
+          call.answer(localStreamRef.current.stream)
+
+          // Handle remote stream
+          call.on('stream', (remoteStream: MediaStream) => {
+            console.log('[usePeerJS] Received remote stream from:', call.peer)
+            setRemoteStreams((prev) => new Map(prev).set(call.peer, remoteStream))
+            setConnectionStates((prev) =>
+              new Map(prev).set(call.peer, 'connected'),
+            )
           })
-          setConnectionStates((prev) =>
-            new Map(prev).set(call.peer, 'disconnected'),
-          )
-          callsRef.current.delete(call.peer)
+
+          // Handle call errors
+          call.on('error', (err) => {
+            logError(err, { context: 'incomingCall', peerId: call.peer })
+            setConnectionStates((prev) =>
+              new Map(prev).set(call.peer, 'failed'),
+            )
+          })
+
+          // Handle call close
+          call.on('close', () => {
+            console.log('[usePeerJS] Call closed with:', call.peer)
+            setRemoteStreams((prev) => {
+              const next = new Map(prev)
+              next.delete(call.peer)
+              return next
+            })
+            setConnectionStates((prev) =>
+              new Map(prev).set(call.peer, 'disconnected'),
+            )
+            callsRef.current.delete(call.peer)
+          })
+
+          // Store call
+          callsRef.current.set(call.peer, call)
         })
 
-        // Store call
-        callsRef.current.set(call.peer, call)
-      })
+        // Handle peer errors
+        peer.on('error', (err) => {
+          const peerError = createPeerJSError(err)
 
-      // Handle peer errors
-      peer.on('error', (err) => {
+          // Check if this is an "ID taken" error - retry with backoff
+          if (
+            peerError.message.includes('taken') &&
+            retryCount < maxRetries &&
+            !isRetrying
+          ) {
+            isRetrying = true
+            console.log(
+              `[usePeerJS] ID taken, destroying peer and retrying in ${baseDelay * (retryCount + 1)}ms (attempt ${retryCount + 1}/${maxRetries})`,
+            )
+            retryCount++
+            // Destroy the failed peer instance
+            peer.destroy()
+            // Retry after delay
+            setTimeout(() => {
+              isRetrying = false
+              attemptConnection()
+            }, baseDelay * retryCount)
+            return
+          }
+
+          logError(peerError, { context: 'peer' })
+          setError(peerError)
+          onError?.(peerError)
+        })
+      } catch (err) {
         const peerError = createPeerJSError(err)
-        logError(peerError, { context: 'peer' })
+        logError(peerError, { context: 'initializePeer' })
         setError(peerError)
         onError?.(peerError)
-      })
-
-      peerRef.current = peer
-      setIsInitialized(true)
-      console.log('[usePeerJS] Peer initialized successfully')
-    } catch (err) {
-      const peerError = createPeerJSError(err)
-      logError(peerError, { context: 'initializePeer' })
-      setError(peerError)
-      onError?.(peerError)
+      }
     }
+
+    // Start connection attempt
+    attemptConnection()
   }, [localPlayerId, onError])
 
   /**
