@@ -135,14 +135,24 @@ export function VideoStreamGrid({
     }
   }, [isVideoActive, getCameras])
 
+  // When localStream is available, mark video as started
+  useEffect(() => {
+    if (localStream && localStream.getVideoTracks().length > 0) {
+      setHasStartedVideo(true)
+    }
+  }, [localStream])
+
   const selectCamera = async (deviceId: string) => {
     const cameraIndex = availableCameras.findIndex(
       (cam) => cam.deviceId === deviceId,
     )
     if (cameraIndex !== -1) {
-      await startVideo(deviceId)
+      // Note: We don't call startVideo() here because the local stream
+      // is managed by usePeerJS and is already being displayed.
+      // The camera selection just updates the UI state.
       setCurrentCameraIndex(cameraIndex)
       setCurrentCameraId(deviceId)
+      setHasStartedVideo(true)
       setCameraPopoverOpen(false)
     }
   }
@@ -319,9 +329,9 @@ export function VideoStreamGrid({
         // For remote players, use track state from peer connection if available, otherwise fall back to streamStates
         const localVideoEnabled = localStream 
           ? localStream.getVideoTracks().some(track => track.enabled)
-          : isVideoActive
+          : false
         const videoEnabled = isLocal 
-          ? (hasStartedVideo ? localVideoEnabled : isVideoActive)
+          ? (hasStartedVideo && localVideoEnabled)
           : (peerData?.videoEnabled ?? state.video) && !!remoteStream
         const audioEnabled = isLocal ? true : (peerData?.audioEnabled ?? state.audio)
 
@@ -339,7 +349,15 @@ export function VideoStreamGrid({
               {isLocal && (
                 <>
                   <video
-                    ref={videoRef}
+                    ref={(el) => {
+                      if (el && localStream && el.srcObject !== localStream) {
+                        el.srcObject = localStream
+                      }
+                      // Also keep videoRef for card detection
+                      if (videoRef.current !== el) {
+                        videoRef.current = el
+                      }
+                    }}
                     autoPlay
                     muted
                     playsInline
@@ -355,7 +373,7 @@ export function VideoStreamGrid({
                     }}
                   />
                   {/* Overlay canvas for card detection - renders green borders */}
-                  {enableCardDetection && overlayRef && (
+                  {enableCardDetection && overlayRef && localStream && (
                     <canvas
                       ref={overlayRef}
                       width={1280}
@@ -636,7 +654,7 @@ export function VideoStreamGrid({
                         variant="outline"
                         className="h-10 w-10 border-white bg-white p-0 text-black hover:bg-gray-100"
                         disabled={
-                          !isVideoActive || availableCameras.length <= 1
+                          !hasStartedVideo || availableCameras.length <= 1
                         }
                         title={
                           availableCameras.length > 1
