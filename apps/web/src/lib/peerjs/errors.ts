@@ -88,8 +88,8 @@ export function createPeerJSError(error: unknown): PeerJSError {
         errorType = 'network'
       } else if (lowerMessage.includes('timeout')) {
         errorType = 'network'
-      } else if (lowerMessage.includes('unavailable')) {
-        errorType = 'peer-unavailable'
+      } else if (lowerMessage.includes('taken') || lowerMessage.includes('unavailable')) {
+        errorType = 'unavailable-id'
       } else if (lowerMessage.includes('webrtc')) {
         errorType = 'webrtc'
       }
