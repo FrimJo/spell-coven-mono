@@ -33,13 +33,22 @@ export const sendSignalingMessage = createServerFn({ method: 'POST' })
         }
       }
 
+      console.log(
+        `[WebRTC Signaling] Attempting to send ${message.type} from ${from} to ${to} in room ${roomId}`,
+      )
+
       // Check if target user has active SSE connection
       if (!sseManager.hasUserConnection(to)) {
+        console.warn(
+          `[WebRTC Signaling] Target player ${to} not found in SSE manager`,
+        )
         return {
           success: false,
           error: `Target player ${to} not found or not connected`,
         }
       }
+
+      console.log(`[WebRTC Signaling] Target ${to} has active SSE connection`)
 
       // Create SSE message format (matches contracts/signaling-api.md)
       const sseMessage = `data: ${JSON.stringify({
@@ -57,10 +66,18 @@ export const sendSignalingMessage = createServerFn({ method: 'POST' })
         },
       })}\n\n`
 
+      console.log(
+        `[WebRTC Signaling] Sending SSE message to ${to}:`,
+        message.type,
+      )
+
       // Route message to target player via SSE
       const sent = sseManager.sendToUser(to, sseMessage)
 
       if (!sent) {
+        console.error(
+          `[WebRTC Signaling] sendToUser returned false for ${to}`,
+        )
         return {
           success: false,
           error: `Failed to send message to player ${to}`,
@@ -68,7 +85,7 @@ export const sendSignalingMessage = createServerFn({ method: 'POST' })
       }
 
       console.log(
-        `[WebRTC Signaling] Routed ${message.type} message from room ${roomId} to player ${to}`,
+        `[WebRTC Signaling] Successfully routed ${message.type} message from room ${roomId} to player ${to}`,
       )
 
       return { success: true }

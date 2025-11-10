@@ -77,6 +77,8 @@ export class DiscordGatewayClient {
   private maxReconnectAttempts = 5
   private baseReconnectDelay = 1000 // 1 second
   private maxReconnectDelay = 30000 // 30 seconds
+  private heartbeatTimeoutTimer: ReturnType<typeof setTimeout> | null = null
+  private heartbeatTimeoutMs = 60000 // 60 seconds - if no ACK received, assume connection dead
 
   // Event listeners
   private stateListeners: Set<EventListener<ConnectionStateEvent>> = new Set()
@@ -134,7 +136,8 @@ export class DiscordGatewayClient {
 
       this.ws.onerror = (error) => {
         console.error('[Gateway] WebSocket error:', error)
-        this.updateState('error', 'WebSocket error')
+        // Don't update state here - let onclose handle reconnection
+        // The error event is always followed by a close event
       }
 
       this.ws.onclose = (event) => {
@@ -161,6 +164,10 @@ export class DiscordGatewayClient {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = null
+    }
+    if (this.heartbeatTimeoutTimer) {
+      clearTimeout(this.heartbeatTimeoutTimer)
+      this.heartbeatTimeoutTimer = null
     }
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)
@@ -305,6 +312,18 @@ export class DiscordGatewayClient {
 
     this.ws.send(JSON.stringify(payload))
     console.log('[Gateway] Sent heartbeat, sequence:', this.sequence)
+
+    // Set timeout to detect if we don't receive ACK
+    if (this.heartbeatTimeoutTimer) {
+      clearTimeout(this.heartbeatTimeoutTimer)
+    }
+    this.heartbeatTimeoutTimer = setTimeout(() => {
+      console.error('[Gateway] Heartbeat timeout - no ACK received, forcing reconnect')
+      // Force close to trigger reconnection
+      if (this.ws) {
+        this.ws.close(4000, 'Heartbeat timeout')
+      }
+    }, this.heartbeatTimeoutMs)
   }
 
   /**
@@ -313,6 +332,12 @@ export class DiscordGatewayClient {
   private handleHeartbeatAck(): void {
     this.lastHeartbeatAck = Date.now()
     console.log('[Gateway] Received heartbeat ACK')
+    
+    // Clear timeout since we received ACK
+    if (this.heartbeatTimeoutTimer) {
+      clearTimeout(this.heartbeatTimeoutTimer)
+      this.heartbeatTimeoutTimer = null
+    }
   }
 
   /**
@@ -401,10 +426,14 @@ export class DiscordGatewayClient {
    * Handle WebSocket close
    */
   private handleClose(code: number, reason: string): void {
-    // Clear heartbeat timer
+    // Clear timers
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = null
+    }
+    if (this.heartbeatTimeoutTimer) {
+      clearTimeout(this.heartbeatTimeoutTimer)
+      this.heartbeatTimeoutTimer = null
     }
 
     // Check if we should reconnect
