@@ -22,9 +22,9 @@
 
 **Purpose**: Project initialization and dependency installation
 
-- [ ] T001 Install PeerJS dependency (peerjs@^1.5.4) via pnpm
-- [ ] T002 [P] Install PeerJS type definitions (@types/peerjs) as dev dependency
-- [ ] T003 [P] Review existing Discord integration in apps/web/src/hooks/useVoiceChannelMembersFromEvents.ts to understand player presence detection
+- [x] T001 Install PeerJS dependency (peerjs@^1.5.4) via pnpm
+- [x] T002 [P] Install PeerJS type definitions (@types/peerjs) as dev dependency
+- [x] T003 [P] Review existing Discord integration in apps/web/src/hooks/useVoiceChannelMembersFromEvents.ts to understand player presence detection
 
 ---
 
@@ -34,10 +34,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create TypeScript types for PeerJS integration in apps/web/src/types/peerjs.ts (ConnectionState, PeerTrackState, PeerJSError types)
-- [ ] T005 [P] Create utility functions for connection retry logic in apps/web/src/lib/peerjs/retry.ts (exponential backoff: 0s, 2s, 4s)
-- [ ] T006 [P] Create utility functions for connection timeout handling in apps/web/src/lib/peerjs/timeout.ts (10-second timeout)
-- [ ] T007 [P] Create error handling utilities in apps/web/src/lib/peerjs/errors.ts (PeerJSError class, error type mapping)
+- [x] T004 Create TypeScript types for PeerJS integration in apps/web/src/types/peerjs.ts (ConnectionState, PeerTrackState, PeerJSError types)
+- [x] T005 [P] Create utility functions for connection retry logic in apps/web/src/lib/peerjs/retry.ts (exponential backoff: 0s, 2s, 4s)
+- [x] T006 [P] Create utility functions for connection timeout handling in apps/web/src/lib/peerjs/timeout.ts (10-second timeout)
+- [x] T007 [P] Create error handling utilities in apps/web/src/lib/peerjs/errors.ts (PeerJSError class, error type mapping)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -53,33 +53,33 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T008 [P] [US1] Create test file for usePeerJS hook in apps/web/tests/hooks/usePeerJS.test.ts
-- [ ] T009 [P] [US1] Write test: "initializes peer with local player ID" in apps/web/tests/hooks/usePeerJS.test.ts
-- [ ] T010 [P] [US1] Write test: "handles incoming call and adds remote stream" in apps/web/tests/hooks/usePeerJS.test.ts
-- [ ] T011 [P] [US1] Write test: "creates outgoing call when remote player joins" in apps/web/tests/hooks/usePeerJS.test.ts
-- [ ] T012 [P] [US1] Write test: "manages local media stream lifecycle" in apps/web/tests/hooks/usePeerJS.test.ts
-- [ ] T013 [P] [US1] Write test: "toggles video enabled/disabled state" in apps/web/tests/hooks/usePeerJS.test.ts
-- [ ] T014 [P] [US1] Write test: "toggles audio muted/unmuted state" in apps/web/tests/hooks/usePeerJS.test.ts
-- [ ] T015 [P] [US1] Write test: "switches camera device while maintaining connection" in apps/web/tests/hooks/usePeerJS.test.ts
-- [ ] T016 [P] [US1] Write test: "cleans up connections when component unmounts" in apps/web/tests/hooks/usePeerJS.test.ts
+- [x] T008 [P] [US1] Create test file for usePeerJS hook in apps/web/tests/hooks/usePeerJS.test.ts
+- [x] T009 [P] [US1] Write test: "initializes peer with local player ID" in apps/web/tests/hooks/usePeerJS.test.ts
+- [x] T010 [P] [US1] Write test: "handles incoming call and adds remote stream" in apps/web/tests/hooks/usePeerJS.test.ts
+- [x] T011 [P] [US1] Write test: "creates outgoing call when remote player joins" in apps/web/tests/hooks/usePeerJS.test.ts
+- [x] T012 [P] [US1] Write test: "manages local media stream lifecycle" in apps/web/tests/hooks/usePeerJS.test.ts
+- [x] T013 [P] [US1] Write test: "toggles video enabled/disabled state" in apps/web/tests/hooks/usePeerJS.test.ts
+- [x] T014 [P] [US1] Write test: "toggles audio muted/unmuted state" in apps/web/tests/hooks/usePeerJS.test.ts
+- [x] T015 [P] [US1] Write test: "switches camera device while maintaining connection" in apps/web/tests/hooks/usePeerJS.test.ts
+- [x] T016 [P] [US1] Write test: "cleans up connections when component unmounts" in apps/web/tests/hooks/usePeerJS.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Create usePeerJS hook skeleton in apps/web/src/hooks/usePeerJS.ts with interface matching contracts/usePeerJS-hook.ts
-- [ ] T018 [US1] Implement peer initialization logic in apps/web/src/hooks/usePeerJS.ts (create Peer instance with localPlayerId)
-- [ ] T019 [US1] Implement local media stream management in apps/web/src/hooks/usePeerJS.ts (getUserMedia with 4K constraints)
-- [ ] T020 [US1] Implement incoming call handler in apps/web/src/hooks/usePeerJS.ts (peer.on('call') event)
-- [ ] T021 [US1] Implement outgoing call creation in apps/web/src/hooks/usePeerJS.ts (peer.call() for remote players)
-- [ ] T022 [US1] Implement remote stream tracking in apps/web/src/hooks/usePeerJS.ts (Map of peerId to MediaStream)
-- [ ] T023 [US1] Implement connection state tracking in apps/web/src/hooks/usePeerJS.ts (Map of peerId to ConnectionState)
-- [ ] T024 [US1] Implement video toggle functionality in apps/web/src/hooks/usePeerJS.ts (enable/disable video track)
-- [ ] T025 [US1] Implement audio toggle functionality in apps/web/src/hooks/usePeerJS.ts (mute/unmute audio track)
-- [ ] T026 [US1] Implement camera device switching in apps/web/src/hooks/usePeerJS.ts (stop old stream, start new stream)
-- [ ] T027 [US1] Implement track state broadcasting in apps/web/src/hooks/usePeerJS.ts (notify peers of video/audio changes)
-- [ ] T028 [US1] Implement cleanup logic in apps/web/src/hooks/usePeerJS.ts (destroy peer, close calls, release streams)
-- [ ] T029 [US1] Update GameRoom component in apps/web/src/components/GameRoom.tsx to use usePeerJS instead of useWebRTC
-- [ ] T030 [US1] Update VideoStreamGrid component in apps/web/src/components/VideoStreamGrid.tsx to use remoteStreams Map and peerTrackStates
-- [ ] T031 [US1] Verify all tests pass for User Story 1
+- [x] T017 [US1] Create usePeerJS hook skeleton in apps/web/src/hooks/usePeerJS.ts with interface matching contracts/usePeerJS-hook.ts
+- [x] T018 [US1] Implement peer initialization logic in apps/web/src/hooks/usePeerJS.ts (create Peer instance with localPlayerId)
+- [x] T019 [US1] Implement local media stream management in apps/web/src/hooks/usePeerJS.ts (getUserMedia with 4K constraints)
+- [x] T020 [US1] Implement incoming call handler in apps/web/src/hooks/usePeerJS.ts (peer.on('call') event)
+- [x] T021 [US1] Implement outgoing call creation in apps/web/src/hooks/usePeerJS.ts (peer.call() for remote players)
+- [x] T022 [US1] Implement remote stream tracking in apps/web/src/hooks/usePeerJS.ts (Map of peerId to MediaStream)
+- [x] T023 [US1] Implement connection state tracking in apps/web/src/hooks/usePeerJS.ts (Map of peerId to ConnectionState)
+- [x] T024 [US1] Implement video toggle functionality in apps/web/src/hooks/usePeerJS.ts (enable/disable video track)
+- [x] T025 [US1] Implement audio toggle functionality in apps/web/src/hooks/usePeerJS.ts (mute/unmute audio track)
+- [x] T026 [US1] Implement camera device switching in apps/web/src/hooks/usePeerJS.ts (stop old stream, start new stream)
+- [x] T027 [US1] Implement track state broadcasting in apps/web/src/hooks/usePeerJS.ts (notify peers of video/audio changes)
+- [x] T028 [US1] Implement cleanup logic in apps/web/src/hooks/usePeerJS.ts (destroy peer, close calls, release streams)
+- [x] T029 [US1] Update GameRoom component in apps/web/src/components/GameRoom.tsx to use usePeerJS instead of useWebRTC
+- [x] T030 [US1] Update VideoStreamGrid component in apps/web/src/components/VideoStreamGrid.tsx to use remoteStreams Map and peerTrackStates
+- [x] T031 [US1] Verify all tests pass for User Story 1
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently - basic video streaming works for 2-4 players
 
@@ -93,23 +93,23 @@
 
 ### Tests for User Story 2
 
-- [ ] T032 [P] [US2] Write test: "retries connection 3 times with exponential backoff" in apps/web/tests/hooks/usePeerJS.test.ts
-- [ ] T033 [P] [US2] Write test: "times out connection after 10 seconds" in apps/web/tests/hooks/usePeerJS.test.ts
-- [ ] T034 [P] [US2] Write test: "automatically reconnects after brief network interruption" in apps/web/tests/hooks/usePeerJS.test.ts
-- [ ] T035 [P] [US2] Write test: "removes peer when connection drops completely" in apps/web/tests/hooks/usePeerJS.test.ts
-- [ ] T036 [P] [US2] Write test: "re-establishes connections when player rejoins" in apps/web/tests/hooks/usePeerJS.test.ts
+- [x] T032 [P] [US2] Write test: "retries connection 3 times with exponential backoff" in apps/web/tests/hooks/usePeerJS.test.ts
+- [x] T033 [P] [US2] Write test: "times out connection after 10 seconds" in apps/web/tests/hooks/usePeerJS.test.ts
+- [x] T034 [P] [US2] Write test: "automatically reconnects after brief network interruption" in apps/web/tests/hooks/usePeerJS.test.ts
+- [x] T035 [P] [US2] Write test: "removes peer when connection drops completely" in apps/web/tests/hooks/usePeerJS.test.ts
+- [x] T036 [P] [US2] Write test: "re-establishes connections when player rejoins" in apps/web/tests/hooks/usePeerJS.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T037 [US2] Integrate retry logic from apps/web/src/lib/peerjs/retry.ts into usePeerJS hook connection establishment
-- [ ] T038 [US2] Integrate timeout logic from apps/web/src/lib/peerjs/timeout.ts into usePeerJS hook connection establishment
-- [ ] T039 [US2] Implement connection failure detection in apps/web/src/hooks/usePeerJS.ts (peer.on('error'), call.on('error'))
-- [ ] T040 [US2] Implement automatic reconnection logic in apps/web/src/hooks/usePeerJS.ts (retry on transient failures)
-- [ ] T041 [US2] Implement connection cleanup on permanent failure in apps/web/src/hooks/usePeerJS.ts (remove from maps after max retries)
-- [ ] T042 [US2] Implement peer rejoin detection in apps/web/src/hooks/usePeerJS.ts (watch remotePlayerIds changes)
-- [ ] T043 [US2] Add error state management in apps/web/src/hooks/usePeerJS.ts (track and expose errors to UI)
-- [ ] T044 [US2] Add connection quality indicators in apps/web/src/components/VideoStreamGrid.tsx (show connection state per peer)
-- [ ] T045 [US2] Verify all tests pass for User Story 2
+- [x] T037 [US2] Integrate retry logic from apps/web/src/lib/peerjs/retry.ts into usePeerJS hook connection establishment
+- [x] T038 [US2] Integrate timeout logic from apps/web/src/lib/peerjs/timeout.ts into usePeerJS hook connection establishment
+- [x] T039 [US2] Implement connection failure detection in apps/web/src/hooks/usePeerJS.ts (peer.on('error'), call.on('error'))
+- [x] T040 [US2] Implement automatic reconnection logic in apps/web/src/hooks/usePeerJS.ts (retry on transient failures)
+- [x] T041 [US2] Implement connection cleanup on permanent failure in apps/web/src/hooks/usePeerJS.ts (remove from maps after max retries)
+- [x] T042 [US2] Implement peer rejoin detection in apps/web/src/hooks/usePeerJS.ts (watch remotePlayerIds changes)
+- [x] T043 [US2] Add error state management in apps/web/src/hooks/usePeerJS.ts (track and expose errors to UI)
+- [x] T044 [US2] Add connection quality indicators in apps/web/src/components/VideoStreamGrid.tsx (show connection state per peer)
+- [x] T045 [US2] Verify all tests pass for User Story 2
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - video streaming is reliable with automatic recovery
 
@@ -123,18 +123,18 @@
 
 ### Implementation for User Story 3
 
-- [ ] T046 [P] [US3] Remove old useWebRTC hook from apps/web/src/hooks/useWebRTC.ts
-- [ ] T047 [P] [US3] Remove old useWebRTCSignaling hook from apps/web/src/hooks/useWebRTCSignaling.ts
-- [ ] T048 [P] [US3] Remove custom peer connection manager from apps/web/src/lib/webrtc/peer-connection.ts
-- [ ] T049 [P] [US3] Remove custom signaling types from apps/web/src/lib/webrtc/signaling.ts
-- [ ] T050 [P] [US3] Remove custom WebRTC types from apps/web/src/lib/webrtc/types.ts
-- [ ] T051 [P] [US3] Remove custom WebRTC utilities from apps/web/src/lib/webrtc/utils.ts
-- [ ] T052 [P] [US3] Remove server-side signaling handler from apps/web/src/server/handlers/webrtc-signaling.server.ts
-- [ ] T053 [US3] Remove apps/web/src/lib/webrtc directory if empty
-- [ ] T054 [US3] Measure code reduction: count lines in new implementation vs old implementation
-- [ ] T055 [US3] Measure file reduction: count files in new implementation vs old implementation
-- [ ] T056 [US3] Document simplified architecture in apps/web/src/hooks/usePeerJS.ts (add comprehensive JSDoc comments)
-- [ ] T057 [US3] Create developer onboarding documentation in specs/001-peerjs-migration/DEVELOPER_GUIDE.md
+- [x] T046 [P] [US3] Remove old useWebRTC hook from apps/web/src/hooks/useWebRTC.ts
+- [x] T047 [P] [US3] Remove old useWebRTCSignaling hook from apps/web/src/hooks/useWebRTCSignaling.ts
+- [x] T048 [P] [US3] Remove custom peer connection manager from apps/web/src/lib/webrtc/peer-connection.ts
+- [x] T049 [P] [US3] Remove custom signaling types from apps/web/src/lib/webrtc/signaling.ts
+- [x] T050 [P] [US3] Remove custom WebRTC types from apps/web/src/lib/webrtc/types.ts
+- [x] T051 [P] [US3] Remove custom WebRTC utilities from apps/web/src/lib/webrtc/utils.ts
+- [x] T052 [P] [US3] Remove server-side signaling handler from apps/web/src/server/handlers/webrtc-signaling.server.ts
+- [x] T053 [US3] Remove apps/web/src/lib/webrtc directory if empty
+- [x] T054 [US3] Measure code reduction: count lines in new implementation vs old implementation
+- [x] T055 [US3] Measure file reduction: count files in new implementation vs old implementation
+- [x] T056 [US3] Document simplified architecture in apps/web/src/hooks/usePeerJS.ts (add comprehensive JSDoc comments)
+- [x] T057 [US3] Create developer onboarding documentation in specs/001-peerjs-migration/DEVELOPER_GUIDE.md
 
 **Checkpoint**: All user stories should now be independently functional - codebase is dramatically simplified
 
@@ -144,17 +144,17 @@
 
 **Purpose**: Improvements that affect multiple user stories and final validation
 
-- [ ] T058 [P] Add comprehensive error messages for all PeerJS error types in apps/web/src/lib/peerjs/errors.ts
-- [ ] T059 [P] Add browser compatibility detection in apps/web/src/hooks/usePeerJS.ts (check WebRTC support)
-- [ ] T060 [P] Add permission denial handling in apps/web/src/hooks/usePeerJS.ts (camera/mic permissions)
-- [ ] T061 [P] Add network quality monitoring in apps/web/src/hooks/usePeerJS.ts (track connection stats)
-- [ ] T062 [P] Add performance logging for connection establishment time in apps/web/src/hooks/usePeerJS.ts
-- [ ] T063 [P] Add performance logging for connection success rate in apps/web/src/hooks/usePeerJS.ts
-- [ ] T064 Update README or documentation with PeerJS migration notes
-- [ ] T065 Run full test suite to ensure no regressions
-- [ ] T066 Perform code review and refactoring for code quality
-- [ ] T067 Run quickstart.md validation (manual testing with 2-4 players)
-- [ ] T068 Verify all success criteria from spec.md are met (70-80% code reduction, <3s connection time, 95%+ success rate)
+- [x] T058 [P] Add comprehensive error messages for all PeerJS error types in apps/web/src/lib/peerjs/errors.ts
+- [x] T059 [P] Add browser compatibility detection in apps/web/src/hooks/usePeerJS.ts (check WebRTC support)
+- [x] T060 [P] Add permission denial handling in apps/web/src/hooks/usePeerJS.ts (camera/mic permissions)
+- [x] T061 [P] Add network quality monitoring in apps/web/src/hooks/usePeerJS.ts (track connection stats)
+- [x] T062 [P] Add performance logging for connection establishment time in apps/web/src/hooks/usePeerJS.ts
+- [x] T063 [P] Add performance logging for connection success rate in apps/web/src/hooks/usePeerJS.ts
+- [x] T064 Update README or documentation with PeerJS migration notes
+- [x] T065 Run full test suite to ensure no regressions
+- [x] T066 Perform code review and refactoring for code quality
+- [x] T067 Run quickstart.md validation (manual testing with 2-4 players)
+- [x] T068 Verify all success criteria from spec.md are met (70-80% code reduction, <3s connection time, 95%+ success rate)
 
 ---
 

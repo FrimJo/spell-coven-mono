@@ -1,15 +1,10 @@
 import type { DetectorType } from '@/lib/detectors'
-import type { PeerConnectionState } from '@/lib/webrtc/types'
-import { Suspense } from 'react'
+import type { ConnectionState, PeerTrackState } from '@/types/peerjs'
+import { Suspense, useMemo } from 'react'
 import { useVoiceChannelMembersFromEvents } from '@/hooks/useVoiceChannelMembersFromEvents'
 import { Loader2 } from 'lucide-react'
 
 import { VideoStreamGrid } from './VideoStreamGrid'
-
-interface PeerConnectionData {
-  videoEnabled: boolean
-  audioEnabled: boolean
-}
 
 interface GameRoomVideoGridProps {
   roomId: string
@@ -18,13 +13,13 @@ interface GameRoomVideoGridProps {
   detectorType?: DetectorType
   usePerspectiveWarp: boolean
   onCardCrop: (canvas: HTMLCanvasElement) => void
-  remoteStreams: Map<string, MediaStream | null>
-  connectionStates: Map<string, PeerConnectionState>
-  peerConnections: Map<string, PeerConnectionData>
-  onLocalVideoStart: () => Promise<void>
-  onLocalVideoStop: () => void
-  onToggleVideo: () => void
-  isWebRTCVideoActive: boolean
+  localStream: MediaStream | null
+  remoteStreams: Map<string, MediaStream>
+  connectionStates: Map<string, ConnectionState>
+  peerTrackStates: Map<string, PeerTrackState>
+  onToggleVideo: (enabled: boolean) => void
+  onToggleAudio: (enabled: boolean) => void
+  onSwitchCamera: (deviceId: string) => Promise<void>
 }
 
 function VideoGridContent({
@@ -34,37 +29,47 @@ function VideoGridContent({
   detectorType,
   usePerspectiveWarp,
   onCardCrop,
+  localStream,
   remoteStreams,
   connectionStates,
-  peerConnections,
-  onLocalVideoStart,
-  onLocalVideoStop,
+  peerTrackStates,
   onToggleVideo,
-  isWebRTCVideoActive,
+  onToggleAudio,
+  onSwitchCamera,
 }: GameRoomVideoGridProps) {
   const { members: voiceChannelMembers } = useVoiceChannelMembersFromEvents({
     gameId: roomId,
     userId: userId,
   })
 
-  return (
-    <VideoStreamGrid
-      players={voiceChannelMembers.map((member) => ({
+  // Build player list with connection states
+  const players = useMemo(
+    () =>
+      voiceChannelMembers.map((member) => ({
         id: member.id,
         name: member.username,
-      }))}
+        connectionState: connectionStates.get(member.id) || 'disconnected',
+        trackState: peerTrackStates.get(member.id) || {
+          videoEnabled: true,
+          audioEnabled: true,
+        },
+      })),
+    [voiceChannelMembers, connectionStates, peerTrackStates],
+  )
+
+  return (
+    <VideoStreamGrid
+      players={players}
       localPlayerName={playerName}
+      localStream={localStream}
       enableCardDetection={true}
       detectorType={detectorType}
       usePerspectiveWarp={usePerspectiveWarp}
       onCardCrop={onCardCrop}
       remoteStreams={remoteStreams}
-      connectionStates={connectionStates}
-      peerConnections={peerConnections}
-      onLocalVideoStart={onLocalVideoStart}
-      onLocalVideoStop={onLocalVideoStop}
       onToggleVideo={onToggleVideo}
-      isWebRTCVideoActive={isWebRTCVideoActive}
+      onToggleAudio={onToggleAudio}
+      onSwitchCamera={onSwitchCamera}
     />
   )
 }
