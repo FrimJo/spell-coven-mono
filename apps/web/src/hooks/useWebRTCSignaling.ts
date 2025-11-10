@@ -47,11 +47,20 @@ export function useWebRTCSignaling({
     userId: localPlayerId,
     channelId: roomId,
     onWebRTCSignaling: (message) => {
+      console.log('[WebRTC Signaling] Received SSE message:', {
+        type: message.data.message.type,
+        from: message.data.from,
+        roomId: message.data.roomId,
+        myRoomId: roomId,
+        myPlayerId: localPlayerId,
+      })
+      
       // Filter by roomId and ignore messages from self
       if (
         message.data.roomId !== roomId ||
         isSelfConnection(message.data.from, localPlayerId)
       ) {
+        console.log('[WebRTC Signaling] Filtered out message (wrong room or self)')
         return
       }
 
@@ -67,6 +76,7 @@ export function useWebRTCSignaling({
         },
       }
 
+      console.log('[WebRTC Signaling] Passing message to handler:', signalingMessage.message.type)
       onMessageRef.current?.(signalingMessage)
     },
   })
@@ -192,17 +202,15 @@ export function useWebRTCSignaling({
    */
   const sendTrackState = useCallback(
     async (kind: 'video' | 'audio', enabled: boolean, to?: string): Promise<void> => {
-      // If no target specified, we'll need to broadcast to all players
-      // For now, require explicit target
-      if (!to) {
-        throw new Error('Target player ID required for track state message')
-      }
+      // Broadcast to room (all players) by using empty string as target
+      // This works around SSE connection ID mismatches
+      const target = to || ''
 
       const result = await sendSignalingMessageFn({
         data: {
           roomId,
           from: localPlayerId,
-          to,
+          to: target,
           message: {
             type: 'track-state',
             payload: {
@@ -215,7 +223,7 @@ export function useWebRTCSignaling({
 
       if (!result.success) {
         console.error(
-          `[WebRTC Signaling] Failed to send track state to ${to}:`,
+          `[WebRTC Signaling] Failed to send track state${to ? ` to ${to}` : ' (broadcast)'}:`,
           result.error,
         )
         throw new Error(result.error || 'Failed to send track state')

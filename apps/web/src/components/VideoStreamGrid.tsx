@@ -248,8 +248,10 @@ export function VideoStreamGrid({
 
         videoTracks.forEach((track) => {
           const handleTrackChange = () => {
+            console.log(`[VideoStreamGrid] Track enabledchange for ${playerId}: enabled=${track.enabled}`)
             // When video track is disabled, update stream state
             if (!track.enabled) {
+              console.log(`[VideoStreamGrid] Setting video=false for ${playerId}`)
               setStreamStates((prev) => {
                 const currentState = prev[playerId]
                 if (!currentState) return prev
@@ -266,6 +268,7 @@ export function VideoStreamGrid({
               })
             } else {
               // When video track is enabled, update stream state
+              console.log(`[VideoStreamGrid] Setting video=true for ${playerId}`)
               setStreamStates((prev) => {
                 const currentState = prev[playerId]
                 if (!currentState) return prev
@@ -339,7 +342,7 @@ export function VideoStreamGrid({
                       height: '100%',
                       objectFit: 'contain',
                       zIndex: 0,
-                      display: isVideoActive ? 'block' : 'none',
+                      display: videoEnabled ? 'block' : 'none',
                     }}
                   />
                   {/* Overlay canvas for card detection - renders green borders */}
@@ -357,7 +360,7 @@ export function VideoStreamGrid({
                         objectFit: 'contain',
                         cursor: 'pointer',
                         zIndex: 1,
-                        display: isVideoActive ? 'block' : 'none',
+                        display: videoEnabled ? 'block' : 'none',
                       }}
                     />
                   )}
@@ -403,7 +406,7 @@ export function VideoStreamGrid({
                     height: '100%',
                     objectFit: 'contain',
                     zIndex: 0,
-                    display: remoteStream ? 'block' : 'none',
+                    display: remoteStream && videoEnabled ? 'block' : 'none',
                   }}
                   onLoadedMetadata={() => {
                     const videoElement = remoteVideoRefs.current.get(player.id)
@@ -547,24 +550,38 @@ export function VideoStreamGrid({
                         : 'destructive'
                     }
                     onClick={async () => {
+                      console.log('[VideoStreamGrid] Video button clicked', {
+                        hasStartedVideo,
+                        hasOnLocalVideoStart: !!onLocalVideoStart,
+                        hasOnToggleVideo: !!onToggleVideo,
+                      })
                       if (!hasStartedVideo) {
                         // First time: start video and WebRTC
+                        console.log('[VideoStreamGrid] Starting local webcam...')
                         await startVideo()
                         setHasStartedVideo(true)
+                        console.log('[VideoStreamGrid] Local webcam started')
                         if (onLocalVideoStart) {
                           try {
+                            console.log('[VideoStreamGrid] Calling onLocalVideoStart (WebRTC)...')
                             await onLocalVideoStart()
+                            console.log('[VideoStreamGrid] WebRTC started successfully')
                           } catch (error) {
                             console.error(
                               '[VideoStreamGrid] Failed to start WebRTC:',
                               error,
                             )
                           }
+                        } else {
+                          console.warn('[VideoStreamGrid] onLocalVideoStart not provided!')
                         }
                       } else {
                         // After first start: just toggle the track enabled state
+                        console.log('[VideoStreamGrid] Toggling video track...')
                         if (onToggleVideo) {
                           onToggleVideo()
+                        } else {
+                          console.warn('[VideoStreamGrid] onToggleVideo not provided!')
                         }
                       }
                     }}

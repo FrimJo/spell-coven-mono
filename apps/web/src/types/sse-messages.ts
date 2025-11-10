@@ -98,7 +98,7 @@ export const SSEWebRTCSignalingMessageSchema = SSEMessageBaseSchema.extend({
     from: z.string(),
     roomId: z.string(),
     message: z.object({
-      type: z.enum(['offer', 'answer', 'ice-candidate']),
+      type: z.enum(['offer', 'answer', 'ice-candidate', 'track-state']),
       payload: z.unknown(),
     }),
   }),

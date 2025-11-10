@@ -150,16 +150,19 @@ class VoiceChannelSSEManager {
 
       this.eventSource.onmessage = (event) => {
         try {
+          console.log('[SSE Manager] Raw SSE event received:', event.data.substring(0, 200))
           const parsed = JSON.parse(event.data)
 
           // Validate message with Zod schema
           const result = SSEMessageSchema.safeParse(parsed)
 
           if (!result.success) {
+            console.error('[SSE] Failed to parse message:', result.error)
             return
           }
 
           const message = result.data
+          console.log('[SSE Manager] Parsed message type:', message.type)
 
           if (isSSEAckMessage(message)) {
             this.reconnectAttempts = 0
@@ -195,9 +198,19 @@ class VoiceChannelSSEManager {
 
           // Handle WebRTC signaling messages
           if (isSSEWebRTCSignalingMessage(message)) {
+            console.log('[SSE Manager] Received webrtc-signaling message:', {
+              type: message.type,
+              event: message.event,
+              dataMessageType: message.data?.message?.type,
+            })
             this.listeners.forEach((listener) => {
               listener.onWebRTCSignaling?.(message)
             })
+          } else {
+            // Log non-webrtc messages for debugging
+            if (message.type !== 'ack' && message.type !== 'connection-status') {
+              console.log('[SSE Manager] Received non-webrtc message:', message.type)
+            }
           }
         } catch (error) {
           const parseError =
