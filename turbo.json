@@ -23,7 +23,9 @@
     "GATEWAY_WS_URL",
     "LINK_TOKEN",
     "BLOB_READ_WRITE_TOKEN",
-    "LOG_LEVEL"
+    "LOG_LEVEL",
+    "PEERJS_PORT",
+    "PEERJS_PATH"
   ],
   "tasks": {
     "build": {

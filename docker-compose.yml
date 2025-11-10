@@ -26,6 +26,22 @@ services:
       retries: 3
       start_period: 40s
 
+  # PeerJS Server
+  # Provides WebRTC signaling for peer-to-peer connections
+  peerjs-server:
+    build:
+      context: .
+      dockerfile: apps/peerjs-server/Dockerfile
+    environment:
+      - PEERJS_PORT=9000
+      - PEERJS_PATH=/peerjs
+      - NODE_ENV=production
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
+    networks:
+      - spell-coven-network
+
   # TanStack Start Web App
   # Serves the web application and connects to Gateway service
   web:

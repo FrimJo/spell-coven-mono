@@ -211,7 +211,15 @@ export function usePeerJS({
     try {
       console.log('[usePeerJS] Initializing peer with ID:', localPlayerId)
 
-      const peer = new Peer(localPlayerId)
+      const peerConfig = {
+        host: 'localhost',
+        port: 9000,
+        path: '/peerjs',
+        secure: false, // Set to true in production with HTTPS
+      }
+
+      console.log('[usePeerJS] Connecting to PeerServer:', peerConfig)
+      const peer = new Peer(localPlayerId, peerConfig)
 
       // Handle incoming calls
       peer.on('call', (call: MediaConnection) => {
