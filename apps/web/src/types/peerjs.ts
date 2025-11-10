@@ -6,7 +6,7 @@
 /**
  * Connection state for a peer connection
  */
-export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'failed'
+export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'failed' | 'reconnecting'
 
 /**
  * Track state for audio/video tracks
@@ -78,6 +78,6 @@ export interface TimeoutConfig {
  */
 export interface LocalMediaStream {
   stream: MediaStream
-  videoTrack: MediaStreamVideoTrack | null
-  audioTrack: MediaStreamAudioTrack | null
+  videoTrack: MediaStreamTrack | null
+  audioTrack: MediaStreamTrack | null
 }

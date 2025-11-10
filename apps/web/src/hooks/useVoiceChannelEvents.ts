@@ -206,11 +206,13 @@ class VoiceChannelSSEManager {
             this.listeners.forEach((listener) => {
               listener.onWebRTCSignaling?.(message)
             })
+          } else if (isSSEAckMessage(message)) {
+            // Ack message - no action needed
+          } else if (isSSEErrorMessage(message)) {
+            // Error message - handled elsewhere
           } else {
-            // Log non-webrtc messages for debugging
-            if (message.type !== 'ack' && message.type !== 'connection-status') {
-              console.log('[SSE Manager] Received non-webrtc message:', message.type)
-            }
+            // Log other messages for debugging
+            console.log('[SSE Manager] Received message:', message.type)
           }
         } catch (error) {
           const parseError =
