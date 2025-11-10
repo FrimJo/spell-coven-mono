@@ -1,6 +1,5 @@
 import type { DetectorType } from '@/lib/detectors'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { loadingEvents } from '@/lib/loading-events'
 import { setupWebcam } from '@/lib/webcam'
 
 interface UseWebcamOptions {
@@ -12,10 +11,6 @@ interface UseWebcamOptions {
   usePerspectiveWarp?: boolean
   /** Callback when a card is cropped */
   onCrop?: (canvas: HTMLCanvasElement) => void
-  /** Auto-start video on mount */
-  autoStart?: boolean
-  /** Preferred camera device ID */
-  deviceId?: string | null
 }
 
 interface UseWebcamReturn {
@@ -27,30 +22,14 @@ interface UseWebcamReturn {
   croppedRef: React.RefObject<HTMLCanvasElement | null>
   /** Ref for the full resolution canvas (internal use) */
   fullResRef: React.RefObject<HTMLCanvasElement | null>
-  /** Ref for camera select element */
-  cameraSelectRef: React.RefObject<HTMLSelectElement | null>
-  /** Start the webcam with optional device ID */
-  startVideo: (deviceId?: string | null) => Promise<void>
-  /** Stop the webcam */
-  stopVideo: () => void
   /** Get list of available cameras */
   getCameras: () => Promise<MediaDeviceInfo[]>
-  /** Get currently active device ID */
-  getCurrentDeviceId: () => string | null
-  /** Populate a select element with available cameras */
-  populateCameraSelect: (selectEl: HTMLSelectElement | null) => Promise<void>
   /** Get the cropped canvas element */
   getCroppedCanvas: () => HTMLCanvasElement | null
-  /** Whether the webcam controller is initialized */
+  /** Whether the card detector is initialized */
   isReady: boolean
   /** Whether a card has been cropped */
   hasCroppedImage: boolean
-  /** Current status message */
-  status: string
-  /** Loading state */
-  isLoading: boolean
-  /** Whether video stream is active */
-  isVideoActive: boolean
 }
 
 /**
@@ -58,9 +37,8 @@ interface UseWebcamReturn {
  *
  * @example
  * ```tsx
- * const { videoRef, overlayRef, startVideo, isReady } = useWebcam({
+ * const { videoRef, overlayRef, isReady } = useWebcam({
  *   enableCardDetection: true,
- *   autoStart: true,
  * })
  *
  * return (
@@ -77,8 +55,6 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     detectorType,
     usePerspectiveWarp = true,
     onCrop: onCropProp,
-    autoStart = false,
-    deviceId = null,
   } = options
 
   // Stable callback reference
@@ -93,24 +69,14 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
   const overlayRef = useRef<HTMLCanvasElement>(null)
   const croppedRef = useRef<HTMLCanvasElement>(null)
   const fullResRef = useRef<HTMLCanvasElement>(null)
-  const cameraSelectRef = useRef<HTMLSelectElement>(null)
 
   const webcamController = useRef<Awaited<
     ReturnType<typeof setupWebcam>
   > | null>(null)
   const isInitialized = useRef(false)
-  const autoStartRef = useRef(autoStart)
-  const deviceIdRef = useRef(deviceId)
-
-  // Update refs when props change
-  autoStartRef.current = autoStart
-  deviceIdRef.current = deviceId
 
   const [isReady, setIsReady] = useState(false)
   const [hasCroppedImage, setHasCroppedImage] = useState(false)
-  const [status, setStatus] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [isVideoActive, setIsVideoActive] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -122,9 +88,8 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
       }
 
       if (!enableCardDetection) {
-        // Simple webcam without OpenCV
+        // Card detection disabled, nothing to initialize
         setIsReady(true)
-        setStatus('Ready')
         return
       }
 
@@ -141,11 +106,8 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
       // Mark as initialized before starting async work
       isInitialized.current = true
 
-      // Initialize webcam with card detection
+      // Initialize card detector
       try {
-        setIsLoading(true)
-        setStatus('Loading detector…')
-
         webcamController.current = await setupWebcam({
           video: videoRef.current,
           overlay: overlayRef.current,
@@ -159,112 +121,15 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
               onCrop(canvas)
             }
           },
-          onProgress: (msg: string) => {
-            if (mounted) {
-              setStatus(msg)
-            }
-          },
-        })
-
-        // Emit final game room setup events regardless of mounted state
-        // (loading events need to fire to complete the loading UI)
-        loadingEvents.emit({
-          step: 'game-room',
-          progress: 90,
-          message: 'Setting up game room...',
-        })
-
-        // Wait for CLIP model to be ready before completing
-        const { isModelReady, loadModel, loadEmbeddingsAndMetaFromPackage } =
-          await import('@/lib/clip-search')
-        console.log('[useWebcam] Checking if CLIP model is ready...')
-
-        // If model not already loaded, load both the model and embeddings database
-        if (!isModelReady()) {
-          console.log(
-            '[useWebcam] Loading CLIP model and embeddings database...',
-          )
-
-          // Load embeddings database (meta + db)
-          loadingEvents.emit({
-            step: 'clip-model',
-            progress: 25,
-            message: 'Loading embeddings database...',
-          })
-          await loadEmbeddingsAndMetaFromPackage()
-          console.log('[useWebcam] ✅ Embeddings database loaded')
-
-          // Load CLIP model
-          await loadModel({
-            onProgress: (msg: string) => {
-              console.log(`[useWebcam] CLIP model loading: ${msg}`)
-              loadingEvents.emit({
-                step: 'clip-model',
-                progress: 50,
-                message: `Loading CLIP model: ${msg}`,
-              })
-            },
-          })
-        }
-
-        // Poll with timeout as fallback in case model loading doesn't complete
-        let attempts = 0
-        const maxAttempts = 300 // 60 seconds timeout
-        while (!isModelReady() && attempts < maxAttempts) {
-          if (attempts % 10 === 0) {
-            console.log(
-              `[useWebcam] Waiting for CLIP model... (${attempts}/${maxAttempts})`,
-            )
-          }
-          await new Promise((resolve) => setTimeout(resolve, 200))
-          attempts++
-        }
-
-        if (!isModelReady()) {
-          console.error(
-            '[useWebcam] ❌ CLIP model not ready after waiting 60 seconds',
-          )
-          console.error(
-            '[useWebcam] This likely means the model failed to load. Check console for errors.',
-          )
-        } else {
-          console.log('[useWebcam] ✅ CLIP model is ready!')
-          loadingEvents.emit({
-            step: 'clip-model',
-            progress: 100,
-            message: 'CLIP model loaded successfully',
-          })
-        }
-
-        loadingEvents.emit({
-          step: 'complete',
-          progress: 100,
-          message: 'Game room ready!',
         })
 
         // Update component state only if still mounted
         if (mounted) {
           setIsReady(true)
-          setStatus('Webcam ready')
-          setIsLoading(false)
-
-          // Auto-start if requested
-          if (autoStartRef.current) {
-            await webcamController.current.startVideo(deviceIdRef.current)
-            await webcamController.current.populateCameraSelect(
-              cameraSelectRef.current,
-            )
-          }
         }
       } catch (err) {
-        console.error('Webcam initialization error:', err)
+        console.error('[useWebcam] Card detector initialization error:', err)
         isInitialized.current = false
-        if (mounted) {
-          setStatus(
-            `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          )
-          setIsLoading(false)
-        }
       }
     }
 
@@ -275,52 +140,6 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     }
   }, [enableCardDetection, detectorType, onCrop, usePerspectiveWarp])
 
-  const startVideo = async (deviceId?: string | null) => {
-    if (enableCardDetection) {
-      if (!webcamController.current) {
-        console.error('Webcam controller not initialized')
-        setStatus('Error: Webcam controller not ready')
-        return
-      }
-      try {
-        await webcamController.current.startVideo(deviceId || null)
-        await webcamController.current.populateCameraSelect(
-          cameraSelectRef.current,
-        )
-        setStatus('Webcam started')
-        setIsVideoActive(true)
-      } catch (err) {
-        console.error('Failed to start webcam:', err)
-        setStatus(
-          `Error: ${err instanceof Error ? err.message : 'Failed to start webcam'}`,
-        )
-        setIsVideoActive(false)
-      }
-    } else {
-      // Simple video start without OpenCV
-      if (!videoRef.current) return
-
-      try {
-        const constraints: MediaStreamConstraints = {
-          audio: false,
-          video: deviceId
-            ? { deviceId: { exact: deviceId } }
-            : { width: { ideal: 1920 }, height: { ideal: 1080 } },
-        }
-        const stream = await navigator.mediaDevices.getUserMedia(constraints)
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-        setStatus('Webcam started')
-        setIsVideoActive(true)
-      } catch (err) {
-        console.error('Failed to start webcam:', err)
-        setStatus(
-          `Error: ${err instanceof Error ? err.message : 'Failed to start webcam'}`,
-        )
-        setIsVideoActive(false)
-      }
-    }
-  }
 
   const getCameras = async () => {
     if (webcamController.current) {
@@ -337,29 +156,6 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     return realCameras
   }
 
-  const getCurrentDeviceId = () => {
-    if (webcamController.current) {
-      return webcamController.current.getCurrentDeviceId()
-    }
-    return null
-  }
-
-  const populateCameraSelect = async (selectEl: HTMLSelectElement | null) => {
-    if (webcamController.current) {
-      await webcamController.current.populateCameraSelect(selectEl)
-    }
-  }
-
-  const stopVideo = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream
-      stream.getTracks().forEach((track) => track.stop())
-      videoRef.current.srcObject = null
-      setIsVideoActive(false)
-      setStatus('Video stopped')
-    }
-  }
-
   const getCroppedCanvas = () => {
     if (webcamController.current) {
       return webcamController.current.getCroppedCanvas()
@@ -372,17 +168,9 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     overlayRef,
     croppedRef,
     fullResRef,
-    cameraSelectRef,
-    startVideo,
-    stopVideo,
     getCameras,
-    getCurrentDeviceId,
-    populateCameraSelect,
     getCroppedCanvas,
     isReady,
     hasCroppedImage,
-    status,
-    isLoading,
-    isVideoActive,
   }
 }
