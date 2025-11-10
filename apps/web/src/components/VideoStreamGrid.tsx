@@ -56,6 +56,8 @@ interface VideoStreamGridProps {
   onLocalVideoStop?: () => void
   /** Local stream for video/audio */
   localStream?: MediaStream | null
+  /** Local track state (video/audio enabled) */
+  localTrackState?: PeerTrackState
   /** Callback to toggle video track enabled/disabled (for WebRTC integration) */
   onToggleVideo?: (enabled: boolean) => void
   /** Callback to toggle audio track enabled/disabled (for WebRTC integration) */
@@ -82,28 +84,12 @@ export function VideoStreamGrid({
   onLocalVideoStart,
   onLocalVideoStop,
   localStream,
+  localTrackState,
   onToggleVideo,
   onToggleAudio,
   onSwitchCamera,
 }: VideoStreamGridProps) {
-  // Initialize webcam with card detection
-  const {
-    videoRef,
-    overlayRef,
-    croppedRef,
-    fullResRef,
-    startVideo,
-    stopVideo,
-    getCameras,
-    isVideoActive,
-  } = useWebcam({
-    enableCardDetection,
-    detectorType,
-    usePerspectiveWarp,
-    onCrop: onCardCrop,
-    autoStart: false,
-  })
-
+  // State declarations first (needed before useWebcam hook)
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>(
     [],
   )
@@ -114,6 +100,22 @@ export function VideoStreamGrid({
   const [cameraPopoverOpen, setCameraPopoverOpen] = useState(false)
   const [isAudioMuted, setIsAudioMuted] = useState(false)
   const [hasStartedVideo, setHasStartedVideo] = useState(false)
+
+  // Initialize webcam with card detection
+  const {
+    videoRef,
+    overlayRef,
+    croppedRef,
+    fullResRef,
+    getCameras,
+    isVideoActive,
+  } = useWebcam({
+    enableCardDetection,
+    detectorType,
+    usePerspectiveWarp,
+    onCrop: onCardCrop,
+    reinitializeTrigger: currentCameraId ? 1 : 0,
+  })
 
   const [streamStates, setStreamStates] = useState<Record<string, StreamState>>(
     players.reduce(
@@ -128,12 +130,12 @@ export function VideoStreamGrid({
   // Find local player (not currently used but may be needed for future features)
   // const localPlayer = players.find((p) => p.name === localPlayerName)
 
-  // Load available cameras when stream becomes active
+  // Load available cameras when local stream becomes available
   useEffect(() => {
-    if (isVideoActive) {
+    if (localStream && localStream.getVideoTracks().length > 0) {
       getCameras().then(setAvailableCameras)
     }
-  }, [isVideoActive, getCameras])
+  }, [localStream, getCameras])
 
   // When localStream is available, mark video as started
   useEffect(() => {
@@ -147,13 +149,18 @@ export function VideoStreamGrid({
       (cam) => cam.deviceId === deviceId,
     )
     if (cameraIndex !== -1) {
-      // Note: We don't call startVideo() here because the local stream
-      // is managed by usePeerJS and is already being displayed.
-      // The camera selection just updates the UI state.
-      setCurrentCameraIndex(cameraIndex)
-      setCurrentCameraId(deviceId)
-      setHasStartedVideo(true)
-      setCameraPopoverOpen(false)
+      // Switch camera via the callback (managed by usePeerJS)
+      if (onSwitchCamera) {
+        try {
+          await onSwitchCamera(deviceId)
+          setCurrentCameraIndex(cameraIndex)
+          setCurrentCameraId(deviceId)
+          setHasStartedVideo(true)
+          setCameraPopoverOpen(false)
+        } catch (error) {
+          console.error('[VideoStreamGrid] Failed to switch camera:', error)
+        }
+      }
     }
   }
 
@@ -325,15 +332,15 @@ export function VideoStreamGrid({
         const connectionState = connectionStates.get(player.id)
         const peerData = peerConnections.get(player.id)
 
-        // For local player, video is enabled based on track state
+        // For local player, use localTrackState as single source of truth
         // For remote players, use track state from peer connection if available, otherwise fall back to streamStates
-        const localVideoEnabled = localStream 
-          ? localStream.getVideoTracks().some(track => track.enabled)
-          : false
+        const localVideoEnabled = localTrackState?.videoEnabled ?? true
         const videoEnabled = isLocal 
           ? (hasStartedVideo && localVideoEnabled)
           : (peerData?.videoEnabled ?? state.video) && !!remoteStream
-        const audioEnabled = isLocal ? true : (peerData?.audioEnabled ?? state.audio)
+        const audioEnabled = isLocal 
+          ? (localTrackState?.audioEnabled ?? true)
+          : (peerData?.audioEnabled ?? state.audio)
 
         // Check if remote video is actually playing (for hiding placeholder)
         const isRemoteVideoPlaying =

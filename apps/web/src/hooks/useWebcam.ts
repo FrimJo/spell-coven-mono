@@ -11,6 +11,8 @@ interface UseWebcamOptions {
   usePerspectiveWarp?: boolean
   /** Callback when a card is cropped */
   onCrop?: (canvas: HTMLCanvasElement) => void
+  /** Trigger to reinitialize detector (e.g., when camera switches) */
+  reinitializeTrigger?: number
 }
 
 interface UseWebcamReturn {
@@ -55,6 +57,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     detectorType,
     usePerspectiveWarp = true,
     onCrop: onCropProp,
+    reinitializeTrigger = 0,
   } = options
 
   // Stable callback reference
@@ -82,11 +85,6 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     let mounted = true
 
     async function init() {
-      // Skip if already initialized (prevents re-initialization loop)
-      if (isInitialized.current) {
-        return
-      }
-
       if (!enableCardDetection) {
         // Card detection disabled, nothing to initialize
         setIsReady(true)
@@ -103,11 +101,11 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
         return
       }
 
-      // Mark as initialized before starting async work
-      isInitialized.current = true
-
-      // Initialize card detector
+      // Initialize or reinitialize card detector
       try {
+        // Reset initialization flag to allow reinitialization when video stream changes
+        isInitialized.current = false
+
         webcamController.current = await setupWebcam({
           video: videoRef.current,
           overlay: overlayRef.current,
@@ -126,6 +124,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
         // Update component state only if still mounted
         if (mounted) {
           setIsReady(true)
+          isInitialized.current = true
         }
       } catch (err) {
         console.error('[useWebcam] Card detector initialization error:', err)
@@ -138,7 +137,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     return () => {
       mounted = false
     }
-  }, [enableCardDetection, detectorType, onCrop, usePerspectiveWarp])
+  }, [enableCardDetection, detectorType, onCrop, usePerspectiveWarp, reinitializeTrigger])
 
 
   const getCameras = async () => {
