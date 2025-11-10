@@ -119,6 +119,7 @@ export interface UsePeerJSReturn {
   toggleVideo: (enabled: boolean) => void
   toggleAudio: (enabled: boolean) => void
   switchCamera: (deviceId: string) => Promise<void>
+  initializeLocalMedia: () => Promise<void>
   error: PeerJSError | null
   isInitialized: boolean
 }
@@ -575,7 +576,8 @@ export function usePeerJS({
     }
 
     const initialize = async () => {
-      await initializeLocalStream()
+      // Initialize Peer first (without local stream)
+      // Local stream will be initialized separately when user is ready
       await initializePeer()
     }
 
@@ -609,6 +611,17 @@ export function usePeerJS({
   }, [])
 
   /**
+   * Initialize local stream when user completes media setup
+   * This is called separately after user selects their camera device
+   */
+  useEffect(() => {
+    // Only initialize if peer is ready and we don't have a local stream yet
+    if (peerRef.current && !localStreamRef.current?.stream) {
+      initializeLocalStream()
+    }
+  }, [])
+
+  /**
    * Handle remote player changes
    */
   useEffect(() => {
@@ -636,6 +649,49 @@ export function usePeerJS({
     }
   }, [remotePlayerIds, isInitialized, createOutgoingCall])
 
+  // Wrapper function to initialize local media (called after media setup dialog)
+  const initializeLocalMediaWrapper = useCallback(async (deviceId?: string) => {
+    if (!localStreamRef.current?.stream) {
+      // If deviceId is provided, create stream with specific device
+      if (deviceId) {
+        try {
+          console.log('[usePeerJS] Initializing local media stream with device:', deviceId)
+
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              deviceId: { exact: deviceId },
+              width: { ideal: 3840 },
+              height: { ideal: 2160 },
+            },
+            audio: true,
+          })
+
+          const videoTrack = stream.getVideoTracks()[0] || null
+          const audioTrack = stream.getAudioTracks()[0] || null
+
+          console.log('[usePeerJS] Video track enabled:', videoTrack?.enabled)
+          console.log('[usePeerJS] Audio track enabled:', audioTrack?.enabled)
+
+          localStreamRef.current = {
+            stream,
+            videoTrack,
+            audioTrack,
+          }
+
+          setLocalStream(stream)
+          console.log('[usePeerJS] Local media stream initialized with device', deviceId)
+        } catch (err) {
+          const peerError = createPeerJSError(err)
+          logError(peerError, { context: 'initializeLocalStream' })
+          setError(peerError)
+          onError?.(peerError)
+        }
+      } else {
+        await initializeLocalStream()
+      }
+    }
+  }, [initializeLocalStream, onError])
+
   return {
     localStream,
     remoteStreams,
@@ -645,6 +701,7 @@ export function usePeerJS({
     toggleVideo,
     toggleAudio,
     switchCamera,
+    initializeLocalMedia: initializeLocalMediaWrapper,
     error,
     isInitialized,
   }

@@ -73,8 +73,13 @@ function GameRoomContent({
   }, [roomId])
 
   const [isLoading, setIsLoading] = useState(true)
-  // HOOK: Dialog open state - start closed to avoid Select component infinite loop in StrictMode
-  const [mediaDialogOpen, setMediaDialogOpen] = useState<boolean>(false)
+  // HOOK: Dialog open state - only show on first visit to this room
+  const [mediaDialogOpen, setMediaDialogOpen] = useState<boolean>(() => {
+    // Check if user has already completed setup for this room
+    if (typeof window === 'undefined') return false
+    const setupCompleted = localStorage.getItem(`media-setup-${roomId}`)
+    return !setupCompleted
+  })
 
   // Voice dropout modal state
   const [voiceDropoutOpen, setVoiceDropoutOpen] = useState(false)
@@ -117,6 +122,7 @@ function GameRoomContent({
     toggleVideo: togglePeerJSVideo,
     toggleAudio: togglePeerJSAudio,
     switchCamera,
+    initializeLocalMedia,
     error: peerError,
     isInitialized,
   } = usePeerJS({
@@ -305,9 +311,31 @@ function GameRoomContent({
     }
   }, [])
 
+  // Auto-initialize camera stream if setup was already completed
+  useEffect(() => {
+    const setupCompleted = localStorage.getItem(`media-setup-${roomId}`)
+    const savedDeviceId = localStorage.getItem(`media-device-${roomId}`)
+
+    if (setupCompleted && savedDeviceId && !mediaDialogOpen) {
+      console.log('[GameRoom] Setup already completed, initializing camera with saved device:', savedDeviceId)
+      initializeLocalMedia(savedDeviceId)
+    }
+  }, [roomId, mediaDialogOpen, initializeLocalMedia])
+
   // Show dialog until user completes media setup
-  const handleDialogComplete = () => {
+  const handleDialogComplete = async (config: { videoDeviceId: string; audioInputDeviceId: string; audioOutputDeviceId: string }) => {
+    // Save to localStorage that setup has been completed for this room and the selected device
+    localStorage.setItem(`media-setup-${roomId}`, 'true')
+    localStorage.setItem(`media-device-${roomId}`, config.videoDeviceId)
     setMediaDialogOpen(false)
+    // Initialize local media stream after user selects their camera
+    await initializeLocalMedia(config.videoDeviceId)
+    // Emit event to signal that video has started
+    loadingEvents.emit({
+      step: 'video-started',
+      progress: 100,
+      message: 'Video stream started',
+    })
   }
 
   const handleCopyShareLink = () => {
@@ -315,6 +343,10 @@ function GameRoomContent({
     setCopied(true)
     toast.success('Shareable link copied to clipboard!')
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleOpenSettings = () => {
+    setMediaDialogOpen(true)
   }
 
   const handleNextTurn = () => {
@@ -390,8 +422,9 @@ function GameRoomContent({
             <Button
               variant="ghost"
               size="sm"
+              onClick={handleOpenSettings}
               className="text-slate-400 hover:text-white"
-              title="Game settings"
+              title="Audio & video settings"
             >
               <Settings className="h-4 w-4" />
             </Button>
