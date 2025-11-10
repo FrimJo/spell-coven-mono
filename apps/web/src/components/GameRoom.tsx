@@ -6,7 +6,8 @@ import {
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
 import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
-import { useWebRTC } from '@/hooks/useWebRTC'
+import { usePeerJS } from '@/hooks/usePeerJS'
+import { useVoiceChannelMembersFromEvents } from '@/hooks/useVoiceChannelMembersFromEvents'
 import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken.js'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
@@ -97,23 +98,35 @@ function GameRoomContent({
 
   const { data: wsTokenData } = useWebSocketAuthToken({ userId })
 
-  // WebRTC hook for peer-to-peer video streaming
+  // Get remote player IDs from voice channel members
+  const { members: voiceChannelMembers } = useVoiceChannelMembersFromEvents({
+    gameId: roomId,
+    userId: userId,
+  })
+
+  const remotePlayerIds = useMemo(
+    () => voiceChannelMembers.filter((m) => m.id !== userId).map((m) => m.id),
+    [voiceChannelMembers, userId],
+  )
+
+  // PeerJS hook for peer-to-peer video streaming
   const {
     localStream,
     remoteStreams,
     connectionStates,
-    peerConnections,
-    startVideo,
-    stopVideo,
-    toggleVideo: toggleWebRTCVideo,
-    toggleAudio: toggleWebRTCAudio,
+    peerTrackStates,
+    toggleVideo: togglePeerJSVideo,
+    toggleAudio: togglePeerJSAudio,
     switchCamera,
-    isVideoActive: isWebRTCVideoActive,
-    isAudioMuted: isWebRTCAudioMuted,
-    isVideoEnabled: isWebRTCVideoEnabled,
-  } = useWebRTC({
-    roomId: roomId,
+    error: peerError,
+    isInitialized,
+  } = usePeerJS({
     localPlayerId: userId,
+    remotePlayerIds: remotePlayerIds,
+    onError: (error) => {
+      console.error('[GameRoom] PeerJS error:', error)
+      toast.error(error.message)
+    },
   })
 
   // Voice channel validation is now done in the route's beforeLoad hook
@@ -433,13 +446,13 @@ function GameRoomContent({
               onCardCrop={(canvas: HTMLCanvasElement) => {
                 query(canvas)
               }}
+              localStream={localStream}
               remoteStreams={remoteStreams}
               connectionStates={connectionStates}
-              peerConnections={peerConnections}
-              onLocalVideoStart={startVideo}
-              onLocalVideoStop={stopVideo}
-              onToggleVideo={toggleWebRTCVideo}
-              isWebRTCVideoActive={isWebRTCVideoEnabled}
+              peerTrackStates={peerTrackStates}
+              onToggleVideo={togglePeerJSVideo}
+              onToggleAudio={togglePeerJSAudio}
+              onSwitchCamera={switchCamera}
             />
           </div>
         </div>
