@@ -112,6 +112,7 @@ export interface UsePeerJSProps {
 
 export interface UsePeerJSReturn {
   localStream: MediaStream | null
+  localTrackState: PeerTrackState
   remoteStreams: Map<string, MediaStream>
   peerTrackStates: Map<string, PeerTrackState>
   connectionStates: Map<string, ConnectionState>
@@ -141,6 +142,12 @@ export function usePeerJS({
   // Local media stream
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const localStreamRef = useRef<LocalMediaStream | null>(null)
+
+  // Local track state (single source of truth for local player's video/audio state)
+  const [localTrackState, setLocalTrackState] = useState<PeerTrackState>({
+    videoEnabled: true,
+    audioEnabled: true,
+  })
 
   // Remote streams and connection state
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(
@@ -471,6 +478,20 @@ export function usePeerJS({
     localStreamRef.current.videoTrack.enabled = enabled
     console.log('[usePeerJS] Video toggled:', enabled)
 
+    // Update local track state (single source of truth)
+    setLocalTrackState((prev) => ({
+      ...prev,
+      videoEnabled: enabled,
+    }))
+
+    // Update local stream to trigger re-render
+    setLocalStream((prev) => {
+      if (prev) {
+        return new MediaStream(prev.getTracks())
+      }
+      return prev
+    })
+
     // Notify peers of state change
     setPeerTrackStates((prev) => {
       const next = new Map(prev)
@@ -495,6 +516,20 @@ export function usePeerJS({
 
     localStreamRef.current.audioTrack.enabled = enabled
     console.log('[usePeerJS] Audio toggled:', enabled)
+
+    // Update local track state (single source of truth)
+    setLocalTrackState((prev) => ({
+      ...prev,
+      audioEnabled: enabled,
+    }))
+
+    // Update local stream to trigger re-render
+    setLocalStream((prev) => {
+      if (prev) {
+        return new MediaStream(prev.getTracks())
+      }
+      return prev
+    })
 
     // Notify peers of state change
     setPeerTrackStates((prev) => {
@@ -545,6 +580,14 @@ export function usePeerJS({
         localStreamRef.current.stream.getVideoTracks()[0]!,
       )
       localStreamRef.current.stream.addTrack(newVideoTrack)
+
+      // Trigger re-render with updated stream
+      setLocalStream((prev) => {
+        if (prev) {
+          return new MediaStream(prev.getTracks())
+        }
+        return prev
+      })
 
       // Replace video track in all active calls
       for (const [peerId, call] of callsRef.current) {
@@ -694,6 +737,7 @@ export function usePeerJS({
 
   return {
     localStream,
+    localTrackState,
     remoteStreams,
     peerTrackStates,
     connectionStates,

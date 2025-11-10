@@ -14,6 +14,7 @@ interface GameRoomVideoGridProps {
   usePerspectiveWarp: boolean
   onCardCrop: (canvas: HTMLCanvasElement) => void
   localStream: MediaStream | null
+  localTrackState: PeerTrackState
   remoteStreams: Map<string, MediaStream>
   connectionStates: Map<string, ConnectionState>
   peerTrackStates: Map<string, PeerTrackState>
@@ -30,6 +31,7 @@ function VideoGridContent({
   usePerspectiveWarp,
   onCardCrop,
   localStream,
+  localTrackState,
   remoteStreams,
   connectionStates,
   peerTrackStates,
@@ -62,11 +64,14 @@ function VideoGridContent({
       players={players}
       localPlayerName={playerName}
       localStream={localStream}
+      localTrackState={localTrackState}
       enableCardDetection={true}
       detectorType={detectorType}
       usePerspectiveWarp={usePerspectiveWarp}
       onCardCrop={onCardCrop}
       remoteStreams={remoteStreams}
+      connectionStates={connectionStates}
+      peerTrackStates={peerTrackStates}
       onToggleVideo={onToggleVideo}
       onToggleAudio={onToggleAudio}
       onSwitchCamera={onSwitchCamera}
