@@ -667,11 +667,11 @@ export function VideoStreamGrid({
                             currentCameraId === camera.deviceId ||
                             (!currentCameraId && index === currentCameraIndex)
                           return (
-                            <button
+                            <div
                               key={camera.deviceId}
                               onClick={() => selectCamera(camera.deviceId)}
                               className={
-                                'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-slate-800/50 ' +
+                                'flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-slate-800/50 ' +
                                 (isActive
                                   ? 'bg-purple-500/20 text-white'
                                   : 'text-slate-300')
@@ -704,7 +704,7 @@ export function VideoStreamGrid({
                                   </div>
                                 )}
                               </div>
-                            </button>
+                            </div>
                           )
                         })}
                       </div>

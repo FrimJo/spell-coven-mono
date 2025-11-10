@@ -7,7 +7,8 @@ import { ErrorFallback } from './components/ErrorFallback.js'
 
 hydrateRoot(
   document,
-  <StrictMode>
+  // TODO: Re-enable StrictMode after fixing the "Maximum update depth exceeded" error
+  // <StrictMode>
     <ErrorBoundary
       fallbackRender={({ error, resetErrorBoundary }) => (
         <ErrorFallback error={error} resetErrorBoundary={resetErrorBoundary} />
@@ -16,5 +17,6 @@ hydrateRoot(
     >
       <StartClient />
     </ErrorBoundary>
-  </StrictMode>,
+  // </StrictMode>
+,
 )
