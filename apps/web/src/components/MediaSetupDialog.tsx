@@ -57,10 +57,15 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   const analyserRef = useRef<AnalyserNode | null>(null)
   const animationFrameRef = useRef<number | null>(null)
   const permissionGrantedRef = useRef<boolean>(false)
+  const isEnumeratingRef = useRef<boolean>(false)
 
   // Enumerate devices function (extracted for reuse)
   const enumerateDevices = useCallback(
     async (requestPermission: boolean = false) => {
+      // Prevent concurrent enumeration (can happen in React StrictMode)
+      if (isEnumeratingRef.current) return
+      isEnumeratingRef.current = true
+
       try {
         // Request permissions first if needed
         if (requestPermission && !permissionGrantedRef.current) {
@@ -136,48 +141,55 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
         setAudioOutputDevices(outputsWithDefault)
 
         // Set defaults or validate existing selections
-        if (videoInputs.length > 0 && !selectedVideoId) {
-          setSelectedVideoId(videoInputs[0]!.deviceId)
-        } else if (
-          selectedVideoId &&
-          !videoInputs.find((d) => d.deviceId === selectedVideoId)
-        ) {
-          // Currently selected device was disconnected, switch to first available
-          setSelectedVideoId(
-            videoInputs.length > 0 ? videoInputs[0]!.deviceId : '',
-          )
-        }
+        setSelectedVideoId((prev) => {
+          if (videoInputs.length > 0 && !prev) {
+            return videoInputs[0]!.deviceId
+          } else if (
+            prev &&
+            !videoInputs.find((d) => d.deviceId === prev)
+          ) {
+            // Currently selected device was disconnected, switch to first available
+            return videoInputs.length > 0 ? videoInputs[0]!.deviceId : ''
+          }
+          return prev
+        })
 
-        if (audioInputs.length > 0 && !selectedAudioInputId) {
-          setSelectedAudioInputId(audioInputs[0]!.deviceId)
-        } else if (
-          selectedAudioInputId &&
-          !audioInputs.find((d) => d.deviceId === selectedAudioInputId)
-        ) {
-          // Currently selected device was disconnected, switch to first available
-          setSelectedAudioInputId(
-            audioInputs.length > 0 ? audioInputs[0]!.deviceId : '',
-          )
-        }
+        setSelectedAudioInputId((prev) => {
+          if (audioInputs.length > 0 && !prev) {
+            return audioInputs[0]!.deviceId
+          } else if (
+            prev &&
+            !audioInputs.find((d) => d.deviceId === prev)
+          ) {
+            // Currently selected device was disconnected, switch to first available
+            return audioInputs.length > 0 ? audioInputs[0]!.deviceId : ''
+          }
+          return prev
+        })
 
-        if (!selectedAudioOutputId) {
-          // Default to 'default' which follows OS audio settings
-          setSelectedAudioOutputId('default')
-        } else if (
-          selectedAudioOutputId !== 'default' &&
-          !outputsWithDefault.find((d) => d.deviceId === selectedAudioOutputId)
-        ) {
-          // Currently selected device was disconnected, switch to default
-          setSelectedAudioOutputId('default')
-        }
+        setSelectedAudioOutputId((prev) => {
+          if (!prev) {
+            // Default to 'default' which follows OS audio settings
+            return 'default'
+          } else if (
+            prev !== 'default' &&
+            !outputsWithDefault.find((d) => d.deviceId === prev)
+          ) {
+            // Currently selected device was disconnected, switch to default
+            return 'default'
+          }
+          return prev
+        })
       } catch (error) {
         console.error('Error accessing media devices:', error)
         setPermissionError(
           'Unable to access camera or microphone. Please grant permissions and try again.',
         )
+      } finally {
+        isEnumeratingRef.current = false
       }
     },
-    [selectedVideoId, selectedAudioInputId, selectedAudioOutputId],
+    [],
   )
 
   // Initial device enumeration

@@ -210,12 +210,15 @@ export function usePeerJS({
   const initializePeer = useCallback(async () => {
     let retryCount = 0
     const maxRetries = 3
-    const baseDelay = 1000 // 1 second
+    const baseDelay = 2000 // 2 seconds - longer delay for server to release ID
     let isRetrying = false
 
     const attemptConnection = () => {
       try {
-        console.log('[usePeerJS] Initializing peer with ID:', localPlayerId)
+        // On retry, append a suffix to the ID to avoid conflicts
+        const peerId =
+          retryCount > 0 ? `${localPlayerId}-retry${retryCount}` : localPlayerId
+        console.log('[usePeerJS] Initializing peer with ID:', peerId)
 
         const peerConfig = {
           host: 'localhost',
@@ -225,7 +228,7 @@ export function usePeerJS({
         }
 
         console.log('[usePeerJS] Connecting to PeerServer:', peerConfig)
-        const peer = new Peer(localPlayerId, peerConfig)
+        const peer = new Peer(peerId, peerConfig)
 
         // Handle successful connection
         peer.on('open', (id) => {
@@ -287,24 +290,25 @@ export function usePeerJS({
         peer.on('error', (err) => {
           const peerError = createPeerJSError(err)
 
-          // Check if this is an "ID taken" error - retry with backoff
+          // Check if this is an "ID taken" error (unavailable-id) - retry with backoff
           if (
-            peerError.message.includes('taken') &&
+            peerError.type === 'unavailable-id' &&
             retryCount < maxRetries &&
             !isRetrying
           ) {
             isRetrying = true
+            const delayMs = baseDelay * Math.pow(2, retryCount) // Exponential backoff: 2s, 4s, 8s
             console.log(
-              `[usePeerJS] ID taken, destroying peer and retrying in ${baseDelay * (retryCount + 1)}ms (attempt ${retryCount + 1}/${maxRetries})`,
+              `[usePeerJS] ID taken, destroying peer and retrying in ${delayMs}ms (attempt ${retryCount + 1}/${maxRetries})`,
             )
             retryCount++
             // Destroy the failed peer instance
             peer.destroy()
-            // Retry after delay
+            // Retry after delay with exponential backoff
             setTimeout(() => {
               isRetrying = false
               attemptConnection()
-            }, baseDelay * retryCount)
+            }, delayMs)
             return
           }
 
@@ -565,6 +569,11 @@ export function usePeerJS({
    * Initialize on mount
    */
   useEffect(() => {
+    // Guard: only initialize once
+    if (peerRef.current !== null) {
+      return
+    }
+
     const initialize = async () => {
       await initializeLocalStream()
       await initializePeer()
@@ -575,13 +584,13 @@ export function usePeerJS({
     // Capture refs for cleanup
     const calls = callsRef.current
     const calledPeers = calledPeersRef.current
-    const peer = peerRef.current
     const localStream = localStreamRef.current
 
     return () => {
       // Cleanup on unmount
-      if (peer) {
-        peer.destroy()
+      if (peerRef.current) {
+        peerRef.current.destroy()
+        peerRef.current = null
       }
 
       if (localStream?.stream) {
@@ -597,7 +606,7 @@ export function usePeerJS({
       calls.clear()
       calledPeers.clear()
     }
-  }, [initializeLocalStream, initializePeer])
+  }, [])
 
   /**
    * Handle remote player changes

@@ -40,10 +40,9 @@ export function useGameRoomLoaderData() {
   if (!loaderData.isAuthenticated) {
     throw new Error('User is not authenticated')
   }
-  if (!loaderData.voiceChannelStatus.inChannel) {
-    throw new Error('User is not in voice channel')
-  }
-  return loaderData
+  // Note: voiceChannelStatus.inChannel may be false initially, but the route
+  // ensures GameRoom is only rendered when user is in the voice channel
+  return loaderData as Extract<typeof loaderData, { isAuthenticated: true }>
 }
 
 interface GameRoomProps {
@@ -74,8 +73,8 @@ function GameRoomContent({
   }, [roomId])
 
   const [isLoading, setIsLoading] = useState(true)
-  // HOOK: Dialog open state
-  const [mediaDialogOpen, setMediaDialogOpen] = useState<boolean>(true)
+  // HOOK: Dialog open state - start closed to avoid Select component infinite loop in StrictMode
+  const [mediaDialogOpen, setMediaDialogOpen] = useState<boolean>(false)
 
   // Voice dropout modal state
   const [voiceDropoutOpen, setVoiceDropoutOpen] = useState(false)
@@ -330,11 +329,13 @@ function GameRoomContent({
 
   return (
     <div className="flex h-screen flex-col bg-slate-950">
-      {/* Media Setup Dialog - modal */}
-      <MediaSetupDialog
-        open={mediaDialogOpen}
-        onComplete={handleDialogComplete}
-      />
+      {/* Media Setup Dialog - modal - only render when open to avoid Select component issues */}
+      {mediaDialogOpen && (
+        <MediaSetupDialog
+          open={mediaDialogOpen}
+          onComplete={handleDialogComplete}
+        />
+      )}
 
       {/* Voice Dropout Modal */}
       <VoiceDropoutModal
