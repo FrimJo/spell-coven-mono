@@ -5,8 +5,8 @@ import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
-import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
 import { usePeerJS } from '@/hooks/usePeerJS'
+import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
 import { useVoiceChannelMembersFromEvents } from '@/hooks/useVoiceChannelMembersFromEvents'
 import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken.js'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
@@ -19,12 +19,6 @@ import { toast } from 'sonner'
 import type { APIVoiceState } from '@repo/discord-integration/types'
 import { Button } from '@repo/ui/components/button'
 import { Toaster } from '@repo/ui/components/sonner'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@repo/ui/components/tooltip'
 
 import { GameRoomLoader } from './GameRoomLoader.js'
 import { GameRoomPlayerCount } from './GameRoomPlayerCount.js'
@@ -124,8 +118,8 @@ function GameRoomContent({
     toggleAudio: togglePeerJSAudio,
     switchCamera,
     initializeLocalMedia,
-    error: peerError,
-    isInitialized,
+    error: _peerError,
+    isInitialized: _isInitialized,
   } = usePeerJS({
     localPlayerId: userId,
     remotePlayerIds: remotePlayerIds,
@@ -134,6 +128,16 @@ function GameRoomContent({
       toast.error(error.message)
     },
   })
+
+  // Debug: Log remote streams state
+  useEffect(() => {
+    console.log('[GameRoom] 🎥 Remote streams update:', {
+      size: remoteStreams.size,
+      keys: Array.from(remoteStreams.keys()),
+      voiceChannelMembers: voiceChannelMembers.map((m) => m.id),
+      remotePlayerIds,
+    })
+  }, [remoteStreams, voiceChannelMembers, remotePlayerIds])
 
   // Voice channel validation is now done in the route's beforeLoad hook
   // If user is not in voice channel, they won't reach this component
@@ -318,25 +322,26 @@ function GameRoomContent({
     const savedDeviceId = localStorage.getItem(`media-device-${roomId}`)
 
     if (setupCompleted && savedDeviceId && !mediaDialogOpen) {
-      console.log('[GameRoom] Setup already completed, initializing camera with saved device:', savedDeviceId)
+      console.log(
+        '[GameRoom] Setup already completed, initializing camera with saved device:',
+        savedDeviceId,
+      )
       initializeLocalMedia(savedDeviceId)
     }
   }, [roomId, mediaDialogOpen, initializeLocalMedia])
 
   // Show dialog until user completes media setup
-  const handleDialogComplete = async (config: { videoDeviceId: string; audioInputDeviceId: string; audioOutputDeviceId: string }) => {
+  const handleDialogComplete = async (config: {
+    videoDeviceId: string
+    audioInputDeviceId: string
+    audioOutputDeviceId: string
+  }) => {
     // Save to localStorage that setup has been completed for this room and the selected device
     localStorage.setItem(`media-setup-${roomId}`, 'true')
     localStorage.setItem(`media-device-${roomId}`, config.videoDeviceId)
     setMediaDialogOpen(false)
     // Initialize local media stream after user selects their camera
     await initializeLocalMedia(config.videoDeviceId)
-    // Emit event to signal that video has started
-    loadingEvents.emit({
-      step: 'video-started',
-      progress: 100,
-      message: 'Video stream started',
-    })
   }
 
   const handleCopyShareLink = () => {
@@ -355,7 +360,7 @@ function GameRoomContent({
     // This will broadcast to other players via SSE
   }
 
-  const handleRemovePlayer = (playerId: string) => {
+  const handleRemovePlayer = (_playerId: string) => {
     throw new Error('Not implemented')
     toast.success('Player removed from game')
   }

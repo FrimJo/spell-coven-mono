@@ -53,7 +53,7 @@ export const Route = createFileRoute('/auth/discord/callback')({
         if (
           err &&
           typeof err === 'object' &&
-          ('status' in err || (err as any).type === 'redirect')
+          ('status' in err || ('type' in err && (err as { type: unknown }).type === 'redirect'))
         ) {
           // This is a redirect Response, re-throw it to allow navigation
           throw err

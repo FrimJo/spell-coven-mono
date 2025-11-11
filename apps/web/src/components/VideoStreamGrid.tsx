@@ -1,5 +1,5 @@
 import type { DetectorType } from '@/lib/detectors'
-import type { ConnectionState } from '@/types/peerjs'
+import type { ConnectionState, PeerTrackState } from '@/types/peerjs'
 import { useEffect, useRef, useState } from 'react'
 import { useWebcam } from '@/hooks/useWebcam'
 import {
@@ -50,6 +50,8 @@ interface VideoStreamGridProps {
   connectionStates?: Map<string, ConnectionState>
   /** Peer connection data with track states (player ID -> data) */
   peerConnections?: Map<string, PeerConnectionData>
+  /** Peer track states from PeerJS (player ID -> track state) */
+  peerTrackStates?: Map<string, PeerTrackState>
   /** Callback when local video starts (for WebRTC integration) */
   onLocalVideoStart?: () => Promise<void>
   /** Callback when local video stops (for WebRTC integration) */
@@ -81,12 +83,13 @@ export function VideoStreamGrid({
   remoteStreams = new Map(),
   connectionStates = new Map(),
   peerConnections = new Map(),
-  onLocalVideoStart,
-  onLocalVideoStop,
+  peerTrackStates: _peerTrackStates = new Map(),
+  onLocalVideoStart: _onLocalVideoStart,
+  onLocalVideoStop: _onLocalVideoStop,
   localStream,
   localTrackState,
   onToggleVideo,
-  onToggleAudio,
+  onToggleAudio: _onToggleAudio,
   onSwitchCamera,
 }: VideoStreamGridProps) {
   // State declarations first (needed before useWebcam hook)
@@ -108,7 +111,6 @@ export function VideoStreamGrid({
     croppedRef,
     fullResRef,
     getCameras,
-    isVideoActive,
   } = useWebcam({
     enableCardDetection,
     detectorType,
@@ -312,14 +314,16 @@ export function VideoStreamGrid({
       }
     }
 
+    // Capture current ref value for cleanup
+    const currentHandlers = trackHandlersRef.current
     return () => {
       // Cleanup event listeners on unmount
-      trackHandlersRef.current.forEach((handlers) => {
+      currentHandlers.forEach((handlers) => {
         handlers.forEach(({ track, handler }) => {
           track.removeEventListener('enabledchange', handler)
         })
       })
-      trackHandlersRef.current.clear()
+      currentHandlers.clear()
     }
   }, [remoteStreams])
 
@@ -579,54 +583,29 @@ export function VideoStreamGrid({
                     data-testid="video-toggle-button"
                     size="sm"
                     variant={
-                      (hasStartedVideo ? localVideoEnabled : isVideoActive) || !hasStartedVideo
+                      localVideoEnabled
                         ? 'outline'
                         : 'destructive'
                     }
-                    onClick={async () => {
+                    onClick={() => {
                       console.log('[VideoStreamGrid] Video button clicked', {
-                        hasStartedVideo,
-                        hasOnLocalVideoStart: !!onLocalVideoStart,
+                        localVideoEnabled,
                         hasOnToggleVideo: !!onToggleVideo,
                       })
-                      if (!hasStartedVideo) {
-                        // First time: start video and WebRTC
-                        console.log('[VideoStreamGrid] Starting local webcam...')
-                        await startVideo()
-                        setHasStartedVideo(true)
-                        console.log('[VideoStreamGrid] Local webcam started')
-                        if (onLocalVideoStart) {
-                          try {
-                            console.log('[VideoStreamGrid] Calling onLocalVideoStart (WebRTC)...')
-                            await onLocalVideoStart()
-                            console.log('[VideoStreamGrid] WebRTC started successfully')
-                          } catch (error) {
-                            console.error(
-                              '[VideoStreamGrid] Failed to start WebRTC:',
-                              error,
-                            )
-                          }
-                        } else {
-                          console.warn('[VideoStreamGrid] onLocalVideoStart not provided!')
-                        }
+                      if (onToggleVideo) {
+                        const newState = !localVideoEnabled
+                        onToggleVideo(newState)
                       } else {
-                        // After first start: just toggle the track enabled state
-                        console.log('[VideoStreamGrid] Toggling video track...')
-                        if (onToggleVideo) {
-                          const newState = !localVideoEnabled
-                          onToggleVideo(newState)
-                        } else {
-                          console.warn('[VideoStreamGrid] onToggleVideo not provided!')
-                        }
+                        console.warn('[VideoStreamGrid] onToggleVideo not provided!')
                       }
                     }}
                     className={`h-10 w-10 p-0 ${
-                      (hasStartedVideo ? localVideoEnabled : isVideoActive) || !hasStartedVideo
+                      localVideoEnabled
                         ? 'border-slate-700 text-white hover:bg-slate-800'
                         : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
                     }`}
                   >
-                    {(hasStartedVideo ? localVideoEnabled : isVideoActive) ? (
+                    {localVideoEnabled ? (
                       <Video className="h-5 w-5" />
                     ) : (
                       <VideoOff className="h-5 w-5" />
@@ -641,7 +620,7 @@ export function VideoStreamGrid({
                         ? 'border-slate-700 text-white hover:bg-slate-800'
                         : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
                     }`}
-                    disabled={!isVideoActive}
+                    disabled={!localStream}
                   >
                     {!isAudioMuted ? (
                       <Mic className="h-5 w-5" />

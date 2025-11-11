@@ -196,7 +196,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   useEffect(() => {
     if (!open) return
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     void enumerateDevices(true)
   }, [open, enumerateDevices])
 

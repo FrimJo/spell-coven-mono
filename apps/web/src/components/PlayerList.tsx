@@ -1,4 +1,4 @@
-import { Crown, Heart, UserX } from 'lucide-react'
+import { Crown, UserX } from 'lucide-react'
 
 import {
   AlertDialog,
