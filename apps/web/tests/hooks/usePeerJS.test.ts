@@ -6,7 +6,7 @@
  * will be added when hook is integrated with actual game room component.
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it } from 'vitest'
 
 describe('usePeerJS Hook', () => {
   describe('T009: initializes peer with local player ID', () => {

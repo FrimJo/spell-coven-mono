@@ -74,7 +74,6 @@ export function createPeerJSError(error: unknown): PeerJSError {
 
   let errorType: PeerErrorType = 'unknown'
   let originalError: Error | string = 'Unknown error'
-  let userMessage: string | undefined
 
   if (error instanceof Error) {
     originalError = error
@@ -98,7 +97,7 @@ export function createPeerJSError(error: unknown): PeerJSError {
     originalError = error
   }
 
-  userMessage = getErrorMessage(errorType)
+  const userMessage = getErrorMessage(errorType)
 
   return new PeerJSError(errorType, originalError, userMessage)
 }

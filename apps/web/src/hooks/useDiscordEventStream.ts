@@ -176,5 +176,5 @@ export function useDiscordEventStream(options: UseDiscordEventStreamOptions) {
       console.log('[Discord Events] Closing SSE connection')
       eventSource.close()
     }
-  }, [enabled, userId])
+  }, [enabled, userId, channelId])
 }
