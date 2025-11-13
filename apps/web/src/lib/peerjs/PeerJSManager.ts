@@ -17,6 +17,7 @@ import type {
 } from '@/types/peerjs'
 import type { MediaConnection } from 'peerjs'
 import Peer from 'peerjs'
+import { env } from '@/env'
 import { createPeerJSError, logError } from './errors'
 import { DEFAULT_RETRY_CONFIG, retryWithBackoff } from './retry'
 import {
@@ -46,6 +47,13 @@ export class PeerJSManager {
   private initializePromise: Promise<void> | null = null
   private isInitialized = false
   private isDestroyed = false
+  private wasSuccessfullyConnected = false
+  private reconnectAttempts = 0
+  private maxReconnectAttempts = 5
+  private reconnectTimeout: NodeJS.Timeout | null = null
+  private initializationErrorLogged = false
+  private isRetryingId = false
+  private idRetryTimeout: NodeJS.Timeout | null = null
 
   constructor(
     private localPlayerId: string,
@@ -69,6 +77,15 @@ export class PeerJSManager {
       return // Already initialized
     }
 
+    // Don't retry if we've already logged an initialization error
+    // This prevents spam when the server is not available
+    if (this.initializationErrorLogged && !this.isInitialized) {
+      throw new Error(
+        'Peer initialization previously failed. The PeerJS server may not be running. ' +
+        'Please ensure the server is started with: cd apps/peerjs-server && bun run dev'
+      )
+    }
+
     this.initializePromise = this.doInitialize()
     return this.initializePromise
   }
@@ -78,11 +95,16 @@ export class PeerJSManager {
    */
   private async doInitialize(): Promise<void> {
     const peerConfig = {
-      host: 'localhost',
-      port: 9000,
-      path: '/peerjs',
-      secure: false,
+      host: env.VITE_PEERJS_HOST,
+      port: parseInt(env.VITE_PEERJS_PORT, 10),
+      path: env.VITE_PEERJS_PATH,
+      secure: env.VITE_PEERJS_SSL, // Use wss:// (secure WebSocket) or ws:// based on config
     }
+
+    const protocol = peerConfig.secure ? 'wss' : 'ws'
+    console.log(
+      `[PeerJSManager] Connecting to PeerJS server at ${protocol}://${peerConfig.host}:${peerConfig.port}${peerConfig.path}`,
+    )
 
     this.peer = new Peer(this.localPlayerId, peerConfig)
 
@@ -94,6 +116,17 @@ export class PeerJSManager {
         if (timeout) {
           clearTimeout(timeout)
           timeout = null
+        }
+      }
+
+      const cleanupPeer = () => {
+        if (this.peer && !this.wasSuccessfullyConnected) {
+          try {
+            this.peer.destroy()
+          } catch (err) {
+            // Ignore errors during cleanup
+          }
+          this.peer = null
         }
       }
 
@@ -109,20 +142,49 @@ export class PeerJSManager {
         if (!resolved) {
           resolved = true
           cleanup()
+          cleanupPeer()
+          this.initializePromise = null
           reject(error)
         }
       }
 
       timeout = setTimeout(() => {
-        rejectOnce(new Error('Peer initialization timeout'))
+        const protocol = peerConfig.secure ? 'wss' : 'ws'
+        const serverUrl = `${protocol}://${peerConfig.host}:${peerConfig.port}${peerConfig.path}`
+        const error = new Error(
+          `Peer initialization timeout. The PeerJS server at ${serverUrl} may not be running. ` +
+          'Please ensure the PeerJS server is started with: cd apps/peerjs-server && bun run dev'
+        )
+        
+        // Only log the error once to avoid spam
+        if (!this.initializationErrorLogged) {
+          console.error('[PeerJSManager] Peer initialization failed:', error.message)
+          console.error('[PeerJSManager] To start the PeerJS server, run: cd apps/peerjs-server && bun run dev')
+          this.initializationErrorLogged = true
+        }
+        
+        rejectOnce(error)
       }, 10000)
 
-      this.peer!.on('open', (id) => {
+      const handleOpen = (id: string) => {
         console.log('[PeerJSManager] Peer opened:', id)
+        this.wasSuccessfullyConnected = true
         this.isInitialized = true
-        this.initializePromise = null
-        resolveOnce()
-      })
+        
+        // Reset reconnect attempts on successful connection
+        if (this.reconnectAttempts > 0) {
+          console.log('[PeerJSManager] Reconnected successfully, resetting reconnect attempts')
+          this.reconnectAttempts = 0
+        }
+        
+        // Only resolve the promise if this is the initial connection
+        if (!resolved) {
+          this.initializePromise = null
+          resolveOnce()
+        }
+      }
+      
+      this.peer!.on('open', handleOpen)
 
       this.peer!.on('error', (err) => {
         const peerError = createPeerJSError(err)
@@ -130,23 +192,99 @@ export class PeerJSManager {
         // Handle ID taken error with retry
         if (peerError.type === 'unavailable-id') {
           console.log('[PeerJSManager] ID taken, retrying...')
-          this.peer?.destroy()
-          this.peer = null
+          cleanupPeer()
           this.initializePromise = null
-          setTimeout(() => {
-            this.doInitialize().then(resolveOnce).catch(rejectOnce)
+          // Reset wasSuccessfullyConnected for retry attempt
+          this.wasSuccessfullyConnected = false
+          this.isRetryingId = true
+          
+          // Cancel any existing retry timeout
+          if (this.idRetryTimeout) {
+            clearTimeout(this.idRetryTimeout)
+            this.idRetryTimeout = null
+          }
+          
+          this.idRetryTimeout = setTimeout(() => {
+            this.idRetryTimeout = null
+            // Only retry if not destroyed
+            if (!this.isDestroyed) {
+              this.doInitialize()
+                .then(() => {
+                  this.isRetryingId = false
+                  resolveOnce()
+                })
+                .catch((retryError) => {
+                  this.isRetryingId = false
+                  rejectOnce(retryError)
+                })
+            } else {
+              // Manager was destroyed, don't reject - just clean up
+              this.isRetryingId = false
+            }
           }, 2000)
           return
         }
 
-        logError(peerError, { context: 'peer initialization' })
+        // Only log network/socket errors once to avoid spam
+        if (!this.initializationErrorLogged && 
+            (peerError.type === 'network' || peerError.type === 'socket-error' || peerError.type === 'socket-closed')) {
+          console.error('[PeerJSManager] Peer initialization failed:', peerError.message)
+          console.error('[PeerJSManager] To start the PeerJS server, run: cd apps/peerjs-server && bun run dev')
+          this.initializationErrorLogged = true
+        } else if (peerError.type !== 'network' && peerError.type !== 'socket-error' && peerError.type !== 'socket-closed') {
+          // Log other errors normally
+          logError(peerError, { context: 'peer initialization' })
+        }
+        
         this.callbacks.onError?.(peerError)
-        this.initializePromise = null
         rejectOnce(peerError)
       })
 
       this.peer!.on('call', (call: MediaConnection) => {
         this.handleIncomingCall(call)
+      })
+
+      // Handle disconnection from server
+      // Only reconnect if we were previously successfully connected
+      this.peer!.on('disconnected', () => {
+        // Don't log disconnect messages during ID retry attempts
+        if (this.isRetryingId) {
+          return
+        }
+        
+        if (!this.wasSuccessfullyConnected) {
+          // Never successfully connected, don't try to reconnect
+          console.log('[PeerJSManager] Disconnected before successful connection, not reconnecting')
+          return
+        }
+        
+        // Check if we've exceeded max reconnection attempts
+        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+          console.log('[PeerJSManager] Max reconnection attempts reached, giving up')
+          const error = new Error('Max reconnection attempts reached')
+          const peerError = createPeerJSError(error)
+          this.callbacks.onError?.(peerError)
+          return
+        }
+        
+        this.reconnectAttempts++
+        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 10000) // Exponential backoff, max 10s
+        console.log(`[PeerJSManager] Disconnected from PeerServer, attempting reconnect ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms...`)
+        
+        // Clear any existing reconnect timeout
+        if (this.reconnectTimeout) {
+          clearTimeout(this.reconnectTimeout)
+        }
+        
+        // Attempt reconnection after exponential backoff delay
+        if (!this.isDestroyed && this.peer && !this.peer.destroyed) {
+          this.reconnectTimeout = setTimeout(() => {
+            if (this.peer && !this.peer.destroyed && !this.isDestroyed) {
+              this.peer.reconnect()
+            }
+            this.reconnectTimeout = null
+          }, delay)
+        }
       })
     })
   }
@@ -221,6 +359,8 @@ export class PeerJSManager {
    */
   private handleIncomingCall(call: MediaConnection): void {
     const peerId = call.peer
+    console.log('[PeerJSManager] Incoming call from:', peerId)
+    console.log('[PeerJSManager] Call metadata:', call.metadata)
 
     if (!this.localStream?.stream) {
       console.log('[PeerJSManager] No local stream, deferring call from:', peerId)
@@ -243,6 +383,9 @@ export class PeerJSManager {
 
     call.on('stream', (remoteStream: MediaStream) => {
       console.log('[PeerJSManager] Received remote stream from:', peerId)
+      console.log('[PeerJSManager] Call metadata:', call.metadata)
+      console.log('[PeerJSManager] Call open:', call.open)
+      
       this.remoteStreams.set(peerId, remoteStream)
       this.callbacks.onRemoteStreamAdded?.(peerId, remoteStream)
       this.callbacks.onConnectionStateChanged?.(peerId, 'connected')
@@ -422,7 +565,12 @@ export class PeerJSManager {
           return await retryWithBackoff(
             () =>
               Promise.resolve(
-                this.peer!.call(remotePlayerId, this.localStream!.stream),
+                this.peer!.call(remotePlayerId, this.localStream!.stream, {
+                  metadata: {
+                    callerId: this.localPlayerId,
+                    timestamp: Date.now(),
+                  },
+                }),
               ),
             DEFAULT_RETRY_CONFIG,
           )
@@ -512,6 +660,12 @@ export class PeerJSManager {
 
       // Replace track in all active calls
       for (const [peerId, call] of this.calls) {
+        // Only replace track if call is open
+        if (!call.open) {
+          console.log('[PeerJSManager] Call not open, skipping track replacement for:', peerId)
+          continue
+        }
+        
         const sender = call.peerConnection
           ?.getSenders()
           .find((s) => s.track?.kind === 'video')
@@ -570,6 +724,18 @@ export class PeerJSManager {
     // Stop track state polling
     this.stopTrackStatePolling()
 
+    // Clear reconnect timeout
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout)
+      this.reconnectTimeout = null
+    }
+
+    // Clear ID retry timeout
+    if (this.idRetryTimeout) {
+      clearTimeout(this.idRetryTimeout)
+      this.idRetryTimeout = null
+    }
+
     // Stop local stream tracks
     if (this.localStream?.stream) {
       this.localStream.stream.getTracks().forEach((track) => track.stop())
@@ -589,6 +755,11 @@ export class PeerJSManager {
     this.currentRemotePlayerIds = []
     this.initializePromise = null
     this.isInitialized = false
+    this.wasSuccessfullyConnected = false
+    this.reconnectAttempts = 0
+    this.initializationErrorLogged = false
+    this.isRetryingId = false
+    this.idRetryTimeout = null
   }
 }
 
