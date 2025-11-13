@@ -81,6 +81,21 @@ export const env = createEnv({
       .string()
       .url()
       .min(1, 'Blob storage URL is required'),
+    // PeerJS Configuration
+    VITE_PEERJS_HOST: z.string().optional().default('localhost'),
+    VITE_PEERJS_PORT: z.string().optional().default('9000'),
+    VITE_PEERJS_PATH: z.string().optional().default('/peerjs'),
+    VITE_PEERJS_SSL: z
+      .union([z.string(), z.boolean()])
+      .optional()
+      .transform((val) => {
+        // Default to true unless explicitly 'false' or '0'
+        if (val === undefined || val === null || val === '') return true
+        if (typeof val === 'boolean') return val
+        return val !== 'false' && val !== '0'
+      })
+      .pipe(z.boolean())
+      .default(true),
   },
 
   /**
@@ -116,6 +131,10 @@ export const env = createEnv({
     VITE_EMBEDDINGS_FORMAT: import.meta.env.VITE_EMBEDDINGS_FORMAT,
     VITE_QUERY_CONTRAST: import.meta.env.VITE_QUERY_CONTRAST,
     VITE_BLOB_STORAGE_URL: import.meta.env.VITE_BLOB_STORAGE_URL,
+    VITE_PEERJS_HOST: import.meta.env.VITE_PEERJS_HOST,
+    VITE_PEERJS_PORT: import.meta.env.VITE_PEERJS_PORT,
+    VITE_PEERJS_PATH: import.meta.env.VITE_PEERJS_PATH,
+    VITE_PEERJS_SSL: import.meta.env.VITE_PEERJS_SSL,
   },
 
   /**
@@ -164,5 +183,9 @@ export function getClientEnv() {
     VITE_EMBEDDINGS_FORMAT: env.VITE_EMBEDDINGS_FORMAT,
     VITE_QUERY_CONTRAST: env.VITE_QUERY_CONTRAST,
     VITE_BLOB_STORAGE_URL: env.VITE_BLOB_STORAGE_URL,
+    VITE_PEERJS_HOST: env.VITE_PEERJS_HOST,
+    VITE_PEERJS_PORT: env.VITE_PEERJS_PORT,
+    VITE_PEERJS_PATH: env.VITE_PEERJS_PATH,
+    VITE_PEERJS_SSL: env.VITE_PEERJS_SSL,
   }
 }

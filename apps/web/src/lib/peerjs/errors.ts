@@ -13,7 +13,7 @@ const ERROR_MESSAGES: Record<PeerErrorType, string> = {
     'Your browser does not support WebRTC. Please use Chrome, Firefox, Safari, or Edge.',
   'invalid-id': 'Invalid peer ID. Please refresh and try again.',
   'invalid-key': 'Invalid API key. Please contact support.',
-  'network': 'Network error. Please check your internet connection.',
+  'network': 'Network error. The PeerJS server may not be running. Please ensure the server is started: cd apps/peerjs-server && bun run dev',
   'peer-unavailable': 'The other player is no longer available.',
   'ssl-unavailable': 'SSL is required but not available.',
   'server-error': 'Server error. Please try again later.',
@@ -80,12 +80,12 @@ export function createPeerJSError(error: unknown): PeerJSError {
     // Try to extract error type from error message or code
     if ('code' in error && typeof error.code === 'string') {
       errorType = mapErrorCode(error.code)
-    } else if (error.message) {
+      } else if (error.message) {
       // Try to infer from message
       const lowerMessage = error.message.toLowerCase()
-      if (lowerMessage.includes('network')) {
-        errorType = 'network'
-      } else if (lowerMessage.includes('timeout')) {
+      if (lowerMessage.includes('network') || lowerMessage.includes('timeout') || 
+          lowerMessage.includes('cannot establish') || lowerMessage.includes('connection') ||
+          lowerMessage.includes('peerjs server')) {
         errorType = 'network'
       } else if (lowerMessage.includes('taken') || lowerMessage.includes('unavailable')) {
         errorType = 'unavailable-id'
