@@ -431,33 +431,12 @@ export function VideoStreamGrid({
               )}
 
               {/* Placeholder UI */}
-              {videoEnabled ? (
-                <>
-                  {/* Show placeholder for remote player when stream exists but video is not playing yet */}
-                  {!isLocal && remoteStream && !isRemoteVideoPlaying && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
-                      <div className="space-y-3 text-center">
-                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-purple-500/20">
-                          <Camera className="h-10 w-10 text-purple-400" />
-                        </div>
-                        <p className="text-slate-400">
-                          {player.name}&apos;s Table View
-                        </p>
-                        <p className="text-sm text-slate-500">
-                          Camera feed of physical battlefield
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950">
+              {<div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950">
                   <div className="space-y-2 text-center">
                     <VideoOff className="mx-auto h-12 w-12 text-slate-600" />
                     <p className="text-slate-600">Camera Off</p>
                   </div>
-                </div>
-              )}
+                </div>}
 
               {/* Player Info Badge */}
               <div className="absolute left-3 top-3 z-10 rounded-lg border border-slate-800 bg-slate-950/90 px-3 py-2 backdrop-blur-sm">
