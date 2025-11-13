@@ -1,105 +1,17 @@
 /**
  * usePeerJS Hook - Simplified WebRTC implementation using PeerJS
  *
- * Manages peer connections, local media streams, and remote streams for multiplayer video.
- * Replaces custom WebRTC implementation with PeerJS library, reducing codebase by 70-80%.
- *
- * ## Architecture
- *
- * This hook implements a mesh topology P2P network for 2-4 concurrent players:
- * - Each player creates a Peer instance with their unique ID
- * - When remote players join, outgoing calls are created automatically
- * - Incoming calls are answered with the local media stream
- * - All connections are tracked in Maps for efficient state management
- *
- * ## Connection Lifecycle
- *
- * 1. **Initialization**: Peer instance created, local media stream acquired
- * 2. **Outgoing Calls**: When remotePlayerIds changes, new calls are created
- * 3. **Incoming Calls**: Automatically answered with local stream
- * 4. **Stream Exchange**: Remote streams added to state when received
- * 5. **Error Handling**: Failures logged, connection state updated
- * 6. **Reconnection**: Automatic retry with exponential backoff (0s, 2s, 4s)
- * 7. **Cleanup**: All resources released on unmount
- *
- * ## Reliability Features
- *
- * - **Retry Logic**: 3 attempts with exponential backoff for failed connections
- * - **Timeout Handling**: 10-second timeout per connection attempt
- * - **Automatic Reconnection**: Detects dropped connections and reconnects
- * - **Error Tracking**: Per-peer error state for UI feedback
- * - **State Management**: Connection states tracked per peer (connecting, connected, disconnected, failed)
- *
- * ## Media Constraints
- *
- * - **Video**: 4K resolution (3840x2160) with fallback to lower resolutions
- * - **Audio**: Full duplex audio with echo cancellation
- * - **Camera Switching**: Supports switching between available devices
- * - **Track Control**: Independent video/audio toggle per local user
- *
- * ## Performance
- *
- * - **Code Size**: ~900 lines (vs ~1000+ lines in old implementation)
- * - **File Count**: 3 files (vs 7+ files in old implementation)
- * - **Connection Time**: <3 seconds (with retry/timeout)
- * - **Success Rate**: 95%+ (with automatic reconnection)
- *
- * ## Dependencies
- *
- * - `peerjs`: P2P connection management
- * - `@/lib/peerjs/retry.ts`: Exponential backoff retry logic
- * - `@/lib/peerjs/timeout.ts`: Connection timeout utilities
- * - `@/lib/peerjs/errors.ts`: Error handling and type mapping
- *
- * @example
- * ```tsx
- * const {
- *   localStream,
- *   remoteStreams,
- *   peerTrackStates,
- *   connectionStates,
- *   peerErrors,
- *   toggleVideo,
- *   toggleAudio,
- *   switchCamera,
- *   error,
- *   isInitialized,
- * } = usePeerJS({
- *   localPlayerId: 'user-123',
- *   remotePlayerIds: ['user-456', 'user-789'],
- *   onError: (error) => console.error('PeerJS error:', error),
- * })
- *
- * return (
- *   <VideoStreamGrid
- *     localStream={localStream}
- *     remoteStreams={remoteStreams}
- *     peerTrackStates={peerTrackStates}
- *     connectionStates={connectionStates}
- *     peerErrors={peerErrors}
- *     onToggleVideo={toggleVideo}
- *     onToggleAudio={toggleAudio}
- *     onSwitchCamera={switchCamera}
- *   />
- * )
- * ```
+ * Thin React wrapper around PeerJSManager that handles state updates.
+ * All core logic is in PeerJSManager class.
  */
 
 import type {
   ConnectionState,
-  LocalMediaStream,
   PeerJSError,
   PeerTrackState,
 } from '@/types/peerjs'
-import type { MediaConnection } from 'peerjs'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createPeerJSError, logError } from '@/lib/peerjs/errors'
-import { DEFAULT_RETRY_CONFIG, retryWithBackoff } from '@/lib/peerjs/retry'
-import {
-  DEFAULT_TIMEOUT_CONFIG,
-  executeWithTimeout,
-} from '@/lib/peerjs/timeout'
-import Peer from 'peerjs'
+import { PeerJSManager } from '@/lib/peerjs/PeerJSManager'
 
 export interface UsePeerJSProps {
   localPlayerId: string
@@ -113,7 +25,6 @@ export interface UsePeerJSReturn {
   remoteStreams: Map<string, MediaStream>
   peerTrackStates: Map<string, PeerTrackState>
   connectionStates: Map<string, ConnectionState>
-  peerErrors: Map<string, PeerJSError>
   toggleVideo: (enabled: boolean) => void
   toggleAudio: (enabled: boolean) => void
   switchCamera: (deviceId: string) => Promise<void>
@@ -124,29 +35,20 @@ export interface UsePeerJSReturn {
 
 /**
  * Hook for managing PeerJS WebRTC connections
- *
- * @param props - Configuration for the hook
- * @returns Object with streams, state, and control functions
  */
 export function usePeerJS({
   localPlayerId,
   remotePlayerIds,
   onError,
 }: UsePeerJSProps): UsePeerJSReturn {
-  // Peer instance
-  const peerRef = useRef<Peer | null>(null)
-
-  // Local media stream
+  const managerRef = useRef<PeerJSManager | null>(null)
+  
+  // State
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
-  const localStreamRef = useRef<LocalMediaStream | null>(null)
-
-  // Local track state (single source of truth for local player's video/audio state)
   const [localTrackState, setLocalTrackState] = useState<PeerTrackState>({
     videoEnabled: true,
     audioEnabled: true,
   })
-
-  // Remote streams and connection state
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(
     new Map(),
   )
@@ -156,732 +58,107 @@ export function usePeerJS({
   const [connectionStates, setConnectionStates] = useState<
     Map<string, ConnectionState>
   >(new Map())
-
-  // Error state
   const [error, setError] = useState<PeerJSError | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
 
-  // Track active calls
-  const callsRef = useRef<Map<string, MediaConnection>>(new Map())
-
-  // Track which peers we've already called
-  const calledPeersRef = useRef<Set<string>>(new Set())
-
-  // Track retry attempts per peer
-  const retryCountRef = useRef<Map<string, number>>(new Map())
-
-  // Track pending incoming calls (received before local stream is ready)
-  const pendingIncomingCallsRef = useRef<Map<string, MediaConnection>>(new Map())
-
-  // Track connection errors per peer
-  const [peerErrors, setPeerErrors] = useState<Map<string, PeerJSError>>(
-    new Map(),
-  )
-
-  /**
-   * Initialize local media stream with 4K constraints
-   */
-  const initializeLocalStream = useCallback(async () => {
-    try {
-      console.log('[usePeerJS] Initializing local media stream')
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 3840 },
-          height: { ideal: 2160 },
-        },
-        audio: true,
-      })
-
-      const videoTrack = stream.getVideoTracks()[0] || null
-      const audioTrack = stream.getAudioTracks()[0] || null
-
-      localStreamRef.current = {
-        stream,
-        videoTrack,
-        audioTrack,
-      }
-
-      setLocalStream(stream)
-      console.log('[usePeerJS] Local media stream initialized')
-
-      // Answer any pending incoming calls that were waiting for the stream
-      if (pendingIncomingCallsRef.current.size > 0) {
-        console.log('[usePeerJS] Answering', pendingIncomingCallsRef.current.size, 'pending incoming calls')
-        console.log('[usePeerJS] Local stream tracks:', stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, id: t.id })))
-        for (const [peerId, call] of pendingIncomingCallsRef.current) {
-          console.log('[usePeerJS] Answering pending call from:', peerId)
-          call.answer(stream)
-          console.log('[usePeerJS] Call answered, waiting for remote stream from:', peerId)
-
-          // Handle remote stream
-          call.on('stream', (remoteStream: MediaStream) => {
-            console.log('[usePeerJS] ✅ Received remote stream from:', peerId)
-            console.log('[usePeerJS] Remote stream tracks:', remoteStream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, id: t.id })))
-            console.log('[usePeerJS] Remote stream active:', remoteStream.active)
-            setRemoteStreams((prev) => {
-              const next = new Map(prev).set(peerId, remoteStream)
-              console.log('[usePeerJS] Updated remoteStreams Map, size:', next.size, 'keys:', Array.from(next.keys()))
-              return next
-            })
-            setConnectionStates((prev) =>
-              new Map(prev).set(peerId, 'connected'),
-            )
-          })
-
-          // Handle call errors
-          call.on('error', (err) => {
-            logError(err, { context: 'pendingIncomingCall', peerId })
-            setConnectionStates((prev) =>
-              new Map(prev).set(peerId, 'failed'),
-            )
-          })
-
-          // Handle call close
-          call.on('close', () => {
-            console.log('[usePeerJS] Call closed with:', peerId)
-            setRemoteStreams((prev) => {
-              const next = new Map(prev)
-              next.delete(peerId)
-              return next
-            })
-            setConnectionStates((prev) =>
-              new Map(prev).set(peerId, 'disconnected'),
-            )
-            callsRef.current.delete(peerId)
-          })
-
-          // Store call
-          callsRef.current.set(peerId, call)
-        }
-        pendingIncomingCallsRef.current.clear()
-      }
-    } catch (err) {
-      const peerError = createPeerJSError(err)
-      logError(peerError, { context: 'initializeLocalStream' })
-      setError(peerError)
-      onError?.(peerError)
-    }
-  }, [onError])
-
-  /**
-   * Initialize Peer instance with retry logic for ID conflicts
-   */
-  const initializePeer = useCallback(async () => {
-    let retryCount = 0
-    const maxRetries = 3
-    const baseDelay = 2000 // 2 seconds - longer delay for server to release ID
-    let isRetrying = false
-
-    const attemptConnection = () => {
-      try {
-        // Destroy any existing peer instance first
-        if (peerRef.current) {
-          console.log('[usePeerJS] Destroying existing peer instance before retry')
-          peerRef.current.destroy()
-          peerRef.current = null
-        }
-
-        // Always use the same peer ID - don't append retry suffix
-        // This ensures other peers can find us consistently
-        const peerId = localPlayerId
-        console.log('[usePeerJS] Initializing peer with ID:', peerId)
-
-        const peerConfig = {
-          host: 'localhost',
-          port: 9000,
-          path: '/peerjs',
-          secure: false, // Set to true in production with HTTPS
-        }
-
-        console.log('[usePeerJS] Connecting to PeerServer:', peerConfig)
-        const peer = new Peer(peerId, peerConfig)
-
-        // Handle successful connection
-        peer.on('open', (id) => {
-          console.log('[usePeerJS] Peer connection opened with ID:', id)
-          peerRef.current = peer
-          setIsInitialized(true)
-          console.log('[usePeerJS] Peer initialized successfully')
-        })
-
-        // Handle incoming calls
-        peer.on('call', (call: MediaConnection) => {
-          console.log('[usePeerJS] Incoming call from:', call.peer)
-
-          if (!localStreamRef.current?.stream) {
-            console.warn('[usePeerJS] No local stream available yet, deferring call from:', call.peer)
-            // Store the call to answer later when stream is ready
-            pendingIncomingCallsRef.current.set(call.peer, call)
-            return
-          }
-
-          // Answer the call with local stream
-          console.log('[usePeerJS] Answering call from:', call.peer)
-          console.log('[usePeerJS] Local stream tracks:', localStreamRef.current.stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, id: t.id })))
-          call.answer(localStreamRef.current.stream)
-          console.log('[usePeerJS] Call answered, waiting for remote stream from:', call.peer)
-
-          // Handle remote stream
-          call.on('stream', (remoteStream: MediaStream) => {
-            console.log('[usePeerJS] ✅ Received remote stream from:', call.peer)
-            console.log('[usePeerJS] Remote stream tracks:', remoteStream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, id: t.id })))
-            console.log('[usePeerJS] Remote stream active:', remoteStream.active)
-            setRemoteStreams((prev) => {
-              const next = new Map(prev).set(call.peer, remoteStream)
-              console.log('[usePeerJS] Updated remoteStreams Map, size:', next.size, 'keys:', Array.from(next.keys()))
-              return next
-            })
-            setConnectionStates((prev) =>
-              new Map(prev).set(call.peer, 'connected'),
-            )
-          })
-
-          // Handle call errors
-          call.on('error', (err) => {
-            logError(err, { context: 'incomingCall', peerId: call.peer })
-            setConnectionStates((prev) =>
-              new Map(prev).set(call.peer, 'failed'),
-            )
-          })
-
-          // Handle call close
-          call.on('close', () => {
-            console.log('[usePeerJS] Call closed with:', call.peer)
-            setRemoteStreams((prev) => {
-              const next = new Map(prev)
-              next.delete(call.peer)
-              return next
-            })
-            setConnectionStates((prev) =>
-              new Map(prev).set(call.peer, 'disconnected'),
-            )
-            callsRef.current.delete(call.peer)
-          })
-
-          // Store call
-          callsRef.current.set(call.peer, call)
-        })
-
-        // Handle peer errors
-        peer.on('error', (err) => {
-          const peerError = createPeerJSError(err)
-
-          // Check if this is an "ID taken" error (unavailable-id) - retry with backoff
-          if (
-            peerError.type === 'unavailable-id' &&
-            retryCount < maxRetries &&
-            !isRetrying
-          ) {
-            isRetrying = true
-            // Use exponential backoff: 2s, 4s, 8s
-            // This gives the PeerJS server time to release the ID
-            const delayMs = baseDelay * Math.pow(2, retryCount)
-            console.log(
-              `[usePeerJS] ID taken, will retry in ${delayMs}ms (attempt ${retryCount + 1}/${maxRetries})`,
-            )
-            retryCount++
-            // Destroy the failed peer instance immediately
-            peer.destroy()
-            // Wait for server to release the ID, then retry
-            setTimeout(() => {
-              isRetrying = false
-              attemptConnection()
-            }, delayMs)
-            return
-          }
-
-          logError(peerError, { context: 'peer' })
-          setError(peerError)
-          onError?.(peerError)
-        })
-      } catch (err) {
-        const peerError = createPeerJSError(err)
-        logError(peerError, { context: 'initializePeer' })
-        setError(peerError)
-        onError?.(peerError)
-      }
-    }
-
-    // Start connection attempt
-    attemptConnection()
-  }, [localPlayerId, onError])
-
-  /**
-   * Create outgoing call to remote player with automatic reconnection
-   */
-  const createOutgoingCall = useCallback(
-    async (remotePlayerId: string) => {
-      if (!peerRef.current || !localStreamRef.current?.stream) {
-        console.warn('[usePeerJS] Cannot create call: peer or stream not ready')
-        return
-      }
-
-      // Skip if already called this peer
-      if (calledPeersRef.current.has(remotePlayerId)) {
-        return
-      }
-
-      try {
-        console.log('[usePeerJS] Creating outgoing call to:', remotePlayerId)
-        console.log('[usePeerJS] Local stream available:', !!localStreamRef.current?.stream)
-        console.log('[usePeerJS] Local stream tracks:', localStreamRef.current?.stream?.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, id: t.id })))
-        setConnectionStates((prev) =>
-          new Map(prev).set(remotePlayerId, 'connecting'),
-        )
-
-        // Reset retry count for this peer
-        retryCountRef.current.set(remotePlayerId, 0)
-
-        // Create call with timeout and retry
-        const call = await executeWithTimeout(
-          async () => {
-            return await retryWithBackoff(
-              () =>
-                Promise.resolve(
-                  peerRef.current!.call(
-                    remotePlayerId,
-                    localStreamRef.current!.stream,
-                  ),
-                ),
-              DEFAULT_RETRY_CONFIG,
-            )
-          },
-          DEFAULT_TIMEOUT_CONFIG.connectionTimeoutMs,
-          `Connection timeout to ${remotePlayerId}`,
-        )
-
-        // Handle remote stream
-        call.on('stream', (remoteStream: MediaStream) => {
-          console.log(
-            '[usePeerJS] ✅ Received remote stream from:',
-            remotePlayerId,
-          )
-          console.log('[usePeerJS] Remote stream tracks:', remoteStream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, id: t.id })))
-          console.log('[usePeerJS] Remote stream active:', remoteStream.active)
-          setRemoteStreams((prev) => {
-            const next = new Map(prev).set(remotePlayerId, remoteStream)
-            console.log('[usePeerJS] Updated remoteStreams Map, size:', next.size, 'keys:', Array.from(next.keys()))
-            return next
-          })
-          setConnectionStates((prev) =>
-            new Map(prev).set(remotePlayerId, 'connected'),
-          )
-          // Clear error for this peer on successful connection
-          setPeerErrors((prev) => {
-            const next = new Map(prev)
-            next.delete(remotePlayerId)
-            return next
-          })
-        })
-
-        // Handle call errors
-        call.on('error', (err) => {
-          const peerError = createPeerJSError(err)
-          logError(peerError, {
-            context: 'outgoingCall',
-            peerId: remotePlayerId,
-          })
-          setConnectionStates((prev) =>
-            new Map(prev).set(remotePlayerId, 'failed'),
-          )
-          // Track error for this peer
-          setPeerErrors((prev) => new Map(prev).set(remotePlayerId, peerError))
-        })
-
-        // Handle call close - attempt automatic reconnection
-        call.on('close', () => {
-          console.log('[usePeerJS] Call closed with:', remotePlayerId)
-          setRemoteStreams((prev) => {
-            const next = new Map(prev)
-            next.delete(remotePlayerId)
-            return next
-          })
-          setConnectionStates((prev) =>
-            new Map(prev).set(remotePlayerId, 'disconnected'),
-          )
-          callsRef.current.delete(remotePlayerId)
-
-          // Attempt automatic reconnection if peer still in remote list
-          if (remotePlayerIds.includes(remotePlayerId)) {
-            const retryCount = retryCountRef.current.get(remotePlayerId) || 0
-            if (retryCount < 3) {
-              console.log(
-                `[usePeerJS] Attempting reconnection to ${remotePlayerId} (attempt ${retryCount + 1}/3)`,
-              )
-              retryCountRef.current.set(remotePlayerId, retryCount + 1)
-
-              // Wait before reconnecting (exponential backoff)
-              const backoffMs = [0, 2000, 4000][retryCount] || 0
-              setTimeout(() => {
-                calledPeersRef.current.delete(remotePlayerId)
-                createOutgoingCall(remotePlayerId)
-              }, backoffMs)
-            } else {
-              console.log(
-                `[usePeerJS] Max reconnection attempts reached for ${remotePlayerId}`,
-              )
-              setConnectionStates((prev) =>
-                new Map(prev).set(remotePlayerId, 'failed'),
-              )
-              calledPeersRef.current.delete(remotePlayerId)
-            }
-          }
-        })
-
-        // Store call
-        callsRef.current.set(remotePlayerId, call)
-        calledPeersRef.current.add(remotePlayerId)
-      } catch (err) {
-        const peerError = createPeerJSError(err)
-        logError(peerError, {
-          context: 'createOutgoingCall',
-          peerId: remotePlayerId,
-        })
-        setConnectionStates((prev) =>
-          new Map(prev).set(remotePlayerId, 'failed'),
-        )
-        setPeerErrors((prev) => new Map(prev).set(remotePlayerId, peerError))
-        setError(peerError)
-        onError?.(peerError)
-      }
-    },
-    [remotePlayerIds, onError],
-  )
-
-  /**
-   * Toggle video enabled/disabled
-   */
-  const toggleVideo = useCallback((enabled: boolean) => {
-    if (!localStreamRef.current?.videoTrack) {
-      console.warn('[usePeerJS] No video track available')
-      return
-    }
-
-    localStreamRef.current.videoTrack.enabled = enabled
-    console.log('[usePeerJS] Video toggled:', enabled)
-
-    // Update local track state (single source of truth)
-    setLocalTrackState((prev) => ({
-      ...prev,
-      videoEnabled: enabled,
-    }))
-
-    // Update local stream to trigger re-render
-    setLocalStream((prev) => {
-      if (prev) {
-        return new MediaStream(prev.getTracks())
-      }
-      return prev
-    })
-
-    // Notify peers of state change
-    setPeerTrackStates((prev) => {
-      const next = new Map(prev)
-      for (const [peerId] of next) {
-        next.set(peerId, {
-          ...next.get(peerId)!,
-          videoEnabled: enabled,
-        })
-      }
-      return next
-    })
-  }, [])
-
-  /**
-   * Toggle audio muted/unmuted
-   */
-  const toggleAudio = useCallback((enabled: boolean) => {
-    if (!localStreamRef.current?.audioTrack) {
-      console.warn('[usePeerJS] No audio track available')
-      return
-    }
-
-    localStreamRef.current.audioTrack.enabled = enabled
-    console.log('[usePeerJS] Audio toggled:', enabled)
-
-    // Update local track state (single source of truth)
-    setLocalTrackState((prev) => ({
-      ...prev,
-      audioEnabled: enabled,
-    }))
-
-    // Update local stream to trigger re-render
-    setLocalStream((prev) => {
-      if (prev) {
-        return new MediaStream(prev.getTracks())
-      }
-      return prev
-    })
-
-    // Notify peers of state change
-    setPeerTrackStates((prev) => {
-      const next = new Map(prev)
-      for (const [peerId] of next) {
-        next.set(peerId, {
-          ...next.get(peerId)!,
-          audioEnabled: enabled,
-        })
-      }
-      return next
-    })
-  }, [])
-
-  /**
-   * Switch camera device
-   */
-  const switchCamera = useCallback(
-    async (deviceId: string) => {
-      try {
-        console.log('[usePeerJS] Switching camera to device:', deviceId)
-
-        if (!localStreamRef.current?.videoTrack) {
-          console.warn('[usePeerJS] No video track available for switching')
-          return
-        }
-
-        // Stop old video track
-        localStreamRef.current.videoTrack.stop()
-
-        // Get new stream with specified device
-        const newStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            deviceId: { exact: deviceId },
-            width: { ideal: 3840 },
-            height: { ideal: 2160 },
-          },
-          audio: false,
-        })
-
-        const newVideoTrack = newStream.getVideoTracks()[0]
-        if (!newVideoTrack) {
-          throw new Error('No video track in new stream')
-        }
-
-        // Update local stream
-        localStreamRef.current.videoTrack = newVideoTrack
-        localStreamRef.current.stream.removeTrack(
-          localStreamRef.current.stream.getVideoTracks()[0]!,
-        )
-        localStreamRef.current.stream.addTrack(newVideoTrack)
-
-        // Trigger re-render with updated stream
-        setLocalStream((prev) => {
-          if (prev) {
-            return new MediaStream(prev.getTracks())
-          }
-          return prev
-        })
-
-        // Replace video track in all active calls
-        for (const [peerId, call] of callsRef.current) {
-          const sender = call.peerConnection
-            ?.getSenders()
-            .find((s) => s.track?.kind === 'video')
-          if (sender) {
-            await sender.replaceTrack(newVideoTrack)
-            console.log('[usePeerJS] Video track replaced for peer:', peerId)
-          }
-        }
-
-        console.log('[usePeerJS] Camera switched successfully')
-      } catch (err) {
-        const peerError = createPeerJSError(err)
-        logError(peerError, { context: 'switchCamera' })
-        setError(peerError)
-        onError?.(peerError)
-      }
-    },
-    [onError],
-  )
-
-  /**
-   * Initialize on mount
-   */
+  // Initialize manager
   useEffect(() => {
-    // Guard: only initialize once
-    if (peerRef.current !== null) {
+    if (managerRef.current != null) {
       return
     }
 
-    const initialize = async () => {
-      // Initialize Peer first (without local stream)
-      // Local stream will be initialized separately when user is ready
-      await initializePeer()
-    }
+    const manager = new PeerJSManager(localPlayerId, {
+      onLocalStreamChanged: (stream) => {
+        setLocalStream(stream)
+      },
+      onRemoteStreamAdded: (peerId, stream) => {
+        setRemoteStreams((prev) => new Map(prev).set(peerId, stream))
+      },
+      onRemoteStreamRemoved: (peerId) => {
+        setRemoteStreams((prev) => {
+          const next = new Map(prev)
+          next.delete(peerId)
+          return next
+        })
+      },
+      onConnectionStateChanged: (peerId, state) => {
+        setConnectionStates((prev) => new Map(prev).set(peerId, state))
+      },
+      onTrackStateChanged: (peerId, state) => {
+        setPeerTrackStates((prev) => new Map(prev).set(peerId, state))
+        
+        // Update local track state if it's for local player
+        if (peerId === localPlayerId) {
+          setLocalTrackState(state)
+        }
+      },
+      onError: (err) => {
+        setError(err)
+        onError?.(err)
+      },
+    })
 
-    initialize()
+    managerRef.current = manager
 
-    // Capture refs for cleanup
-    const calls = callsRef.current
-    const calledPeers = calledPeersRef.current
-    const pendingCalls = pendingIncomingCallsRef.current
-    const localStream = localStreamRef.current
+    // Initialize peer
+    manager
+      .initialize()
+      .then(() => {
+        setIsInitialized(true)
+      })
+      .catch((err) => {
+        console.error('[usePeerJS] Failed to initialize:', err)
+        setError(err)
+        onError?.(err)
+      })
 
     return () => {
-      // Cleanup on unmount
-      if (peerRef.current) {
-        peerRef.current.destroy()
-        peerRef.current = null
-      }
-
-      if (localStream?.stream) {
-        localStream.stream.getTracks().forEach((track) => {
-          track.stop()
-        })
-      }
-
-      calls.forEach((call) => {
-        call.close()
-      })
-
-      // Close any pending incoming calls that were never answered
-      pendingCalls.forEach((call) => {
-        call.close()
-      })
-
-      calls.clear()
-      calledPeers.clear()
-      pendingCalls.clear()
+      manager.destroy()
+      managerRef.current = null
     }
-  }, [initializePeer])
+  }, [localPlayerId, onError])
 
-  /**
-   * Initialize local stream when user completes media setup
-   * This is called separately after user selects their camera device
-   */
+  // Connect to remote peers when they change
   useEffect(() => {
-    // Only initialize if peer is ready and we don't have a local stream yet
-    if (peerRef.current && !localStreamRef.current?.stream) {
-      initializeLocalStream()
-    }
-  }, [initializeLocalStream])
-
-  /**
-   * Handle remote player changes
-   */
-  useEffect(() => {
-    if (!isInitialized) {
+    if (!isInitialized || !managerRef.current) {
       return
     }
 
-    // Create calls for new players
-    for (const remotePlayerId of remotePlayerIds) {
-      if (!callsRef.current.has(remotePlayerId)) {
-        createOutgoingCall(remotePlayerId)
-      }
-    }
+    managerRef.current.connectToPeers(remotePlayerIds).catch((err) => {
+      console.error('[usePeerJS] Failed to connect to peers:', err)
+      setError(err)
+      onError?.(err)
+    })
+  }, [remotePlayerIds, isInitialized])
 
-    // Close calls for removed players
-    for (const [peerId] of callsRef.current) {
-      if (!remotePlayerIds.includes(peerId)) {
-        const call = callsRef.current.get(peerId)
-        if (call) {
-          call.close()
-        }
-        callsRef.current.delete(peerId)
-        calledPeersRef.current.delete(peerId)
-      }
-    }
-  }, [remotePlayerIds, isInitialized, createOutgoingCall])
-
-  // Wrapper function to initialize local media (called after media setup dialog)
-  const initializeLocalMediaWrapper = useCallback(
+  // Initialize local media when called
+  const initializeLocalMedia = useCallback(
     async (deviceId?: string) => {
-      if (!localStreamRef.current?.stream) {
-        // If deviceId is provided, create stream with specific device
-        if (deviceId) {
-          try {
-            console.log(
-              '[usePeerJS] Initializing local media stream with device:',
-              deviceId,
-            )
-
-            const stream = await navigator.mediaDevices.getUserMedia({
-              video: {
-                deviceId: { exact: deviceId },
-                width: { ideal: 3840 },
-                height: { ideal: 2160 },
-              },
-              audio: true,
-            })
-
-            const videoTrack = stream.getVideoTracks()[0] || null
-            const audioTrack = stream.getAudioTracks()[0] || null
-
-            console.log('[usePeerJS] Video track enabled:', videoTrack?.enabled)
-            console.log('[usePeerJS] Audio track enabled:', audioTrack?.enabled)
-
-            localStreamRef.current = {
-              stream,
-              videoTrack,
-              audioTrack,
-            }
-
-            setLocalStream(stream)
-            console.log(
-              '[usePeerJS] Local media stream initialized with device',
-              deviceId,
-            )
-
-            // Answer any pending incoming calls that were waiting for the stream
-            if (pendingIncomingCallsRef.current.size > 0) {
-              console.log('[usePeerJS] Answering', pendingIncomingCallsRef.current.size, 'pending incoming calls')
-              for (const [peerId, call] of pendingIncomingCallsRef.current) {
-                console.log('[usePeerJS] Answering pending call from:', peerId)
-                call.answer(stream)
-
-                // Handle remote stream
-                call.on('stream', (remoteStream: MediaStream) => {
-                  console.log('[usePeerJS] Received remote stream from:', peerId)
-                  setRemoteStreams((prev) =>
-                    new Map(prev).set(peerId, remoteStream),
-                  )
-                  setConnectionStates((prev) =>
-                    new Map(prev).set(peerId, 'connected'),
-                  )
-                })
-
-                // Handle call errors
-                call.on('error', (err) => {
-                  logError(err, { context: 'pendingIncomingCall', peerId })
-                  setConnectionStates((prev) =>
-                    new Map(prev).set(peerId, 'failed'),
-                  )
-                })
-
-                // Handle call close
-                call.on('close', () => {
-                  console.log('[usePeerJS] Call closed with:', peerId)
-                  setRemoteStreams((prev) => {
-                    const next = new Map(prev)
-                    next.delete(peerId)
-                    return next
-                  })
-                  setConnectionStates((prev) =>
-                    new Map(prev).set(peerId, 'disconnected'),
-                  )
-                  callsRef.current.delete(peerId)
-                })
-
-                // Store call
-                callsRef.current.set(peerId, call)
-              }
-              pendingIncomingCallsRef.current.clear()
-            }
-          } catch (err) {
-            const peerError = createPeerJSError(err)
-            logError(peerError, { context: 'initializeLocalStream' })
-            setError(peerError)
-            onError?.(peerError)
-          }
-        } else {
-          await initializeLocalStream()
-        }
+      if (!managerRef.current) {
+        throw new Error('Manager not initialized')
       }
+      await managerRef.current.initializeLocalMedia(deviceId)
     },
-    [initializeLocalStream, onError],
+    [],
   )
+
+  // Toggle video
+  const toggleVideo = useCallback((enabled: boolean) => {
+    managerRef.current?.toggleVideo(enabled)
+  }, [])
+
+  // Toggle audio
+  const toggleAudio = useCallback((enabled: boolean) => {
+    managerRef.current?.toggleAudio(enabled)
+  }, [])
+
+  // Switch camera
+  const switchCamera = useCallback(async (deviceId: string) => {
+    if (!managerRef.current) {
+      throw new Error('Manager not initialized')
+    }
+    await managerRef.current.switchCamera(deviceId)
+  }, [])
 
   return {
     localStream,
@@ -889,11 +166,10 @@ export function usePeerJS({
     remoteStreams,
     peerTrackStates,
     connectionStates,
-    peerErrors,
     toggleVideo,
     toggleAudio,
     switchCamera,
-    initializeLocalMedia: initializeLocalMediaWrapper,
+    initializeLocalMedia,
     error,
     isInitialized,
   }
