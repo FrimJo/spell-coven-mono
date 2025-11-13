@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "with-env": "dotenv -e ../../.env.development -e ../../.env.development.local -e .env.development -e .env.development.local --",
+    "generate-certs": "tsx scripts/generate-certs.ts",
     "dev": "bun run with-env -- tsx watch src/index.ts",
     "start": "node dist/index.js",
     "build": "tsc",
@@ -22,10 +23,11 @@
     "@repo/prettier-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^20.11.0",
-    "tsx": "^4.7.0",
-    "typescript": "^5.3.3",
+    "dotenv-cli": "catalog:",
     "eslint": "^9.34.0",
-    "dotenv-cli": "catalog:"
+    "prettier": "catalog:",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
   },
   "prettier": "@repo/prettier-config"
 }
