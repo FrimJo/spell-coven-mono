@@ -28,11 +28,6 @@ interface Player {
   name: string
 }
 
-interface PeerConnectionData {
-  videoEnabled: boolean
-  audioEnabled: boolean
-}
-
 interface VideoStreamGridProps {
   players: Player[]
   localPlayerName: string
@@ -48,8 +43,6 @@ interface VideoStreamGridProps {
   remoteStreams?: Map<string, MediaStream | null>
   /** Connection states from WebRTC (player ID -> ConnectionState) */
   connectionStates?: Map<string, ConnectionState>
-  /** Peer connection data with track states (player ID -> data) */
-  peerConnections?: Map<string, PeerConnectionData>
   /** Peer track states from PeerJS (player ID -> track state) */
   peerTrackStates?: Map<string, PeerTrackState>
   /** Callback when local video starts (for WebRTC integration) */
@@ -82,8 +75,7 @@ export function VideoStreamGrid({
   onCardCrop,
   remoteStreams = new Map(),
   connectionStates = new Map(),
-  peerConnections = new Map(),
-  peerTrackStates: _peerTrackStates = new Map(),
+  peerTrackStates = new Map(),
   onLocalVideoStart: _onLocalVideoStart,
   onLocalVideoStop: _onLocalVideoStop,
   localStream,
@@ -206,21 +198,14 @@ export function VideoStreamGrid({
     new Set(),
   )
 
-  // Track event listeners for cleanup
-  const trackHandlersRef = useRef<
-    Map<string, Array<{ track: MediaStreamTrack; handler: () => void }>>
-  >(new Map())
-
-  // Update remote video elements when streams change
+  // Update remote video elements when streams change or tracks change
   useEffect(() => {
     for (const [playerId, stream] of remoteStreams) {
       const videoElement = remoteVideoRefs.current.get(playerId)
       const currentAttachedStream = attachedStreamsRef.current.get(playerId)
 
-      // Skip null/undefined streams - wait for actual stream
       if (!stream) {
         if (videoElement && currentAttachedStream) {
-          // Clear existing stream if we received null
           videoElement.srcObject = null
           attachedStreamsRef.current.set(playerId, null)
           setPlayingRemoteVideos((prev) => {
@@ -232,98 +217,33 @@ export function VideoStreamGrid({
         continue
       }
 
-      // Only update if stream has changed
-      if (videoElement && stream !== currentAttachedStream) {
-        videoElement.srcObject = stream
-        attachedStreamsRef.current.set(playerId, stream)
-
-        // Check if already playing
-        if (!videoElement.paused && videoElement.readyState >= 2) {
-          setPlayingRemoteVideos((prev) => new Set(prev).add(playerId))
-        }
-
-        // Don't call play() here - let autoplay and onLoadedMetadata handle it
-        // Calling play() here causes AbortError when srcObject is set multiple times
-      } else if (videoElement && !stream) {
-        if (currentAttachedStream) {
-          videoElement.srcObject = null
-          attachedStreamsRef.current.set(playerId, null)
-          setPlayingRemoteVideos((prev) => {
-            const next = new Set(prev)
-            next.delete(playerId)
-            return next
-          })
-        }
-      }
-
-      // Monitor video track enabled state changes
-      if (stream) {
-        // First, clean up old handlers for this player
-        const oldHandlers = trackHandlersRef.current.get(playerId)
-        if (oldHandlers) {
-          oldHandlers.forEach(({ track, handler }) => {
-            track.removeEventListener('enabledchange', handler)
-          })
-        }
-
-        // Add new handlers
-        const videoTracks = stream.getVideoTracks()
-        const newHandlers: Array<{ track: MediaStreamTrack; handler: () => void }> =
-          []
-
-        videoTracks.forEach((track) => {
-          const handleTrackChange = () => {
-            console.log(`[VideoStreamGrid] Track enabledchange for ${playerId}: enabled=${track.enabled}`)
-            // When video track is disabled, update stream state
-            if (!track.enabled) {
-              console.log(`[VideoStreamGrid] Setting video=false for ${playerId}`)
-              setStreamStates((prev) => {
-                const currentState = prev[playerId]
-                if (!currentState) return prev
-                return {
-                  ...prev,
-                  [playerId]: { ...currentState, video: false },
-                }
-              })
-              // Stop showing the video as playing
-              setPlayingRemoteVideos((prev) => {
-                const next = new Set(prev)
-                next.delete(playerId)
-                return next
-              })
-            } else {
-              // When video track is enabled, update stream state
-              console.log(`[VideoStreamGrid] Setting video=true for ${playerId}`)
-              setStreamStates((prev) => {
-                const currentState = prev[playerId]
-                if (!currentState) return prev
-                return {
-                  ...prev,
-                  [playerId]: { ...currentState, video: true },
-                }
-              })
-            }
+      const hasVideoTrack = stream.getVideoTracks().length > 0
+      
+      // Update video element if stream changed OR if track presence changed
+      if (videoElement) {
+        const hadVideoTrack = currentAttachedStream ? currentAttachedStream.getVideoTracks().length > 0 : false
+        
+        if (stream !== currentAttachedStream || hasVideoTrack !== hadVideoTrack) {
+          if (hasVideoTrack) {
+            videoElement.srcObject = stream
+            attachedStreamsRef.current.set(playerId, stream)
+            setPlayingRemoteVideos((prev) => {
+              const next = new Set(prev)
+              next.delete(playerId)
+              return next
+            })
+          } else {
+            // No video track - clear video element
+            videoElement.srcObject = null
+            attachedStreamsRef.current.set(playerId, stream) // Keep stream ref for audio
+            setPlayingRemoteVideos((prev) => {
+              const next = new Set(prev)
+              next.delete(playerId)
+              return next
+            })
           }
-
-          track.addEventListener('enabledchange', handleTrackChange)
-          newHandlers.push({ track, handler: handleTrackChange })
-        })
-
-        // Store handlers for cleanup
-        trackHandlersRef.current.set(playerId, newHandlers)
+        }
       }
-    }
-
-    // Capture current ref value for cleanup
-    const currentHandlers = trackHandlersRef.current
-    return () => {
-      // Cleanup event listeners on unmount
-      currentHandlers.forEach((handlers) => {
-        handlers.forEach(({ track, handler }) => {
-          track.removeEventListener('enabledchange', handler)
-        })
-      })
-      currentHandlers.clear()
     }
   }, [remoteStreams])
 
@@ -334,17 +254,17 @@ export function VideoStreamGrid({
         const state = streamStates[player.id] || { video: true, audio: true }
         const remoteStream = remoteStreams.get(player.id)
         const connectionState = connectionStates.get(player.id)
-        const peerData = peerConnections.get(player.id)
+        const peerTrackState = peerTrackStates.get(player.id)
 
-        // For local player, use localTrackState as single source of truth
-        // For remote players, use track state from peer connection if available, otherwise fall back to streamStates
+        // Simple: check if stream has video track
         const localVideoEnabled = localTrackState?.videoEnabled ?? true
+        const hasVideoTrack = remoteStream ? remoteStream.getVideoTracks().length > 0 : false
         const videoEnabled = isLocal 
           ? (hasStartedVideo && localVideoEnabled)
-          : (peerData?.videoEnabled ?? state.video) && !!remoteStream
+          : hasVideoTrack
         const audioEnabled = isLocal 
           ? (localTrackState?.audioEnabled ?? true)
-          : (peerData?.audioEnabled ?? state.audio)
+          : (peerTrackState?.audioEnabled ?? state.audio)
 
         // Check if remote video is actually playing (for hiding placeholder)
         const isRemoteVideoPlaying =
@@ -448,7 +368,11 @@ export function VideoStreamGrid({
                   }}
                   onLoadedMetadata={() => {
                     const videoElement = remoteVideoRefs.current.get(player.id)
-                    if (videoElement && remoteStream && videoElement.paused) {
+                    const peerTrackState = peerTrackStates.get(player.id)
+                    const state = streamStates[player.id] || { video: true, audio: true }
+                    const videoEnabled = (peerTrackState?.videoEnabled ?? state.video) && !!remoteStream
+                    
+                    if (videoElement && remoteStream && videoElement.paused && videoEnabled) {
                       // Use requestAnimationFrame to ensure element is ready
                       requestAnimationFrame(() => {
                         videoElement.play().catch((error) => {
@@ -466,7 +390,11 @@ export function VideoStreamGrid({
                   onCanPlay={() => {
                     // Fallback: ensure play when video can start playing
                     const videoElement = remoteVideoRefs.current.get(player.id)
-                    if (videoElement && remoteStream && videoElement.paused) {
+                    const peerTrackState = peerTrackStates.get(player.id)
+                    const state = streamStates[player.id] || { video: true, audio: true }
+                    const videoEnabled = (peerTrackState?.videoEnabled ?? state.video) && !!remoteStream
+                    
+                    if (videoElement && remoteStream && videoElement.paused && videoEnabled) {
                       requestAnimationFrame(() => {
                         videoElement.play().catch((error) => {
                           if (error.name !== 'AbortError') {
@@ -523,7 +451,7 @@ export function VideoStreamGrid({
                   )}
                 </>
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center bg-slate-950">
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950">
                   <div className="space-y-2 text-center">
                     <VideoOff className="mx-auto h-12 w-12 text-slate-600" />
                     <p className="text-slate-600">Camera Off</p>

@@ -54,6 +54,7 @@ export class PeerJSManager {
   private initializationErrorLogged = false
   private isRetryingId = false
   private idRetryTimeout: NodeJS.Timeout | null = null
+  private lastVideoDeviceId: string | undefined = undefined
 
   constructor(
     private localPlayerId: string,
@@ -316,6 +317,12 @@ export class PeerJSManager {
       const videoTrack = stream.getVideoTracks()[0] || null
       const audioTrack = stream.getAudioTracks()[0] || null
 
+      // Store the device ID for later reinitialization
+      if (videoTrack) {
+        const settings = videoTrack.getSettings()
+        this.lastVideoDeviceId = settings.deviceId || deviceId
+      }
+
       this.localStream = {
         stream,
         videoTrack,
@@ -379,7 +386,6 @@ export class PeerJSManager {
    * Setup event handlers for a call
    */
   private setupCallHandlers(call: MediaConnection, peerId: string): void {
-    const trackEndHandlers = new Map<string, () => void>()
 
     call.on('stream', (remoteStream: MediaStream) => {
       console.log('[PeerJSManager] Received remote stream from:', peerId)
@@ -393,29 +399,8 @@ export class PeerJSManager {
       // Initial track state
       this.updateTrackState(peerId, remoteStream)
 
-      // Monitor track ended events
-      const videoTrack = remoteStream.getVideoTracks()[0]
-      const audioTrack = remoteStream.getAudioTracks()[0]
-
-      const onVideoEnded = () => {
-        this.updateTrackState(peerId, remoteStream)
-      }
-      const onAudioEnded = () => {
-        this.updateTrackState(peerId, remoteStream)
-      }
-
-      videoTrack?.addEventListener('ended', onVideoEnded)
-      audioTrack?.addEventListener('ended', onAudioEnded)
-
-      // Store handlers for cleanup
-      if (videoTrack) {
-        trackEndHandlers.set(`${peerId}-video`, onVideoEnded)
-      }
-      if (audioTrack) {
-        trackEndHandlers.set(`${peerId}-audio`, onAudioEnded)
-      }
-
-      // Start polling for track enabled state changes if not already started
+      // Monitor track changes - simple approach: just poll for track presence
+      // Start polling for track state changes if not already started
       this.startTrackStatePolling()
     })
 
@@ -429,23 +414,7 @@ export class PeerJSManager {
     call.on('close', () => {
       console.log('[PeerJSManager] Call closed with:', peerId)
       
-      // Clean up track event listeners
-      const stream = this.remoteStreams.get(peerId)
-      if (stream) {
-        const videoTrack = stream.getVideoTracks()[0]
-        const audioTrack = stream.getAudioTracks()[0]
-        const onVideoEnded = trackEndHandlers.get(`${peerId}-video`)
-        const onAudioEnded = trackEndHandlers.get(`${peerId}-audio`)
-        
-        if (videoTrack && onVideoEnded) {
-          videoTrack.removeEventListener('ended', onVideoEnded)
-        }
-        if (audioTrack && onAudioEnded) {
-          audioTrack.removeEventListener('ended', onAudioEnded)
-        }
-      }
-      
-      trackEndHandlers.clear()
+      // No event listeners to clean up - we use polling instead
       this.calls.delete(peerId)
       this.calledPeers.delete(peerId)
       this.remoteStreams.delete(peerId)
@@ -462,13 +431,14 @@ export class PeerJSManager {
 
   /**
    * Update track state for a peer
+   * Simple: if stream has video track, video is enabled. Otherwise, it's disabled.
    */
   private updateTrackState(peerId: string, stream: MediaStream): void {
     const videoTrack = stream.getVideoTracks()[0]
     const audioTrack = stream.getAudioTracks()[0]
     
     const newState: PeerTrackState = {
-      videoEnabled: videoTrack?.enabled ?? false,
+      videoEnabled: !!videoTrack && videoTrack.readyState === 'live',
       audioEnabled: audioTrack?.enabled ?? false,
     }
 
@@ -592,19 +562,153 @@ export class PeerJSManager {
 
   /**
    * Toggle video track
+   * When disabling, stops the track completely (camera turns off)
+   * When enabling, gets a new track from getUserMedia and adds it to all connections
    */
-  toggleVideo(enabled: boolean): void {
-    if (!this.localStream?.videoTrack) {
-      return
-    }
+  async toggleVideo(enabled: boolean): Promise<void> {
+    if (enabled) {
+      // Re-enable: Get a new video track from the camera
+      if (!this.lastVideoDeviceId) {
+        console.warn('[PeerJSManager] Cannot enable video: no previous device ID stored')
+        return
+      }
 
-    this.localStream.videoTrack.enabled = enabled
-    console.log('[PeerJSManager] Video toggled:', enabled)
+      try {
+        // Get a new video track from the camera
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: { exact: this.lastVideoDeviceId },
+            width: { ideal: 3840 },
+            height: { ideal: 2160 },
+          },
+          audio: false,
+        })
+
+        const newVideoTrack = videoStream.getVideoTracks()[0]
+        if (!newVideoTrack) {
+          // Stop all tracks from the temporary stream
+          videoStream.getTracks().forEach(track => track.stop())
+          throw new Error('No video track in new stream')
+        }
+
+        // Stop any other tracks from the temporary stream (shouldn't be any, but be safe)
+        videoStream.getTracks().forEach(track => {
+          if (track !== newVideoTrack) {
+            track.stop()
+          }
+        })
+
+        // If we have an existing stream, replace the track
+        if (this.localStream?.stream) {
+          // Remove old track if it exists
+          if (this.localStream.videoTrack) {
+            this.localStream.videoTrack.stop()
+            this.localStream.stream.removeTrack(this.localStream.videoTrack)
+          }
+          
+          // Add new track to stream
+          this.localStream.stream.addTrack(newVideoTrack)
+          this.localStream.videoTrack = newVideoTrack
+        } else {
+          // No existing stream, create new one
+          const audioTrack = this.localStream?.audioTrack || null
+          const stream = new MediaStream()
+          if (audioTrack) {
+            stream.addTrack(audioTrack)
+          }
+          stream.addTrack(newVideoTrack)
+          
+          this.localStream = {
+            stream,
+            videoTrack: newVideoTrack,
+            audioTrack: audioTrack,
+          }
+          this.callbacks.onLocalStreamChanged?.(stream)
+        }
+
+        // Replace track in all active calls
+        for (const [peerId, call] of this.calls) {
+          if (!call.open) {
+            continue
+          }
+          
+          const peerConnection = call.peerConnection
+          if (!peerConnection) {
+            continue
+          }
+          
+          const sender = peerConnection
+            .getSenders()
+            .find((s) => s.track?.kind === 'video')
+          if (sender) {
+            try {
+              await sender.replaceTrack(newVideoTrack)
+              console.log('[PeerJSManager] Video track replaced for:', peerId)
+            } catch (err) {
+              console.error(`[PeerJSManager] Failed to replace video track for ${peerId}:`, err)
+            }
+          } else {
+            // No video sender exists, add track to connection
+            // This can happen if the call was created while video was off
+            try {
+              peerConnection.addTrack(newVideoTrack, this.localStream!.stream)
+              console.log('[PeerJSManager] Video track added to connection for:', peerId)
+            } catch (err) {
+              console.error(`[PeerJSManager] Failed to add video track to connection for ${peerId}:`, err)
+            }
+          }
+        }
+
+        console.log('[PeerJSManager] Video enabled, camera turned on')
+      } catch (err) {
+        const peerError = createPeerJSError(err)
+        logError(peerError, { context: 'toggleVideo', action: 'enable' })
+        this.callbacks.onError?.(peerError)
+        throw peerError
+      }
+    } else {
+      // Disable: Stop the track completely (camera turns off)
+      if (!this.localStream?.videoTrack) {
+        return
+      }
+
+      // Stop the track (this turns off the camera)
+      this.localStream.videoTrack.stop()
+      
+      // Remove track from local stream
+      if (this.localStream.stream) {
+        this.localStream.stream.removeTrack(this.localStream.videoTrack)
+      }
+      
+      // Remove track from all active calls using replaceTrack(null)
+      for (const [peerId, call] of this.calls) {
+        if (!call.open) {
+          continue
+        }
+        
+        const sender = call.peerConnection
+          ?.getSenders()
+          .find((s) => s.track?.kind === 'video')
+        if (sender) {
+          try {
+            await sender.replaceTrack(null)
+            console.log('[PeerJSManager] Video track removed for:', peerId)
+          } catch (err) {
+            console.error(`[PeerJSManager] Failed to remove video track for ${peerId}:`, err)
+          }
+        }
+      }
+
+      // Clear the video track reference
+      this.localStream.videoTrack = null
+
+      console.log('[PeerJSManager] Video disabled, camera turned off')
+    }
 
     // Notify about local track state change
     this.callbacks.onTrackStateChanged?.(this.localPlayerId, {
       videoEnabled: enabled,
-      audioEnabled: this.localStream.audioTrack?.enabled ?? false,
+      audioEnabled: this.localStream?.audioTrack?.enabled ?? false,
     })
   }
 
@@ -657,6 +761,9 @@ export class PeerJSManager {
       this.localStream.stream.removeTrack(this.localStream.videoTrack)
       this.localStream.stream.addTrack(newVideoTrack)
       this.localStream.videoTrack = newVideoTrack
+
+      // Update stored device ID for future reinitialization
+      this.lastVideoDeviceId = deviceId
 
       // Replace track in all active calls
       for (const [peerId, call] of this.calls) {
