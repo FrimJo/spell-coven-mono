@@ -316,18 +316,6 @@ export function VideoStreamGrid({
           ? (localTrackState?.audioEnabled ?? true)
           : (peerTrackState?.audioEnabled ?? state.audio)
 
-        // Debug log for local player
-        if (isLocal) {
-          console.log('[VideoStreamGrid] Local player render:', {
-            playerId: player.id,
-            hasLocalStream: !!localStream,
-            hasStartedVideo,
-            localVideoEnabled,
-            videoEnabled,
-            localTrackState,
-          })
-        }
-
         // Check if remote video is actually playing (for hiding placeholder)
         const _isRemoteVideoPlaying =
           !isLocal && remoteStream && playingRemoteVideos.has(player.id)
@@ -338,39 +326,87 @@ export function VideoStreamGrid({
             className="flex flex-col overflow-hidden border-slate-800 bg-slate-900"
           >
             <div className="relative flex-1 bg-black">
-              {/* Video Stream Area - Always render video element for local player */}
-              {isLocal && (
+              {/* Render video elements when enabled, placeholder when disabled */}
+              {videoEnabled ? (
                 <>
-                  <video
-                    ref={(el) => {
-                      if (el && localStream && el.srcObject !== localStream) {
-                        el.srcObject = localStream
-                      }
-                      // Also keep videoRef for card detection
-                      if (videoRef.current !== el) {
-                        videoRef.current = el
-                      }
-                    }}
-                    autoPlay
-                    muted
-                    playsInline
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'contain',
-                      zIndex: 0,
-                      display: videoEnabled ? 'block' : 'none',
-                    }}
-                  />
-                  {/* Overlay canvas for card detection - renders green borders */}
-                  {enableCardDetection && overlayRef && localStream && (
-                    <canvas
-                      ref={overlayRef}
-                      width={1280}
-                      height={720}
+                  {/* Local player video */}
+                  {isLocal && (
+                    <>
+                      <video
+                        ref={(el) => {
+                          if (el && localStream && el.srcObject !== localStream) {
+                            el.srcObject = localStream
+                          }
+                          // Also keep videoRef for card detection
+                          if (videoRef.current !== el) {
+                            videoRef.current = el
+                          }
+                        }}
+                        autoPlay
+                        muted
+                        playsInline
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain',
+                          zIndex: 0,
+                        }}
+                      />
+                      {/* Overlay canvas for card detection - renders green borders */}
+                      {enableCardDetection && overlayRef && localStream && (
+                        <canvas
+                          ref={overlayRef}
+                          width={1280}
+                          height={720}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            cursor: 'pointer',
+                            zIndex: 1,
+                          }}
+                        />
+                      )}
+                      {/* Hidden canvases for card detection processing */}
+                      {enableCardDetection && croppedRef && (
+                        <canvas
+                          ref={croppedRef}
+                          width={446}
+                          height={620}
+                          style={{ display: 'none' }}
+                        />
+                      )}
+                      {enableCardDetection && fullResRef && (
+                        <canvas
+                          ref={fullResRef}
+                          width={640}
+                          height={480}
+                          style={{ display: 'none' }}
+                        />
+                      )}
+                    </>
+                  )}
+
+                  {/* Remote player video element */}
+                  {!isLocal && remoteStream && (
+                    <video
+                      ref={(element) => {
+                        if (element) {
+                          remoteVideoRefs.current.set(player.id, element)
+                        } else {
+                          remoteVideoRefs.current.delete(player.id)
+                          attachedStreamsRef.current.delete(player.id)
+                        }
+                      }}
+                      autoPlay
+                      playsInline
+                      muted={true}
                       style={{
                         position: 'absolute',
                         top: 0,
@@ -378,149 +414,101 @@ export function VideoStreamGrid({
                         width: '100%',
                         height: '100%',
                         objectFit: 'contain',
-                        cursor: 'pointer',
-                        zIndex: 1,
-                        display: videoEnabled ? 'block' : 'none',
+                        zIndex: 0,
+                      }}
+                      onLoadedMetadata={() => {
+                        const videoElement = remoteVideoRefs.current.get(player.id)
+                        const peerTrackState = peerTrackStates.get(player.id)
+                        const state = streamStates[player.id] || {
+                          video: true,
+                          audio: true,
+                        }
+                        const videoEnabled =
+                          (peerTrackState?.videoEnabled ?? state.video) &&
+                          !!remoteStream
+
+                        if (
+                          videoElement &&
+                          remoteStream &&
+                          videoElement.paused &&
+                          videoEnabled
+                        ) {
+                          // Use requestAnimationFrame to ensure element is ready
+                          requestAnimationFrame(() => {
+                            videoElement.play().catch((error) => {
+                              // AbortError is expected if srcObject changes during play, ignore it
+                              if (error.name !== 'AbortError') {
+                                console.error(
+                                  `[VideoStreamGrid] Failed to play after metadata loaded for ${player.id}:`,
+                                  error,
+                                )
+                              }
+                            })
+                          })
+                        }
+                      }}
+                      onCanPlay={() => {
+                        // Fallback: ensure play when video can start playing
+                        const videoElement = remoteVideoRefs.current.get(player.id)
+                        const peerTrackState = peerTrackStates.get(player.id)
+                        const state = streamStates[player.id] || {
+                          video: true,
+                          audio: true,
+                        }
+                        const videoEnabled =
+                          (peerTrackState?.videoEnabled ?? state.video) &&
+                          !!remoteStream
+
+                        if (
+                          videoElement &&
+                          remoteStream &&
+                          videoElement.paused &&
+                          videoEnabled
+                        ) {
+                          requestAnimationFrame(() => {
+                            videoElement.play().catch((error) => {
+                              if (error.name !== 'AbortError') {
+                                console.error(
+                                  `[VideoStreamGrid] Failed to play on canPlay for ${player.id}:`,
+                                  error,
+                                )
+                              }
+                            })
+                          })
+                        }
+                      }}
+                      onPlaying={() => {
+                        // Direct handler to track when video actually starts playing
+                        setPlayingRemoteVideos((prev) =>
+                          new Set(prev).add(player.id),
+                        )
+                      }}
+                      onPause={() => {
+                        // Track when video pauses
+                        setPlayingRemoteVideos((prev) => {
+                          const next = new Set(prev)
+                          next.delete(player.id)
+                          return next
+                        })
+                      }}
+                      onError={(e) => {
+                        console.error(
+                          `[VideoStreamGrid] Video error for ${player.id}:`,
+                          e,
+                        )
                       }}
                     />
                   )}
-                  {/* Hidden canvases for card detection processing */}
-                  {enableCardDetection && croppedRef && (
-                    <canvas
-                      ref={croppedRef}
-                      width={446}
-                      height={620}
-                      style={{ display: 'none' }}
-                    />
-                  )}
-                  {enableCardDetection && fullResRef && (
-                    <canvas
-                      ref={fullResRef}
-                      width={640}
-                      height={480}
-                      style={{ display: 'none' }}
-                    />
-                  )}
                 </>
-              )}
-
-              {/* Remote player video element */}
-              {!isLocal && (
-                <video
-                  ref={(element) => {
-                    if (element) {
-                      remoteVideoRefs.current.set(player.id, element)
-                    } else {
-                      remoteVideoRefs.current.delete(player.id)
-                      attachedStreamsRef.current.delete(player.id)
-                    }
-                  }}
-                  autoPlay
-                  playsInline
-                  muted={true}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                    zIndex: 0,
-                    display: remoteStream && videoEnabled ? 'block' : 'none',
-                  }}
-                  onLoadedMetadata={() => {
-                    const videoElement = remoteVideoRefs.current.get(player.id)
-                    const peerTrackState = peerTrackStates.get(player.id)
-                    const state = streamStates[player.id] || {
-                      video: true,
-                      audio: true,
-                    }
-                    const videoEnabled =
-                      (peerTrackState?.videoEnabled ?? state.video) &&
-                      !!remoteStream
-
-                    if (
-                      videoElement &&
-                      remoteStream &&
-                      videoElement.paused &&
-                      videoEnabled
-                    ) {
-                      // Use requestAnimationFrame to ensure element is ready
-                      requestAnimationFrame(() => {
-                        videoElement.play().catch((error) => {
-                          // AbortError is expected if srcObject changes during play, ignore it
-                          if (error.name !== 'AbortError') {
-                            console.error(
-                              `[VideoStreamGrid] Failed to play after metadata loaded for ${player.id}:`,
-                              error,
-                            )
-                          }
-                        })
-                      })
-                    }
-                  }}
-                  onCanPlay={() => {
-                    // Fallback: ensure play when video can start playing
-                    const videoElement = remoteVideoRefs.current.get(player.id)
-                    const peerTrackState = peerTrackStates.get(player.id)
-                    const state = streamStates[player.id] || {
-                      video: true,
-                      audio: true,
-                    }
-                    const videoEnabled =
-                      (peerTrackState?.videoEnabled ?? state.video) &&
-                      !!remoteStream
-
-                    if (
-                      videoElement &&
-                      remoteStream &&
-                      videoElement.paused &&
-                      videoEnabled
-                    ) {
-                      requestAnimationFrame(() => {
-                        videoElement.play().catch((error) => {
-                          if (error.name !== 'AbortError') {
-                            console.error(
-                              `[VideoStreamGrid] Failed to play on canPlay for ${player.id}:`,
-                              error,
-                            )
-                          }
-                        })
-                      })
-                    }
-                  }}
-                  onPlaying={() => {
-                    // Direct handler to track when video actually starts playing
-                    setPlayingRemoteVideos((prev) =>
-                      new Set(prev).add(player.id),
-                    )
-                  }}
-                  onPause={() => {
-                    // Track when video pauses
-                    setPlayingRemoteVideos((prev) => {
-                      const next = new Set(prev)
-                      next.delete(player.id)
-                      return next
-                    })
-                  }}
-                  onError={(e) => {
-                    console.error(
-                      `[VideoStreamGrid] Video error for ${player.id}:`,
-                      e,
-                    )
-                  }}
-                />
-              )}
-
-              {/* Placeholder UI */}
-              {
-                <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950">
+              ) : (
+                // Placeholder UI - Renders instead of video when disabled
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-950">
                   <div className="space-y-2 text-center">
                     <VideoOff className="mx-auto h-12 w-12 text-slate-600" />
                     <p className="text-slate-600">Camera Off</p>
                   </div>
                 </div>
-              }
+              )}
 
               {/* Player Info Badge */}
               <div className="absolute left-3 top-3 z-10 rounded-lg border border-slate-800 bg-slate-950/90 px-3 py-2 backdrop-blur-sm">
