@@ -96,12 +96,16 @@ export function useDiscordEventStream(options: UseDiscordEventStreamOptions) {
 
     // userId and channelId are required for SSE endpoint connection
     if (!userId) {
-      console.warn('[Discord Events] userId required but not provided, skipping SSE connection')
+      console.warn(
+        '[Discord Events] userId required but not provided, skipping SSE connection',
+      )
       return
     }
 
     if (!channelId) {
-      console.warn('[Discord Events] channelId required but not provided, skipping SSE connection')
+      console.warn(
+        '[Discord Events] channelId required but not provided, skipping SSE connection',
+      )
       return
     }
 

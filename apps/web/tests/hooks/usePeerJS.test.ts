@@ -1,7 +1,7 @@
 /**
  * Tests for usePeerJS hook
  * Tests cover peer initialization, call handling, stream management, and cleanup
- * 
+ *
  * NOTE: These are placeholder tests. Full implementation with React Testing Library
  * will be added when hook is integrated with actual game room component.
  */

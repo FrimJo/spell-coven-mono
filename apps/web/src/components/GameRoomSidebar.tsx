@@ -1,11 +1,11 @@
-import { Suspense, useId } from 'react'
-import { useVoiceChannelMembersFromEvents } from '@/hooks/useVoiceChannelMembersFromEvents'
+import { Suspense } from 'react'
+import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
+import { getTempUser } from '@/lib/temp-user'
 
 import { Card } from '@repo/ui/components/card'
 import { Skeleton } from '@repo/ui/components/skeleton'
 
 import { CardPreview } from './CardPreview'
-import { useGameRoomLoaderData } from './GameRoom'
 import { PlayerList } from './PlayerList'
 import { TurnTracker } from './TurnTracker'
 
@@ -26,25 +26,32 @@ function SidebarContent({
   onNextTurn,
   onRemovePlayer,
 }: GameRoomSidebarProps) {
-  const { members: voiceChannelMembers } = useVoiceChannelMembersFromEvents({
-    gameId: roomId,
-    userId: userId,
+  // Get current user info for username
+  const tempUser = getTempUser()
+  const username = tempUser.username
+
+  // Get game room participants (replaces Discord voice channel members)
+  const { participants } = useGameRoomParticipants({
+    roomId,
+    userId,
+    username,
+    enabled: true,
   })
 
   return (
     <div className="w-64 flex-shrink-0 space-y-4 overflow-y-auto">
       <TurnTracker
-        players={voiceChannelMembers.map((member) => ({
-          id: member.id,
-          name: member.username,
+        players={participants.map((participant) => ({
+          id: participant.id,
+          name: participant.username,
         }))}
         onNextTurn={onNextTurn}
       />
       <PlayerList
-        players={voiceChannelMembers.map((member) => ({
-          id: member.id,
-          name: member.username,
-          isOnline: member.isOnline,
+        players={participants.map((participant) => ({
+          id: participant.id,
+          name: participant.username,
+          isOnline: true, // Game room participants are always online
         }))}
         isLobbyOwner={isLobbyOwner}
         localPlayerName={playerName}
@@ -56,9 +63,19 @@ function SidebarContent({
   )
 }
 
-function SidebarLoading() {
-  const { connectedUserIds } = useGameRoomLoaderData()
-  const connectingUser = useId()
+function SidebarLoading({ roomId, userId }: GameRoomSidebarProps) {
+  // Get current user info for username
+  const tempUser = getTempUser()
+  const username = tempUser.username
+
+  // Get game room participants (replaces Discord voice channel members)
+  const { participants } = useGameRoomParticipants({
+    roomId,
+    userId,
+    username,
+    enabled: true,
+  })
+
   return (
     <div className="w-64 flex-shrink-0 space-y-4">
       {/* Turn Tracker - Rendered but disabled */}
@@ -73,11 +90,11 @@ function SidebarLoading() {
             <Skeleton className="h-3 w-8 bg-slate-700/50" />
           </div>
 
-          {/* Player items */}
+          {/* Player items - show generic loading state */}
           <div className="space-y-2">
-            {[connectingUser, ...connectedUserIds].map((userId) => (
+            {[tempUser, ...participants].map((user) => (
               <div
-                key={userId}
+                key={user.id}
                 className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-800/50 p-2"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -95,7 +112,7 @@ function SidebarLoading() {
 
 export function GameRoomSidebar(props: GameRoomSidebarProps) {
   return (
-    <Suspense fallback={<SidebarLoading />}>
+    <Suspense fallback={<SidebarLoading {...props} />}>
       <SidebarContent {...props} />
     </Suspense>
   )

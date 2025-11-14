@@ -1,8 +1,7 @@
-import { PeerServer } from 'peer'
-import { readFileSync, existsSync } from 'fs'
-import { join } from 'path'
+import { existsSync, readFileSync } from 'fs'
+import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
-import { dirname } from 'path'
+import { PeerServer } from 'peer'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -23,7 +22,7 @@ let sslCert: string | undefined
 if (useSSL) {
   // Certificate directory relative to this file
   const certDir = join(__dirname, '../certificates')
-  
+
   const keyPath = join(certDir, 'dev.pem')
   const certPath = join(certDir, 'cert.pem')
 
@@ -34,7 +33,7 @@ if (useSSL) {
       sslCert = readFileSync(certPath, 'utf-8')
       console.log(`[PeerServer] SSL certificates loaded from ${certDir}`)
       console.log(`[PeerServer] Using key: ${keyPath}, cert: ${certPath}`)
-    } catch (error) {
+    } catch (_error) {
       console.warn(
         `[PeerServer] Could not read SSL certificates from ${certDir}. ` +
           'Run "bun run generate-certs" to generate them, or set PEERJS_SSL=false to use HTTP.',
@@ -79,4 +78,6 @@ peerServer.on('disconnect', (client) => {
 
 const protocol = sslKey && sslCert ? 'wss' : 'ws'
 console.log(`[PeerServer] PeerServer initialized successfully`)
-console.log(`[PeerServer] WebSocket URL: ${protocol}://localhost:${port}${path}`)
+console.log(
+  `[PeerServer] WebSocket URL: ${protocol}://localhost:${port}${path}`,
+)

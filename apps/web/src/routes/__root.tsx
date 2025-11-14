@@ -10,7 +10,6 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 
 import globalCss from '../globals.css?url'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools.js'
-import { initializeServerServices } from '../server/init/start-ws.server.js'
 import appCss from '../styles.css?url'
 
 export interface MyRouterContext {
@@ -22,13 +21,6 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     // Only initialize on server
     if (typeof window !== 'undefined') {
       return
-    }
-
-    try {
-      await initializeServerServices()
-    } catch (error) {
-      console.error('[Root] Failed to initialize server services:', error)
-      // Don't throw - allow app to continue
     }
   },
   loader: async () => {

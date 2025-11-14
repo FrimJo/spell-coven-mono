@@ -1,6 +1,6 @@
 /**
  * PeerJSManager - Core PeerJS connection management
- * 
+ *
  * Handles all PeerJS logic outside of React. This class manages:
  * - Peer instance lifecycle
  * - Local media stream management
@@ -16,14 +16,12 @@ import type {
   PeerTrackState,
 } from '@/types/peerjs'
 import type { MediaConnection } from 'peerjs'
-import Peer from 'peerjs'
 import { env } from '@/env'
+import Peer from 'peerjs'
+
 import { createPeerJSError, logError } from './errors'
 import { DEFAULT_RETRY_CONFIG, retryWithBackoff } from './retry'
-import {
-  DEFAULT_TIMEOUT_CONFIG,
-  executeWithTimeout,
-} from './timeout'
+import { DEFAULT_TIMEOUT_CONFIG, executeWithTimeout } from './timeout'
 
 export interface PeerJSManagerCallbacks {
   onLocalStreamChanged?: (stream: MediaStream | null) => void
@@ -83,7 +81,7 @@ export class PeerJSManager {
     if (this.initializationErrorLogged && !this.isInitialized) {
       throw new Error(
         'Peer initialization previously failed. The PeerJS server may not be running. ' +
-        'Please ensure the server is started with: cd apps/peerjs-server && bun run dev'
+          'Please ensure the server is started with: cd apps/peerjs-server && bun run dev',
       )
     }
 
@@ -124,7 +122,7 @@ export class PeerJSManager {
         if (this.peer && !this.wasSuccessfullyConnected) {
           try {
             this.peer.destroy()
-          } catch (err) {
+          } catch (_err) {
             // Ignore errors during cleanup
           }
           this.peer = null
@@ -154,16 +152,21 @@ export class PeerJSManager {
         const serverUrl = `${protocol}://${peerConfig.host}:${peerConfig.port}${peerConfig.path}`
         const error = new Error(
           `Peer initialization timeout. The PeerJS server at ${serverUrl} may not be running. ` +
-          'Please ensure the PeerJS server is started with: cd apps/peerjs-server && bun run dev'
+            'Please ensure the PeerJS server is started with: cd apps/peerjs-server && bun run dev',
         )
-        
+
         // Only log the error once to avoid spam
         if (!this.initializationErrorLogged) {
-          console.error('[PeerJSManager] Peer initialization failed:', error.message)
-          console.error('[PeerJSManager] To start the PeerJS server, run: cd apps/peerjs-server && bun run dev')
+          console.error(
+            '[PeerJSManager] Peer initialization failed:',
+            error.message,
+          )
+          console.error(
+            '[PeerJSManager] To start the PeerJS server, run: cd apps/peerjs-server && bun run dev',
+          )
           this.initializationErrorLogged = true
         }
-        
+
         rejectOnce(error)
       }, 10000)
 
@@ -171,20 +174,22 @@ export class PeerJSManager {
         console.log('[PeerJSManager] Peer opened:', id)
         this.wasSuccessfullyConnected = true
         this.isInitialized = true
-        
+
         // Reset reconnect attempts on successful connection
         if (this.reconnectAttempts > 0) {
-          console.log('[PeerJSManager] Reconnected successfully, resetting reconnect attempts')
+          console.log(
+            '[PeerJSManager] Reconnected successfully, resetting reconnect attempts',
+          )
           this.reconnectAttempts = 0
         }
-        
+
         // Only resolve the promise if this is the initial connection
         if (!resolved) {
           this.initializePromise = null
           resolveOnce()
         }
       }
-      
+
       this.peer!.on('open', handleOpen)
 
       this.peer!.on('error', (err) => {
@@ -198,13 +203,13 @@ export class PeerJSManager {
           // Reset wasSuccessfullyConnected for retry attempt
           this.wasSuccessfullyConnected = false
           this.isRetryingId = true
-          
+
           // Cancel any existing retry timeout
           if (this.idRetryTimeout) {
             clearTimeout(this.idRetryTimeout)
             this.idRetryTimeout = null
           }
-          
+
           this.idRetryTimeout = setTimeout(() => {
             this.idRetryTimeout = null
             // Only retry if not destroyed
@@ -227,16 +232,29 @@ export class PeerJSManager {
         }
 
         // Only log network/socket errors once to avoid spam
-        if (!this.initializationErrorLogged && 
-            (peerError.type === 'network' || peerError.type === 'socket-error' || peerError.type === 'socket-closed')) {
-          console.error('[PeerJSManager] Peer initialization failed:', peerError.message)
-          console.error('[PeerJSManager] To start the PeerJS server, run: cd apps/peerjs-server && bun run dev')
+        if (
+          !this.initializationErrorLogged &&
+          (peerError.type === 'network' ||
+            peerError.type === 'socket-error' ||
+            peerError.type === 'socket-closed')
+        ) {
+          console.error(
+            '[PeerJSManager] Peer initialization failed:',
+            peerError.message,
+          )
+          console.error(
+            '[PeerJSManager] To start the PeerJS server, run: cd apps/peerjs-server && bun run dev',
+          )
           this.initializationErrorLogged = true
-        } else if (peerError.type !== 'network' && peerError.type !== 'socket-error' && peerError.type !== 'socket-closed') {
+        } else if (
+          peerError.type !== 'network' &&
+          peerError.type !== 'socket-error' &&
+          peerError.type !== 'socket-closed'
+        ) {
           // Log other errors normally
           logError(peerError, { context: 'peer initialization' })
         }
-        
+
         this.callbacks.onError?.(peerError)
         rejectOnce(peerError)
       })
@@ -252,31 +270,40 @@ export class PeerJSManager {
         if (this.isRetryingId) {
           return
         }
-        
+
         if (!this.wasSuccessfullyConnected) {
           // Never successfully connected, don't try to reconnect
-          console.log('[PeerJSManager] Disconnected before successful connection, not reconnecting')
+          console.log(
+            '[PeerJSManager] Disconnected before successful connection, not reconnecting',
+          )
           return
         }
-        
+
         // Check if we've exceeded max reconnection attempts
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-          console.log('[PeerJSManager] Max reconnection attempts reached, giving up')
+          console.log(
+            '[PeerJSManager] Max reconnection attempts reached, giving up',
+          )
           const error = new Error('Max reconnection attempts reached')
           const peerError = createPeerJSError(error)
           this.callbacks.onError?.(peerError)
           return
         }
-        
+
         this.reconnectAttempts++
-        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 10000) // Exponential backoff, max 10s
-        console.log(`[PeerJSManager] Disconnected from PeerServer, attempting reconnect ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms...`)
-        
+        const delay = Math.min(
+          1000 * Math.pow(2, this.reconnectAttempts - 1),
+          10000,
+        ) // Exponential backoff, max 10s
+        console.log(
+          `[PeerJSManager] Disconnected from PeerServer, attempting reconnect ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms...`,
+        )
+
         // Clear any existing reconnect timeout
         if (this.reconnectTimeout) {
           clearTimeout(this.reconnectTimeout)
         }
-        
+
         // Attempt reconnection after exponential backoff delay
         if (!this.isDestroyed && this.peer && !this.peer.destroyed) {
           this.reconnectTimeout = setTimeout(() => {
@@ -329,7 +356,19 @@ export class PeerJSManager {
         audioTrack,
       }
 
+      console.log('[PeerJSManager] Local stream initialized:', {
+        hasVideo: !!videoTrack,
+        hasAudio: !!audioTrack,
+        videoDeviceId: deviceId,
+      })
+
       this.callbacks.onLocalStreamChanged?.(stream)
+
+      // Notify about initial local track state
+      this.callbacks.onTrackStateChanged?.(this.localPlayerId, {
+        videoEnabled: !!videoTrack && videoTrack.readyState === 'live',
+        audioEnabled: !!audioTrack && audioTrack.enabled,
+      })
 
       // Answer any pending incoming calls
       this.answerPendingCalls(stream)
@@ -337,7 +376,10 @@ export class PeerJSManager {
       // Automatically connect to current remote peers
       if (this.currentRemotePlayerIds.length > 0) {
         this.connectToPeers(this.currentRemotePlayerIds).catch((err) => {
-          console.error('[PeerJSManager] Failed to connect to peers after stream init:', err)
+          console.error(
+            '[PeerJSManager] Failed to connect to peers after stream init:',
+            err,
+          )
         })
       }
     } catch (err) {
@@ -370,7 +412,10 @@ export class PeerJSManager {
     console.log('[PeerJSManager] Call metadata:', call.metadata)
 
     if (!this.localStream?.stream) {
-      console.log('[PeerJSManager] No local stream, deferring call from:', peerId)
+      console.log(
+        '[PeerJSManager] No local stream, deferring call from:',
+        peerId,
+      )
       this.pendingIncomingCalls.set(peerId, call)
       this.callbacks.onConnectionStateChanged?.(peerId, 'connecting')
       return
@@ -386,12 +431,11 @@ export class PeerJSManager {
    * Setup event handlers for a call
    */
   private setupCallHandlers(call: MediaConnection, peerId: string): void {
-
     call.on('stream', (remoteStream: MediaStream) => {
       console.log('[PeerJSManager] Received remote stream from:', peerId)
       console.log('[PeerJSManager] Call metadata:', call.metadata)
       console.log('[PeerJSManager] Call open:', call.open)
-      
+
       this.remoteStreams.set(peerId, remoteStream)
       this.callbacks.onRemoteStreamAdded?.(peerId, remoteStream)
       this.callbacks.onConnectionStateChanged?.(peerId, 'connected')
@@ -413,7 +457,7 @@ export class PeerJSManager {
 
     call.on('close', () => {
       console.log('[PeerJSManager] Call closed with:', peerId)
-      
+
       // No event listeners to clean up - we use polling instead
       this.calls.delete(peerId)
       this.calledPeers.delete(peerId)
@@ -421,7 +465,7 @@ export class PeerJSManager {
       this.trackStates.delete(peerId)
       this.callbacks.onRemoteStreamRemoved?.(peerId)
       this.callbacks.onConnectionStateChanged?.(peerId, 'disconnected')
-      
+
       // Stop polling if no more remote streams
       if (this.remoteStreams.size === 0) {
         this.stopTrackStatePolling()
@@ -436,7 +480,7 @@ export class PeerJSManager {
   private updateTrackState(peerId: string, stream: MediaStream): void {
     const videoTrack = stream.getVideoTracks()[0]
     const audioTrack = stream.getAudioTracks()[0]
-    
+
     const newState: PeerTrackState = {
       videoEnabled: !!videoTrack && videoTrack.readyState === 'live',
       audioEnabled: audioTrack?.enabled ?? false,
@@ -492,13 +536,22 @@ export class PeerJSManager {
     this.currentRemotePlayerIds = remotePlayerIds
 
     if (!this.localStream?.stream) {
-      console.log('[PeerJSManager] No local stream, will connect when stream is ready')
+      console.log(
+        '[PeerJSManager] No local stream yet, stored remote player IDs for later connection:',
+        remotePlayerIds,
+      )
       return
     }
 
+    console.log('[PeerJSManager] Connecting to remote peers:', remotePlayerIds)
+
     // Create calls for new peers in parallel
     const connectionPromises = remotePlayerIds
-      .filter((remotePlayerId) => !this.calls.has(remotePlayerId) && !this.calledPeers.has(remotePlayerId))
+      .filter(
+        (remotePlayerId) =>
+          !this.calls.has(remotePlayerId) &&
+          !this.calledPeers.has(remotePlayerId),
+      )
       .map((remotePlayerId) => this.createOutgoingCall(remotePlayerId))
 
     // Wait for all connections, but don't fail if one fails
@@ -507,6 +560,7 @@ export class PeerJSManager {
     // Close calls for removed peers
     for (const [peerId] of this.calls) {
       if (!remotePlayerIds.includes(peerId)) {
+        console.log('[PeerJSManager] Closing call with removed peer:', peerId)
         this.calls.get(peerId)?.close()
       }
     }
@@ -521,7 +575,10 @@ export class PeerJSManager {
     }
 
     // Check if already called or connected
-    if (this.calledPeers.has(remotePlayerId) || this.calls.has(remotePlayerId)) {
+    if (
+      this.calledPeers.has(remotePlayerId) ||
+      this.calls.has(remotePlayerId)
+    ) {
       return
     }
 
@@ -553,7 +610,10 @@ export class PeerJSManager {
       this.calls.set(remotePlayerId, call)
     } catch (err) {
       const peerError = createPeerJSError(err)
-      logError(peerError, { context: 'createOutgoingCall', peerId: remotePlayerId })
+      logError(peerError, {
+        context: 'createOutgoingCall',
+        peerId: remotePlayerId,
+      })
       this.callbacks.onConnectionStateChanged?.(remotePlayerId, 'failed')
       this.callbacks.onError?.(peerError)
       this.calledPeers.delete(remotePlayerId)
@@ -568,31 +628,40 @@ export class PeerJSManager {
   async toggleVideo(enabled: boolean): Promise<void> {
     if (enabled) {
       // Re-enable: Get a new video track from the camera
-      if (!this.lastVideoDeviceId) {
-        console.warn('[PeerJSManager] Cannot enable video: no previous device ID stored')
-        return
-      }
-
       try {
+        // Try to use the last device ID if available, otherwise use any video device
+        const videoConstraints = this.lastVideoDeviceId
+          ? {
+              deviceId: { exact: this.lastVideoDeviceId },
+              width: { ideal: 3840 },
+              height: { ideal: 2160 },
+            }
+          : {
+              width: { ideal: 3840 },
+              height: { ideal: 2160 },
+            }
+
         // Get a new video track from the camera
         const videoStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            deviceId: { exact: this.lastVideoDeviceId },
-            width: { ideal: 3840 },
-            height: { ideal: 2160 },
-          },
+          video: videoConstraints,
           audio: false,
         })
 
         const newVideoTrack = videoStream.getVideoTracks()[0]
         if (!newVideoTrack) {
           // Stop all tracks from the temporary stream
-          videoStream.getTracks().forEach(track => track.stop())
+          videoStream.getTracks().forEach((track) => track.stop())
           throw new Error('No video track in new stream')
         }
 
+        // Store the device ID for future use
+        const settings = newVideoTrack.getSettings()
+        if (settings.deviceId) {
+          this.lastVideoDeviceId = settings.deviceId
+        }
+
         // Stop any other tracks from the temporary stream (shouldn't be any, but be safe)
-        videoStream.getTracks().forEach(track => {
+        videoStream.getTracks().forEach((track) => {
           if (track !== newVideoTrack) {
             track.stop()
           }
@@ -605,7 +674,7 @@ export class PeerJSManager {
             this.localStream.videoTrack.stop()
             this.localStream.stream.removeTrack(this.localStream.videoTrack)
           }
-          
+
           // Add new track to stream
           this.localStream.stream.addTrack(newVideoTrack)
           this.localStream.videoTrack = newVideoTrack
@@ -617,7 +686,7 @@ export class PeerJSManager {
             stream.addTrack(audioTrack)
           }
           stream.addTrack(newVideoTrack)
-          
+
           this.localStream = {
             stream,
             videoTrack: newVideoTrack,
@@ -631,12 +700,12 @@ export class PeerJSManager {
           if (!call.open) {
             continue
           }
-          
+
           const peerConnection = call.peerConnection
           if (!peerConnection) {
             continue
           }
-          
+
           const sender = peerConnection
             .getSenders()
             .find((s) => s.track?.kind === 'video')
@@ -645,16 +714,25 @@ export class PeerJSManager {
               await sender.replaceTrack(newVideoTrack)
               console.log('[PeerJSManager] Video track replaced for:', peerId)
             } catch (err) {
-              console.error(`[PeerJSManager] Failed to replace video track for ${peerId}:`, err)
+              console.error(
+                `[PeerJSManager] Failed to replace video track for ${peerId}:`,
+                err,
+              )
             }
           } else {
             // No video sender exists, add track to connection
             // This can happen if the call was created while video was off
             try {
               peerConnection.addTrack(newVideoTrack, this.localStream!.stream)
-              console.log('[PeerJSManager] Video track added to connection for:', peerId)
+              console.log(
+                '[PeerJSManager] Video track added to connection for:',
+                peerId,
+              )
             } catch (err) {
-              console.error(`[PeerJSManager] Failed to add video track to connection for ${peerId}:`, err)
+              console.error(
+                `[PeerJSManager] Failed to add video track to connection for ${peerId}:`,
+                err,
+              )
             }
           }
         }
@@ -674,18 +752,18 @@ export class PeerJSManager {
 
       // Stop the track (this turns off the camera)
       this.localStream.videoTrack.stop()
-      
+
       // Remove track from local stream
       if (this.localStream.stream) {
         this.localStream.stream.removeTrack(this.localStream.videoTrack)
       }
-      
+
       // Remove track from all active calls using replaceTrack(null)
       for (const [peerId, call] of this.calls) {
         if (!call.open) {
           continue
         }
-        
+
         const sender = call.peerConnection
           ?.getSenders()
           .find((s) => s.track?.kind === 'video')
@@ -694,7 +772,10 @@ export class PeerJSManager {
             await sender.replaceTrack(null)
             console.log('[PeerJSManager] Video track removed for:', peerId)
           } catch (err) {
-            console.error(`[PeerJSManager] Failed to remove video track for ${peerId}:`, err)
+            console.error(
+              `[PeerJSManager] Failed to remove video track for ${peerId}:`,
+              err,
+            )
           }
         }
       }
@@ -769,10 +850,13 @@ export class PeerJSManager {
       for (const [peerId, call] of this.calls) {
         // Only replace track if call is open
         if (!call.open) {
-          console.log('[PeerJSManager] Call not open, skipping track replacement for:', peerId)
+          console.log(
+            '[PeerJSManager] Call not open, skipping track replacement for:',
+            peerId,
+          )
           continue
         }
-        
+
         const sender = call.peerConnection
           ?.getSenders()
           .find((s) => s.track?.kind === 'video')
@@ -869,4 +953,3 @@ export class PeerJSManager {
     this.idRetryTimeout = null
   }
 }
-

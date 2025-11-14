@@ -4,8 +4,6 @@
  * Manages active SSE connections and broadcasts events to clients
  */
 
-import type { GatewayDispatchEvents } from '@repo/discord-integration/types'
-
 export interface SSEConnection {
   userId: string
   guildId: string
@@ -120,29 +118,6 @@ class SSEManager {
     console.log(
       `[SSE] Broadcast complete: sent ${event} to ${sentCount} connections`,
     )
-  }
-
-  /**
-   * Broadcast Discord Gateway event to specific guild only
-   */
-  broadcastDiscordEventToGuild(
-    guildId: string,
-    event: GatewayDispatchEvents,
-    payload: unknown,
-  ): void {
-    const message = `data: ${JSON.stringify({
-      v: 1,
-      type: 'discord.event',
-      event,
-      payload,
-      ts: Date.now(),
-    })}\n\n`
-
-    console.log(
-      `[SSE] Broadcasting Discord event ${event} to guild ${guildId}. Total connections: ${this.connections.size}`,
-    )
-
-    this.sendToGuild(guildId, message)
   }
 
   /**

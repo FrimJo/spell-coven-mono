@@ -1,14 +1,14 @@
 /**
  * Generate SSL certificates using mkcert for PeerJS server
- * 
+ *
  * This script checks if certificates exist, and generates them if missing.
  * Certificates are saved to ./certificates/ directory.
  */
 
-import { existsSync, mkdirSync } from 'fs'
-import { join, dirname, resolve } from 'path'
-import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
+import { existsSync, mkdirSync } from 'fs'
+import { dirname, join, resolve } from 'path'
+import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -41,10 +41,11 @@ try {
     },
   )
   console.log('[PeerServer] SSL certificates generated successfully')
-} catch (error) {
+} catch (_error) {
   console.error('[PeerServer] Failed to generate SSL certificates')
-  console.error('[PeerServer] Make sure mkcert is installed: brew install mkcert')
+  console.error(
+    '[PeerServer] Make sure mkcert is installed: brew install mkcert',
+  )
   console.error('[PeerServer] Or visit: https://github.com/FiloSottile/mkcert')
   process.exit(1)
 }
-

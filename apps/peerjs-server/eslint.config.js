@@ -6,7 +6,12 @@ export default [
   { ignores: ['dist/**', 'certificates/**'] },
   {
     files: ['**/*.ts'],
-    ignores: ['dist/**', 'certificates/**', 'eslint.config.js', 'vite.config.ts'],
+    ignores: [
+      'dist/**',
+      'certificates/**',
+      'eslint.config.js',
+      'vite.config.ts',
+    ],
     languageOptions: {
       parserOptions: {
         project: './tsconfig.json',

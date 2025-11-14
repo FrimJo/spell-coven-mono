@@ -144,10 +144,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
         setSelectedVideoId((prev) => {
           if (videoInputs.length > 0 && !prev) {
             return videoInputs[0]!.deviceId
-          } else if (
-            prev &&
-            !videoInputs.find((d) => d.deviceId === prev)
-          ) {
+          } else if (prev && !videoInputs.find((d) => d.deviceId === prev)) {
             // Currently selected device was disconnected, switch to first available
             return videoInputs.length > 0 ? videoInputs[0]!.deviceId : ''
           }
@@ -157,10 +154,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
         setSelectedAudioInputId((prev) => {
           if (audioInputs.length > 0 && !prev) {
             return audioInputs[0]!.deviceId
-          } else if (
-            prev &&
-            !audioInputs.find((d) => d.deviceId === prev)
-          ) {
+          } else if (prev && !audioInputs.find((d) => d.deviceId === prev)) {
             // Currently selected device was disconnected, switch to first available
             return audioInputs.length > 0 ? audioInputs[0]!.deviceId : ''
           }
@@ -196,7 +190,6 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   useEffect(() => {
     if (!open) return
 
-     
     void enumerateDevices(true)
   }, [open, enumerateDevices])
 

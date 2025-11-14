@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
-import { useVoiceChannelMembersFromEvents } from '@/hooks/useVoiceChannelMembersFromEvents'
+import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
+import { getTempUser } from '@/lib/temp-user'
 import { Loader2, Users } from 'lucide-react'
 
 interface GameRoomPlayerCountProps {
@@ -8,15 +9,22 @@ interface GameRoomPlayerCountProps {
 }
 
 function PlayerCountContent({ roomId, userId }: GameRoomPlayerCountProps) {
-  const { members: voiceChannelMembers } = useVoiceChannelMembersFromEvents({
-    gameId: roomId,
-    userId: userId,
+  // Get current user info for username
+  const tempUser = getTempUser()
+  const username = tempUser.username
+
+  // Get game room participants (replaces Discord voice channel members)
+  const { participants } = useGameRoomParticipants({
+    roomId,
+    userId,
+    username,
+    enabled: true,
   })
 
   return (
     <div className="flex items-center gap-2 text-slate-400">
       <Users className="h-4 w-4" />
-      <span className="text-sm">{voiceChannelMembers.length}/4 Players</span>
+      <span className="text-sm">{participants.length}/4 Players</span>
     </div>
   )
 }

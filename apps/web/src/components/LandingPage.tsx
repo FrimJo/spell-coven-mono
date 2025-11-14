@@ -14,9 +14,6 @@ import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
 
 import type { CreatorInviteState } from '../lib/session-storage.js'
-import { useDiscordAuth } from '../hooks/useDiscordAuth.js'
-import { DiscordAuthModal } from './discord/DiscordAuthModal.js'
-import { DiscordUserProfile } from './discord/DiscordUserProfile.js'
 import { RoomInvitePanel } from './discord/RoomInvitePanel.js'
 
 interface LandingPageProps {
@@ -36,25 +33,15 @@ export function LandingPage({
   onRefreshInvite,
   isRefreshingInvite,
 }: LandingPageProps) {
-  const { isAuthenticated } = useDiscordAuth()
   const [joinName, setJoinName] = useState('')
   const [joinGameId, setJoinGameId] = useState('')
   const [joinDialogOpen, setJoinDialogOpen] = useState(false)
-  const [showAuthModal, setShowAuthModal] = useState(false)
 
   const handleCreateClick = () => {
-    if (!isAuthenticated) {
-      setShowAuthModal(true)
-      return
-    }
     onCreateGame()
   }
 
   const handleJoinClick = () => {
-    if (!isAuthenticated) {
-      setShowAuthModal(true)
-      return
-    }
     setJoinDialogOpen(true)
   }
 
@@ -96,19 +83,6 @@ export function LandingPage({
               >
                 How It Works
               </a>
-              {isAuthenticated ? (
-                <div className="flex items-center space-x-4">
-                  <DiscordUserProfile />
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  className="border-purple-500/50 text-purple-300 hover:bg-purple-500/10"
-                  onClick={() => setShowAuthModal(true)}
-                >
-                  Sign In with Discord
-                </Button>
-              )}
             </nav>
           </div>
         </header>
@@ -327,12 +301,6 @@ export function LandingPage({
           </div>
         </footer>
       </div>
-
-      {/* Discord Auth Modal */}
-      <DiscordAuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-      />
     </div>
   )
 }

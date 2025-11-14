@@ -18,7 +18,6 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^3.7.5",
-    "@repo/discord-integration": "workspace:*",
     "@repo/ui": "workspace:*",
     "@t3-oss/env-core": "^0.13.8",
     "@tailwindcss/vite": "^4.0.6",

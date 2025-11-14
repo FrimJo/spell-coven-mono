@@ -318,7 +318,9 @@ export class DiscordGatewayClient {
       clearTimeout(this.heartbeatTimeoutTimer)
     }
     this.heartbeatTimeoutTimer = setTimeout(() => {
-      console.error('[Gateway] Heartbeat timeout - no ACK received, forcing reconnect')
+      console.error(
+        '[Gateway] Heartbeat timeout - no ACK received, forcing reconnect',
+      )
       // Force close to trigger reconnection
       if (this.ws) {
         this.ws.close(4000, 'Heartbeat timeout')
@@ -332,7 +334,7 @@ export class DiscordGatewayClient {
   private handleHeartbeatAck(): void {
     this.lastHeartbeatAck = Date.now()
     console.log('[Gateway] Received heartbeat ACK')
-    
+
     // Clear timeout since we received ACK
     if (this.heartbeatTimeoutTimer) {
       clearTimeout(this.heartbeatTimeoutTimer)

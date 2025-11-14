@@ -23,7 +23,7 @@ export const DISCORD_REDIRECT_URI =
 /**
  * OAuth2 Scopes
  * Phase 1: Authentication only
- * 
+ *
  * Valid Discord OAuth2 scopes:
  * - identify: Get user's Discord username, avatar, ID
  * - guilds: See which Discord servers the user is in

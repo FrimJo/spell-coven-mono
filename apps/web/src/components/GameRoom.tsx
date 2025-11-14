@@ -5,18 +5,15 @@ import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
+import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
 import { usePeerJS } from '@/hooks/usePeerJS'
-import { useVoiceChannelEvents } from '@/hooks/useVoiceChannelEvents'
-import { useVoiceChannelMembersFromEvents } from '@/hooks/useVoiceChannelMembersFromEvents'
-import { useWebSocketAuthToken } from '@/hooks/useWebSocketAuthToken.js'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
 import { loadOpenCV } from '@/lib/opencv-loader'
-import { getRouteApi } from '@tanstack/react-router'
+import { getTempUser } from '@/lib/temp-user'
 import { ArrowLeft, Check, Copy, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 
-import type { APIVoiceState } from '@repo/discord-integration/types'
 import { Button } from '@repo/ui/components/button'
 import { Toaster } from '@repo/ui/components/sonner'
 
@@ -25,19 +22,6 @@ import { GameRoomPlayerCount } from './GameRoomPlayerCount.js'
 import { GameRoomSidebar } from './GameRoomSidebar.js'
 import { GameRoomVideoGrid } from './GameRoomVideoGrid.js'
 import { MediaSetupDialog } from './MediaSetupDialog.js'
-import { VoiceDropoutModal } from './VoiceDropoutModal.js'
-
-const GameRoomRoute = getRouteApi('/game/$gameId')
-
-export function useGameRoomLoaderData() {
-  const loaderData = GameRoomRoute.useLoaderData()
-  if (!loaderData.isAuthenticated) {
-    throw new Error('User is not authenticated')
-  }
-  // Note: voiceChannelStatus.inChannel may be false initially, but the route
-  // ensures GameRoom is only rendered when user is in the voice channel
-  return loaderData as Extract<typeof loaderData, { isAuthenticated: true }>
-}
 
 interface GameRoomProps {
   roomId: string
@@ -50,13 +34,17 @@ interface GameRoomProps {
 
 function GameRoomContent({
   roomId,
-  playerName,
+  playerName: _playerName,
   onLeaveGame,
   isLobbyOwner = true,
   detectorType,
   usePerspectiveWarp = true,
 }: GameRoomProps) {
-  const { userId } = useGameRoomLoaderData()
+  // Get or create temporary user identity (replaces Discord auth)
+  const tempUser = getTempUser()
+  const userId = tempUser.id
+  const username = tempUser.username
+
   const { query } = useCardQueryContext()
   const [copied, setCopied] = useState(false)
 
@@ -75,9 +63,6 @@ function GameRoomContent({
     return !setupCompleted
   })
 
-  // Voice dropout modal state
-  const [voiceDropoutOpen, setVoiceDropoutOpen] = useState(false)
-
   const handleLoadingComplete = () => {
     setIsLoading(false)
   }
@@ -94,18 +79,26 @@ function GameRoomContent({
     return unsubscribe
   }, [])
 
-  const { data: wsTokenData } = useWebSocketAuthToken({ userId })
-
-  // Get remote player IDs from voice channel members
-  const { members: voiceChannelMembers } = useVoiceChannelMembersFromEvents({
-    gameId: roomId,
-    userId: userId,
+  // Get remote player IDs from GAME ROOM participants (not voice channel!)
+  // Game room participation is independent of Discord voice channels
+  const { participants: gameRoomParticipants } = useGameRoomParticipants({
+    roomId,
+    userId,
+    username, // Use generated username from temp user
+    enabled: true,
   })
 
-  const remotePlayerIds = useMemo(
-    () => voiceChannelMembers.filter((m) => m.id !== userId).map((m) => m.id),
-    [voiceChannelMembers, userId],
-  )
+  const remotePlayerIds = useMemo(() => {
+    const filtered = gameRoomParticipants
+      .filter((p) => p.id !== userId)
+      .map((p) => p.id)
+    console.log('[GameRoom] remotePlayerIds calculated:', {
+      allParticipants: gameRoomParticipants.length,
+      localUserId: userId,
+      remotePlayerIds: filtered,
+    })
+    return filtered
+  }, [gameRoomParticipants, userId])
 
   // PeerJS hook for peer-to-peer video streaming
   const {
@@ -134,10 +127,10 @@ function GameRoomContent({
     console.log('[GameRoom] 🎥 Remote streams update:', {
       size: remoteStreams.size,
       keys: Array.from(remoteStreams.keys()),
-      voiceChannelMembers: voiceChannelMembers.map((m) => m.id),
+      gameRoomParticipants: gameRoomParticipants.map((p) => p.id),
       remotePlayerIds,
     })
-  }, [remoteStreams, voiceChannelMembers, remotePlayerIds])
+  }, [remoteStreams, gameRoomParticipants, remotePlayerIds])
 
   // Voice channel validation is now done in the route's beforeLoad hook
   // If user is not in voice channel, they won't reach this component
@@ -155,32 +148,6 @@ function GameRoomContent({
       message: 'Voice channel ready',
     })
   }, [])
-
-  // Listen for voice channel events (for dropout detection)
-  // Only enabled when wsAuthToken is available
-  useVoiceChannelEvents({
-    jwtToken: wsTokenData,
-    userId: userId,
-    channelId: roomId,
-    onVoiceStateUpdate: (voiceState: APIVoiceState) => {
-      console.log('[GameRoom] VOICE_STATE_UPDATE received:', {
-        userId: voiceState.user_id,
-        channelId: voiceState.channel_id,
-        currentUserId: userId,
-      })
-
-      // Only handle events for the current user
-      if (voiceState.user_id === userId && voiceState.channel_id === null) {
-        console.log('[GameRoom] Current user left voice channel')
-        setVoiceDropoutOpen(true)
-        toast.warning('You have been removed from the voice channel')
-      }
-    },
-    onError: (error: Error) => {
-      console.error('[GameRoom] Voice channel event error:', error)
-      // Don't show error toast for connection issues - they're expected
-    },
-  })
 
   // Initialize CLIP model and embeddings on mount
   useEffect(() => {
@@ -321,12 +288,25 @@ function GameRoomContent({
     const setupCompleted = localStorage.getItem(`media-setup-${roomId}`)
     const savedDeviceId = localStorage.getItem(`media-device-${roomId}`)
 
+    console.log('[GameRoom] Media setup check:', {
+      setupCompleted: !!setupCompleted,
+      hasSavedDeviceId: !!savedDeviceId,
+      mediaDialogOpen,
+      willAutoInitialize: !!(
+        setupCompleted &&
+        savedDeviceId &&
+        !mediaDialogOpen
+      ),
+    })
+
     if (setupCompleted && savedDeviceId && !mediaDialogOpen) {
       console.log(
         '[GameRoom] Setup already completed, initializing camera with saved device:',
         savedDeviceId,
       )
       initializeLocalMedia(savedDeviceId)
+    } else if (!setupCompleted) {
+      console.log('[GameRoom] No setup completed yet, waiting for media dialog')
     }
   }, [roomId, mediaDialogOpen, initializeLocalMedia])
 
@@ -336,12 +316,20 @@ function GameRoomContent({
     audioInputDeviceId: string
     audioOutputDeviceId: string
   }) => {
+    console.log('[GameRoom] Media dialog completed with config:', config)
+
     // Save to localStorage that setup has been completed for this room and the selected device
     localStorage.setItem(`media-setup-${roomId}`, 'true')
     localStorage.setItem(`media-device-${roomId}`, config.videoDeviceId)
     setMediaDialogOpen(false)
+
+    console.log(
+      '[GameRoom] Initializing local media with device:',
+      config.videoDeviceId,
+    )
     // Initialize local media stream after user selects their camera
     await initializeLocalMedia(config.videoDeviceId)
+    console.log('[GameRoom] Local media initialization complete')
   }
 
   const handleCopyShareLink = () => {
@@ -374,13 +362,6 @@ function GameRoomContent({
           onComplete={handleDialogComplete}
         />
       )}
-
-      {/* Voice Dropout Modal */}
-      <VoiceDropoutModal
-        open={voiceDropoutOpen}
-        onRejoin={() => setVoiceDropoutOpen(false)}
-        onLeaveGame={onLeaveGame}
-      />
 
       <Toaster />
 
@@ -445,7 +426,7 @@ function GameRoomContent({
           <GameRoomSidebar
             roomId={roomId}
             userId={userId}
-            playerName={playerName}
+            playerName={username}
             isLobbyOwner={isLobbyOwner}
             onNextTurn={handleNextTurn}
             onRemovePlayer={handleRemovePlayer}
@@ -456,7 +437,7 @@ function GameRoomContent({
             <GameRoomVideoGrid
               roomId={roomId}
               userId={userId}
-              playerName={playerName}
+              playerName={username}
               detectorType={detectorType}
               usePerspectiveWarp={usePerspectiveWarp}
               onCardCrop={(canvas: HTMLCanvasElement) => {

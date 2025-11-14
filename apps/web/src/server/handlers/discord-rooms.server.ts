@@ -1,9 +1,12 @@
 /**
  * Discord Room Management Server Functions
  * Handles room creation, validation, and voice channel access
+ *
+ * NOTE: This file is part of the legacy Discord integration and is being phased out
+ * in favor of the game room system (gameroom.server.ts and useGameRoomParticipants)
  */
 
-import type { VoiceChannelMember } from '@/hooks/useVoiceChannelMembersFromEvents'
+import type { GameRoomParticipant } from '@/hooks/useGameRoomParticipants'
 import { env } from '@/env'
 import { sseManager } from '@/server/managers/sse-manager'
 import { createServerFn } from '@tanstack/react-start'
@@ -403,7 +406,7 @@ export const getInitialVoiceChannelMembers = createServerFn({ method: 'POST' })
     async ({
       data: { channelId },
     }): Promise<{
-      members: Array<VoiceChannelMember>
+      members: Array<GameRoomParticipant & { isOnline?: boolean }>
       error?: string | null
     }> => {
       try {
@@ -441,7 +444,8 @@ export const getInitialVoiceChannelMembers = createServerFn({ method: 'POST' })
         const connectedUserIds = sseManager.getConnectedUserIdsForGuild(guildId)
 
         // Now fetch member details for each user in the voice channel
-        const allMembers: Array<VoiceChannelMember> = []
+        const allMembers: Array<GameRoomParticipant & { isOnline?: boolean }> =
+          []
 
         for (const voiceState of voiceStates) {
           if (!voiceState.user_id) continue
@@ -456,6 +460,7 @@ export const getInitialVoiceChannelMembers = createServerFn({ method: 'POST' })
                 id: member.user.id,
                 username: member.user.username,
                 avatar: member.user.avatar,
+                joinedAt: Date.now(), // Use current timestamp for legacy compatibility
                 isOnline: connectedUserIds.has(member.user.id),
               })
             }

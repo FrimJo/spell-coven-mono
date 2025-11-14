@@ -1,10 +1,10 @@
 /**
  * Environment Variables Configuration
- * 
+ *
  * Centralized environment variable validation using @t3-oss/env-core.
  * This ensures all required environment variables are present and valid
  * at runtime, with proper TypeScript types.
- * 
+ *
  * @see https://env.t3.gg/docs/core
  */
 
@@ -13,11 +13,11 @@ import { z } from 'zod'
 
 /**
  * Validated environment variables
- * 
+ *
  * Access environment variables through this object for type safety:
  * ```typescript
  * import { env } from '@/env'
- * 
+ *
  * const guildId = env.VITE_DISCORD_GUILD_ID
  * const botToken = env.DISCORD_BOT_TOKEN
  * ```
@@ -30,11 +30,15 @@ export const env = createEnv({
     // Discord Configuration
     DISCORD_BOT_TOKEN: z.string().min(1, 'Discord Bot Token is required'),
     DISCORD_BOT_USER_ID: z.string().min(1, 'Discord Bot User ID is required'),
-    DISCORD_CLIENT_SECRET: z.string().min(1, 'Discord Client Secret is required'),
+    DISCORD_CLIENT_SECRET: z
+      .string()
+      .min(1, 'Discord Client Secret is required'),
 
     // Hub & WebSocket Configuration
     HUB_SECRET: z.string().min(32, 'Hub Secret must be at least 32 characters'),
-    ROOM_TOKEN_SECRET: z.string().min(32, 'Room Token Secret must be at least 32 characters'),
+    ROOM_TOKEN_SECRET: z
+      .string()
+      .min(32, 'Room Token Secret must be at least 32 characters'),
     WS_AUTH_SECRET: z.string().optional(),
 
     // Gateway Configuration
@@ -100,7 +104,7 @@ export const env = createEnv({
 
   /**
    * Runtime environment variables
-   * 
+   *
    * For TanStack Start, we need to manually specify which variables to read from.
    * - Client variables come from import.meta.env (Vite exposes VITE_* vars)
    * - Server variables come from process.env
@@ -139,7 +143,7 @@ export const env = createEnv({
 
   /**
    * Treat empty strings as undefined
-   * 
+   *
    * This solves issues where empty env vars in .env files (e.g., `PORT=`)
    * would be treated as empty strings instead of undefined, breaking defaults.
    */

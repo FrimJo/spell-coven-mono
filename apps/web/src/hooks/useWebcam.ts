@@ -137,8 +137,13 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     return () => {
       mounted = false
     }
-  }, [enableCardDetection, detectorType, onCrop, usePerspectiveWarp, reinitializeTrigger])
-
+  }, [
+    enableCardDetection,
+    detectorType,
+    onCrop,
+    usePerspectiveWarp,
+    reinitializeTrigger,
+  ])
 
   const getCameras = async () => {
     if (webcamController.current) {
@@ -146,7 +151,7 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     }
     const devices = await navigator.mediaDevices.enumerateDevices()
     const cameras = devices.filter((d) => d.kind === 'videoinput')
-    
+
     // Filter out mock video file devices
     const realCameras = cameras.filter(
       (camera) => !camera.deviceId.startsWith('video-file:'),
