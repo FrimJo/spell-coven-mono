@@ -1,7 +1,5 @@
 import { z } from 'zod'
 
-import type { GatewayDispatchEvents } from '@repo/discord-integration/types'
-
 /**
  * SSE Message Types (Client-Side)
  *
@@ -16,19 +14,6 @@ export const SSEMessageBaseSchema = z.object({
   v: z.literal(1), // Protocol version
   ts: z.number(), // Timestamp
 })
-
-/**
- * SSE Discord Gateway Event Message - Raw Discord events
- */
-export const SSEDiscordEventMessageSchema = SSEMessageBaseSchema.extend({
-  type: z.literal('discord.event'),
-  event: z.string().transform((event) => event as GatewayDispatchEvents), // Transform to GatewayDispatchEvents
-  payload: z.unknown(), // Raw Discord event payload GatewaySendPayload
-})
-
-export type SSEDiscordEventMessage = z.infer<
-  typeof SSEDiscordEventMessageSchema
->
 
 /**
  * SSE Custom Event Message - Application-specific events
@@ -112,7 +97,6 @@ export type SSEWebRTCSignalingMessage = z.infer<
  * Discriminated union of all SSE message types
  */
 export const SSEMessageSchema = z.discriminatedUnion('type', [
-  SSEDiscordEventMessageSchema,
   SSECustomEventMessageSchema,
   SSEAckMessageSchema,
   SSEErrorMessageSchema,
@@ -124,12 +108,6 @@ export type SSEMessage = z.infer<typeof SSEMessageSchema>
 /**
  * Type guards
  */
-export function isSSEDiscordEventMessage(
-  msg: SSEMessage,
-): msg is SSEDiscordEventMessage {
-  return msg.type === 'discord.event'
-}
-
 export function isSSECustomEventMessage(
   msg: SSEMessage,
 ): msg is SSECustomEventMessage {

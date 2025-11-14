@@ -1,7 +1,7 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { ConnectionState, PeerTrackState } from '@/types/peerjs'
 import { Suspense, useMemo } from 'react'
-import { useVoiceChannelMembersFromEvents } from '@/hooks/useVoiceChannelMembersFromEvents'
+import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
 import { Loader2 } from 'lucide-react'
 
 import { VideoStreamGrid } from './VideoStreamGrid'
@@ -39,25 +39,35 @@ function VideoGridContent({
   onToggleAudio,
   onSwitchCamera,
 }: GameRoomVideoGridProps) {
-  const { members: voiceChannelMembers } = useVoiceChannelMembersFromEvents({
-    gameId: roomId,
-    userId: userId,
+  const { participants: gameRoomParticipants } = useGameRoomParticipants({
+    roomId,
+    userId,
+    username: playerName,
+    enabled: true,
   })
 
-  // Build player list with connection states
-  const players = useMemo(
-    () =>
-      voiceChannelMembers.map((member) => ({
-        id: member.id,
-        name: member.username,
-        connectionState: connectionStates.get(member.id) || 'disconnected',
-        trackState: peerTrackStates.get(member.id) || {
-          videoEnabled: true,
-          audioEnabled: true,
-        },
-      })),
-    [voiceChannelMembers, connectionStates, peerTrackStates],
-  )
+  // Build player list: Include ALL participants (including self)
+  // The local player should show their own video
+  const players = useMemo(() => {
+    const allPlayers = gameRoomParticipants.map((participant) => ({
+      id: participant.id,
+      name: participant.username,
+      connectionState: connectionStates.get(participant.id) || 'disconnected',
+      trackState: peerTrackStates.get(participant.id) || {
+        videoEnabled: true,
+        audioEnabled: true,
+      },
+    }))
+
+    console.log('[GameRoomVideoGrid] Players list built:', {
+      participantCount: gameRoomParticipants.length,
+      playerCount: allPlayers.length,
+      localUserId: userId,
+      players: allPlayers.map((p) => ({ id: p.id, name: p.name })),
+    })
+
+    return allPlayers
+  }, [gameRoomParticipants, connectionStates, peerTrackStates, userId])
 
   return (
     <VideoStreamGrid

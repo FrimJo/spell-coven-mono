@@ -6,7 +6,12 @@
 /**
  * Connection state for a peer connection
  */
-export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'failed' | 'reconnecting'
+export type ConnectionState =
+  | 'connecting'
+  | 'connected'
+  | 'disconnected'
+  | 'failed'
+  | 'reconnecting'
 
 /**
  * Track state for audio/video tracks

@@ -15,7 +15,9 @@ import { Route as DebugSessionStorageRouteImport } from './routes/debug/session-
 import { Route as ApiStreamRouteImport } from './routes/api/stream'
 import { Route as AdminCleanupRouteImport } from './routes/admin/cleanup'
 import { Route as DebugVoiceChannelChannelIdRouteImport } from './routes/debug/voice-channel.$channelId'
-import { Route as AuthDiscordCallbackRouteImport } from './routes/auth/discord/callback'
+import { Route as ApiGameroomStreamRouteImport } from './routes/api/gameroom/stream'
+import { Route as ApiGameroomLeaveRouteImport } from './routes/api/gameroom/leave'
+import { Route as ApiGameroomJoinRouteImport } from './routes/api/gameroom/join'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -48,9 +50,19 @@ const DebugVoiceChannelChannelIdRoute =
     path: '/debug/voice-channel/$channelId',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AuthDiscordCallbackRoute = AuthDiscordCallbackRouteImport.update({
-  id: '/auth/discord/callback',
-  path: '/auth/discord/callback',
+const ApiGameroomStreamRoute = ApiGameroomStreamRouteImport.update({
+  id: '/api/gameroom/stream',
+  path: '/api/gameroom/stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGameroomLeaveRoute = ApiGameroomLeaveRouteImport.update({
+  id: '/api/gameroom/leave',
+  path: '/api/gameroom/leave',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGameroomJoinRoute = ApiGameroomJoinRouteImport.update({
+  id: '/api/gameroom/join',
+  path: '/api/gameroom/join',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -60,7 +72,9 @@ export interface FileRoutesByFullPath {
   '/api/stream': typeof ApiStreamRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/auth/discord/callback': typeof AuthDiscordCallbackRoute
+  '/api/gameroom/join': typeof ApiGameroomJoinRoute
+  '/api/gameroom/leave': typeof ApiGameroomLeaveRoute
+  '/api/gameroom/stream': typeof ApiGameroomStreamRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
 export interface FileRoutesByTo {
@@ -69,7 +83,9 @@ export interface FileRoutesByTo {
   '/api/stream': typeof ApiStreamRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/auth/discord/callback': typeof AuthDiscordCallbackRoute
+  '/api/gameroom/join': typeof ApiGameroomJoinRoute
+  '/api/gameroom/leave': typeof ApiGameroomLeaveRoute
+  '/api/gameroom/stream': typeof ApiGameroomStreamRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
 export interface FileRoutesById {
@@ -79,7 +95,9 @@ export interface FileRoutesById {
   '/api/stream': typeof ApiStreamRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/auth/discord/callback': typeof AuthDiscordCallbackRoute
+  '/api/gameroom/join': typeof ApiGameroomJoinRoute
+  '/api/gameroom/leave': typeof ApiGameroomLeaveRoute
+  '/api/gameroom/stream': typeof ApiGameroomStreamRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
 export interface FileRouteTypes {
@@ -90,7 +108,9 @@ export interface FileRouteTypes {
     | '/api/stream'
     | '/debug/session-storage'
     | '/game/$gameId'
-    | '/auth/discord/callback'
+    | '/api/gameroom/join'
+    | '/api/gameroom/leave'
+    | '/api/gameroom/stream'
     | '/debug/voice-channel/$channelId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,7 +119,9 @@ export interface FileRouteTypes {
     | '/api/stream'
     | '/debug/session-storage'
     | '/game/$gameId'
-    | '/auth/discord/callback'
+    | '/api/gameroom/join'
+    | '/api/gameroom/leave'
+    | '/api/gameroom/stream'
     | '/debug/voice-channel/$channelId'
   id:
     | '__root__'
@@ -108,7 +130,9 @@ export interface FileRouteTypes {
     | '/api/stream'
     | '/debug/session-storage'
     | '/game/$gameId'
-    | '/auth/discord/callback'
+    | '/api/gameroom/join'
+    | '/api/gameroom/leave'
+    | '/api/gameroom/stream'
     | '/debug/voice-channel/$channelId'
   fileRoutesById: FileRoutesById
 }
@@ -118,7 +142,9 @@ export interface RootRouteChildren {
   ApiStreamRoute: typeof ApiStreamRoute
   DebugSessionStorageRoute: typeof DebugSessionStorageRoute
   GameGameIdRoute: typeof GameGameIdRoute
-  AuthDiscordCallbackRoute: typeof AuthDiscordCallbackRoute
+  ApiGameroomJoinRoute: typeof ApiGameroomJoinRoute
+  ApiGameroomLeaveRoute: typeof ApiGameroomLeaveRoute
+  ApiGameroomStreamRoute: typeof ApiGameroomStreamRoute
   DebugVoiceChannelChannelIdRoute: typeof DebugVoiceChannelChannelIdRoute
 }
 
@@ -166,11 +192,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DebugVoiceChannelChannelIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/discord/callback': {
-      id: '/auth/discord/callback'
-      path: '/auth/discord/callback'
-      fullPath: '/auth/discord/callback'
-      preLoaderRoute: typeof AuthDiscordCallbackRouteImport
+    '/api/gameroom/stream': {
+      id: '/api/gameroom/stream'
+      path: '/api/gameroom/stream'
+      fullPath: '/api/gameroom/stream'
+      preLoaderRoute: typeof ApiGameroomStreamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/gameroom/leave': {
+      id: '/api/gameroom/leave'
+      path: '/api/gameroom/leave'
+      fullPath: '/api/gameroom/leave'
+      preLoaderRoute: typeof ApiGameroomLeaveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/gameroom/join': {
+      id: '/api/gameroom/join'
+      path: '/api/gameroom/join'
+      fullPath: '/api/gameroom/join'
+      preLoaderRoute: typeof ApiGameroomJoinRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -182,7 +222,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiStreamRoute: ApiStreamRoute,
   DebugSessionStorageRoute: DebugSessionStorageRoute,
   GameGameIdRoute: GameGameIdRoute,
-  AuthDiscordCallbackRoute: AuthDiscordCallbackRoute,
+  ApiGameroomJoinRoute: ApiGameroomJoinRoute,
+  ApiGameroomLeaveRoute: ApiGameroomLeaveRoute,
+  ApiGameroomStreamRoute: ApiGameroomStreamRoute,
   DebugVoiceChannelChannelIdRoute: DebugVoiceChannelChannelIdRoute,
 }
 export const routeTree = rootRouteImport

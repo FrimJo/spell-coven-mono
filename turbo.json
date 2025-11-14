@@ -25,7 +25,8 @@
     "BLOB_READ_WRITE_TOKEN",
     "LOG_LEVEL",
     "PEERJS_PORT",
-    "PEERJS_PATH"
+    "PEERJS_PATH",
+    "PEERJS_SSL"
   ],
   "tasks": {
     "build": {

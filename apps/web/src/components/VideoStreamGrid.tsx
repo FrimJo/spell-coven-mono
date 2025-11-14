@@ -97,19 +97,14 @@ export function VideoStreamGrid({
   const [hasStartedVideo, setHasStartedVideo] = useState(false)
 
   // Initialize webcam with card detection
-  const {
-    videoRef,
-    overlayRef,
-    croppedRef,
-    fullResRef,
-    getCameras,
-  } = useWebcam({
-    enableCardDetection,
-    detectorType,
-    usePerspectiveWarp,
-    onCrop: onCardCrop,
-    reinitializeTrigger: currentCameraId ? 1 : 0,
-  })
+  const { videoRef, overlayRef, croppedRef, fullResRef, getCameras } =
+    useWebcam({
+      enableCardDetection,
+      detectorType,
+      usePerspectiveWarp,
+      onCrop: onCardCrop,
+      reinitializeTrigger: currentCameraId ? 1 : 0,
+    })
 
   const [streamStates, setStreamStates] = useState<Record<string, StreamState>>(
     players.reduce(
@@ -134,7 +129,12 @@ export function VideoStreamGrid({
   // When localStream is available, mark video as started
   useEffect(() => {
     if (localStream && localStream.getVideoTracks().length > 0) {
+      console.log(
+        '[VideoStreamGrid] Local stream available, setting hasStartedVideo=true',
+      )
       setHasStartedVideo(true)
+    } else if (localStream && localStream.getVideoTracks().length === 0) {
+      console.log('[VideoStreamGrid] Local stream has no video tracks')
     }
   }, [localStream])
 
@@ -200,12 +200,32 @@ export function VideoStreamGrid({
 
   // Update remote video elements when streams change or tracks change
   useEffect(() => {
+    console.log('[VideoStreamGrid] Remote streams effect triggered:', {
+      remoteStreamCount: remoteStreams.size,
+      remoteStreamKeys: Array.from(remoteStreams.keys()),
+      peerTrackStatesCount: peerTrackStates.size,
+    })
+
     for (const [playerId, stream] of remoteStreams) {
       const videoElement = remoteVideoRefs.current.get(playerId)
       const currentAttachedStream = attachedStreamsRef.current.get(playerId)
+      const trackState = peerTrackStates.get(playerId)
+
+      console.log(
+        `[VideoStreamGrid] Processing remote stream for ${playerId}:`,
+        {
+          hasStream: !!stream,
+          hasVideoElement: !!videoElement,
+          trackState,
+          videoTracks: stream?.getVideoTracks().length ?? 0,
+        },
+      )
 
       if (!stream) {
         if (videoElement && currentAttachedStream) {
+          console.log(
+            `[VideoStreamGrid] Clearing video element for ${playerId}`,
+          )
           videoElement.srcObject = null
           attachedStreamsRef.current.set(playerId, null)
           setPlayingRemoteVideos((prev) => {
@@ -217,14 +237,36 @@ export function VideoStreamGrid({
         continue
       }
 
-      const hasVideoTrack = stream.getVideoTracks().length > 0
-      
-      // Update video element if stream changed OR if track presence changed
+      // Check if video is actually enabled (track is live, not just present)
+      const hasLiveVideoTrack =
+        trackState?.videoEnabled ?? stream.getVideoTracks().length > 0
+
+      // Update video element if stream changed OR if track state changed
       if (videoElement) {
-        const hadVideoTrack = currentAttachedStream ? currentAttachedStream.getVideoTracks().length > 0 : false
-        
-        if (stream !== currentAttachedStream || hasVideoTrack !== hadVideoTrack) {
-          if (hasVideoTrack) {
+        const hadLiveVideoTrack = currentAttachedStream
+          ? currentAttachedStream
+              .getVideoTracks()
+              .some((t) => t.readyState === 'live')
+          : false
+
+        console.log(
+          `[VideoStreamGrid] Video element update check for ${playerId}:`,
+          {
+            hasLiveVideoTrack,
+            hadLiveVideoTrack,
+            streamChanged: stream !== currentAttachedStream,
+            trackStateChanged: hasLiveVideoTrack !== hadLiveVideoTrack,
+          },
+        )
+
+        if (
+          stream !== currentAttachedStream ||
+          hasLiveVideoTrack !== hadLiveVideoTrack
+        ) {
+          if (hasLiveVideoTrack) {
+            console.log(
+              `[VideoStreamGrid] Attaching stream to video element for ${playerId}`,
+            )
             videoElement.srcObject = stream
             attachedStreamsRef.current.set(playerId, stream)
             setPlayingRemoteVideos((prev) => {
@@ -233,7 +275,10 @@ export function VideoStreamGrid({
               return next
             })
           } else {
-            // No video track - clear video element
+            console.log(
+              `[VideoStreamGrid] Clearing video element (no live track) for ${playerId}`,
+            )
+            // No live video track - clear video element
             videoElement.srcObject = null
             attachedStreamsRef.current.set(playerId, stream) // Keep stream ref for audio
             setPlayingRemoteVideos((prev) => {
@@ -243,9 +288,11 @@ export function VideoStreamGrid({
             })
           }
         }
+      } else {
+        console.log(`[VideoStreamGrid] No video element found for ${playerId}`)
       }
     }
-  }, [remoteStreams])
+  }, [remoteStreams, peerTrackStates])
 
   return (
     <div className={`grid ${getGridClass()} h-full gap-4`}>
@@ -256,18 +303,33 @@ export function VideoStreamGrid({
         const connectionState = connectionStates.get(player.id)
         const peerTrackState = peerTrackStates.get(player.id)
 
-        // Simple: check if stream has video track
+        // For local: check if started and enabled
+        // For remote: use peerTrackState which checks if track is 'live', not just present
         const localVideoEnabled = localTrackState?.videoEnabled ?? true
-        const hasVideoTrack = remoteStream ? remoteStream.getVideoTracks().length > 0 : false
-        const videoEnabled = isLocal 
-          ? (hasStartedVideo && localVideoEnabled)
-          : hasVideoTrack
-        const audioEnabled = isLocal 
+        const hasVideoTrack = remoteStream
+          ? remoteStream.getVideoTracks().length > 0
+          : false
+        const videoEnabled = isLocal
+          ? hasStartedVideo && localVideoEnabled
+          : (peerTrackState?.videoEnabled ?? hasVideoTrack)
+        const audioEnabled = isLocal
           ? (localTrackState?.audioEnabled ?? true)
           : (peerTrackState?.audioEnabled ?? state.audio)
 
+        // Debug log for local player
+        if (isLocal) {
+          console.log('[VideoStreamGrid] Local player render:', {
+            playerId: player.id,
+            hasLocalStream: !!localStream,
+            hasStartedVideo,
+            localVideoEnabled,
+            videoEnabled,
+            localTrackState,
+          })
+        }
+
         // Check if remote video is actually playing (for hiding placeholder)
-        const isRemoteVideoPlaying =
+        const _isRemoteVideoPlaying =
           !isLocal && remoteStream && playingRemoteVideos.has(player.id)
 
         return (
@@ -369,10 +431,20 @@ export function VideoStreamGrid({
                   onLoadedMetadata={() => {
                     const videoElement = remoteVideoRefs.current.get(player.id)
                     const peerTrackState = peerTrackStates.get(player.id)
-                    const state = streamStates[player.id] || { video: true, audio: true }
-                    const videoEnabled = (peerTrackState?.videoEnabled ?? state.video) && !!remoteStream
-                    
-                    if (videoElement && remoteStream && videoElement.paused && videoEnabled) {
+                    const state = streamStates[player.id] || {
+                      video: true,
+                      audio: true,
+                    }
+                    const videoEnabled =
+                      (peerTrackState?.videoEnabled ?? state.video) &&
+                      !!remoteStream
+
+                    if (
+                      videoElement &&
+                      remoteStream &&
+                      videoElement.paused &&
+                      videoEnabled
+                    ) {
                       // Use requestAnimationFrame to ensure element is ready
                       requestAnimationFrame(() => {
                         videoElement.play().catch((error) => {
@@ -391,10 +463,20 @@ export function VideoStreamGrid({
                     // Fallback: ensure play when video can start playing
                     const videoElement = remoteVideoRefs.current.get(player.id)
                     const peerTrackState = peerTrackStates.get(player.id)
-                    const state = streamStates[player.id] || { video: true, audio: true }
-                    const videoEnabled = (peerTrackState?.videoEnabled ?? state.video) && !!remoteStream
-                    
-                    if (videoElement && remoteStream && videoElement.paused && videoEnabled) {
+                    const state = streamStates[player.id] || {
+                      video: true,
+                      audio: true,
+                    }
+                    const videoEnabled =
+                      (peerTrackState?.videoEnabled ?? state.video) &&
+                      !!remoteStream
+
+                    if (
+                      videoElement &&
+                      remoteStream &&
+                      videoElement.paused &&
+                      videoEnabled
+                    ) {
                       requestAnimationFrame(() => {
                         videoElement.play().catch((error) => {
                           if (error.name !== 'AbortError') {
@@ -431,12 +513,14 @@ export function VideoStreamGrid({
               )}
 
               {/* Placeholder UI */}
-              {<div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950">
+              {
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950">
                   <div className="space-y-2 text-center">
                     <VideoOff className="mx-auto h-12 w-12 text-slate-600" />
                     <p className="text-slate-600">Camera Off</p>
                   </div>
-                </div>}
+                </div>
+              }
 
               {/* Player Info Badge */}
               <div className="absolute left-3 top-3 z-10 rounded-lg border border-slate-800 bg-slate-950/90 px-3 py-2 backdrop-blur-sm">
@@ -489,11 +573,7 @@ export function VideoStreamGrid({
                   <Button
                     data-testid="video-toggle-button"
                     size="sm"
-                    variant={
-                      localVideoEnabled
-                        ? 'outline'
-                        : 'destructive'
-                    }
+                    variant={localVideoEnabled ? 'outline' : 'destructive'}
                     onClick={() => {
                       console.log('[VideoStreamGrid] Video button clicked', {
                         localVideoEnabled,
@@ -503,7 +583,9 @@ export function VideoStreamGrid({
                         const newState = !localVideoEnabled
                         onToggleVideo(newState)
                       } else {
-                        console.warn('[VideoStreamGrid] onToggleVideo not provided!')
+                        console.warn(
+                          '[VideoStreamGrid] onToggleVideo not provided!',
+                        )
                       }
                     }}
                     className={`h-10 w-10 p-0 ${

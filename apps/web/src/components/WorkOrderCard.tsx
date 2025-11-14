@@ -11,9 +11,9 @@ interface WorkOrderCardProps {
 }
 
 export const WorkOrderCard = ({
-  status,
+  status: _status,
   isSelected,
-  workOrderItem,
+  workOrderItem: _workOrderItem,
   onClick,
   children,
 }: WorkOrderCardProps) => {
@@ -22,12 +22,10 @@ export const WorkOrderCard = ({
       onClick={onClick}
       className={cn(
         'cursor-pointer rounded-lg border transition-colors',
-        isSelected && 'ring-2 ring-primary',
+        isSelected && 'ring-primary ring-2',
       )}
     >
-      <div className="bg-yellow-400 p-4 flex-1">{children}</div>
+      <div className="flex-1 bg-yellow-400 p-4">{children}</div>
     </div>
   )
 }
-
-

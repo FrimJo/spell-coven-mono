@@ -1,9 +1,10 @@
+import type { PeerErrorType } from '@/types/peerjs'
+import { PeerJSError } from '@/types/peerjs'
+
 /**
  * Error handling utilities for PeerJS connections
  * Maps PeerJS error types to user-friendly messages
  */
-
-import { PeerJSError, type PeerErrorType } from '@/types/peerjs'
 
 /**
  * Maps PeerJS error types to user-friendly error messages
@@ -13,32 +14,33 @@ const ERROR_MESSAGES: Record<PeerErrorType, string> = {
     'Your browser does not support WebRTC. Please use Chrome, Firefox, Safari, or Edge.',
   'invalid-id': 'Invalid peer ID. Please refresh and try again.',
   'invalid-key': 'Invalid API key. Please contact support.',
-  'network': 'Network error. The PeerJS server may not be running. Please ensure the server is started: cd apps/peerjs-server && bun run dev',
+  network:
+    'Network error. The PeerJS server may not be running. Please ensure the server is started: cd apps/peerjs-server && bun run dev',
   'peer-unavailable': 'The other player is no longer available.',
   'ssl-unavailable': 'SSL is required but not available.',
   'server-error': 'Server error. Please try again later.',
   'socket-closed': 'Connection closed. Please refresh and try again.',
   'socket-error': 'Connection error. Please check your internet.',
   'unavailable-id': 'Peer ID is already in use. Please refresh.',
-  'webrtc': 'WebRTC error. Please check your camera and microphone permissions.',
-  'unknown': 'An unknown error occurred. Please try again.',
+  webrtc: 'WebRTC error. Please check your camera and microphone permissions.',
+  unknown: 'An unknown error occurred. Please try again.',
 }
 
 /**
  * Maps PeerJS error codes to error types
  */
 const ERROR_CODE_MAP: Record<string, PeerErrorType> = {
-  'ERR_BROWSER_INCOMPATIBLE': 'browser-incompatible',
-  'ERR_INVALID_ID': 'invalid-id',
-  'ERR_INVALID_KEY': 'invalid-key',
-  'ERR_NETWORK': 'network',
-  'ERR_PEER_UNAVAILABLE': 'peer-unavailable',
-  'ERR_SSL_UNAVAILABLE': 'ssl-unavailable',
-  'ERR_SERVER_ERROR': 'server-error',
-  'ERR_SOCKET_CLOSED': 'socket-closed',
-  'ERR_SOCKET_ERROR': 'socket-error',
-  'ERR_UNAVAILABLE_ID': 'unavailable-id',
-  'ERR_WEBRTC': 'webrtc',
+  ERR_BROWSER_INCOMPATIBLE: 'browser-incompatible',
+  ERR_INVALID_ID: 'invalid-id',
+  ERR_INVALID_KEY: 'invalid-key',
+  ERR_NETWORK: 'network',
+  ERR_PEER_UNAVAILABLE: 'peer-unavailable',
+  ERR_SSL_UNAVAILABLE: 'ssl-unavailable',
+  ERR_SERVER_ERROR: 'server-error',
+  ERR_SOCKET_CLOSED: 'socket-closed',
+  ERR_SOCKET_ERROR: 'socket-error',
+  ERR_UNAVAILABLE_ID: 'unavailable-id',
+  ERR_WEBRTC: 'webrtc',
 }
 
 /**
@@ -80,14 +82,21 @@ export function createPeerJSError(error: unknown): PeerJSError {
     // Try to extract error type from error message or code
     if ('code' in error && typeof error.code === 'string') {
       errorType = mapErrorCode(error.code)
-      } else if (error.message) {
+    } else if (error.message) {
       // Try to infer from message
       const lowerMessage = error.message.toLowerCase()
-      if (lowerMessage.includes('network') || lowerMessage.includes('timeout') || 
-          lowerMessage.includes('cannot establish') || lowerMessage.includes('connection') ||
-          lowerMessage.includes('peerjs server')) {
+      if (
+        lowerMessage.includes('network') ||
+        lowerMessage.includes('timeout') ||
+        lowerMessage.includes('cannot establish') ||
+        lowerMessage.includes('connection') ||
+        lowerMessage.includes('peerjs server')
+      ) {
         errorType = 'network'
-      } else if (lowerMessage.includes('taken') || lowerMessage.includes('unavailable')) {
+      } else if (
+        lowerMessage.includes('taken') ||
+        lowerMessage.includes('unavailable')
+      ) {
         errorType = 'unavailable-id'
       } else if (lowerMessage.includes('webrtc')) {
         errorType = 'webrtc'

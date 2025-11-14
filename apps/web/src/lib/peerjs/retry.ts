@@ -46,16 +46,11 @@ export async function retryWithBackoff<T>(
         )
       }
 
-      console.log(
-        `[Retry] Attempt ${attempt + 1}/${config.maxAttempts}`,
-      )
+      console.log(`[Retry] Attempt ${attempt + 1}/${config.maxAttempts}`)
       return await fn()
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
-      console.warn(
-        `[Retry] Attempt ${attempt + 1} failed:`,
-        lastError.message,
-      )
+      console.warn(`[Retry] Attempt ${attempt + 1} failed:`, lastError.message)
 
       // Don't retry if this is the last attempt
       if (attempt === config.maxAttempts - 1) {

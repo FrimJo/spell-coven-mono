@@ -41,6 +41,7 @@ Environment variables (`.env.development`):
 ## Architecture
 
 The PeerServer handles:
+
 - WebSocket connections from PeerJS clients
 - Signaling for peer discovery and connection establishment
 - Connection state management
@@ -71,6 +72,7 @@ For production deployment:
 ## Monitoring
 
 The server logs:
+
 - Client connections: `[PeerServer] Client connected: {clientId}`
 - Client disconnections: `[PeerServer] Client disconnected: {clientId}`
 - Server initialization: `[PeerServer] PeerServer initialized successfully`

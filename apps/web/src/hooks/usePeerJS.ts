@@ -45,12 +45,12 @@ export function usePeerJS({
   const initializationAttemptedRef = useRef(false)
   const initializationFailedRef = useRef(false)
   const onErrorRef = useRef(onError)
-  
+
   // Update error callback ref when it changes
   useEffect(() => {
     onErrorRef.current = onError
   }, [onError])
-  
+
   // State
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [localTrackState, setLocalTrackState] = useState<PeerTrackState>({
@@ -76,17 +76,17 @@ export function usePeerJS({
     if (initializationFailedRef.current) {
       return
     }
-    
+
     // Don't create a new manager if one already exists
     if (managerRef.current != null) {
       return
     }
-    
+
     // Prevent multiple initialization attempts
     if (initializationAttemptedRef.current) {
       return
     }
-    
+
     initializationAttemptedRef.current = true
 
     const manager = new PeerJSManager(localPlayerId, {
@@ -108,7 +108,7 @@ export function usePeerJS({
       },
       onTrackStateChanged: (peerId, state) => {
         setPeerTrackStates((prev) => new Map(prev).set(peerId, state))
-        
+
         // Update local track state if it's for local player
         if (peerId === localPlayerId) {
           setLocalTrackState(state)
@@ -132,9 +132,14 @@ export function usePeerJS({
       .catch((err) => {
         // Only log the error once to avoid spam in console
         if (!initializationFailedRef.current) {
-          console.error('[usePeerJS] Failed to initialize PeerJS:', err instanceof Error ? err.message : err)
+          console.error(
+            '[usePeerJS] Failed to initialize PeerJS:',
+            err instanceof Error ? err.message : err,
+          )
           if (err instanceof Error && err.message.includes('PeerJS server')) {
-            console.error('[usePeerJS] Make sure the PeerJS server is running: cd apps/peerjs-server && bun run dev')
+            console.error(
+              '[usePeerJS] Make sure the PeerJS server is running: cd apps/peerjs-server && bun run dev',
+            )
           }
         }
         initializationFailedRef.current = true
@@ -169,15 +174,12 @@ export function usePeerJS({
   }, [remotePlayerIds, isInitialized])
 
   // Initialize local media when called
-  const initializeLocalMedia = useCallback(
-    async (deviceId?: string) => {
-      if (!managerRef.current) {
-        throw new Error('Manager not initialized')
-      }
-      await managerRef.current.initializeLocalMedia(deviceId)
-    },
-    [],
-  )
+  const initializeLocalMedia = useCallback(async (deviceId?: string) => {
+    if (!managerRef.current) {
+      throw new Error('Manager not initialized')
+    }
+    await managerRef.current.initializeLocalMedia(deviceId)
+  }, [])
 
   // Toggle video
   const toggleVideo = useCallback((enabled: boolean) => {

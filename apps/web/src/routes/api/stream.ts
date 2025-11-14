@@ -31,7 +31,10 @@ export const Route = createFileRoute('/api/stream')({
         const userIdParam = url.searchParams.get('userId')
         const channelIdParam = url.searchParams.get('channelId')
 
-        console.log('[SSE] Parsed params from URL:', { userId: userIdParam, channelId: channelIdParam })
+        console.log('[SSE] Parsed params from URL:', {
+          userId: userIdParam,
+          channelId: channelIdParam,
+        })
 
         try {
           // TODO: Verify session from cookie and get user ID from session
@@ -57,7 +60,9 @@ export const Route = createFileRoute('/api/stream')({
               urlSearchParams: url.searchParams.get('channelId'),
             })
             return new Response(
-              JSON.stringify({ error: 'channelId query parameter is required' }),
+              JSON.stringify({
+                error: 'channelId query parameter is required',
+              }),
               {
                 status: 400,
                 headers: { 'Content-Type': 'application/json' },
@@ -79,8 +84,15 @@ export const Route = createFileRoute('/api/stream')({
             start(controller) {
               try {
                 // Register connection with SSE manager
-                connectionId = sseManager.register(userId, guildId, channelId, controller)
-                console.log(`[SSE] Client authenticated: ${userId} in channel ${channelId}`)
+                connectionId = sseManager.register(
+                  userId,
+                  guildId,
+                  channelId,
+                  controller,
+                )
+                console.log(
+                  `[SSE] Client authenticated: ${userId} in channel ${channelId}`,
+                )
 
                 // Send initial connection acknowledgment
                 const ackMessage = `data: ${JSON.stringify({
