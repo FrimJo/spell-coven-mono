@@ -21,6 +21,7 @@ import {
 } from '@repo/ui/components/select'
 
 import { useMediaDevice } from '@/hooks/useMediaDevice'
+import { useAudioOutput } from '@/hooks/useAudioOutput'
 
 interface MediaDevice {
   deviceId: string
@@ -53,156 +54,37 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     autoStart: false, // We'll control start manually when dialog opens
   })
 
-  const [audioInputDevices, setAudioInputDevices] = useState<MediaDevice[]>([])
-  const [audioOutputDevices, setAudioOutputDevices] = useState<MediaDevice[]>(
-    [],
-  )
+  // Use our consolidated media device hook for audio input
+  const {
+    devices: audioInputDevices,
+    currentDeviceId: selectedAudioInputId,
+    switchDevice: switchAudioInputDevice,
+    stream: audioInputStream,
+    error: audioInputError,
+  } = useMediaDevice({
+    kind: 'audioinput',
+    autoStart: false,
+  })
 
-  const [selectedAudioInputId, setSelectedAudioInputId] = useState<string>('')
-  const [selectedAudioOutputId, setSelectedAudioOutputId] = useState<string>('')
+  // Use our audio output hook for speakers/headphones
+  const {
+    devices: audioOutputDevices,
+    currentDeviceId: selectedAudioOutputId,
+    setOutputDevice: setAudioOutputDevice,
+    testOutput: testAudioOutput,
+    isTesting: isTestingOutput,
+    isSupported: isAudioOutputSupported,
+    error: audioOutputError,
+  } = useAudioOutput({
+    initialDeviceId: 'default',
+  })
 
   const [audioLevel, setAudioLevel] = useState<number>(0)
   const [permissionError, setPermissionError] = useState<string>('')
-  const [isTestingOutput, setIsTestingOutput] = useState(false)
 
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const animationFrameRef = useRef<number | null>(null)
-  const permissionGrantedRef = useRef<boolean>(false)
-  const isEnumeratingRef = useRef<boolean>(false)
-
-  // Enumerate audio devices function
-  const enumerateAudioDevices = useCallback(
-    async (requestPermission: boolean = false) => {
-      // Prevent concurrent enumeration (can happen in React StrictMode)
-      if (isEnumeratingRef.current) return
-      isEnumeratingRef.current = true
-
-      try {
-        // Request permissions first if needed
-        if (requestPermission && !permissionGrantedRef.current) {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true,
-          })
-          permissionGrantedRef.current = true
-          // Stop the permission stream immediately
-          stream.getTracks().forEach((track) => track.stop())
-        }
-
-        // Enumerate devices
-        const devices = await navigator.mediaDevices.enumerateDevices()
-
-        const audioInputs = devices
-          .filter((device) => device.kind === 'audioinput')
-          .map((device) => ({
-            deviceId: device.deviceId,
-            label: device.label || `Microphone ${device.deviceId.slice(0, 8)}`,
-          }))
-
-        const audioOutputs = devices
-          .filter((device) => device.kind === 'audiooutput')
-          .map((device) => ({
-            deviceId: device.deviceId,
-            label: device.label || `Speaker ${device.deviceId.slice(0, 8)}`,
-          }))
-
-        // Find the default device to avoid showing duplicates
-        const defaultDevice = audioOutputs.find((d) => d.deviceId === 'default')
-        let defaultLabel = defaultDevice?.label || 'Unknown'
-
-        // Strip "Default - " prefix if present (browser adds this to default device)
-        if (defaultLabel.startsWith('Default - ')) {
-          defaultLabel = defaultLabel.substring('Default - '.length)
-        }
-
-        // Filter out the specific device that matches the current default
-        // to avoid showing both "Default - MacBook Pro Speakers" and "MacBook Pro Speakers"
-        const filteredOutputs = audioOutputs.filter((device) => {
-          if (device.deviceId === 'default') return false
-          // If this device's label matches the default (with or without "Default - " prefix), it's a duplicate
-          const cleanLabel = device.label.startsWith('Default - ')
-            ? device.label.substring('Default - '.length)
-            : device.label
-          if (defaultDevice && cleanLabel === defaultLabel) return false
-          return true
-        })
-
-        // Always include a "System Default" option at the top
-        const outputsWithDefault = [
-          {
-            deviceId: 'default',
-            label: `System Default${defaultLabel !== 'Unknown' ? ` (${defaultLabel})` : ''}`,
-          },
-          ...filteredOutputs,
-        ]
-
-        setAudioInputDevices(audioInputs)
-        setAudioOutputDevices(outputsWithDefault)
-
-        // Set defaults or validate existing selections
-        setSelectedAudioInputId((prev) => {
-          if (audioInputs.length > 0 && !prev) {
-            return audioInputs[0]!.deviceId
-          } else if (prev && !audioInputs.find((d) => d.deviceId === prev)) {
-            // Currently selected device was disconnected, switch to first available
-            return audioInputs.length > 0 ? audioInputs[0]!.deviceId : ''
-          }
-          return prev
-        })
-
-        setSelectedAudioOutputId((prev) => {
-          if (!prev) {
-            // Default to 'default' which follows OS audio settings
-            return 'default'
-          } else if (
-            prev !== 'default' &&
-            !outputsWithDefault.find((d) => d.deviceId === prev)
-          ) {
-            // Currently selected device was disconnected, switch to default
-            return 'default'
-          }
-          return prev
-        })
-      } catch (error) {
-        console.error('Error accessing media devices:', error)
-        setPermissionError(
-          'Unable to access camera or microphone. Please grant permissions and try again.',
-        )
-      } finally {
-        isEnumeratingRef.current = false
-      }
-    },
-    [],
-  )
-
-  // Initial audio device enumeration
-  useEffect(() => {
-    if (!open) return
-
-    void enumerateAudioDevices(true)
-  }, [open, enumerateAudioDevices])
-
-  // Listen for device changes (plug/unplug)
-  useEffect(() => {
-    if (!open) return
-
-    const handleDeviceChange = () => {
-      console.log(
-        '[MediaSetupDialog] Device change detected, re-enumerating devices...',
-      )
-      void enumerateAudioDevices(false)
-    }
-
-    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange)
-
-    return () => {
-      navigator.mediaDevices.removeEventListener(
-        'devicechange',
-        handleDeviceChange,
-      )
-    }
-  }, [open, enumerateAudioDevices])
 
   // Auto-start video preview when dialog opens and devices are available
   useEffect(() => {
@@ -215,6 +97,17 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     }
   }, [open, videoDevices, selectedVideoId, switchVideoDevice])
 
+  // Auto-start audio input when dialog opens and devices are available
+  useEffect(() => {
+    if (!open || audioInputDevices.length === 0 || selectedAudioInputId) return
+
+    // Start with first available device
+    const firstDevice = audioInputDevices[0]
+    if (firstDevice) {
+      void switchAudioInputDevice(firstDevice.deviceId)
+    }
+  }, [open, audioInputDevices, selectedAudioInputId, switchAudioInputDevice])
+
   // Handle video device errors
   useEffect(() => {
     if (videoError) {
@@ -224,20 +117,40 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     }
   }, [videoError])
 
-  // Monitor audio input level
+  // Handle audio input device errors
   useEffect(() => {
-    if (!selectedAudioInputId) return
+    if (audioInputError) {
+      setPermissionError(
+        `Unable to access selected microphone: ${audioInputError.message}`,
+      )
+    }
+  }, [audioInputError])
+
+  // Handle audio output device errors
+  useEffect(() => {
+    if (audioOutputError) {
+      setPermissionError(
+        `Audio output error: ${audioOutputError.message}`,
+      )
+    }
+  }, [audioOutputError])
+
+  // Show warning if audio output device selection is not supported
+  useEffect(() => {
+    if (!isAudioOutputSupported) {
+      console.warn('[MediaSetupDialog] Audio output device selection not supported in this browser')
+    }
+  }, [isAudioOutputSupported])
+
+  // Monitor audio input level using the stream from useMediaDevice hook
+  useEffect(() => {
+    if (!audioInputStream) return
 
     const setupAudioMonitoring = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { deviceId: selectedAudioInputId },
-          video: false,
-        })
-
         const audioContext = new AudioContext()
         const analyser = audioContext.createAnalyser()
-        const microphone = audioContext.createMediaStreamSource(stream)
+        const microphone = audioContext.createMediaStreamSource(audioInputStream)
 
         analyser.fftSize = 256
         microphone.connect(analyser)
@@ -269,45 +182,19 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
       }
     }
 
-    setupAudioMonitoring()
+    void setupAudioMonitoring()
 
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
       }
       if (audioContextRef.current) {
         audioContextRef.current.close()
+        audioContextRef.current = null
       }
     }
-  }, [selectedAudioInputId])
-
-  const handleTestOutput = async () => {
-    setIsTestingOutput(true)
-
-    try {
-      // Create a simple test tone
-      const audioContext = new AudioContext()
-      const oscillator = audioContext.createOscillator()
-      const gainNode = audioContext.createGain()
-
-      oscillator.connect(gainNode)
-      gainNode.connect(audioContext.destination)
-
-      oscillator.frequency.value = 440 // A4 note
-      gainNode.gain.value = 0.1 // Low volume
-
-      oscillator.start()
-
-      setTimeout(() => {
-        oscillator.stop()
-        audioContext.close()
-        setIsTestingOutput(false)
-      }, 500)
-    } catch (error) {
-      console.error('Error testing audio output:', error)
-      setIsTestingOutput(false)
-    }
-  }
+  }, [audioInputStream])
 
   const handleComplete = () => {
     // Clean up audio monitoring
@@ -318,12 +205,18 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
       cancelAnimationFrame(animationFrameRef.current)
     }
 
-    // Video cleanup is handled by the useMediaDevice hook
+    // Validate required devices are selected
     if (!selectedVideoId) {
       setPermissionError('Please select a camera device')
       return
     }
 
+    if (!selectedAudioInputId) {
+      setPermissionError('Please select a microphone device')
+      return
+    }
+
+    // Device cleanup is handled by the useMediaDevice hooks
     onComplete({
       videoDeviceId: selectedVideoId,
       audioInputDeviceId: selectedAudioInputId,
@@ -406,8 +299,8 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
             </div>
 
             <Select
-              value={selectedAudioInputId}
-              onValueChange={setSelectedAudioInputId}
+              value={selectedAudioInputId || ''}
+              onValueChange={(deviceId) => void switchAudioInputDevice(deviceId)}
             >
               <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200">
                 <SelectValue placeholder="Select microphone" />
@@ -461,10 +354,11 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
             <div className="flex gap-2">
               <Select
                 value={selectedAudioOutputId}
-                onValueChange={setSelectedAudioOutputId}
+                onValueChange={(deviceId) => void setAudioOutputDevice(deviceId)}
+                disabled={!isAudioOutputSupported}
               >
                 <SelectTrigger className="flex-1 border-slate-700 bg-slate-800 text-slate-200">
-                  <SelectValue placeholder="Select speaker" />
+                  <SelectValue placeholder={isAudioOutputSupported ? "Select speaker" : "Not supported in this browser"} />
                 </SelectTrigger>
                 <SelectContent className="border-slate-700 bg-slate-800">
                   {audioOutputDevices.map((device) => (
@@ -481,8 +375,8 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
 
               <Button
                 variant="outline"
-                onClick={handleTestOutput}
-                disabled={isTestingOutput || !selectedAudioOutputId}
+                onClick={() => void testAudioOutput()}
+                disabled={isTestingOutput || !selectedAudioOutputId || !isAudioOutputSupported}
                 className="border-slate-700 bg-slate-800 hover:bg-slate-700"
               >
                 {isTestingOutput ? 'Playing...' : 'Test'}
