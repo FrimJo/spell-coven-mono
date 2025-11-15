@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from '@repo/ui/components/select'
 
+import { useMediaDevice } from '@/hooks/useMediaDevice'
+
 interface MediaDevice {
   deviceId: string
   label: string
@@ -37,13 +39,25 @@ export interface MediaConfig {
 }
 
 export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
-  const [videoDevices, setVideoDevices] = useState<MediaDevice[]>([])
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  // Use our consolidated media device hook for video
+  const {
+    devices: videoDevices,
+    currentDeviceId: selectedVideoId,
+    switchDevice: switchVideoDevice,
+    error: videoError,
+  } = useMediaDevice({
+    kind: 'videoinput',
+    videoRef,
+    autoStart: false, // We'll control start manually when dialog opens
+  })
+
   const [audioInputDevices, setAudioInputDevices] = useState<MediaDevice[]>([])
   const [audioOutputDevices, setAudioOutputDevices] = useState<MediaDevice[]>(
     [],
   )
 
-  const [selectedVideoId, setSelectedVideoId] = useState<string>('')
   const [selectedAudioInputId, setSelectedAudioInputId] = useState<string>('')
   const [selectedAudioOutputId, setSelectedAudioOutputId] = useState<string>('')
 
@@ -51,16 +65,14 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   const [permissionError, setPermissionError] = useState<string>('')
   const [isTestingOutput, setIsTestingOutput] = useState(false)
 
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const animationFrameRef = useRef<number | null>(null)
   const permissionGrantedRef = useRef<boolean>(false)
   const isEnumeratingRef = useRef<boolean>(false)
 
-  // Enumerate devices function (extracted for reuse)
-  const enumerateDevices = useCallback(
+  // Enumerate audio devices function
+  const enumerateAudioDevices = useCallback(
     async (requestPermission: boolean = false) => {
       // Prevent concurrent enumeration (can happen in React StrictMode)
       if (isEnumeratingRef.current) return
@@ -80,17 +92,6 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
 
         // Enumerate devices
         const devices = await navigator.mediaDevices.enumerateDevices()
-
-        const videoInputs = devices
-          .filter(
-            (device) =>
-              device.kind === 'videoinput' &&
-              !device.deviceId.startsWith('video-file:'),
-          )
-          .map((device) => ({
-            deviceId: device.deviceId,
-            label: device.label || `Camera ${device.deviceId.slice(0, 8)}`,
-          }))
 
         const audioInputs = devices
           .filter((device) => device.kind === 'audioinput')
@@ -136,21 +137,10 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
           ...filteredOutputs,
         ]
 
-        setVideoDevices(videoInputs)
         setAudioInputDevices(audioInputs)
         setAudioOutputDevices(outputsWithDefault)
 
         // Set defaults or validate existing selections
-        setSelectedVideoId((prev) => {
-          if (videoInputs.length > 0 && !prev) {
-            return videoInputs[0]!.deviceId
-          } else if (prev && !videoInputs.find((d) => d.deviceId === prev)) {
-            // Currently selected device was disconnected, switch to first available
-            return videoInputs.length > 0 ? videoInputs[0]!.deviceId : ''
-          }
-          return prev
-        })
-
         setSelectedAudioInputId((prev) => {
           if (audioInputs.length > 0 && !prev) {
             return audioInputs[0]!.deviceId
@@ -186,12 +176,12 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     [],
   )
 
-  // Initial device enumeration
+  // Initial audio device enumeration
   useEffect(() => {
     if (!open) return
 
-    void enumerateDevices(true)
-  }, [open, enumerateDevices])
+    void enumerateAudioDevices(true)
+  }, [open, enumerateAudioDevices])
 
   // Listen for device changes (plug/unplug)
   useEffect(() => {
@@ -201,7 +191,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
       console.log(
         '[MediaSetupDialog] Device change detected, re-enumerating devices...',
       )
-      void enumerateDevices(false)
+      void enumerateAudioDevices(false)
     }
 
     navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange)
@@ -212,41 +202,27 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
         handleDeviceChange,
       )
     }
-  }, [open, enumerateDevices])
+  }, [open, enumerateAudioDevices])
 
-  // Update video preview when video device changes
+  // Auto-start video preview when dialog opens and devices are available
   useEffect(() => {
-    if (!selectedVideoId || !videoRef.current) return
+    if (!open || videoDevices.length === 0 || selectedVideoId) return
 
-    const setupVideo = async () => {
-      try {
-        // Stop previous stream
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach((track) => track.stop())
-        }
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: selectedVideoId },
-          audio: false,
-        })
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-          streamRef.current = stream
-        }
-      } catch (error) {
-        console.error('Error setting up video preview:', error)
-      }
+    // Start with first available device
+    const firstDevice = videoDevices[0]
+    if (firstDevice) {
+      void switchVideoDevice(firstDevice.deviceId)
     }
+  }, [open, videoDevices, selectedVideoId, switchVideoDevice])
 
-    setupVideo()
-
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop())
-      }
+  // Handle video device errors
+  useEffect(() => {
+    if (videoError) {
+      setPermissionError(
+        `Unable to access selected camera: ${videoError.message}`,
+      )
     }
-  }, [selectedVideoId])
+  }, [videoError])
 
   // Monitor audio input level
   useEffect(() => {
@@ -334,15 +310,18 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   }
 
   const handleComplete = () => {
-    // Clean up
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop())
-    }
+    // Clean up audio monitoring
     if (audioContextRef.current) {
       audioContextRef.current.close()
     }
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current)
+    }
+
+    // Video cleanup is handled by the useMediaDevice hook
+    if (!selectedVideoId) {
+      setPermissionError('Please select a camera device')
+      return
     }
 
     onComplete({
@@ -379,7 +358,10 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
               <Label className="text-slate-200">Camera Source</Label>
             </div>
 
-            <Select value={selectedVideoId} onValueChange={setSelectedVideoId}>
+            <Select
+              value={selectedVideoId || ''}
+              onValueChange={(deviceId) => void switchVideoDevice(deviceId)}
+            >
               <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200">
                 <SelectValue placeholder="Select camera" />
               </SelectTrigger>
