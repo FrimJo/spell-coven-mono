@@ -42,6 +42,8 @@ export interface MediaConfig {
 export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
 
+  console.log('[MediaSetupDialog] Rendering with open:', open)
+
   // Use our consolidated media device hook for video
   const {
     devices: videoDevices,
@@ -54,6 +56,8 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     videoRef,
     shouldStart: open, // Reactively start/stop when dialog opens/closes
   })
+
+  console.log('[MediaSetupDialog] Video devices:', videoDevices.length, videoDevices)
 
   // Use our consolidated media device hook for audio input
   const {

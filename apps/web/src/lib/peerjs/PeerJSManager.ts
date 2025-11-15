@@ -415,6 +415,12 @@ export class PeerJSManager {
         })
       }
     } catch (err) {
+      console.error('[PeerJSManager] initializeLocalMedia failed with error:', err)
+      console.error('[PeerJSManager] Error details:', {
+        name: err instanceof Error ? err.name : 'unknown',
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      })
       const peerError = createPeerJSError(err)
       logError(peerError, { context: 'initializeLocalMedia' })
       this.callbacks.onError?.(peerError)

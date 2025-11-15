@@ -132,11 +132,12 @@ export function useMediaDevice(
    * Refresh the list of available devices
    */
   const refreshDevices = useCallback(async () => {
+    console.log(`[useMediaDevice] refreshDevices called for kind: ${kind}`)
     try {
       setIsLoading(true)
-      const allDevices = await navigator.mediaDevices.enumerateDevices()
       
-      // Detect the default device by getting a temporary stream
+      // First, request permissions to get device labels
+      // Without permissions, enumerateDevices() returns devices with empty labels
       let defaultDeviceId: string | null = null
       try {
         const constraints: MediaStreamConstraints =
@@ -153,16 +154,40 @@ export function useMediaDevice(
         // Clean up the temporary stream immediately
         tempStream.getTracks().forEach((t) => t.stop())
       } catch (err) {
-        console.warn('[useMediaDevice] Could not detect default device:', err)
+        const error = err as Error
+        console.warn('[useMediaDevice] Could not get permissions for device enumeration:', err)
+        console.warn('[useMediaDevice] Error name:', error.name)
+        console.warn('[useMediaDevice] Error message:', error.message)
+        
+        if (error.name === 'NotFoundError') {
+          console.error('[useMediaDevice] NotFoundError: No camera device found. Possible causes:')
+          console.error('  1. Camera is in use by another application')
+          console.error('  2. Camera is disabled in System Settings')
+          console.error('  3. Browser does not have camera permission')
+        } else if (error.name === 'NotAllowedError') {
+          console.error('[useMediaDevice] NotAllowedError: User denied camera permission')
+        }
+        // If we can't get permissions, we'll still enumerate but labels will be empty
       }
       
-      const filteredDevices = allDevices
-        .filter((device) => device.kind === kind)
+      // Now enumerate devices (will have labels if permissions were granted)
+      const allDevices = await navigator.mediaDevices.enumerateDevices()
+      console.log(`[useMediaDevice] All devices from enumerateDevices() (${allDevices.length} total):`, allDevices)
+      
+      if (allDevices.length === 0) {
+        console.warn('[useMediaDevice] enumerateDevices returned 0 devices - this might indicate a browser restriction')
+      }
+      
+      const matchingKind = allDevices.filter((device) => device.kind === kind)
+      console.log(`[useMediaDevice] Devices matching kind '${kind}' (${matchingKind.length}):`, matchingKind)
+      
+      const filteredDevices = matchingKind
         // Filter out the "default" device ID to avoid duplication
-        .filter((device) => device.deviceId !== 'default')
-        .map((device) => {
+        .filter((device) => device.deviceId !== 'default' && device.deviceId !== '')
+        .map((device, index) => {
           const isDefault = device.deviceId === defaultDeviceId
-          const baseLabel = device.label || `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${device.deviceId.slice(0, 8)}`
+          // If no label, use a generic one with index (happens when permissions not granted)
+          const baseLabel = device.label || `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${index + 1}`
           return {
             deviceId: device.deviceId,
             label: isDefault ? `${baseLabel} (Default)` : baseLabel,
@@ -171,10 +196,15 @@ export function useMediaDevice(
           }
         })
       
+      console.log(`[useMediaDevice] Final filtered ${kind} devices (${filteredDevices.length}):`, filteredDevices)
       setDevices(filteredDevices)
     } catch (err) {
-      console.error('[useMediaDevice] Failed to enumerate devices:', err)
+      console.error(`[useMediaDevice] Failed to enumerate ${kind} devices:`, err)
+      console.error('[useMediaDevice] Error stack:', err instanceof Error ? err.stack : 'No stack trace')
+      // Set empty array on error
+      setDevices([])
     } finally {
+      console.log(`[useMediaDevice] refreshDevices completed for ${kind}, isLoading -> false`)
       setIsLoading(false)
     }
   }, [kind])
@@ -310,6 +340,7 @@ export function useMediaDevice(
 
   // Initial device enumeration
   useEffect(() => {
+    console.log(`[useMediaDevice] Initial device enumeration effect running for ${kind}`)
     void refreshDevices()
 
     // Listen for device changes
