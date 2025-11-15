@@ -22,8 +22,10 @@ export interface UseMediaDeviceOptions {
   initialDeviceId?: string
   /** Video element ref for video devices */
   videoRef?: React.RefObject<HTMLVideoElement | null>
-  /** Auto-start on mount */
+  /** Auto-start on mount (not reactive to changes) */
   autoStart?: boolean
+  /** Reactive trigger to start the device when true (overrides autoStart) */
+  shouldStart?: boolean
   /** Additional video constraints */
   videoConstraints?: MediaTrackConstraints
   /** Additional audio constraints */
@@ -96,6 +98,7 @@ export function useMediaDevice(
     initialDeviceId,
     videoRef,
     autoStart = false,
+    shouldStart,
     videoConstraints = {
       width: { ideal: 1920 },
       height: { ideal: 1080 },
@@ -195,13 +198,20 @@ export function useMediaDevice(
 
   /**
    * Start or switch to a specific device
+   * If no deviceId is provided, will use: currentDeviceId > default device > first device
    */
   const start = useCallback(
     async (deviceId?: string) => {
-      const targetDeviceId = deviceId || currentDeviceId
+      let targetDeviceId = deviceId || currentDeviceId
+      
+      // If still no device ID, try to find default or first device
+      if (!targetDeviceId && devices.length > 0) {
+        const defaultDevice = devices.find((device) => device.isDefault)
+        targetDeviceId = defaultDevice?.deviceId || devices[0]?.deviceId || null
+      }
 
       if (!targetDeviceId) {
-        const err = new Error('No device ID provided')
+        const err = new Error('No device ID provided and no devices available')
         setError(err)
         onErrorRef.current?.(err)
         throw err
@@ -285,7 +295,7 @@ export function useMediaDevice(
         }
       }
     },
-    [kind, currentDeviceId, videoRef, videoConstraints, audioConstraints],
+    [kind, currentDeviceId, devices, videoRef, videoConstraints, audioConstraints],
   )
 
   /**
@@ -315,7 +325,7 @@ export function useMediaDevice(
     }
   }, [refreshDevices])
 
-  // Auto-start if requested
+  // Auto-start if requested (runs once on mount)
   useEffect(() => {
     if (!autoStart) {
       return
@@ -327,13 +337,16 @@ export function useMediaDevice(
     }
 
     // Determine which device to start with
-    const deviceToStart = initialDeviceId || devices[0]?.deviceId
+    // Priority: initialDeviceId > default device > first device
+    const defaultDevice = devices.find((device) => device.isDefault)
+    const deviceToStart = initialDeviceId || defaultDevice?.deviceId || devices[0]?.deviceId
 
     if (!deviceToStart) {
       console.warn('[useMediaDevice] No devices available for auto-start')
       return
     }
 
+    console.log('[useMediaDevice] Auto-starting with device:', deviceToStart)
     void start(deviceToStart)
 
     // Cleanup on unmount
@@ -343,6 +356,26 @@ export function useMediaDevice(
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoStart, devices.length])
+
+  // Reactive start/stop based on shouldStart prop
+  useEffect(() => {
+    // Only react to shouldStart if it's explicitly provided
+    if (shouldStart === undefined) {
+      return
+    }
+
+    // If shouldStart is true and we're not active, start the device
+    if (shouldStart && !isActive && devices.length > 0) {
+      console.log('[useMediaDevice] shouldStart triggered, starting device')
+      void start()
+    }
+
+    // If shouldStart is false and we're active, stop the device
+    if (!shouldStart && isActive) {
+      console.log('[useMediaDevice] shouldStart false, stopping device')
+      stop()
+    }
+  }, [shouldStart, isActive, devices.length, start, stop])
 
   // Cleanup on unmount
   useEffect(() => {

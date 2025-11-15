@@ -52,7 +52,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   } = useMediaDevice({
     kind: 'videoinput',
     videoRef,
-    autoStart: false, // We'll control start manually when dialog opens
+    shouldStart: open, // Reactively start/stop when dialog opens/closes
   })
 
   // Use our consolidated media device hook for audio input
@@ -64,7 +64,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     error: audioInputError,
   } = useMediaDevice({
     kind: 'audioinput',
-    autoStart: false,
+    shouldStart: open, // Reactively start/stop when dialog opens/closes
   })
 
   // Use our audio output hook for speakers/headphones
@@ -81,66 +81,19 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   })
 
   const [audioLevel, setAudioLevel] = useState<number>(0)
-  const [permissionError, setPermissionError] = useState<string>('')
 
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const animationFrameRef = useRef<number | null>(null)
 
-  // Auto-start video preview when dialog opens and devices are available
-  useEffect(() => {
-    if (!open || videoDevices.length === 0 || selectedVideoId) return
-
-    // Prefer the default device, otherwise use the first available device
-    const defaultDevice = videoDevices.find((device) => device.isDefault)
-    const deviceToUse = defaultDevice || videoDevices[0]
-    
-    if (deviceToUse) {
-      console.log('[MediaSetupDialog] Auto-starting video with device:', deviceToUse.label)
-      void switchVideoDevice(deviceToUse.deviceId)
-    }
-  }, [open, videoDevices, selectedVideoId, switchVideoDevice])
-
-  // Auto-start audio input when dialog opens and devices are available
-  useEffect(() => {
-    if (!open || audioInputDevices.length === 0 || selectedAudioInputId) return
-
-    // Prefer the default device, otherwise use the first available device
-    const defaultDevice = audioInputDevices.find((device) => device.isDefault)
-    const deviceToUse = defaultDevice || audioInputDevices[0]
-    
-    if (deviceToUse) {
-      console.log('[MediaSetupDialog] Auto-starting audio input with device:', deviceToUse.label)
-      void switchAudioInputDevice(deviceToUse.deviceId)
-    }
-  }, [open, audioInputDevices, selectedAudioInputId, switchAudioInputDevice])
-
-  // Handle video device errors
-  useEffect(() => {
-    if (videoError) {
-      setPermissionError(
-        `Unable to access selected camera: ${videoError.message}`,
-      )
-    }
-  }, [videoError])
-
-  // Handle audio input device errors
-  useEffect(() => {
-    if (audioInputError) {
-      setPermissionError(
-        `Unable to access selected microphone: ${audioInputError.message}`,
-      )
-    }
-  }, [audioInputError])
-
-  // Handle audio output device errors
-  useEffect(() => {
-    if (audioOutputError) {
-      setPermissionError(
-        `Audio output error: ${audioOutputError.message}`,
-      )
-    }
-  }, [audioOutputError])
+  // Derive permission error from all error sources
+  const permissionError = videoError
+    ? `Unable to access selected camera: ${videoError.message}`
+    : audioInputError
+      ? `Unable to access selected microphone: ${audioInputError.message}`
+      : audioOutputError
+        ? `Audio output error: ${audioOutputError.message}`
+        : ''
 
   // Show warning if audio output device selection is not supported
   useEffect(() => {
@@ -212,21 +165,11 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
       cancelAnimationFrame(animationFrameRef.current)
     }
 
-    // Validate required devices are selected
-    if (!selectedVideoId) {
-      setPermissionError('Please select a camera device')
-      return
-    }
-
-    if (!selectedAudioInputId) {
-      setPermissionError('Please select a microphone device')
-      return
-    }
-
     // Device cleanup is handled by the useMediaDevice hooks
+    // Note: Button is already disabled if devices aren't selected or there are errors
     onComplete({
-      videoDeviceId: selectedVideoId,
-      audioInputDeviceId: selectedAudioInputId,
+      videoDeviceId: selectedVideoId!,
+      audioInputDeviceId: selectedAudioInputId!,
       audioOutputDeviceId: selectedAudioOutputId,
     })
   }
