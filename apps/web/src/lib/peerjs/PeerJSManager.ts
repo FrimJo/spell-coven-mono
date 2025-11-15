@@ -326,10 +326,11 @@ export class PeerJSManager {
     }
 
     try {
-      const constraints: MediaStreamConstraints = {
+      // Try with ideal 4K resolution first
+      let constraints: MediaStreamConstraints = {
         video: deviceId
           ? {
-              deviceId: { exact: deviceId },
+              deviceId: { ideal: deviceId }, // Use ideal instead of exact
               width: { ideal: 3840 },
               height: { ideal: 2160 },
             }
@@ -340,7 +341,38 @@ export class PeerJSManager {
         audio: true,
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints)
+      } catch (err) {
+        // If 4K fails, try with 1080p
+        console.warn('[PeerJSManager] 4K failed, falling back to 1080p:', err)
+        constraints = {
+          video: deviceId
+            ? {
+                deviceId: { ideal: deviceId },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+              }
+            : {
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+              },
+          audio: true,
+        }
+        
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints)
+        } catch (err2) {
+          // If 1080p fails, try with basic constraints
+          console.warn('[PeerJSManager] 1080p failed, using basic constraints:', err2)
+          constraints = {
+            video: deviceId ? { deviceId: { ideal: deviceId } } : true,
+            audio: true,
+          }
+          stream = await navigator.mediaDevices.getUserMedia(constraints)
+        }
+      }
       const videoTrack = stream.getVideoTracks()[0] || null
       const audioTrack = stream.getAudioTracks()[0] || null
 
@@ -446,6 +478,52 @@ export class PeerJSManager {
       // Monitor track changes - simple approach: just poll for track presence
       // Start polling for track state changes if not already started
       this.startTrackStatePolling()
+
+      // Listen for track events on the MediaStream itself
+      // This fires when tracks are added/removed dynamically (e.g., via replaceTrack)
+      remoteStream.onaddtrack = (event) => {
+        console.log('[PeerJSManager] ✅ Track added to stream from:', peerId, {
+          kind: event.track.kind,
+          readyState: event.track.readyState,
+          enabled: event.track.enabled,
+          totalTracks: remoteStream.getTracks().length,
+          videoTracks: remoteStream.getVideoTracks().length,
+        })
+        
+        // Update track state immediately
+        this.updateTrackState(peerId, remoteStream)
+        
+        // Create a new Map to trigger React re-render
+        const newMap = new Map(this.remoteStreams)
+        this.remoteStreams = newMap
+        this.callbacks.onRemoteStreamAdded?.(peerId, remoteStream)
+      }
+
+      remoteStream.onremovetrack = (event) => {
+        console.log('[PeerJSManager] ❌ Track removed from stream from:', peerId, {
+          kind: event.track.kind,
+          totalTracks: remoteStream.getTracks().length,
+          videoTracks: remoteStream.getVideoTracks().length,
+        })
+        
+        // Update track state immediately
+        this.updateTrackState(peerId, remoteStream)
+        
+        // Create a new Map to trigger React re-render
+        const newMap = new Map(this.remoteStreams)
+        this.remoteStreams = newMap
+        this.callbacks.onRemoteStreamAdded?.(peerId, remoteStream)
+      }
+
+      // Listen for track events on the peer connection to detect track replacements
+      if (call.peerConnection) {
+        call.peerConnection.ontrack = (event) => {
+          console.log('[PeerJSManager] Track event received from:', peerId, event.track.kind, 'readyState:', event.track.readyState)
+          
+          // The track is automatically added to the stream by WebRTC
+          // The onaddtrack event on the stream will handle the update
+        }
+      }
     })
 
     call.on('error', (err) => {
@@ -481,8 +559,13 @@ export class PeerJSManager {
     const videoTrack = stream.getVideoTracks()[0]
     const audioTrack = stream.getAudioTracks()[0]
 
+    // A track is considered enabled if:
+    // 1. It exists
+    // 2. It's in 'live' state
+    // 3. It's enabled (not disabled via track.enabled = false)
+    // 4. It's not muted (muted means no data is flowing, e.g., after replaceTrack(null))
     const newState: PeerTrackState = {
-      videoEnabled: !!videoTrack && videoTrack.readyState === 'live',
+      videoEnabled: !!videoTrack && videoTrack.readyState === 'live' && videoTrack.enabled && !videoTrack.muted,
       audioEnabled: audioTrack?.enabled ?? false,
     }
 
@@ -493,6 +576,18 @@ export class PeerJSManager {
       currentState.videoEnabled !== newState.videoEnabled ||
       currentState.audioEnabled !== newState.audioEnabled
     ) {
+      console.log('[PeerJSManager] 🔄 Track state changed for:', peerId, {
+        old: currentState,
+        new: newState,
+        videoTrack: videoTrack ? {
+          id: videoTrack.id,
+          kind: videoTrack.kind,
+          readyState: videoTrack.readyState,
+          enabled: videoTrack.enabled,
+          muted: videoTrack.muted,
+        } : null,
+        totalTracks: stream.getTracks().length,
+      })
       this.trackStates.set(peerId, newState)
       this.callbacks.onTrackStateChanged?.(peerId, newState)
     }
@@ -506,9 +601,19 @@ export class PeerJSManager {
       return // Already polling
     }
 
+    console.log('[PeerJSManager] 🔄 Starting track state polling')
+
     // Poll every 500ms to detect enabled/disabled state changes
     this.trackStatePollInterval = window.setInterval(() => {
+      console.log('[PeerJSManager] 📊 Polling', this.remoteStreams.size, 'remote streams')
       for (const [peerId, stream] of this.remoteStreams) {
+        const videoTrack = stream.getVideoTracks()[0]
+        console.log('[PeerJSManager] 📹 Checking peer:', peerId, {
+          hasVideoTrack: !!videoTrack,
+          readyState: videoTrack?.readyState,
+          enabled: videoTrack?.enabled,
+          muted: videoTrack?.muted,
+        })
         this.updateTrackState(peerId, stream)
       }
     }, 500)
@@ -623,16 +728,16 @@ export class PeerJSManager {
   /**
    * Toggle video track
    * When disabling, stops the track completely (camera turns off)
-   * When enabling, gets a new track from getUserMedia and adds it to all connections
+   * When enabling, gets a new track from getUserMedia and replaces it in all connections
    */
   async toggleVideo(enabled: boolean): Promise<void> {
     if (enabled) {
       // Re-enable: Get a new video track from the camera
       try {
         // Try to use the last device ID if available, otherwise use any video device
-        const videoConstraints = this.lastVideoDeviceId
+        let videoConstraints: MediaTrackConstraints = this.lastVideoDeviceId
           ? {
-              deviceId: { exact: this.lastVideoDeviceId },
+              deviceId: { ideal: this.lastVideoDeviceId }, // Use ideal instead of exact
               width: { ideal: 3840 },
               height: { ideal: 2160 },
             }
@@ -641,11 +746,41 @@ export class PeerJSManager {
               height: { ideal: 2160 },
             }
 
-        // Get a new video track from the camera
-        const videoStream = await navigator.mediaDevices.getUserMedia({
-          video: videoConstraints,
-          audio: false,
-        })
+        // Get a new video track from the camera with fallback
+        let videoStream: MediaStream
+        try {
+          videoStream = await navigator.mediaDevices.getUserMedia({
+            video: videoConstraints,
+            audio: false,
+          })
+        } catch (err) {
+          // If 4K fails, try with 1080p
+          console.warn('[PeerJSManager] 4K failed in toggleVideo, falling back to 1080p:', err)
+          videoConstraints = this.lastVideoDeviceId
+            ? {
+                deviceId: { ideal: this.lastVideoDeviceId },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+              }
+            : {
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+              }
+          
+          try {
+            videoStream = await navigator.mediaDevices.getUserMedia({
+              video: videoConstraints,
+              audio: false,
+            })
+          } catch (err2) {
+            // If 1080p fails, use basic constraints
+            console.warn('[PeerJSManager] 1080p failed in toggleVideo, using basic constraints:', err2)
+            videoStream = await navigator.mediaDevices.getUserMedia({
+              video: this.lastVideoDeviceId ? { deviceId: { ideal: this.lastVideoDeviceId } } : true,
+              audio: false,
+            })
+          }
+        }
 
         const newVideoTrack = videoStream.getVideoTracks()[0]
         if (!newVideoTrack) {
@@ -667,17 +802,29 @@ export class PeerJSManager {
           }
         })
 
-        // If we have an existing stream, replace the track
+        // If we have an existing stream, create a new MediaStream with the new track
+        // This ensures React detects the reference change and updates video elements
         if (this.localStream?.stream) {
           // Remove old track if it exists
           if (this.localStream.videoTrack) {
             this.localStream.videoTrack.stop()
-            this.localStream.stream.removeTrack(this.localStream.videoTrack)
           }
 
-          // Add new track to stream
-          this.localStream.stream.addTrack(newVideoTrack)
-          this.localStream.videoTrack = newVideoTrack
+          // Create a new MediaStream with audio (if exists) and new video track
+          const newStream = new MediaStream()
+          if (this.localStream.audioTrack) {
+            newStream.addTrack(this.localStream.audioTrack)
+          }
+          newStream.addTrack(newVideoTrack)
+
+          this.localStream = {
+            stream: newStream,
+            videoTrack: newVideoTrack,
+            audioTrack: this.localStream.audioTrack,
+          }
+          
+          // Notify about stream change so UI updates
+          this.callbacks.onLocalStreamChanged?.(newStream)
         } else {
           // No existing stream, create new one
           const audioTrack = this.localStream?.audioTrack || null
@@ -753,9 +900,18 @@ export class PeerJSManager {
       // Stop the track (this turns off the camera)
       this.localStream.videoTrack.stop()
 
-      // Remove track from local stream
+      // Create a new MediaStream without the video track
+      // This ensures React detects the reference change and updates video elements
       if (this.localStream.stream) {
-        this.localStream.stream.removeTrack(this.localStream.videoTrack)
+        const newStream = new MediaStream()
+        if (this.localStream.audioTrack) {
+          newStream.addTrack(this.localStream.audioTrack)
+        }
+        
+        this.localStream.stream = newStream
+        
+        // Notify about stream change so UI updates
+        this.callbacks.onLocalStreamChanged?.(newStream)
       }
 
       // Remove track from all active calls using replaceTrack(null)
