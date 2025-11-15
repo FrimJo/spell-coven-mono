@@ -11,10 +11,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-export interface MediaDeviceInfo {
-  deviceId: string
-  label: string
-  kind: MediaDeviceKind
+export interface MediaDeviceInfo extends Pick<globalThis.MediaDeviceInfo, 'deviceId' | 'label' | 'kind'> {
+  isDefault?: boolean
 }
 
 export interface UseMediaDeviceOptions {
@@ -134,13 +132,42 @@ export function useMediaDevice(
     try {
       setIsLoading(true)
       const allDevices = await navigator.mediaDevices.enumerateDevices()
+      
+      // Detect the default device by getting a temporary stream
+      let defaultDeviceId: string | null = null
+      try {
+        const constraints: MediaStreamConstraints =
+          kind === 'videoinput'
+            ? { video: true, audio: false }
+            : { video: false, audio: true }
+        
+        const tempStream = await navigator.mediaDevices.getUserMedia(constraints)
+        const track = tempStream.getTracks()[0]
+        if (track) {
+          defaultDeviceId = track.getSettings().deviceId || null
+          console.log(`[useMediaDevice] Detected default ${kind}:`, defaultDeviceId)
+        }
+        // Clean up the temporary stream immediately
+        tempStream.getTracks().forEach((t) => t.stop())
+      } catch (err) {
+        console.warn('[useMediaDevice] Could not detect default device:', err)
+      }
+      
       const filteredDevices = allDevices
         .filter((device) => device.kind === kind)
-        .map((device) => ({
-          deviceId: device.deviceId,
-          label: device.label || `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${device.deviceId.slice(0, 8)}`,
-          kind: device.kind,
-        }))
+        // Filter out the "default" device ID to avoid duplication
+        .filter((device) => device.deviceId !== 'default')
+        .map((device) => {
+          const isDefault = device.deviceId === defaultDeviceId
+          const baseLabel = device.label || `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${device.deviceId.slice(0, 8)}`
+          return {
+            deviceId: device.deviceId,
+            label: isDefault ? `${baseLabel} (Default)` : baseLabel,
+            kind: device.kind,
+            isDefault,
+          }
+        })
+      
       setDevices(filteredDevices)
     } catch (err) {
       console.error('[useMediaDevice] Failed to enumerate devices:', err)

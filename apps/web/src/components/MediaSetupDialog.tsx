@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertCircle, Camera, Check, Mic, Volume2 } from 'lucide-react'
+import { AlertCircle, Camera, Check, Loader2, Mic, Volume2 } from 'lucide-react'
 
 import { Alert, AlertDescription } from '@repo/ui/components/alert'
 import { Button } from '@repo/ui/components/button'
@@ -48,6 +48,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     currentDeviceId: selectedVideoId,
     switchDevice: switchVideoDevice,
     error: videoError,
+    isActive: isVideoActive,
   } = useMediaDevice({
     kind: 'videoinput',
     videoRef,
@@ -90,10 +91,13 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   useEffect(() => {
     if (!open || videoDevices.length === 0 || selectedVideoId) return
 
-    // Start with first available device
-    const firstDevice = videoDevices[0]
-    if (firstDevice) {
-      void switchVideoDevice(firstDevice.deviceId)
+    // Prefer the default device, otherwise use the first available device
+    const defaultDevice = videoDevices.find((device) => device.isDefault)
+    const deviceToUse = defaultDevice || videoDevices[0]
+    
+    if (deviceToUse) {
+      console.log('[MediaSetupDialog] Auto-starting video with device:', deviceToUse.label)
+      void switchVideoDevice(deviceToUse.deviceId)
     }
   }, [open, videoDevices, selectedVideoId, switchVideoDevice])
 
@@ -101,10 +105,13 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   useEffect(() => {
     if (!open || audioInputDevices.length === 0 || selectedAudioInputId) return
 
-    // Start with first available device
-    const firstDevice = audioInputDevices[0]
-    if (firstDevice) {
-      void switchAudioInputDevice(firstDevice.deviceId)
+    // Prefer the default device, otherwise use the first available device
+    const defaultDevice = audioInputDevices.find((device) => device.isDefault)
+    const deviceToUse = defaultDevice || audioInputDevices[0]
+    
+    if (deviceToUse) {
+      console.log('[MediaSetupDialog] Auto-starting audio input with device:', deviceToUse.label)
+      void switchAudioInputDevice(deviceToUse.deviceId)
     }
   }, [open, audioInputDevices, selectedAudioInputId, switchAudioInputDevice])
 
@@ -285,6 +292,17 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
                   <div className="text-center">
                     <Camera className="mx-auto mb-2 h-12 w-12 opacity-50" />
                     <p>No camera selected</p>
+                  </div>
+                </div>
+              )}
+              {selectedVideoId && !isVideoActive && (
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-950/90 text-slate-400">
+                  <div className="text-center">
+                    <Loader2 className="mx-auto mb-2 h-12 w-12 animate-spin" />
+                    <p className="text-sm">Loading camera...</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Please allow camera permissions if prompted
+                    </p>
                   </div>
                 </div>
               )}
