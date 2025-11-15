@@ -13,9 +13,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-export interface AudioOutputDevice {
-  deviceId: string
-  label: string
+export interface AudioOutputDevice extends Pick<globalThis.MediaDeviceInfo, 'deviceId' | 'label'> {
+  // Audio output devices don't need isDefault since we always include a "System Default" option
 }
 
 export interface UseAudioOutputOptions {
