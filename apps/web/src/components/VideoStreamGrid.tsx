@@ -198,31 +198,70 @@ export function VideoStreamGrid({
     new Set(),
   )
 
+  // Track last known stream/track state to detect actual changes
+  const lastStreamsRef = useRef<Map<string, MediaStream | null>>(new Map())
+  const lastTrackStatesRef = useRef<Map<string, PeerTrackState>>(new Map())
+  const pendingMountsRef = useRef<Set<string>>(new Set())
+  const mountCheckTriggerRef = useRef(0)
+  const [mountCheckTrigger, setMountCheckTrigger] = useState(0)
+
   // Update remote video elements when streams change or tracks change
   useEffect(() => {
-    console.log('[VideoStreamGrid] Remote streams effect triggered:', {
-      remoteStreamCount: remoteStreams.size,
-      remoteStreamKeys: Array.from(remoteStreams.keys()),
-      peerTrackStatesCount: peerTrackStates.size,
-    })
+    // Check if anything actually changed
+    const streamsChanged =
+      remoteStreams.size !== lastStreamsRef.current.size ||
+      Array.from(remoteStreams.keys()).some(
+        (id) => remoteStreams.get(id) !== lastStreamsRef.current.get(id),
+      ) ||
+      Array.from(lastStreamsRef.current.keys()).some(
+        (id) => !remoteStreams.has(id),
+      )
+
+    const trackStatesChanged =
+      peerTrackStates.size !== lastTrackStatesRef.current.size ||
+      Array.from(peerTrackStates.keys()).some((id) => {
+        const current = peerTrackStates.get(id)
+        const last = lastTrackStatesRef.current.get(id)
+        return (
+          !last ||
+          current?.videoEnabled !== last.videoEnabled ||
+          current?.audioEnabled !== last.audioEnabled
+        )
+      })
+
+    const hasPendingMounts = pendingMountsRef.current.size > 0
+
+    // Only run if something actually changed or there are pending mounts
+    if (!streamsChanged && !trackStatesChanged && !hasPendingMounts) {
+      return
+    }
+
+    // Only log when something actually changed (not on every run)
+    if (streamsChanged || trackStatesChanged || hasPendingMounts) {
+      console.log('[VideoStreamGrid] Remote streams effect triggered:', {
+        streamsChanged,
+        trackStatesChanged,
+        hasPendingMounts,
+        pendingMounts: Array.from(pendingMountsRef.current),
+      })
+    }
+
+    // Update refs
+    lastStreamsRef.current = new Map(remoteStreams)
+    lastTrackStatesRef.current = new Map(peerTrackStates)
+    pendingMountsRef.current.clear()
 
     for (const [playerId, stream] of remoteStreams) {
       const videoElement = remoteVideoRefs.current.get(playerId)
       const currentAttachedStream = attachedStreamsRef.current.get(playerId)
       const trackState = peerTrackStates.get(playerId)
 
-      console.log(
-        `[VideoStreamGrid] Processing remote stream for ${playerId}:`,
-        {
-          hasStream: !!stream,
-          hasVideoElement: !!videoElement,
-          trackState,
-          videoTracks: stream?.getVideoTracks().length ?? 0,
-        },
-      )
+      if (!videoElement) {
+        continue
+      }
 
       if (!stream) {
-        if (videoElement && currentAttachedStream) {
+        if (currentAttachedStream) {
           console.log(
             `[VideoStreamGrid] Clearing video element for ${playerId}`,
           )
@@ -238,61 +277,82 @@ export function VideoStreamGrid({
       }
 
       // Check if video is actually enabled (track is live, not just present)
+      // Use trackState first, then check actual track readyState as fallback
       const hasLiveVideoTrack =
-        trackState?.videoEnabled ?? stream.getVideoTracks().length > 0
+        trackState?.videoEnabled ??
+        stream.getVideoTracks().some((t) => t.readyState === 'live')
 
-      // Update video element if stream changed OR if track state changed
-      if (videoElement) {
-        const hadLiveVideoTrack = currentAttachedStream
-          ? currentAttachedStream
-              .getVideoTracks()
-              .some((t) => t.readyState === 'live')
-          : false
+      // Check if the video element already has the correct srcObject
+      const currentSrcObject = videoElement.srcObject as MediaStream | null
 
+      // Determine if we need to update the video element
+      const shouldHaveStream = hasLiveVideoTrack
+      
+      // Check if srcObject matches what it should be
+      // If video should be playing, srcObject must be the stream
+      // If video should NOT be playing, srcObject must be null
+      const hasCorrectSrcObject = shouldHaveStream
+        ? currentSrcObject === stream
+        : currentSrcObject === null
+
+      // Also check if attachedStreamsRef is out of sync
+      const attachedStreamMatches = currentAttachedStream === stream
+
+      // Only log and update if something actually needs to change
+      if (!hasCorrectSrcObject || !attachedStreamMatches) {
         console.log(
-          `[VideoStreamGrid] Video element update check for ${playerId}:`,
+          `[VideoStreamGrid] Video element update needed for ${playerId}:`,
           {
             hasLiveVideoTrack,
-            hadLiveVideoTrack,
-            streamChanged: stream !== currentAttachedStream,
-            trackStateChanged: hasLiveVideoTrack !== hadLiveVideoTrack,
+            shouldHaveStream,
+            currentSrcObjectIsNull: currentSrcObject === null,
+            currentSrcObjectMatches: currentSrcObject === stream,
+            hasCorrectSrcObject,
+            attachedStreamMatches,
           },
         )
-
-        if (
-          stream !== currentAttachedStream ||
-          hasLiveVideoTrack !== hadLiveVideoTrack
-        ) {
-          if (hasLiveVideoTrack) {
-            console.log(
-              `[VideoStreamGrid] Attaching stream to video element for ${playerId}`,
-            )
-            videoElement.srcObject = stream
-            attachedStreamsRef.current.set(playerId, stream)
-            setPlayingRemoteVideos((prev) => {
-              const next = new Set(prev)
-              next.delete(playerId)
-              return next
-            })
-          } else {
-            console.log(
-              `[VideoStreamGrid] Clearing video element (no live track) for ${playerId}`,
-            )
-            // No live video track - clear video element
+        if (shouldHaveStream) {
+          console.log(
+            `[VideoStreamGrid] Attaching stream to video element for ${playerId}`,
+          )
+          
+          // Clear first to ensure clean state
+          if (currentSrcObject && currentSrcObject !== stream) {
             videoElement.srcObject = null
-            attachedStreamsRef.current.set(playerId, stream) // Keep stream ref for audio
-            setPlayingRemoteVideos((prev) => {
-              const next = new Set(prev)
-              next.delete(playerId)
-              return next
-            })
           }
+          
+          // Set the stream
+          videoElement.srcObject = stream
+          attachedStreamsRef.current.set(playerId, stream)
+
+          // Force reload and play
+          videoElement.load()
+          videoElement.play().catch((error) => {
+            if (error.name !== 'AbortError') {
+              console.error(
+                `[VideoStreamGrid] Failed to play video for ${playerId}:`,
+                error,
+              )
+            }
+          })
+
+          setPlayingRemoteVideos((prev) => new Set(prev).add(playerId))
+        } else {
+          console.log(
+            `[VideoStreamGrid] Clearing video element (no live track) for ${playerId}`,
+          )
+          videoElement.srcObject = null
+          attachedStreamsRef.current.set(playerId, stream) // Keep stream ref for audio
+
+          setPlayingRemoteVideos((prev) => {
+            const next = new Set(prev)
+            next.delete(playerId)
+            return next
+          })
         }
-      } else {
-        console.log(`[VideoStreamGrid] No video element found for ${playerId}`)
       }
     }
-  }, [remoteStreams, peerTrackStates])
+  }, [remoteStreams, peerTrackStates, mountCheckTrigger])
 
   return (
     <div className={`grid ${getGridClass()} h-full gap-4`}>
@@ -399,9 +459,30 @@ export function VideoStreamGrid({
                       ref={(element) => {
                         if (element) {
                           remoteVideoRefs.current.set(player.id, element)
+                          
+                          // Check if stream needs to be attached
+                          const trackState = peerTrackStates.get(player.id)
+                          const hasLiveVideoTrack =
+                            trackState?.videoEnabled ??
+                            remoteStream.getVideoTracks().some((t) => t.readyState === 'live')
+                          const currentSrcObject = element.srcObject as MediaStream | null
+                          const currentAttached = attachedStreamsRef.current.get(player.id)
+                          const needsAttachment = hasLiveVideoTrack && 
+                            (currentSrcObject !== remoteStream || currentAttached !== remoteStream)
+                          
+                          // Only trigger mount check if stream needs to be attached
+                          if (needsAttachment) {
+                            pendingMountsRef.current.add(player.id)
+                            // Defer state update to avoid infinite loop
+                            requestAnimationFrame(() => {
+                              mountCheckTriggerRef.current += 1
+                              setMountCheckTrigger(mountCheckTriggerRef.current)
+                            })
+                          }
                         } else {
                           remoteVideoRefs.current.delete(player.id)
                           attachedStreamsRef.current.delete(player.id)
+                          pendingMountsRef.current.delete(player.id)
                         }
                       }}
                       autoPlay
