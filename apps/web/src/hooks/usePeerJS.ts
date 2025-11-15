@@ -182,8 +182,9 @@ export function usePeerJS({
   }, [])
 
   // Toggle video
-  const toggleVideo = useCallback((enabled: boolean) => {
-    managerRef.current?.toggleVideo(enabled)
+  const toggleVideo = useCallback(async (enabled: boolean) => {
+    if (!managerRef.current) return
+    await managerRef.current.toggleVideo(enabled)
   }, [])
 
   // Toggle audio

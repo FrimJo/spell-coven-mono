@@ -18,7 +18,7 @@ interface GameRoomVideoGridProps {
   remoteStreams: Map<string, MediaStream>
   connectionStates: Map<string, ConnectionState>
   peerTrackStates: Map<string, PeerTrackState>
-  onToggleVideo: (enabled: boolean) => void
+  onToggleVideo: (enabled: boolean) => Promise<void>
   onToggleAudio: (enabled: boolean) => void
   onSwitchCamera: (deviceId: string) => Promise<void>
 }
