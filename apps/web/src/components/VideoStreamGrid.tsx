@@ -1,11 +1,13 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { ConnectionState, PeerTrackState } from '@/types/peerjs'
-import { useRef, useState } from 'react'
-import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
-import { useWebcam } from '@/hooks/useWebcam'
+import { Suspense, useMemo, useRef, useState } from 'react'
+import { useCardDetector } from '@/hooks/useCardDetector'
+import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
+import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
 import {
   Camera,
+  Loader2,
   Mic,
   MicOff,
   SwitchCamera,
@@ -19,20 +21,14 @@ import {
 
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@repo/ui/components/popover'
-
-interface Player {
-  id: string
-  name: string
-}
+import { Popover, PopoverContent } from '@repo/ui/components/popover'
 
 interface VideoStreamGridProps {
-  players: Player[]
+  // Room and user identification (for fetching participants)
+  roomId: string
+  userId: string
   localPlayerName: string
+  // Card detection
   /** Enable card detection with green borders and click-to-crop */
   enableCardDetection?: boolean
   /** Detector type to use (opencv, detr, owl-vit) */
@@ -41,20 +37,23 @@ interface VideoStreamGridProps {
   usePerspectiveWarp?: boolean
   /** Callback when a card is cropped */
   onCardCrop?: (canvas: HTMLCanvasElement) => void
+  // WebRTC streams and states
   /** Remote streams from WebRTC (player ID -> MediaStream) */
   remoteStreams?: Map<string, MediaStream | null>
   /** Connection states from WebRTC (player ID -> ConnectionState) */
   connectionStates?: Map<string, ConnectionState>
   /** Peer track states from PeerJS (player ID -> track state) */
   peerTrackStates?: Map<string, PeerTrackState>
-  /** Callback when local video starts (for WebRTC integration) */
-  onLocalVideoStart?: () => Promise<void>
-  /** Callback when local video stops (for WebRTC integration) */
-  onLocalVideoStop?: () => void
+  // Local media
   /** Local stream for video/audio */
   localStream?: MediaStream | null
   /** Local track state (video/audio enabled) */
   localTrackState?: PeerTrackState
+  // Callbacks
+  /** Callback when local video starts (for WebRTC integration) */
+  onLocalVideoStart?: () => Promise<void>
+  /** Callback when local video stops (for WebRTC integration) */
+  onLocalVideoStop?: () => void
   /** Callback to toggle video track enabled/disabled (for WebRTC integration) */
   onToggleVideo?: (enabled: boolean) => Promise<void>
   /** Callback to toggle audio track enabled/disabled (for WebRTC integration) */
@@ -67,7 +66,8 @@ interface StreamState {
 }
 
 export function VideoStreamGrid({
-  players,
+  roomId,
+  userId,
   localPlayerName,
   enableCardDetection = true, // Always enabled by default
   detectorType,
@@ -78,13 +78,31 @@ export function VideoStreamGrid({
   peerTrackStates = new Map(),
   onLocalVideoStart: _onLocalVideoStart,
   onLocalVideoStop: _onLocalVideoStop,
-  localStream,
+  localStream: _localStream,
   localTrackState,
   onToggleVideo,
   onToggleAudio: _onToggleAudio,
 }: VideoStreamGridProps) {
+  // Fetch remote players (exclude local player)
+  const { participants: gameRoomParticipants } = useGameRoomParticipants({
+    roomId,
+    userId,
+    username: localPlayerName,
+    enabled: true,
+  })
+
+  // Build remote player list
+  const players = useMemo(() => {
+    return gameRoomParticipants
+      .filter((participant) => participant.username !== localPlayerName)
+      .map((participant) => ({
+        id: participant.id,
+        name: participant.username,
+      }))
+  }, [gameRoomParticipants, localPlayerName])
+
   // State declarations first (needed before useWebcam hook)
-  const [currentCameraIndex, setCurrentCameraIndex] = useState(0)
+  const [_currentCameraIndex, setCurrentCameraIndex] = useState(0)
   const [cameraPopoverOpen, setCameraPopoverOpen] = useState(false)
   const [isAudioMuted, setIsAudioMuted] = useState(false)
 
@@ -94,15 +112,20 @@ export function VideoStreamGrid({
 
   // Get available cameras and camera switching via useMediaDevice hook
   // Pass videoRef so the stream is attached to the video element
-  const { devices: availableCameras, selectedDeviceId: currentCameraId, start: switchCamera } = useMediaDevice({
+  const {
+    devices: availableCameras,
+    selectedDeviceId: currentCameraId,
+    start: switchCamera,
+  } = useMediaDevice({
     kind: 'videoinput',
     videoRef: mediaDeviceVideoRef,
     autoStart: false,
   })
 
-  // Initialize webcam with card detection
+  // Initialize card detector
   // Uses currentCameraId from useMediaDevice to trigger re-initialization on camera switch
-  const { videoRef, overlayRef, croppedRef, fullResRef } = useWebcam({
+  const { overlayRef, croppedRef, fullResRef } = useCardDetector({
+    videoRef: mediaDeviceVideoRef,
     enableCardDetection,
     detectorType,
     usePerspectiveWarp,
@@ -139,8 +162,8 @@ export function VideoStreamGrid({
   }
 
   const toggleLocalAudio = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream
+    if (mediaDeviceVideoRef.current && mediaDeviceVideoRef.current.srcObject) {
+      const stream = mediaDeviceVideoRef.current.srcObject as MediaStream
       const audioTracks = stream.getAudioTracks()
       audioTracks.forEach((track) => {
         track.enabled = !track.enabled
@@ -174,7 +197,7 @@ export function VideoStreamGrid({
   const attachedStreamsRef = useRef<Map<string, MediaStream | null>>(new Map())
 
   // Track which remote videos are actually playing
-  const [playingRemoteVideos, setPlayingRemoteVideos] = useState<Set<string>>(
+  const [_playingRemoteVideos, setPlayingRemoteVideos] = useState<Set<string>>(
     new Set(),
   )
 
@@ -199,29 +222,179 @@ export function VideoStreamGrid({
 
   return (
     <div className={`grid ${getGridClass()} h-full gap-4`}>
+      {/* Render local player first */}
+      {localPlayerName && (
+        <Card className="flex flex-col overflow-hidden border-slate-800 bg-slate-900">
+          <div className="relative flex-1 bg-black">
+            {(localTrackState?.videoEnabled ?? true) ? (
+              <>
+                <video
+                  ref={mediaDeviceVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    zIndex: 0,
+                  }}
+                />
+                {/* Overlay canvas for card detection */}
+                {enableCardDetection && overlayRef && (
+                  <canvas
+                    ref={overlayRef}
+                    width={1280}
+                    height={720}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      cursor: 'pointer',
+                      zIndex: 1,
+                    }}
+                  />
+                )}
+                {/* Hidden canvases for card detection processing */}
+                {enableCardDetection && croppedRef && (
+                  <canvas
+                    ref={croppedRef}
+                    width={446}
+                    height={620}
+                    style={{ display: 'none' }}
+                  />
+                )}
+                {enableCardDetection && fullResRef && (
+                  <canvas
+                    ref={fullResRef}
+                    width={1280}
+                    height={720}
+                    style={{ display: 'none' }}
+                  />
+                )}
+              </>
+            ) : (
+              <div className="flex h-full items-center justify-center bg-slate-800">
+                <VideoOff className="h-12 w-12 text-slate-600" />
+              </div>
+            )}
+
+            {/* Media Controls Overlay - Always visible for local player */}
+            <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/95 px-3 py-2 shadow-lg backdrop-blur-sm">
+              <Button
+                data-testid="video-toggle-button"
+                size="sm"
+                variant={
+                  (localTrackState?.videoEnabled ?? true)
+                    ? 'outline'
+                    : 'destructive'
+                }
+                onClick={async () => {
+                  if (onToggleVideo) {
+                    const newState = !(localTrackState?.videoEnabled ?? true)
+                    await onToggleVideo(newState)
+                  }
+                }}
+                className={`h-10 w-10 p-0 ${
+                  (localTrackState?.videoEnabled ?? true)
+                    ? 'border-slate-700 text-white hover:bg-slate-800'
+                    : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
+                }`}
+              >
+                {(localTrackState?.videoEnabled ?? true) ? (
+                  <Video className="h-5 w-5" />
+                ) : (
+                  <VideoOff className="h-5 w-5" />
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant={!isAudioMuted ? 'outline' : 'destructive'}
+                onClick={toggleLocalAudio}
+                className={`h-10 w-10 p-0 ${
+                  !isAudioMuted
+                    ? 'border-slate-700 bg-slate-950/90 text-white hover:bg-slate-800'
+                    : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
+                }`}
+              >
+                {!isAudioMuted ? (
+                  <Mic className="h-5 w-5" />
+                ) : (
+                  <MicOff className="h-5 w-5" />
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-10 w-10 border-slate-700 p-0 text-white hover:bg-slate-800"
+                onClick={() => setCameraPopoverOpen(!cameraPopoverOpen)}
+              >
+                <SwitchCamera className="h-5 w-5" />
+              </Button>
+              {/* Camera selector popover */}
+              <Popover
+                open={cameraPopoverOpen}
+                onOpenChange={setCameraPopoverOpen}
+              >
+                <PopoverContent
+                  className="w-80 border-slate-800 bg-slate-950/95 p-0 backdrop-blur-sm"
+                  align="end"
+                  sideOffset={8}
+                >
+                  <div className="border-b border-slate-800 px-4 py-3">
+                    <h3 className="text-sm font-semibold text-white">
+                      Select Camera
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      {availableCameras.length} camera
+                      {availableCameras.length !== 1 ? 's' : ''} available
+                    </p>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto p-2">
+                    {availableCameras.map((camera) => (
+                      <div
+                        key={camera.deviceId}
+                        onClick={() => void handleSelectCamera(camera.deviceId)}
+                        className={`flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-slate-800/50 ${
+                          currentCameraId === camera.deviceId
+                            ? 'bg-purple-500/20 text-white'
+                            : 'text-slate-300'
+                        }`}
+                      >
+                        <Camera className="h-4 w-4" />
+                        <span className="text-sm">
+                          {camera.label ||
+                            `Camera ${availableCameras.indexOf(camera) + 1}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          <div className="border-t border-slate-800 bg-slate-950 px-4 py-3">
+            <p className="text-sm font-medium text-white">{localPlayerName}</p>
+          </div>
+        </Card>
+      )}
+
+      {/* Render remote players */}
       {players.map((player) => {
-        const isLocal = player.name === localPlayerName
         const state = streamStates[player.id] || { video: true, audio: true }
         const remoteStream = remoteStreams.get(player.id)
         const connectionState = connectionStates.get(player.id)
         const peerTrackState = peerTrackStates.get(player.id)
 
-        // For local: check if started and enabled
-        // For remote: use peerTrackState which checks if track is 'live', not just present
-        const localVideoEnabled = localTrackState?.videoEnabled ?? true
-        const hasVideoTrack = remoteStream
-          ? remoteStream.getVideoTracks().length > 0
-          : false
-        const videoEnabled = isLocal
-          ? localVideoEnabled
-          : (peerTrackState?.videoEnabled ?? hasVideoTrack)
-        const audioEnabled = isLocal
-          ? (localTrackState?.audioEnabled ?? true)
-          : (peerTrackState?.audioEnabled ?? state.audio)
-
-        // Check if remote video is actually playing (for hiding placeholder)
-        const _isRemoteVideoPlaying =
-          !isLocal && remoteStream && playingRemoteVideos.has(player.id)
+        // Remote players: use peerTrackState which checks if track is 'live'
+        const videoEnabled = peerTrackState?.videoEnabled ?? false
+        const audioEnabled = peerTrackState?.audioEnabled ?? state.audio
 
         return (
           <Card
@@ -232,76 +405,8 @@ export function VideoStreamGrid({
               {/* Render video elements when enabled, placeholder when disabled */}
               {videoEnabled ? (
                 <>
-                  {/* Local player video */}
-                  {isLocal && (
-                    <>
-                      <video
-                        ref={(el) => {
-                          if (
-                            el &&
-                            localStream &&
-                            el.srcObject !== localStream
-                          ) {
-                            el.srcObject = localStream
-                          }
-                          // Also keep videoRef for card detection
-                          if (videoRef.current !== el) {
-                            videoRef.current = el
-                          }
-                        }}
-                        autoPlay
-                        muted
-                        playsInline
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'contain',
-                          zIndex: 0,
-                        }}
-                      />
-                      {/* Overlay canvas for card detection - renders green borders */}
-                      {enableCardDetection && overlayRef && localStream && (
-                        <canvas
-                          ref={overlayRef}
-                          width={1280}
-                          height={720}
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'contain',
-                            cursor: 'pointer',
-                            zIndex: 1,
-                          }}
-                        />
-                      )}
-                      {/* Hidden canvases for card detection processing */}
-                      {enableCardDetection && croppedRef && (
-                        <canvas
-                          ref={croppedRef}
-                          width={446}
-                          height={620}
-                          style={{ display: 'none' }}
-                        />
-                      )}
-                      {enableCardDetection && fullResRef && (
-                        <canvas
-                          ref={fullResRef}
-                          width={640}
-                          height={480}
-                          style={{ display: 'none' }}
-                        />
-                      )}
-                    </>
-                  )}
-
                   {/* Remote player video element */}
-                  {!isLocal && remoteStream && (
+                  {remoteStream && (
                     <video
                       ref={(element) => {
                         if (element) {
@@ -425,23 +530,18 @@ export function VideoStreamGrid({
               <div className="absolute left-3 top-3 z-10 rounded-lg border border-slate-800 bg-slate-950/90 px-3 py-2 backdrop-blur-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-white">{player.name}</span>
-                  {isLocal && (
-                    <span className="rounded bg-purple-500/30 px-1.5 py-0.5 text-xs text-purple-300">
-                      You
-                    </span>
-                  )}
                 </div>
               </div>
 
               {/* Audio/Video Status Indicators */}
               <div className="absolute right-3 top-3 z-10 flex gap-2">
-                {((isLocal && isAudioMuted) || (!isLocal && !audioEnabled)) && (
+                {!audioEnabled && (
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/20 backdrop-blur-sm">
                     <MicOff className="h-4 w-4 text-red-400" />
                   </div>
                 )}
                 {/* Connection status indicator for remote players */}
-                {!isLocal && connectionState && (
+                {connectionState && (
                   <div
                     className={`flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur-sm ${
                       connectionState === 'connected'
@@ -466,168 +566,58 @@ export function VideoStreamGrid({
                 )}
               </div>
 
-              {/* Media Controls Overlay - Always visible for local player */}
-              {isLocal && (
-                <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/95 px-3 py-2 shadow-lg backdrop-blur-sm">
-                  <Button
-                    data-testid="video-toggle-button"
-                    size="sm"
-                    variant={localVideoEnabled ? 'outline' : 'destructive'}
-                    onClick={async () => {
-                      console.log('[VideoStreamGrid] Video button clicked', {
-                        localVideoEnabled,
-                        hasOnToggleVideo: !!onToggleVideo,
-                      })
-                      if (onToggleVideo) {
-                        const newState = !localVideoEnabled
-                        await onToggleVideo(newState)
-                      } else {
-                        console.warn(
-                          '[VideoStreamGrid] onToggleVideo not provided!',
-                        )
-                      }
-                    }}
-                    className={`h-10 w-10 p-0 ${
-                      localVideoEnabled
-                        ? 'border-slate-700 text-white hover:bg-slate-800'
-                        : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
-                    }`}
-                  >
-                    {localVideoEnabled ? (
-                      <Video className="h-5 w-5" />
-                    ) : (
-                      <VideoOff className="h-5 w-5" />
-                    )}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={!isAudioMuted ? 'outline' : 'destructive'}
-                    onClick={toggleLocalAudio}
-                    className={`h-10 w-10 p-0 ${
-                      !isAudioMuted
-                        ? 'border-slate-700 text-white hover:bg-slate-800'
-                        : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
-                    }`}
-                    disabled={!localStream}
-                  >
-                    {!isAudioMuted ? (
-                      <Mic className="h-5 w-5" />
-                    ) : (
-                      <MicOff className="h-5 w-5" />
-                    )}
-                  </Button>
-                  <div className="mx-1 h-6 w-px bg-slate-700" />
-                  {/* Camera selection popover */}
-                  <Popover
-                    open={cameraPopoverOpen}
-                    onOpenChange={setCameraPopoverOpen}
-                  >
-                    <PopoverTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-10 w-10 border-white bg-white p-0 text-black hover:bg-gray-100"
-                        disabled={availableCameras.length <= 1}
-                        title={
-                          availableCameras.length > 1
-                            ? `Switch camera (${availableCameras.length} available)`
-                            : 'No other cameras available'
-                        }
-                      >
-                        <SwitchCamera className="h-5 w-5" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-80 border-slate-800 bg-slate-950/95 p-0 backdrop-blur-sm"
-                      align="end"
-                      sideOffset={8}
-                    >
-                      <div className="border-b border-slate-800 px-4 py-3">
-                        <h3 className="text-sm font-semibold text-white">
-                          Select Camera
-                        </h3>
-                        <p className="text-xs text-slate-400">
-                          {availableCameras.length} camera
-                          {availableCameras.length !== 1 ? 's' : ''} available
-                        </p>
-                      </div>
-                      <div className="max-h-64 overflow-y-auto p-2">
-                        {availableCameras.map((camera, index) => {
-                          const isActive =
-                            currentCameraId === camera.deviceId ||
-                            (!currentCameraId && index === currentCameraIndex)
-                          return (
-                            <div
-                              key={camera.deviceId}
-                              onClick={() => void handleSelectCamera(camera.deviceId)}
-                              className={
-                                'flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-slate-800/50 ' +
-                                (isActive
-                                  ? 'bg-purple-500/20 text-white'
-                                  : 'text-slate-300')
-                              }
-                            >
-                              <div
-                                className={
-                                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full ' +
-                                  (isActive
-                                    ? 'bg-purple-500/30'
-                                    : 'bg-slate-800')
-                                }
-                              >
-                                <Camera
-                                  className={
-                                    'h-4 w-4 ' +
-                                    (isActive
-                                      ? 'text-purple-400'
-                                      : 'text-slate-400')
-                                  }
-                                />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="text-sm font-medium">
-                                  {camera.label || `Camera ${index + 1}`}
-                                </div>
-                                {isActive && (
-                                  <div className="text-xs text-purple-400">
-                                    Currently active
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              )}
-
               {/* Remote Audio Control */}
-              {!isLocal && (
-                <div className="absolute bottom-4 right-4 z-10">
-                  <Button
-                    size="sm"
-                    variant={audioEnabled ? 'outline' : 'destructive'}
-                    onClick={() => toggleAudio(player.id)}
-                    className={`h-10 w-10 p-0 backdrop-blur-sm ${
-                      audioEnabled
-                        ? 'border-slate-700 bg-slate-950/90 text-white hover:bg-slate-800'
-                        : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
-                    }`}
-                  >
-                    {audioEnabled ? (
-                      <Volume2 className="h-5 w-5" />
-                    ) : (
-                      <VolumeX className="h-5 w-5" />
-                    )}
-                  </Button>
-                </div>
-              )}
+              <div className="absolute bottom-4 right-4 z-10">
+                <Button
+                  size="sm"
+                  variant={audioEnabled ? 'outline' : 'destructive'}
+                  onClick={() => toggleAudio(player.id)}
+                  className={`h-10 w-10 p-0 backdrop-blur-sm ${
+                    audioEnabled
+                      ? 'border-slate-700 bg-slate-950/90 text-white hover:bg-slate-800'
+                      : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
+                  }`}
+                >
+                  {audioEnabled ? (
+                    <Volume2 className="h-5 w-5" />
+                  ) : (
+                    <VolumeX className="h-5 w-5" />
+                  )}
+                </Button>
+              </div>
             </div>
           </Card>
         )
       })}
     </div>
+  )
+}
+
+function VideoStreamGridLoading() {
+  return (
+    <div className="flex h-full items-center justify-center rounded-lg border border-slate-700 bg-slate-800/50">
+      <div className="flex flex-col items-center space-y-3">
+        <div className="relative">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-500/20">
+            <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+          </div>
+          <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/10" />
+        </div>
+        <div className="space-y-1 text-center">
+          <p className="text-sm font-medium text-slate-200">
+            Loading Video Streams
+          </p>
+          <p className="text-xs text-slate-400">Connecting to players...</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function VideoStreamGridWithSuspense(props: VideoStreamGridProps) {
+  return (
+    <Suspense fallback={<VideoStreamGridLoading />}>
+      <VideoStreamGrid {...props} />
+    </Suspense>
   )
 }

@@ -5,7 +5,6 @@ import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
-import { useCardQuery } from '@/hooks/useCardQuery'
 import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
 import { usePeerJS } from '@/hooks/usePeerJS'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
@@ -21,8 +20,8 @@ import { Toaster } from '@repo/ui/components/sonner'
 import { GameRoomLoader } from './GameRoomLoader.js'
 import { GameRoomPlayerCount } from './GameRoomPlayerCount.js'
 import { GameRoomSidebar } from './GameRoomSidebar.js'
-import { GameRoomVideoGrid } from './GameRoomVideoGrid.js'
 import { MediaSetupDialog } from './MediaSetupDialog.js'
+import { VideoStreamGridWithSuspense } from './VideoStreamGrid.js'
 
 interface GameRoomProps {
   roomId: string
@@ -407,10 +406,10 @@ function GameRoomContent({
 
           {/* Main Area - Video Stream Grid */}
           <div className="flex-1 overflow-hidden">
-            <GameRoomVideoGrid
+            <VideoStreamGridWithSuspense
               roomId={roomId}
               userId={userId}
-              playerName={username}
+              localPlayerName={username}
               detectorType={detectorType}
               usePerspectiveWarp={usePerspectiveWarp}
               onCardCrop={(canvas: HTMLCanvasElement) => {

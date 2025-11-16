@@ -1,9 +1,10 @@
 import type { DetectorType } from '@/lib/detectors'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { enumerateMediaDevices } from '@/lib/media-stream-manager'
 import { setupWebcam } from '@/lib/webcam'
 
 interface UseWebcamOptions {
+  /** Video element ref (managed by useMediaDevice) */
+  videoRef: React.RefObject<HTMLVideoElement | null>
   /** Enable card detection */
   enableCardDetection?: boolean
   /** Detector type to use (opencv, detr, owl-vit) */
@@ -17,16 +18,12 @@ interface UseWebcamOptions {
 }
 
 interface UseWebcamReturn {
-  /** Ref for the video element */
-  videoRef: React.RefObject<HTMLVideoElement | null>
   /** Ref for the overlay canvas (used for card detection) */
   overlayRef: React.RefObject<HTMLCanvasElement | null>
   /** Ref for the cropped canvas (stores cropped card image) */
   croppedRef: React.RefObject<HTMLCanvasElement | null>
   /** Ref for the full resolution canvas (internal use) */
   fullResRef: React.RefObject<HTMLCanvasElement | null>
-  /** Get list of available cameras */
-  getCameras: () => Promise<MediaDeviceInfo[]>
   /** Get the cropped canvas element */
   getCroppedCanvas: () => HTMLCanvasElement | null
   /** Whether the card detector is initialized */
@@ -36,11 +33,16 @@ interface UseWebcamReturn {
 }
 
 /**
- * Hook for managing webcam with optional OpenCV card detection
+ * Hook for managing MTG card detection on a video stream
+ *
+ * Wraps setupWebcam() to provide card detection initialization and state management.
+ * The video stream is managed separately by useMediaDevice.
  *
  * @example
  * ```tsx
- * const { videoRef, overlayRef, isReady } = useWebcam({
+ * const videoRef = useRef<HTMLVideoElement>(null)
+ * const { overlayRef, isReady } = useCardDetector({
+ *   videoRef,
  *   enableCardDetection: true,
  * })
  *
@@ -52,8 +54,9 @@ interface UseWebcamReturn {
  * )
  * ```
  */
-export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
+export function useCardDetector(options: UseWebcamOptions): UseWebcamReturn {
   const {
+    videoRef,
     enableCardDetection = false,
     detectorType,
     usePerspectiveWarp = true,
@@ -69,7 +72,6 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     [onCropProp],
   )
 
-  const videoRef = useRef<HTMLVideoElement>(null)
   const overlayRef = useRef<HTMLCanvasElement>(null)
   const croppedRef = useRef<HTMLCanvasElement>(null)
   const fullResRef = useRef<HTMLCanvasElement>(null)
@@ -139,20 +141,13 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
       mounted = false
     }
   }, [
+    videoRef,
     enableCardDetection,
     detectorType,
     onCrop,
     usePerspectiveWarp,
     reinitializeTrigger,
   ])
-
-  const getCameras = async () => {
-    if (webcamController.current) {
-      return webcamController.current.getCameras()
-    }
-    // Use centralized device enumeration
-    return enumerateMediaDevices('videoinput')
-  }
 
   const getCroppedCanvas = () => {
     if (webcamController.current) {
@@ -162,11 +157,9 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
   }
 
   return {
-    videoRef,
     overlayRef,
     croppedRef,
     fullResRef,
-    getCameras,
     getCroppedCanvas,
     isReady,
     hasCroppedImage,

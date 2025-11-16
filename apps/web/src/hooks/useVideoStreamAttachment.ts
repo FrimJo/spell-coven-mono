@@ -3,8 +3,8 @@
  * Handles the complex logic of attaching/detaching streams based on track states
  */
 
-import { useEffect, useRef } from 'react'
 import type { PeerTrackState } from '@/types/peerjs'
+import { useEffect, useRef } from 'react'
 
 interface UseVideoStreamAttachmentOptions {
   /** Map of player IDs to their MediaStreams */
@@ -110,19 +110,26 @@ export function useVideoStreamAttachment({
 
       // Check if track state changed (for forcing reload when tracks are replaced)
       const lastTrackState = lastTrackStatesRef.current.get(playerId)
-      const trackStateChanged = lastTrackState?.videoEnabled !== trackState?.videoEnabled
+      const trackStateChanged =
+        lastTrackState?.videoEnabled !== trackState?.videoEnabled
 
       // Update if needed OR if track state changed (to handle replaceTrack scenarios)
-      if (!hasCorrectSrcObject || !attachedStreamMatches || (trackStateChanged && shouldHaveStream)) {
+      if (
+        !hasCorrectSrcObject ||
+        !attachedStreamMatches ||
+        (trackStateChanged && shouldHaveStream)
+      ) {
         if (shouldHaveStream) {
           // Attach stream or force reload if track state changed
           if (currentSrcObject && currentSrcObject !== stream) {
             videoElement.srcObject = null
           }
-          
+
           // Force reload by clearing and resetting srcObject if track was re-enabled
           if (trackStateChanged && currentSrcObject === stream) {
-            console.log(`[useVideoStreamAttachment] Force reload for ${playerId} due to track state change`)
+            console.log(
+              `[useVideoStreamAttachment] Force reload for ${playerId} due to track state change`,
+            )
             videoElement.srcObject = null
             // Small delay to ensure the clear takes effect
             setTimeout(() => {
@@ -149,7 +156,7 @@ export function useVideoStreamAttachment({
               }
             })
           }
-          
+
           attachedStreamsRef.current.set(playerId, stream)
           onVideoPlaying?.(playerId)
         } else {
@@ -160,7 +167,12 @@ export function useVideoStreamAttachment({
         }
       }
     }
-  }, [remoteStreams, peerTrackStates, videoElementsRef, attachedStreamsRef, onVideoPlaying, onVideoStopped])
+  }, [
+    remoteStreams,
+    peerTrackStates,
+    videoElementsRef,
+    attachedStreamsRef,
+    onVideoPlaying,
+    onVideoStopped,
+  ])
 }
-
-
