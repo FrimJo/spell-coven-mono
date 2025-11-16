@@ -11,6 +11,7 @@ import type {
   PeerTrackState,
 } from '@/types/peerjs'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { enumerateMediaDevices } from '@/lib/media-stream-manager'
 import { PeerJSManager } from '@/lib/peerjs/PeerJSManager'
 
 export interface UsePeerJSProps {
@@ -25,10 +26,12 @@ export interface UsePeerJSReturn {
   remoteStreams: Map<string, MediaStream>
   peerTrackStates: Map<string, PeerTrackState>
   connectionStates: Map<string, ConnectionState>
-  toggleVideo: (enabled: boolean) => void
+  toggleVideo: (enabled: boolean) => Promise<void>
   toggleAudio: (enabled: boolean) => void
   switchCamera: (deviceId: string) => Promise<void>
   initializeLocalMedia: (deviceId?: string) => Promise<void>
+  availableCameras: MediaDeviceInfo[]
+  refreshCameras: () => Promise<void>
   error: PeerJSError | null
   isInitialized: boolean
 }
@@ -54,8 +57,8 @@ export function usePeerJS({
   // State
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [localTrackState, setLocalTrackState] = useState<PeerTrackState>({
-    videoEnabled: true,
-    audioEnabled: true,
+    videoEnabled: false,
+    audioEnabled: false,
   })
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(
     new Map(),
@@ -66,6 +69,9 @@ export function usePeerJS({
   const [connectionStates, setConnectionStates] = useState<
     Map<string, ConnectionState>
   >(new Map())
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>(
+    [],
+  )
   const [error, setError] = useState<PeerJSError | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
 
@@ -200,6 +206,20 @@ export function usePeerJS({
     await managerRef.current.switchCamera(deviceId)
   }, [])
 
+  // Refresh available cameras
+  const refreshCameras = useCallback(async () => {
+    const cameras = await enumerateMediaDevices('videoinput')
+    setAvailableCameras(cameras)
+  }, [])
+
+  // Enumerate cameras when local stream becomes available
+  useEffect(() => {
+    if (localStream?.getVideoTracks().length) {
+      // Call directly to avoid lint warning about setState in effect
+      enumerateMediaDevices('videoinput').then(setAvailableCameras)
+    }
+  }, [localStream])
+
   return {
     localStream,
     localTrackState,
@@ -210,6 +230,8 @@ export function usePeerJS({
     toggleAudio,
     switchCamera,
     initializeLocalMedia,
+    availableCameras,
+    refreshCameras,
     error,
     isInitialized,
   }

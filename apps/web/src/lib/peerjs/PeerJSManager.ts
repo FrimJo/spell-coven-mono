@@ -19,6 +19,7 @@ import type { MediaConnection } from 'peerjs'
 import { env } from '@/env'
 import Peer from 'peerjs'
 
+import { getMediaStream, stopMediaStream } from '../media-stream-manager'
 import { createPeerJSError, logError } from './errors'
 import { DEFAULT_RETRY_CONFIG, retryWithBackoff } from './retry'
 import { DEFAULT_TIMEOUT_CONFIG, executeWithTimeout } from './timeout'
@@ -326,55 +327,19 @@ export class PeerJSManager {
     }
 
     try {
-      // Try with ideal 4K resolution first
-      let constraints: MediaStreamConstraints = {
-        video: deviceId
-          ? {
-              deviceId: { ideal: deviceId }, // Use ideal instead of exact
-              width: { ideal: 3840 },
-              height: { ideal: 2160 },
-            }
-          : {
-              width: { ideal: 3840 },
-              height: { ideal: 2160 },
-            },
-        audio: true,
-      }
-
-      let stream: MediaStream
-      try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints)
-      } catch (err) {
-        // If 4K fails, try with 1080p
-        console.warn('[PeerJSManager] 4K failed, falling back to 1080p:', err)
-        constraints = {
-          video: deviceId
-            ? {
-                deviceId: { ideal: deviceId },
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-              }
-            : {
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-              },
+      // Use centralized media stream manager with automatic fallback
+      const { stream, videoTrack, audioTrack, actualResolution } =
+        await getMediaStream({
+          videoDeviceId: deviceId,
+          video: true,
           audio: true,
-        }
-        
-        try {
-          stream = await navigator.mediaDevices.getUserMedia(constraints)
-        } catch (err2) {
-          // If 1080p fails, try with basic constraints
-          console.warn('[PeerJSManager] 1080p failed, using basic constraints:', err2)
-          constraints = {
-            video: deviceId ? { deviceId: { ideal: deviceId } } : true,
-            audio: true,
-          }
-          stream = await navigator.mediaDevices.getUserMedia(constraints)
-        }
-      }
-      const videoTrack = stream.getVideoTracks()[0] || null
-      const audioTrack = stream.getAudioTracks()[0] || null
+          resolution: '4k',
+          enableFallback: true,
+        })
+
+      console.log(
+        `[PeerJSManager] Local stream initialized with ${actualResolution}`,
+      )
 
       // Store the device ID for later reinitialization
       if (videoTrack) {
@@ -740,58 +705,18 @@ export class PeerJSManager {
     if (enabled) {
       // Re-enable: Get a new video track from the camera
       try {
-        // Try to use the last device ID if available, otherwise use any video device
-        let videoConstraints: MediaTrackConstraints = this.lastVideoDeviceId
-          ? {
-              deviceId: { ideal: this.lastVideoDeviceId }, // Use ideal instead of exact
-              width: { ideal: 3840 },
-              height: { ideal: 2160 },
-            }
-          : {
-              width: { ideal: 3840 },
-              height: { ideal: 2160 },
-            }
-
-        // Get a new video track from the camera with fallback
-        let videoStream: MediaStream
-        try {
-          videoStream = await navigator.mediaDevices.getUserMedia({
-            video: videoConstraints,
+        // Use centralized media stream manager
+        const { stream: videoStream, videoTrack: newVideoTrack } =
+          await getMediaStream({
+            videoDeviceId: this.lastVideoDeviceId,
+            video: true,
             audio: false,
+            resolution: '4k',
+            enableFallback: true,
           })
-        } catch (err) {
-          // If 4K fails, try with 1080p
-          console.warn('[PeerJSManager] 4K failed in toggleVideo, falling back to 1080p:', err)
-          videoConstraints = this.lastVideoDeviceId
-            ? {
-                deviceId: { ideal: this.lastVideoDeviceId },
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-              }
-            : {
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-              }
-          
-          try {
-            videoStream = await navigator.mediaDevices.getUserMedia({
-              video: videoConstraints,
-              audio: false,
-            })
-          } catch (err2) {
-            // If 1080p fails, use basic constraints
-            console.warn('[PeerJSManager] 1080p failed in toggleVideo, using basic constraints:', err2)
-            videoStream = await navigator.mediaDevices.getUserMedia({
-              video: this.lastVideoDeviceId ? { deviceId: { ideal: this.lastVideoDeviceId } } : true,
-              audio: false,
-            })
-          }
-        }
 
-        const newVideoTrack = videoStream.getVideoTracks()[0]
         if (!newVideoTrack) {
-          // Stop all tracks from the temporary stream
-          videoStream.getTracks().forEach((track) => track.stop())
+          stopMediaStream(videoStream)
           throw new Error('No video track in new stream')
         }
 
@@ -801,12 +726,8 @@ export class PeerJSManager {
           this.lastVideoDeviceId = settings.deviceId
         }
 
-        // Stop any other tracks from the temporary stream (shouldn't be any, but be safe)
-        videoStream.getTracks().forEach((track) => {
-          if (track !== newVideoTrack) {
-            track.stop()
-          }
-        })
+        // Stop any audio tracks that might have been created (shouldn't happen)
+        videoStream.getAudioTracks().forEach((track) => track.stop())
 
         // If we have an existing stream, create a new MediaStream with the new track
         // This ensures React detects the reference change and updates video elements
@@ -985,18 +906,18 @@ export class PeerJSManager {
       // Stop old track
       this.localStream.videoTrack.stop()
 
-      // Get new stream
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          deviceId: { exact: deviceId },
-          width: { ideal: 3840 },
-          height: { ideal: 2160 },
-        },
-        audio: false,
-      })
+      // Get new stream with centralized manager
+      const { stream: newStream, videoTrack: newVideoTrack } =
+        await getMediaStream({
+          videoDeviceId: deviceId,
+          video: true,
+          audio: false,
+          resolution: '4k',
+          enableFallback: true,
+        })
 
-      const newVideoTrack = newStream.getVideoTracks()[0]
       if (!newVideoTrack) {
+        stopMediaStream(newStream)
         throw new Error('No video track in new stream')
       }
 
@@ -1091,7 +1012,7 @@ export class PeerJSManager {
 
     // Stop local stream tracks
     if (this.localStream?.stream) {
-      this.localStream.stream.getTracks().forEach((track) => track.stop())
+      stopMediaStream(this.localStream.stream)
     }
     this.localStream = null
 

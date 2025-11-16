@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useAudioOutput } from '@/hooks/useAudioOutput'
+import { useMediaDevice } from '@/hooks/useMediaDevice'
 import { AlertCircle, Camera, Check, Loader2, Mic, Volume2 } from 'lucide-react'
 
 import { Alert, AlertDescription } from '@repo/ui/components/alert'
@@ -19,9 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@repo/ui/components/select'
-
-import { useMediaDevice } from '@/hooks/useMediaDevice'
-import { useAudioOutput } from '@/hooks/useAudioOutput'
 
 interface MediaDevice {
   deviceId: string
@@ -56,8 +55,6 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     videoRef,
     shouldStart: open, // Reactively start/stop when dialog opens/closes
   })
-
-  console.log('[MediaSetupDialog] Video devices:', videoDevices.length, videoDevices)
 
   // Use our consolidated media device hook for audio input
   const {
@@ -99,22 +96,17 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
         ? `Audio output error: ${audioOutputError.message}`
         : ''
 
-  // Show warning if audio output device selection is not supported
-  useEffect(() => {
-    if (!isAudioOutputSupported) {
-      console.warn('[MediaSetupDialog] Audio output device selection not supported in this browser')
-    }
-  }, [isAudioOutputSupported])
-
   // Monitor audio input level using the stream from useMediaDevice hook
   useEffect(() => {
+    console.log('foobar useEffect MediaSetupDialog')
     if (!audioInputStream) return
 
     const setupAudioMonitoring = async () => {
       try {
         const audioContext = new AudioContext()
         const analyser = audioContext.createAnalyser()
-        const microphone = audioContext.createMediaStreamSource(audioInputStream)
+        const microphone =
+          audioContext.createMediaStreamSource(audioInputStream)
 
         analyser.fftSize = 256
         microphone.connect(analyser)
@@ -265,7 +257,9 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
 
             <Select
               value={selectedAudioInputId || ''}
-              onValueChange={(deviceId) => void switchAudioInputDevice(deviceId)}
+              onValueChange={(deviceId) =>
+                void switchAudioInputDevice(deviceId)
+              }
             >
               <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200">
                 <SelectValue placeholder="Select microphone" />
@@ -319,11 +313,19 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
             <div className="flex gap-2">
               <Select
                 value={selectedAudioOutputId}
-                onValueChange={(deviceId) => void setAudioOutputDevice(deviceId)}
+                onValueChange={(deviceId) =>
+                  void setAudioOutputDevice(deviceId)
+                }
                 disabled={!isAudioOutputSupported}
               >
                 <SelectTrigger className="flex-1 border-slate-700 bg-slate-800 text-slate-200">
-                  <SelectValue placeholder={isAudioOutputSupported ? "Select speaker" : "Not supported in this browser"} />
+                  <SelectValue
+                    placeholder={
+                      isAudioOutputSupported
+                        ? 'Select speaker'
+                        : 'Not supported in this browser'
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent className="border-slate-700 bg-slate-800">
                   {audioOutputDevices.map((device) => (
@@ -341,7 +343,11 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
               <Button
                 variant="outline"
                 onClick={() => void testAudioOutput()}
-                disabled={isTestingOutput || !selectedAudioOutputId || !isAudioOutputSupported}
+                disabled={
+                  isTestingOutput ||
+                  !selectedAudioOutputId ||
+                  !isAudioOutputSupported
+                }
                 className="border-slate-700 bg-slate-800 hover:bg-slate-700"
               >
                 {isTestingOutput ? 'Playing...' : 'Test'}

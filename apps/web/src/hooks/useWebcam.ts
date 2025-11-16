@@ -1,5 +1,6 @@
 import type { DetectorType } from '@/lib/detectors'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { enumerateMediaDevices } from '@/lib/media-stream-manager'
 import { setupWebcam } from '@/lib/webcam'
 
 interface UseWebcamOptions {
@@ -149,15 +150,8 @@ export function useWebcam(options: UseWebcamOptions = {}): UseWebcamReturn {
     if (webcamController.current) {
       return webcamController.current.getCameras()
     }
-    const devices = await navigator.mediaDevices.enumerateDevices()
-    const cameras = devices.filter((d) => d.kind === 'videoinput')
-
-    // Filter out mock video file devices
-    const realCameras = cameras.filter(
-      (camera) => !camera.deviceId.startsWith('video-file:'),
-    )
-
-    return realCameras
+    // Use centralized device enumeration
+    return enumerateMediaDevices('videoinput')
   }
 
   const getCroppedCanvas = () => {
