@@ -1,6 +1,6 @@
 /**
  * useMediaDevice - Unified hook for managing media device switching
- * 
+ *
  * Consolidates all camera/microphone device management logic with best practices:
  * - Proper cleanup of old tracks
  * - Exact device constraints
@@ -10,8 +10,15 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  enumerateMediaDevices,
+  getMediaStream,
+  getTemporaryStreamForPermissions,
+  stopMediaStream,
+} from '@/lib/media-stream-manager'
 
-export interface MediaDeviceInfo extends Pick<globalThis.MediaDeviceInfo, 'deviceId' | 'label' | 'kind'> {
+export interface MediaDeviceInfo
+  extends Pick<globalThis.MediaDeviceInfo, 'deviceId' | 'label' | 'kind'> {
   isDefault?: boolean
 }
 
@@ -62,7 +69,7 @@ export interface UseMediaDeviceReturn {
 /**
  * Hook for managing media device (camera/microphone) with automatic cleanup
  * and device switching support.
- * 
+ *
  * @example Video device with preview
  * ```tsx
  * const videoRef = useRef<HTMLVideoElement>(null)
@@ -71,7 +78,7 @@ export interface UseMediaDeviceReturn {
  *   videoRef,
  *   autoStart: true,
  * })
- * 
+ *
  * return (
  *   <>
  *     <video ref={videoRef} autoPlay muted playsInline />
@@ -81,7 +88,7 @@ export interface UseMediaDeviceReturn {
  *   </>
  * )
  * ```
- * 
+ *
  * @example Audio device
  * ```tsx
  * const { devices, switchDevice, stream } = useMediaDevice({
@@ -97,7 +104,7 @@ export function useMediaDevice(
     kind,
     initialDeviceId,
     videoRef,
-    autoStart = false,
+    autoStart: autoStart = false,
     shouldStart,
     videoConstraints = {
       width: { ideal: 1920 },
@@ -118,11 +125,9 @@ export function useMediaDevice(
   const [isLoading, setIsLoading] = useState(false)
 
   const streamRef = useRef<MediaStream | null>(null)
-  const isCancelledRef = useRef(false)
   const onDeviceChangedRef = useRef(onDeviceChanged)
   const onErrorRef = useRef(onError)
 
-  // Keep callback refs up to date
   useEffect(() => {
     onDeviceChangedRef.current = onDeviceChanged
     onErrorRef.current = onError
@@ -135,59 +140,71 @@ export function useMediaDevice(
     console.log(`[useMediaDevice] refreshDevices called for kind: ${kind}`)
     try {
       setIsLoading(true)
-      
+
       // First, request permissions to get device labels
       // Without permissions, enumerateDevices() returns devices with empty labels
       let defaultDeviceId: string | null = null
       try {
-        const constraints: MediaStreamConstraints =
-          kind === 'videoinput'
-            ? { video: true, audio: false }
-            : { video: false, audio: true }
-        
-        const tempStream = await navigator.mediaDevices.getUserMedia(constraints)
-        const track = tempStream.getTracks()[0]
-        if (track) {
-          defaultDeviceId = track.getSettings().deviceId || null
-          console.log(`[useMediaDevice] Detected default ${kind}:`, defaultDeviceId)
-        }
+        const { deviceId, stream: tempStream } =
+          await getTemporaryStreamForPermissions(
+            kind === 'videoinput' ? 'video' : 'audio',
+          )
+        defaultDeviceId = deviceId
+        console.log(
+          `[useMediaDevice] Detected default ${kind}:`,
+          defaultDeviceId,
+        )
         // Clean up the temporary stream immediately
-        tempStream.getTracks().forEach((t) => t.stop())
+        stopMediaStream(tempStream)
       } catch (err) {
         const error = err as Error
-        console.warn('[useMediaDevice] Could not get permissions for device enumeration:', err)
+        console.warn(
+          '[useMediaDevice] Could not get permissions for device enumeration:',
+          err,
+        )
         console.warn('[useMediaDevice] Error name:', error.name)
         console.warn('[useMediaDevice] Error message:', error.message)
-        
+
         if (error.name === 'NotFoundError') {
-          console.error('[useMediaDevice] NotFoundError: No camera device found. Possible causes:')
+          console.error(
+            '[useMediaDevice] NotFoundError: No camera device found. Possible causes:',
+          )
           console.error('  1. Camera is in use by another application')
           console.error('  2. Camera is disabled in System Settings')
           console.error('  3. Browser does not have camera permission')
         } else if (error.name === 'NotAllowedError') {
-          console.error('[useMediaDevice] NotAllowedError: User denied camera permission')
+          console.error(
+            '[useMediaDevice] NotAllowedError: User denied camera permission',
+          )
         }
         // If we can't get permissions, we'll still enumerate but labels will be empty
       }
-      
+
       // Now enumerate devices (will have labels if permissions were granted)
-      const allDevices = await navigator.mediaDevices.enumerateDevices()
-      console.log(`[useMediaDevice] All devices from enumerateDevices() (${allDevices.length} total):`, allDevices)
-      
-      if (allDevices.length === 0) {
-        console.warn('[useMediaDevice] enumerateDevices returned 0 devices - this might indicate a browser restriction')
+      // Use centralized device enumeration (already filtered by kind)
+      const matchingKind = await enumerateMediaDevices(kind)
+      console.log(
+        `[useMediaDevice] Devices matching kind '${kind}' (${matchingKind.length}):`,
+        matchingKind,
+      )
+
+      if (matchingKind.length === 0) {
+        console.warn(
+          '[useMediaDevice] enumerateMediaDevices returned 0 devices - this might indicate a browser restriction',
+        )
       }
-      
-      const matchingKind = allDevices.filter((device) => device.kind === kind)
-      console.log(`[useMediaDevice] Devices matching kind '${kind}' (${matchingKind.length}):`, matchingKind)
-      
+
       const filteredDevices = matchingKind
         // Filter out the "default" device ID to avoid duplication
-        .filter((device) => device.deviceId !== 'default' && device.deviceId !== '')
+        .filter(
+          (device) => device.deviceId !== 'default' && device.deviceId !== '',
+        )
         .map((device, index) => {
           const isDefault = device.deviceId === defaultDeviceId
           // If no label, use a generic one with index (happens when permissions not granted)
-          const baseLabel = device.label || `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${index + 1}`
+          const baseLabel =
+            device.label ||
+            `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${index + 1}`
           return {
             deviceId: device.deviceId,
             label: isDefault ? `${baseLabel} (Default)` : baseLabel,
@@ -195,16 +212,27 @@ export function useMediaDevice(
             isDefault,
           }
         })
-      
-      console.log(`[useMediaDevice] Final filtered ${kind} devices (${filteredDevices.length}):`, filteredDevices)
+
+      console.log(
+        `[useMediaDevice] Final filtered ${kind} devices (${filteredDevices.length}):`,
+        filteredDevices,
+      )
       setDevices(filteredDevices)
     } catch (err) {
-      console.error(`[useMediaDevice] Failed to enumerate ${kind} devices:`, err)
-      console.error('[useMediaDevice] Error stack:', err instanceof Error ? err.stack : 'No stack trace')
+      console.error(
+        `[useMediaDevice] Failed to enumerate ${kind} devices:`,
+        err,
+      )
+      console.error(
+        '[useMediaDevice] Error stack:',
+        err instanceof Error ? err.stack : 'No stack trace',
+      )
       // Set empty array on error
       setDevices([])
     } finally {
-      console.log(`[useMediaDevice] refreshDevices completed for ${kind}, isLoading -> false`)
+      console.log(
+        `[useMediaDevice] refreshDevices completed for ${kind}, isLoading -> false`,
+      )
       setIsLoading(false)
     }
   }, [kind])
@@ -215,7 +243,7 @@ export function useMediaDevice(
   const stop = useCallback(() => {
     if (streamRef.current) {
       console.log('[useMediaDevice] Stopping stream')
-      streamRef.current.getTracks().forEach((track) => track.stop())
+      stopMediaStream(streamRef.current)
       streamRef.current = null
       setStream(null)
       setIsActive(false)
@@ -233,7 +261,7 @@ export function useMediaDevice(
   const start = useCallback(
     async (deviceId?: string) => {
       let targetDeviceId = deviceId || currentDeviceId
-      
+
       // If still no device ID, try to find default or first device
       if (!targetDeviceId && devices.length > 0) {
         const defaultDevice = devices.find((device) => device.isDefault)
@@ -250,12 +278,11 @@ export function useMediaDevice(
       try {
         console.log(`[useMediaDevice] Starting ${kind} device:`, targetDeviceId)
         setError(null)
-        isCancelledRef.current = false
 
         // Stop previous stream
         if (streamRef.current) {
           console.log('[useMediaDevice] Stopping previous stream')
-          streamRef.current.getTracks().forEach((track) => track.stop())
+          stopMediaStream(streamRef.current)
           streamRef.current = null
         }
 
@@ -264,33 +291,24 @@ export function useMediaDevice(
           videoRef.current.srcObject = null
         }
 
-        // Build constraints based on device kind
-        const constraints: MediaStreamConstraints =
+        // Get the media stream using centralized manager
+        const { stream: newStream } = await getMediaStream(
           kind === 'videoinput'
             ? {
-                video: {
-                  deviceId: { exact: targetDeviceId },
-                  ...videoConstraints,
-                },
+                videoDeviceId: targetDeviceId,
+                video: true,
                 audio: false,
+                videoConstraints,
+                resolution: '1080p',
+                enableFallback: true,
               }
             : {
+                audioDeviceId: targetDeviceId,
                 video: false,
-                audio: {
-                  deviceId: { exact: targetDeviceId },
-                  ...audioConstraints,
-                },
-              }
-
-        // Get the media stream
-        const newStream = await navigator.mediaDevices.getUserMedia(constraints)
-
-        // Check if cancelled while waiting
-        if (isCancelledRef.current) {
-          console.log('[useMediaDevice] Operation cancelled, stopping new stream')
-          newStream.getTracks().forEach((track) => track.stop())
-          return
-        }
+                audio: true,
+                audioConstraints,
+              },
+        )
 
         console.log('[useMediaDevice] Got new stream')
 
@@ -308,24 +326,32 @@ export function useMediaDevice(
             await videoRef.current.play()
             console.log('[useMediaDevice] Video playback started')
           } catch (playError) {
-            console.error('[useMediaDevice] Error starting video playback:', playError)
+            console.error(
+              '[useMediaDevice] Error starting video playback:',
+              playError,
+            )
           }
         }
 
         // Notify success
         onDeviceChangedRef.current?.(targetDeviceId, newStream)
       } catch (err) {
-        if (!isCancelledRef.current) {
-          const error = err instanceof Error ? err : new Error(String(err))
-          console.error('[useMediaDevice] Error starting device:', error)
-          setError(error)
-          setIsActive(false)
-          onErrorRef.current?.(error)
-          throw error
-        }
+        const error = err instanceof Error ? err : new Error(String(err))
+        console.error('[useMediaDevice] Error starting device:', error)
+        setError(error)
+        setIsActive(false)
+        onErrorRef.current?.(error)
+        throw error
       }
     },
-    [kind, currentDeviceId, devices, videoRef, videoConstraints, audioConstraints],
+    [
+      kind,
+      currentDeviceId,
+      devices,
+      videoRef,
+      videoConstraints,
+      audioConstraints,
+    ],
   )
 
   /**
@@ -338,83 +364,25 @@ export function useMediaDevice(
     [start],
   )
 
-  // Initial device enumeration
   useEffect(() => {
-    console.log(`[useMediaDevice] Initial device enumeration effect running for ${kind}`)
-    void refreshDevices()
-
-    // Listen for device changes
-    const handleDeviceChange = () => {
-      console.log('[useMediaDevice] Device change detected')
-      void refreshDevices()
-    }
-
-    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange)
-
-    return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange)
-    }
+    refreshDevices()
   }, [refreshDevices])
 
-  // Auto-start if requested (runs once on mount)
+  // Auto-select default device when devices list changes and no device is selected
   useEffect(() => {
-    if (!autoStart) {
-      return
+    if (devices.length > 0) {
+      const defaultDevice = devices.find((device) => device.isDefault)
+      const deviceToSelect = defaultDevice?.deviceId ?? devices[0]?.deviceId
+
+      if (deviceToSelect) {
+        console.log(
+          `[useMediaDevice] Auto-selecting ${defaultDevice ? 'default' : 'first'} device:`,
+          deviceToSelect,
+        )
+        void start(deviceToSelect)
+      }
     }
-
-    // Wait for devices to be loaded
-    if (devices.length === 0) {
-      return
-    }
-
-    // Determine which device to start with
-    // Priority: initialDeviceId > default device > first device
-    const defaultDevice = devices.find((device) => device.isDefault)
-    const deviceToStart = initialDeviceId || defaultDevice?.deviceId || devices[0]?.deviceId
-
-    if (!deviceToStart) {
-      console.warn('[useMediaDevice] No devices available for auto-start')
-      return
-    }
-
-    console.log('[useMediaDevice] Auto-starting with device:', deviceToStart)
-    void start(deviceToStart)
-
-    // Cleanup on unmount
-    return () => {
-      isCancelledRef.current = true
-      stop()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoStart, devices.length])
-
-  // Reactive start/stop based on shouldStart prop
-  useEffect(() => {
-    // Only react to shouldStart if it's explicitly provided
-    if (shouldStart === undefined) {
-      return
-    }
-
-    // If shouldStart is true and we're not active, start the device
-    if (shouldStart && !isActive && devices.length > 0) {
-      console.log('[useMediaDevice] shouldStart triggered, starting device')
-      void start()
-    }
-
-    // If shouldStart is false and we're active, stop the device
-    if (!shouldStart && isActive) {
-      console.log('[useMediaDevice] shouldStart false, stopping device')
-      stop()
-    }
-  }, [shouldStart, isActive, devices.length, start, stop])
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isCancelledRef.current = true
-      stop()
-    }
-  }, [stop])
+  }, [devices, start])
 
   return {
     stream,
@@ -429,4 +397,3 @@ export function useMediaDevice(
     isLoading,
   }
 }
-

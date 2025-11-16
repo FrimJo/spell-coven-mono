@@ -1,8 +1,8 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { ConnectionState, PeerTrackState } from '@/types/peerjs'
-import { useEffect, useRef, useState } from 'react'
-import { useWebcam } from '@/hooks/useWebcam'
+import { useRef, useState } from 'react'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
+import { useWebcam } from '@/hooks/useWebcam'
 import {
   Camera,
   Mic,
@@ -60,6 +60,8 @@ interface VideoStreamGridProps {
   onToggleAudio?: (enabled: boolean) => void
   /** Callback to switch camera device */
   onSwitchCamera?: (deviceId: string) => Promise<void>
+  /** Available cameras from PeerJS manager */
+  availableCameras?: MediaDeviceInfo[]
 }
 
 interface StreamState {
@@ -84,28 +86,24 @@ export function VideoStreamGrid({
   onToggleVideo,
   onToggleAudio: _onToggleAudio,
   onSwitchCamera,
+  availableCameras = [],
 }: VideoStreamGridProps) {
   // State declarations first (needed before useWebcam hook)
-  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>(
-    [],
-  )
   const [currentCameraIndex, setCurrentCameraIndex] = useState(0)
   const [currentCameraId, setCurrentCameraId] = useState<string | undefined>(
     undefined,
   )
   const [cameraPopoverOpen, setCameraPopoverOpen] = useState(false)
   const [isAudioMuted, setIsAudioMuted] = useState(false)
-  const [hasStartedVideo, setHasStartedVideo] = useState(false)
 
   // Initialize webcam with card detection
-  const { videoRef, overlayRef, croppedRef, fullResRef, getCameras } =
-    useWebcam({
-      enableCardDetection,
-      detectorType,
-      usePerspectiveWarp,
-      onCrop: onCardCrop,
-      reinitializeTrigger: currentCameraId ? 1 : 0,
-    })
+  const { videoRef, overlayRef, croppedRef, fullResRef } = useWebcam({
+    enableCardDetection,
+    detectorType,
+    usePerspectiveWarp,
+    onCrop: onCardCrop,
+    reinitializeTrigger: currentCameraId ? 1 : 0,
+  })
 
   const [streamStates, setStreamStates] = useState<Record<string, StreamState>>(
     players.reduce(
@@ -120,25 +118,6 @@ export function VideoStreamGrid({
   // Find local player (not currently used but may be needed for future features)
   // const localPlayer = players.find((p) => p.name === localPlayerName)
 
-  // Load available cameras when local stream becomes available
-  useEffect(() => {
-    if (localStream && localStream.getVideoTracks().length > 0) {
-      getCameras().then(setAvailableCameras)
-    }
-  }, [localStream, getCameras])
-
-  // When localStream is available, mark video as started
-  useEffect(() => {
-    if (localStream && localStream.getVideoTracks().length > 0) {
-      console.log(
-        '[VideoStreamGrid] Local stream available, setting hasStartedVideo=true',
-      )
-      setHasStartedVideo(true)
-    } else if (localStream && localStream.getVideoTracks().length === 0) {
-      console.log('[VideoStreamGrid] Local stream has no video tracks')
-    }
-  }, [localStream])
-
   const selectCamera = async (deviceId: string) => {
     const cameraIndex = availableCameras.findIndex(
       (cam) => cam.deviceId === deviceId,
@@ -150,7 +129,6 @@ export function VideoStreamGrid({
           await onSwitchCamera(deviceId)
           setCurrentCameraIndex(cameraIndex)
           setCurrentCameraId(deviceId)
-          setHasStartedVideo(true)
           setCameraPopoverOpen(false)
         } catch (error) {
           console.error('[VideoStreamGrid] Failed to switch camera:', error)
@@ -234,7 +212,7 @@ export function VideoStreamGrid({
           ? remoteStream.getVideoTracks().length > 0
           : false
         const videoEnabled = isLocal
-          ? hasStartedVideo && localVideoEnabled
+          ? localVideoEnabled
           : (peerTrackState?.videoEnabled ?? hasVideoTrack)
         const audioEnabled = isLocal
           ? (localTrackState?.audioEnabled ?? true)
@@ -258,7 +236,11 @@ export function VideoStreamGrid({
                     <>
                       <video
                         ref={(el) => {
-                          if (el && localStream && el.srcObject !== localStream) {
+                          if (
+                            el &&
+                            localStream &&
+                            el.srcObject !== localStream
+                          ) {
                             el.srcObject = localStream
                           }
                           // Also keep videoRef for card detection
@@ -341,7 +323,9 @@ export function VideoStreamGrid({
                         zIndex: 0,
                       }}
                       onLoadedMetadata={() => {
-                        const videoElement = remoteVideoRefs.current.get(player.id)
+                        const videoElement = remoteVideoRefs.current.get(
+                          player.id,
+                        )
                         const peerTrackState = peerTrackStates.get(player.id)
                         const state = streamStates[player.id] || {
                           video: true,
@@ -373,7 +357,9 @@ export function VideoStreamGrid({
                       }}
                       onCanPlay={() => {
                         // Fallback: ensure play when video can start playing
-                        const videoElement = remoteVideoRefs.current.get(player.id)
+                        const videoElement = remoteVideoRefs.current.get(
+                          player.id,
+                        )
                         const peerTrackState = peerTrackStates.get(player.id)
                         const state = streamStates[player.id] || {
                           video: true,
@@ -540,9 +526,7 @@ export function VideoStreamGrid({
                         size="sm"
                         variant="outline"
                         className="h-10 w-10 border-white bg-white p-0 text-black hover:bg-gray-100"
-                        disabled={
-                          !hasStartedVideo || availableCameras.length <= 1
-                        }
+                        disabled={availableCameras.length <= 1}
                         title={
                           availableCameras.length > 1
                             ? `Switch camera (${availableCameras.length} available)`

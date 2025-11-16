@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { getMediaStream, stopMediaStream } from '@/lib/media-stream-manager'
+
 interface UseMediaStreamOptions {
   /** Auto-start video on mount */
   autoStart?: boolean
@@ -81,15 +83,16 @@ export function useMediaStream(
         setError(null)
 
         const finalDeviceId = requestedDeviceId ?? deviceId
-        const constraints: MediaStreamConstraints = {
-          audio,
-          video: finalDeviceId
-            ? { ...videoConstraints, deviceId: { exact: finalDeviceId } }
-            : videoConstraints,
-        }
 
-        const mediaStream =
-          await navigator.mediaDevices.getUserMedia(constraints)
+        // Use centralized media stream manager
+        const { stream: mediaStream } = await getMediaStream({
+          videoDeviceId: finalDeviceId,
+          video: true,
+          audio,
+          videoConstraints,
+          resolution: '1080p',
+          enableFallback: true,
+        })
 
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream
@@ -132,7 +135,7 @@ export function useMediaStream(
 
   const stopStream = useCallback(() => {
     if (stream) {
-      stream.getTracks().forEach((track) => track.stop())
+      stopMediaStream(stream)
       if (videoRef.current) {
         videoRef.current.srcObject = null
       }

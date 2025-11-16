@@ -13,6 +13,11 @@ import { refineBoundingBoxToCorners } from './detectors/geometry/bbox-refinement
 import { warpCardToCanonical } from './detectors/geometry/perspective.js'
 import { createDetector } from './detectors/index.js'
 import { loadingEvents } from './loading-events.js'
+import {
+  enumerateMediaDevices,
+  getMediaStream,
+  stopMediaStream,
+} from './media-stream-manager.js'
 
 // OpenCV removed - using DETR bounding boxes for cropping
 
@@ -649,23 +654,19 @@ export async function setupWebcam(args: {
   return {
     async startVideo(deviceId: string | null = null) {
       if (currentStream) {
-        currentStream.getTracks().forEach((t) => t.stop())
+        stopMediaStream(currentStream)
         currentStream = null
       }
 
-      // Handle regular webcam
-      const constraints: MediaStreamConstraints = {
-        audio: true,
-        video: deviceId
-          ? {
-              deviceId: { exact: deviceId },
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
-            }
-          : { width: { ideal: 1920 }, height: { ideal: 1080 } },
-      }
+      // Handle regular webcam - use centralized media stream manager
       try {
-        const stream = await navigator.mediaDevices.getUserMedia(constraints)
+        const { stream } = await getMediaStream({
+          videoDeviceId: deviceId,
+          video: true,
+          audio: true,
+          resolution: '1080p',
+          enableFallback: true,
+        })
         currentStream = stream
         // Clear src when switching to stream-based source
         videoEl.src = ''
@@ -692,9 +693,7 @@ export async function setupWebcam(args: {
       }
     },
     async getCameras() {
-      const devices = await navigator.mediaDevices.enumerateDevices()
-      const cameras = devices.filter((d) => d.kind === 'videoinput')
-      return cameras
+      return enumerateMediaDevices('videoinput')
     },
     getCurrentDeviceId() {
       return currentDeviceId

@@ -111,6 +111,7 @@ function GameRoomContent({
     toggleAudio: togglePeerJSAudio,
     switchCamera,
     initializeLocalMedia,
+    availableCameras,
     error: _peerError,
     isInitialized: _isInitialized,
   } = usePeerJS({
@@ -283,33 +284,6 @@ function GameRoomContent({
     }
   }, [])
 
-  // Auto-initialize camera stream if setup was already completed
-  useEffect(() => {
-    const setupCompleted = localStorage.getItem(`media-setup-${roomId}`)
-    const savedDeviceId = localStorage.getItem(`media-device-${roomId}`)
-
-    console.log('[GameRoom] Media setup check:', {
-      setupCompleted: !!setupCompleted,
-      hasSavedDeviceId: !!savedDeviceId,
-      mediaDialogOpen,
-      willAutoInitialize: !!(
-        setupCompleted &&
-        savedDeviceId &&
-        !mediaDialogOpen
-      ),
-    })
-
-    if (setupCompleted && savedDeviceId && !mediaDialogOpen) {
-      console.log(
-        '[GameRoom] Setup already completed, initializing camera with saved device:',
-        savedDeviceId,
-      )
-      initializeLocalMedia(savedDeviceId)
-    } else if (!setupCompleted) {
-      console.log('[GameRoom] No setup completed yet, waiting for media dialog')
-    }
-  }, [roomId, mediaDialogOpen, initializeLocalMedia])
-
   // Show dialog until user completes media setup
   const handleDialogComplete = async (config: {
     videoDeviceId: string
@@ -448,6 +422,7 @@ function GameRoomContent({
               remoteStreams={remoteStreams}
               connectionStates={connectionStates}
               peerTrackStates={peerTrackStates}
+              availableCameras={availableCameras}
               onToggleVideo={togglePeerJSVideo}
               onToggleAudio={togglePeerJSAudio}
               onSwitchCamera={switchCamera}
