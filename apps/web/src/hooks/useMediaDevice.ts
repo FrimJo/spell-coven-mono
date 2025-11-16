@@ -26,8 +26,6 @@ export interface MediaDeviceInfo {
 export interface UseMediaDeviceOptions {
   /** Type of media device: 'video' or 'audio' */
   kind: MediaDeviceInfo['kind']
-  /** Initial device ID to use */
-  initialDeviceId?: string
   /** Video element ref for video devices */
   videoRef?: React.RefObject<HTMLVideoElement | null>
   /** Auto-start on mount (not reactive to changes) */
@@ -47,14 +45,10 @@ export interface UseMediaDeviceOptions {
 export interface UseMediaDeviceReturn {
   /** Current media stream */
   stream: MediaStream | null
-  /** Current device ID */
-  currentDeviceId: string | null
   /** Available devices */
   devices: MediaDeviceInfo[]
-  /** Switch to a different device */
-  switchDevice: (deviceId: string) => Promise<void>
   /** Start the media stream */
-  start: (deviceId?: string) => Promise<void>
+  start: (deviceId: string) => Promise<void>
   /** Stop the media stream */
   stop: () => void
   /** Refresh the list of available devices */
@@ -98,12 +92,23 @@ export interface UseMediaDeviceReturn {
  * })
  * ```
  */
+/**
+ * Helper to clear video element source without triggering React Compiler warnings
+ * This encapsulates the DOM mutation in a single place
+ */
+function clearVideoSource(
+  videoRef: React.RefObject<HTMLVideoElement | null> | undefined,
+) {
+  if (videoRef?.current) {
+    videoRef.current.srcObject = null
+  }
+}
+
 export function useMediaDevice(
   options: UseMediaDeviceOptions,
 ): UseMediaDeviceReturn {
   const {
     kind,
-    initialDeviceId,
     videoRef,
     autoStart: autoStart = false,
     shouldStart,
@@ -117,9 +122,7 @@ export function useMediaDevice(
   } = options
 
   const [stream, setStream] = useState<MediaStream | null>(null)
-  const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(
-    initialDeviceId || null,
-  )
+
   const [isActive, setIsActive] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
@@ -206,9 +209,7 @@ export function useMediaDevice(
       setIsActive(false)
     }
 
-    if (videoRef?.current) {
-      videoRef.current.srcObject = null
-    }
+    clearVideoSource(videoRef)
   }, [videoRef])
 
   /**
@@ -216,12 +217,8 @@ export function useMediaDevice(
    * If no deviceId is provided, will use: currentDeviceId > default device > first device
    */
   const start = useCallback(
-    async (deviceId?: string) => {
-      if (data == null) return
-      const targetDeviceId =
-        deviceId ?? data.defaultDeviceId ?? data.devices[0]?.id
-
-      if (!targetDeviceId) {
+    async (deviceId: string) => {
+      if (!deviceId) {
         const err = new Error('No device ID provided and no devices available')
         setError(err)
         onErrorRef.current?.(err)
@@ -229,7 +226,7 @@ export function useMediaDevice(
       }
 
       try {
-        console.log(`[useMediaDevice] Starting ${kind} device:`, targetDeviceId)
+        console.log(`[useMediaDevice] Starting ${kind} device:`, deviceId)
         setError(null)
 
         // Stop previous stream
@@ -248,7 +245,7 @@ export function useMediaDevice(
         const { stream: newStream } = await getMediaStream(
           kind === 'videoinput'
             ? {
-                videoDeviceId: targetDeviceId,
+                videoDeviceId: deviceId,
                 video: true,
                 audio: false,
                 videoConstraints,
@@ -256,7 +253,7 @@ export function useMediaDevice(
                 enableFallback: true,
               }
             : {
-                audioDeviceId: targetDeviceId,
+                audioDeviceId: deviceId,
                 video: false,
                 audio: true,
                 audioConstraints,
@@ -268,7 +265,6 @@ export function useMediaDevice(
         // Update refs and state
         streamRef.current = newStream
         setStream(newStream)
-        setCurrentDeviceId(targetDeviceId)
         setIsActive(true)
 
         // For video devices, set up video element
@@ -287,7 +283,7 @@ export function useMediaDevice(
         }
 
         // Notify success
-        onDeviceChangedRef.current?.(targetDeviceId, newStream)
+        onDeviceChangedRef.current?.(deviceId, newStream)
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err))
         console.error('[useMediaDevice] Error starting device:', error)
@@ -297,50 +293,12 @@ export function useMediaDevice(
         throw error
       }
     },
-    [audioConstraints, data, kind, videoConstraints, videoRef],
+    [audioConstraints, kind, videoConstraints, videoRef],
   )
-
-  /**
-   * Switch to a different device
-   */
-  const switchDevice = useCallback(
-    async (deviceId: string) => {
-      await start(deviceId)
-    },
-    [start],
-  )
-
-  // useEffect(() => {
-  //   refreshDevices()
-  // }, [refreshDevices])
-
-  // Auto-select default device when devices list changes and no device is selected
-  // useEffect(() => {
-  //   console.log('[useMediaDevice] Auto-selecting device')
-  //   if (devices.length > 0) {
-  //     const defaultDevice = devices.find((device) => device.isDefault)
-  //     const deviceToSelect = defaultDevice?.deviceId ?? devices[0]?.deviceId
-  //     console.log('[useMediaDevice] Devices:', {
-  //       devices,
-  //       defaultDevice,
-  //       deviceToSelect,
-  //     })
-
-  //     if (deviceToSelect) {
-  //       console.log(
-  //         `[useMediaDevice] Auto-selecting ${defaultDevice ? 'default' : 'first'} device:`,
-  //         deviceToSelect,
-  //       )
-  //       void start(deviceToSelect)
-  //     }
-  //   }
-  // }, [devices, start])
 
   return {
     stream,
-    currentDeviceId,
     devices: data?.devices || [],
-    switchDevice,
     start,
     stop,
     refreshDevices,
