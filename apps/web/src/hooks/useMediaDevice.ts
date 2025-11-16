@@ -19,8 +19,6 @@ import { useSelectedMediaDevice } from './useSelectedMediaDevice'
 export interface UseMediaDeviceOptions {
   /** Type of media device: 'video' or 'audio' */
   kind: MediaDeviceInfo['kind']
-  /** Auto-start on mount (not reactive to changes) */
-  autoStart?: boolean
   /** Additional video constraints */
   videoConstraints?: MediaTrackConstraints
   /** Additional audio constraints */
@@ -89,7 +87,6 @@ export function useMediaDevice(
 ): UseMediaDeviceReturn {
   const {
     kind,
-    autoStart = false,
     videoConstraints = {
       width: { ideal: 1920 },
       height: { ideal: 1080 },
@@ -254,10 +251,10 @@ export function useMediaDevice(
   })
 
   useEffect(() => {
-    if (defaultDeviceId != null && autoStart) {
+    if (defaultDeviceId != null) {
       autoStartEvent()
     }
-  }, [defaultDeviceId, autoStart])
+  }, [defaultDeviceId])
 
   const refreshDevices = useCallback(async () => {
     await refetchDevices()

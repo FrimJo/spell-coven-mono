@@ -34,7 +34,7 @@ export function LocalVideoCard({
   onCardCrop,
   onToggleVideo,
 }: LocalVideoCardProps) {
-  const mediaDeviceVideoRef = useRef<HTMLVideoElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
   // Manage local video state
   const localVideoStateOptions = useMemo(
     () => ({
@@ -51,7 +51,7 @@ export function LocalVideoCard({
 
   // Initialize card detector
   const { overlayRef, croppedRef, fullResRef } = useCardDetector({
-    videoRef: mediaDeviceVideoRef,
+    videoRef: videoRef,
     enableCardDetection,
     detectorType,
     usePerspectiveWarp,
@@ -67,7 +67,7 @@ export function LocalVideoCard({
     (videoElement: HTMLVideoElement | null) => {
       // Attach stream when element is mounted
       if (videoElement) {
-        mediaDeviceVideoRef.current = videoElement
+        videoRef.current = videoElement
         attachVideoStream(videoElement, stream)
       }
     },
@@ -75,15 +75,15 @@ export function LocalVideoCard({
   )
 
   const toggleLocalAudio = useCallback(() => {
-    if (mediaDeviceVideoRef.current && mediaDeviceVideoRef.current.srcObject) {
-      const mediaStream = mediaDeviceVideoRef.current.srcObject as MediaStream
+    if (videoRef.current && videoRef.current.srcObject) {
+      const mediaStream = videoRef.current.srcObject as MediaStream
       const audioTracks = mediaStream.getAudioTracks()
       audioTracks.forEach((track) => {
         track.enabled = !track.enabled
       })
       setIsAudioMuted(!isAudioMuted)
     }
-  }, [isAudioMuted, mediaDeviceVideoRef])
+  }, [isAudioMuted, videoRef])
 
   return (
     <PlayerVideoCard>
