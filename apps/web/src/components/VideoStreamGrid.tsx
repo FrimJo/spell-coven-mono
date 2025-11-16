@@ -43,9 +43,6 @@ interface VideoStreamGridProps {
   connectionStates?: Map<string, ConnectionState>
   /** Peer track states from PeerJS (player ID -> track state) */
   peerTrackStates?: Map<string, PeerTrackState>
-  // Local media
-  /** Local track state (video/audio enabled) */
-  localTrackState?: PeerTrackState
   // Callbacks
   /** Callback to toggle video track enabled/disabled (for WebRTC integration) */
   onToggleVideo?: (enabled: boolean) => Promise<void>
@@ -69,7 +66,6 @@ export function VideoStreamGrid({
   remoteStreams = new Map(),
   connectionStates = new Map(),
   peerTrackStates = new Map(),
-  localTrackState,
   onToggleVideo,
   onToggleAudio: _onToggleAudio,
 }: VideoStreamGridProps) {
@@ -101,16 +97,18 @@ export function VideoStreamGrid({
 
   // Get available cameras via useMediaDevice hook
   // Pass videoRef so the stream is attached to the video element
+  // autoStart: true - automatically start the camera stream when entering game room
   const { selectedDeviceId: currentCameraId } = useMediaDevice({
     kind: 'videoinput',
     videoRef: mediaDeviceVideoRef,
-    autoStart: false,
+    autoStart: true,
   })
 
   // Manage local video state with synchronization across:
   // 1. UI button state (show enabled/disabled)
   // 2. Physical webcam track (enable/disable)
   // 3. Peer stream (send/don't send video to peers)
+  // initialEnabled: true because useMediaDevice with autoStart: true starts the stream enabled
   const { videoEnabled, toggleVideo } = useLocalVideoState({
     videoRef: mediaDeviceVideoRef,
     onVideoStateChanged: async (enabled) => {
@@ -118,7 +116,7 @@ export function VideoStreamGrid({
         await onToggleVideo(enabled)
       }
     },
-    initialEnabled: localTrackState?.videoEnabled ?? true,
+    initialEnabled: true,
   })
 
   // Initialize card detector
