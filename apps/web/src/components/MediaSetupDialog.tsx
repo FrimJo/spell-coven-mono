@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAudioOutput } from '@/hooks/useAudioOutput'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
-import { useVideoStreamAttach } from '@/hooks/useVideoStreamAttach'
+import { attachVideoStreamNoAutoPlay } from '@/lib/video-stream-utils'
 import { AlertCircle, Camera, Check, Loader2, Mic, Volume2 } from 'lucide-react'
 
 import { Alert, AlertDescription } from '@repo/ui/components/alert'
@@ -35,8 +35,6 @@ export interface MediaConfig {
 }
 
 export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-
   console.log('[MediaSetupDialog] Rendering with open:', open)
 
   // Memoize hook options to prevent infinite renders from recreated objects
@@ -62,12 +60,15 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     stream: videoStream,
   } = useMediaDevice(videoDeviceOptions)
 
-  // Attach video stream to video element
-  useVideoStreamAttach({
-    videoRef,
-    stream: videoStream,
-    autoPlay: true,
-  })
+  // Callback ref to attach video stream (no auto-play for preview)
+  const handleVideoRef = useCallback(
+    (videoElement: HTMLVideoElement | null) => {
+      if (videoElement) {
+        attachVideoStreamNoAutoPlay(videoElement, videoStream)
+      }
+    },
+    [videoStream],
+  )
 
   // Use our consolidated media device hook for audio input
   const {
@@ -228,8 +229,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
             {/* Video Preview */}
             <div className="relative aspect-video overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
               <video
-                ref={videoRef}
-                autoPlay
+                ref={handleVideoRef}
                 playsInline
                 muted
                 className="h-full w-full object-cover"
