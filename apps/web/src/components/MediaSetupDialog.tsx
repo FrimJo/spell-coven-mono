@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useMemo, useEffect, useRef, useState } from 'react'
 import { useAudioOutput } from '@/hooks/useAudioOutput'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
 import { AlertCircle, Camera, Check, Loader2, Mic, Volume2 } from 'lucide-react'
@@ -38,6 +38,22 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
 
   console.log('[MediaSetupDialog] Rendering with open:', open)
 
+  // Memoize hook options to prevent infinite renders from recreated objects
+  const videoDeviceOptions = useMemo(
+    () => ({ kind: 'videoinput' as const, videoRef }),
+    [],
+  )
+
+  const audioInputDeviceOptions = useMemo(
+    () => ({ kind: 'audioinput' as const }),
+    [],
+  )
+
+  const audioOutputOptions = useMemo(
+    () => ({ initialDeviceId: 'default' }),
+    [],
+  )
+
   // Use our consolidated media device hook for video
   const {
     devices: videoDevices,
@@ -45,10 +61,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     error: videoError,
     isActive: isVideoActive,
     start: switchVideoDevice,
-  } = useMediaDevice({
-    kind: 'videoinput',
-    videoRef,
-  })
+  } = useMediaDevice(videoDeviceOptions)
 
   // Use our consolidated media device hook for audio input
   const {
@@ -57,9 +70,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     start: switchAudioInputDevice,
     stream: audioInputStream,
     error: audioInputError,
-  } = useMediaDevice({
-    kind: 'audioinput',
-  })
+  } = useMediaDevice(audioInputDeviceOptions)
 
   // Use our audio output hook for speakers/headphones
   const {
@@ -70,9 +81,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     isSupported: isAudioOutputSupported,
     error: audioOutputError,
     setOutputDevice: switchAudioOutputDevice,
-  } = useAudioOutput({
-    initialDeviceId: 'default',
-  })
+  } = useAudioOutput(audioOutputOptions)
 
   const [audioLevel, setAudioLevel] = useState<number>(0)
 
