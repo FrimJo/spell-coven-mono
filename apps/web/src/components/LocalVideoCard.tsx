@@ -1,8 +1,8 @@
 import type { DetectorType } from '@/lib/detectors'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useCardDetector } from '@/hooks/useCardDetector'
 import { useLocalVideoState } from '@/hooks/useLocalVideoState'
-import { useVideoStreamAttach } from '@/hooks/useVideoStreamAttach'
+import { attachVideoStream } from '@/lib/video-stream-utils'
 
 import { PlayerVideoCard } from './PlayerVideoCard'
 import {
@@ -10,7 +10,6 @@ import {
   CroppedCanvas,
   FullResCanvas,
   LocalMediaControls,
-  LocalVideo,
   PlayerNameBadge,
   VideoDisabledPlaceholder,
 } from './PlayerVideoCardParts'
@@ -29,15 +28,13 @@ interface LocalVideoCardProps {
 export function LocalVideoCard({
   localPlayerName,
   stream,
-  videoRef,
   enableCardDetection = true,
   detectorType,
   usePerspectiveWarp = true,
   onCardCrop,
   onToggleVideo,
 }: LocalVideoCardProps) {
-  // Note: stream and videoRef are managed by parent (VideoStreamGrid)
-
+  const mediaDeviceVideoRef = useRef<HTMLVideoElement>(null)
   // Manage local video state
   const localVideoStateOptions = useMemo(
     () => ({
@@ -54,7 +51,7 @@ export function LocalVideoCard({
 
   // Initialize card detector
   const { overlayRef, croppedRef, fullResRef } = useCardDetector({
-    videoRef,
+    videoRef: mediaDeviceVideoRef,
     enableCardDetection,
     detectorType,
     usePerspectiveWarp,
@@ -64,29 +61,49 @@ export function LocalVideoCard({
 
   const [isAudioMuted, setIsAudioMuted] = useState(false)
 
-  // Attach stream to video element and handle playback
-  useVideoStreamAttach({
-    videoRef,
-    stream,
-    autoPlay: true,
-  })
+  // Callback ref that combines ref assignment with stream attachment
+  // Called when video element is mounted/unmounted
+  const handleVideoRef = useCallback(
+    (videoElement: HTMLVideoElement | null) => {
+      // Attach stream when element is mounted
+      if (videoElement) {
+        mediaDeviceVideoRef.current = videoElement
+        attachVideoStream(videoElement, stream)
+      }
+    },
+    [stream],
+  )
 
   const toggleLocalAudio = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const mediaStream = videoRef.current.srcObject as MediaStream
+    if (mediaDeviceVideoRef.current && mediaDeviceVideoRef.current.srcObject) {
+      const mediaStream = mediaDeviceVideoRef.current.srcObject as MediaStream
       const audioTracks = mediaStream.getAudioTracks()
       audioTracks.forEach((track) => {
         track.enabled = !track.enabled
       })
       setIsAudioMuted(!isAudioMuted)
     }
-  }, [isAudioMuted, videoRef])
+  }, [isAudioMuted, mediaDeviceVideoRef])
 
   return (
     <PlayerVideoCard>
       {videoEnabled ? (
         <>
-          <LocalVideo videoRef={videoRef} />
+          <video
+            ref={handleVideoRef}
+            autoPlay
+            muted
+            playsInline
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              zIndex: 0,
+            }}
+          />
           {enableCardDetection && overlayRef && (
             <CardDetectionOverlay overlayRef={overlayRef} />
           )}

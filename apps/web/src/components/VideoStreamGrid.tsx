@@ -81,7 +81,7 @@ export function VideoStreamGrid({
   }, [gameRoomParticipants, localPlayerName])
 
   // Manage local video stream
-  const mediaDeviceVideoRef = useRef<HTMLVideoElement>(null)
+
   const { stream } = useMediaDevice({
     kind: 'videoinput',
     autoStart: true,
@@ -140,7 +140,6 @@ export function VideoStreamGrid({
         <LocalVideoCard
           localPlayerName={localPlayerName}
           stream={stream}
-          videoRef={mediaDeviceVideoRef}
           enableCardDetection={enableCardDetection}
           detectorType={detectorType}
           usePerspectiveWarp={usePerspectiveWarp}
