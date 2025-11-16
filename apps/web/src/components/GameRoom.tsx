@@ -102,7 +102,6 @@ function GameRoomContent({
 
   // PeerJS hook for peer-to-peer video streaming
   const {
-    localStream,
     localTrackState,
     remoteStreams,
     connectionStates,
@@ -415,7 +414,6 @@ function GameRoomContent({
               onCardCrop={(canvas: HTMLCanvasElement) => {
                 query(canvas)
               }}
-              localStream={localStream}
               localTrackState={localTrackState}
               remoteStreams={remoteStreams}
               connectionStates={connectionStates}
