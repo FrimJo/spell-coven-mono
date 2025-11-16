@@ -1,4 +1,6 @@
 import type { PropsWithChildren } from 'react'
+import { useState } from 'react'
+import { useMediaDevice } from '@/hooks/useMediaDevice'
 import {
   Camera,
   Mic,
@@ -9,8 +11,11 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
-import { Popover, PopoverContent } from '@repo/ui/components/popover'
-import { useMediaDevice } from '@/hooks/useMediaDevice'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@repo/ui/components/popover'
 
 /**
  * Local player video element with stream
@@ -124,20 +129,20 @@ export function VideoDisabledPlaceholder() {
 interface LocalMediaControlsProps {
   videoEnabled: boolean
   isAudioMuted: boolean
-  cameraPopoverOpen: boolean
   onToggleVideo: (enabled: boolean) => Promise<void>
   onToggleAudio: () => void
-  onCameraPopoverOpenChange: (open: boolean) => void
+  isTogglingVideo?: boolean
 }
 
 export function LocalMediaControls({
   videoEnabled,
   isAudioMuted,
-  cameraPopoverOpen,
   onToggleVideo,
   onToggleAudio,
-  onCameraPopoverOpenChange,
+  isTogglingVideo = false,
 }: LocalMediaControlsProps) {
+  const [cameraPopoverOpen, setCameraPopoverOpen] = useState(false)
+
   // Get camera data and control from hook - single source of truth
   // useMediaDevice handles persistence to localStorage internally
   const {
@@ -153,7 +158,7 @@ export function LocalMediaControls({
   const handleSelectCamera = async (deviceId: string) => {
     try {
       await switchCamera(deviceId) // Persists to localStorage internally
-      onCameraPopoverOpenChange(false)
+      setCameraPopoverOpen(false)
     } catch (error) {
       console.error('[LocalMediaControls] Failed to switch camera:', error)
     }
@@ -167,10 +172,11 @@ export function LocalMediaControls({
         onClick={async () => {
           await onToggleVideo(!videoEnabled)
         }}
+        disabled={isTogglingVideo}
         className={`h-10 w-10 p-0 ${
           videoEnabled
-            ? 'border-slate-700 text-white hover:bg-slate-800'
-            : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
+            ? 'border-slate-700 text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50'
+            : 'border-red-600 bg-red-600 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50'
         }`}
       >
         {videoEnabled ? (
@@ -195,19 +201,17 @@ export function LocalMediaControls({
           <MicOff className="h-5 w-5" />
         )}
       </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-10 w-10 border-slate-700 p-0 text-white hover:bg-slate-800"
-        onClick={() => onCameraPopoverOpenChange(!cameraPopoverOpen)}
-      >
-        <SwitchCamera className="h-5 w-5" />
-      </Button>
       {/* Camera selector popover */}
-      <Popover
-        open={cameraPopoverOpen}
-        onOpenChange={onCameraPopoverOpenChange}
-      >
+      <Popover open={cameraPopoverOpen} onOpenChange={setCameraPopoverOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-10 w-10 border-slate-700 p-0 text-white hover:bg-slate-800"
+          >
+            <SwitchCamera className="h-5 w-5" />
+          </Button>
+        </PopoverTrigger>
         <PopoverContent
           className="w-80 border-slate-800 bg-slate-950/95 p-0 backdrop-blur-sm"
           align="end"

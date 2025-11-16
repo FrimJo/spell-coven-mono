@@ -10,6 +10,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 
+import { useVideoTrackState } from './useVideoTrackState'
+
 export interface UseLocalVideoStateReturn {
   /** Whether video is currently enabled (derived from track state) */
   videoEnabled: boolean
@@ -17,11 +19,13 @@ export interface UseLocalVideoStateReturn {
   toggleVideo: (enabled: boolean) => Promise<void>
   /** Set video state without peer notification (for initialization) */
   setVideoEnabled: (enabled: boolean) => void
+  /** Whether a toggle operation is in progress */
+  isTogglingVideo: boolean
 }
 
 export interface UseLocalVideoStateOptions {
-  /** Video element ref to control track */
-  videoRef?: React.RefObject<HTMLVideoElement | null>
+  /** MediaStream to track (source of truth) */
+  stream: MediaStream
   /** Callback when video state changes (for peer notification) */
   onVideoStateChanged?: (enabled: boolean) => Promise<void>
   /** Initial video state (used before stream is available) */
@@ -54,118 +58,66 @@ export interface UseLocalVideoStateOptions {
  * ```
  */
 export function useLocalVideoState(
-  options: UseLocalVideoStateOptions = {},
+  options: UseLocalVideoStateOptions,
 ): UseLocalVideoStateReturn {
-  const {
-    videoRef,
-    onVideoStateChanged,
-    initialEnabled = true,
-  } = options
+  const { stream, onVideoStateChanged } = options
 
-  const [_forceUpdate, setForceUpdate] = useState(0)
   const [isTogglingVideo, setIsTogglingVideo] = useState(false)
 
   /**
-   * Get current video enabled state from the actual stream track
-   * This is the source of truth - no separate state needed
+   * Subscribe to track state changes via the dedicated hook
+   * This handles all the mute/unmute/ended event listeners
    */
-  const getVideoEnabled = useCallback(() => {
-    if (!videoRef?.current?.srcObject) {
-      return initialEnabled
-    }
-
-    const stream = videoRef.current.srcObject as MediaStream
-    const videoTracks = stream.getVideoTracks()
-
-    if (videoTracks.length === 0) {
-      return false
-    }
-
-    return videoTracks[0]!.enabled
-  }, [videoRef, initialEnabled])
-
+  const videoEnabled = useVideoTrackState(stream)
   /**
-   * Derive videoEnabled from track state
-   * Triggers re-render when track state changes via event listener
-   */
-  const videoEnabled = getVideoEnabled()
-
-  /**
-   * Listen for track state changes and trigger re-render
-   * Uses standard MediaStreamTrack events: mute, unmute, ended
-   * This ensures UI updates when track state changes
+   * Notify peers when video state changes for ANY reason
+   * This includes user clicks, browser mutes, external events, etc.
+   * Ensures peers always know the true state of our video track
    */
   useEffect(() => {
-    if (!videoRef?.current?.srcObject) {
-      return
-    }
-
-    const stream = videoRef.current.srcObject as MediaStream
-    const videoTracks = stream.getVideoTracks()
-
-    if (videoTracks.length === 0) {
-      return
-    }
-
-    // Trigger re-render when track state changes
-    const handleTrackStateChange = () => {
-      setForceUpdate((prev) => prev + 1)
-    }
-
-    videoTracks.forEach((track) => {
-      // mute: fires when track.enabled becomes false (or browser mutes it)
-      track.addEventListener('mute', handleTrackStateChange)
-      // unmute: fires when track.enabled becomes true (or browser unmutes it)
-      track.addEventListener('unmute', handleTrackStateChange)
-      // ended: fires when track ends
-      track.addEventListener('ended', handleTrackStateChange)
-    })
-
-    return () => {
-      videoTracks.forEach((track) => {
-        track.removeEventListener('mute', handleTrackStateChange)
-        track.removeEventListener('unmute', handleTrackStateChange)
-        track.removeEventListener('ended', handleTrackStateChange)
-      })
-    }
-  }, [videoRef])
+    void onVideoStateChanged?.(videoEnabled)
+  }, [videoEnabled, onVideoStateChanged])
 
   /**
    * Toggle video on/off
    * Coordinates:
    * 1. Update physical track
-   * 2. Update UI state
-   * 3. Notify peers
+   * 2. Update UI state (derived from track state via useSyncExternalStore)
+   * 3. Notify peers (handled by useEffect listening to track events)
    */
   const toggleVideo = useCallback(
     async (enabled: boolean) => {
       if (isTogglingVideo) return // Prevent concurrent toggles
-      if (videoEnabled === enabled) return // No state change needed
 
       setIsTogglingVideo(true)
 
       try {
-        // Step 1: Update physical track (enable/disable webcam)
-        if (videoRef?.current?.srcObject) {
-          const stream = videoRef.current.srcObject as MediaStream
+        // Update physical track (enable/disable webcam)
+        if (stream) {
           const videoTracks = stream.getVideoTracks()
+          // Check if state change is needed by comparing with cached state
+          // (cache is kept in sync with actual track state via mute/unmute event listeners)
+          if (videoEnabled === enabled) {
+            // No state change needed
+            return
+          }
+
           videoTracks.forEach((track) => {
             track.enabled = enabled
+            // Manually dispatch mute/unmute event since setting track.enabled doesn't trigger browser events
+            const event = new Event(enabled ? 'unmute' : 'mute')
+
+            track.dispatchEvent(event)
           })
         }
 
-        // Step 2: Notify peers (e.g., send to PeerJS)
-        // UI state is derived from track state, so it updates automatically
-        if (onVideoStateChanged) {
-          await onVideoStateChanged(enabled)
-        }
-
-        console.log(`[useLocalVideoState] Video ${enabled ? 'enabled' : 'disabled'}`)
+        console.log(
+          `[useLocalVideoState] Video ${enabled ? 'enabled' : 'disabled'}`,
+        )
       } catch (error) {
         console.error('[useLocalVideoState] Failed to toggle video:', error)
         // Revert track state on error
-        if (videoRef?.current?.srcObject) {
-          const stream = videoRef.current.srcObject as MediaStream
+        if (stream) {
           const videoTracks = stream.getVideoTracks()
           videoTracks.forEach((track) => {
             track.enabled = !enabled
@@ -176,29 +128,33 @@ export function useLocalVideoState(
         setIsTogglingVideo(false)
       }
     },
-    [videoRef, onVideoStateChanged, videoEnabled, isTogglingVideo],
+    [stream, isTogglingVideo, videoEnabled],
   )
 
   /**
    * Set video state without peer notification
    * Used for initialization or when state comes from peers
-   * Directly updates track state; UI derives from it automatically
+   * Directly updates track state; UI derives from it automatically via useSyncExternalStore
    */
-  const setVideoEnabledWithoutNotify = useCallback((enabled: boolean) => {
-    if (videoRef?.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream
-      const videoTracks = stream.getVideoTracks()
-      videoTracks.forEach((track) => {
-        track.enabled = enabled
-      })
-      // Trigger re-render by updating force update counter
-      setForceUpdate((prev) => prev + 1)
-    }
-  }, [videoRef])
+  const setVideoEnabledWithoutNotify = useCallback(
+    (enabled: boolean) => {
+      if (stream) {
+        const videoTracks = stream.getVideoTracks()
+        videoTracks.forEach((track) => {
+          track.enabled = enabled
+          // Manually dispatch mute/unmute event since setting track.enabled doesn't trigger browser events
+          const event = new Event(enabled ? 'unmute' : 'mute')
+          track.dispatchEvent(event)
+        })
+      }
+    },
+    [stream],
+  )
 
   return {
     videoEnabled,
     toggleVideo,
     setVideoEnabled: setVideoEnabledWithoutNotify,
+    isTogglingVideo,
   }
 }

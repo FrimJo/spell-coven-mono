@@ -117,7 +117,6 @@ export function useMediaDevice(
   const [isActive, setIsActive] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
-  const streamRef = useRef<MediaStream | null>(null)
   const onDeviceChangedRef = useRef(onDeviceChanged)
   const onErrorRef = useRef(onError)
 
@@ -194,14 +193,12 @@ export function useMediaDevice(
    * Stop the current stream and clean up
    */
   const stop = useCallback(() => {
-    if (streamRef.current) {
-      console.log('[useMediaDevice] Stopping stream')
-      stopMediaStream(streamRef.current)
-      streamRef.current = null
-      setStream(null)
-      setIsActive(false)
-    }
-
+    console.log('[useMediaDevice] Stopping stream')
+    setStream((prev) => {
+      if (prev != null) stopMediaStream(prev)
+      return null
+    })
+    setIsActive(false)
     clearVideoSource(videoRef)
   }, [videoRef])
 
@@ -221,13 +218,6 @@ export function useMediaDevice(
       try {
         console.log(`[useMediaDevice] Starting ${kind} device:`, deviceId)
         setError(null)
-
-        // Stop previous stream
-        if (streamRef.current) {
-          console.log('[useMediaDevice] Stopping previous stream')
-          stopMediaStream(streamRef.current)
-          streamRef.current = null
-        }
 
         // Clear video element if present
         clearVideoSource(videoRef)
@@ -253,11 +243,13 @@ export function useMediaDevice(
 
         console.log('[useMediaDevice] Got new stream')
 
-        // Update refs and state
-        streamRef.current = newStream
-        setStream(newStream)
+        setStream((prev) => {
+          console.log('[useMediaDevice] Stopping previous stream')
+          // Stop previous stream
+          if (prev != null) stopMediaStream(prev)
+          return newStream
+        })
         saveSelectedDevice(deviceId) // Persist to localStorage
-        setIsActive(true)
 
         // For video devices, set up video element
         if (kind === 'videoinput' && videoRef?.current) {
@@ -273,6 +265,8 @@ export function useMediaDevice(
             )
           }
         }
+
+        setIsActive(true)
 
         // Notify success
         onDeviceChangedRef.current?.(deviceId, newStream)

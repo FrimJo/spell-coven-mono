@@ -1,9 +1,7 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { ConnectionState, PeerTrackState } from '@/types/peerjs'
 import { Suspense, useMemo, useRef, useState } from 'react'
-import { useCardDetector } from '@/hooks/useCardDetector'
 import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
-import { useLocalVideoState } from '@/hooks/useLocalVideoState'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
 import { Loader2, MicOff, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react'
@@ -11,16 +9,8 @@ import { Loader2, MicOff, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react'
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
 
-import { PlayerVideoCard } from './PlayerVideoCard'
-import {
-  CardDetectionOverlay,
-  CroppedCanvas,
-  FullResCanvas,
-  LocalMediaControls,
-  LocalVideo,
-  PlayerNameBadge,
-  VideoDisabledPlaceholder,
-} from './PlayerVideoCardParts'
+import { LocalVideoCard } from './LocalVideoCard'
+import { PlayerNameBadge, VideoDisabledPlaceholder } from './PlayerVideoCardParts'
 
 interface VideoStreamGridProps {
   // Room and user identification (for fetching participants)
@@ -87,47 +77,12 @@ export function VideoStreamGrid({
       }))
   }, [gameRoomParticipants, localPlayerName])
 
-  // State declarations first (needed before useWebcam hook)
-  const [cameraPopoverOpen, setCameraPopoverOpen] = useState(false)
-  const [isAudioMuted, setIsAudioMuted] = useState(false)
-
-  // Create a ref for useMediaDevice to attach the stream
-  // This is separate from useWebcam's videoRef which is for canvas-based processing
+  // Manage local video stream
   const mediaDeviceVideoRef = useRef<HTMLVideoElement>(null)
-
-  // Get available cameras via useMediaDevice hook
-  // Pass videoRef so the stream is attached to the video element
-  // autoStart: true - automatically start the camera stream when entering game room
-  const { selectedDeviceId: currentCameraId } = useMediaDevice({
+  const { stream } = useMediaDevice({
     kind: 'videoinput',
     videoRef: mediaDeviceVideoRef,
     autoStart: true,
-  })
-
-  // Manage local video state with synchronization across:
-  // 1. UI button state (show enabled/disabled)
-  // 2. Physical webcam track (enable/disable)
-  // 3. Peer stream (send/don't send video to peers)
-  // initialEnabled: true because useMediaDevice with autoStart: true starts the stream enabled
-  const { videoEnabled, toggleVideo } = useLocalVideoState({
-    videoRef: mediaDeviceVideoRef,
-    onVideoStateChanged: async (enabled) => {
-      if (onToggleVideo) {
-        await onToggleVideo(enabled)
-      }
-    },
-    initialEnabled: true,
-  })
-
-  // Initialize card detector
-  // Uses currentCameraId from useMediaDevice to trigger re-initialization on camera switch
-  const { overlayRef, croppedRef, fullResRef } = useCardDetector({
-    videoRef: mediaDeviceVideoRef,
-    enableCardDetection,
-    detectorType,
-    usePerspectiveWarp,
-    onCrop: onCardCrop,
-    reinitializeTrigger: currentCameraId ? 1 : 0,
   })
 
   const [streamStates, setStreamStates] = useState<Record<string, StreamState>>(
@@ -142,17 +97,6 @@ export function VideoStreamGrid({
 
   // Find local player (not currently used but may be needed for future features)
   // const localPlayer = players.find((p) => p.name === localPlayerName)
-
-  const toggleLocalAudio = () => {
-    if (mediaDeviceVideoRef.current && mediaDeviceVideoRef.current.srcObject) {
-      const stream = mediaDeviceVideoRef.current.srcObject as MediaStream
-      const audioTracks = stream.getAudioTracks()
-      audioTracks.forEach((track) => {
-        track.enabled = !track.enabled
-      })
-      setIsAudioMuted(!isAudioMuted)
-    }
-  }
 
   const toggleAudio = (playerId: string) => {
     // For remote players, just update UI state
@@ -189,43 +133,36 @@ export function VideoStreamGrid({
 
   return (
     <div className={`grid ${getGridClass()} h-full gap-4`}>
-      {/* Render local player first */}
-      <PlayerVideoCard>
-        {videoEnabled ? (
-          <>
-            <LocalVideo videoRef={mediaDeviceVideoRef} />
-            {enableCardDetection && overlayRef && (
-              <CardDetectionOverlay overlayRef={overlayRef} />
-            )}
-            {enableCardDetection && croppedRef && (
-              <CroppedCanvas croppedRef={croppedRef} />
-            )}
-            {enableCardDetection && fullResRef && (
-              <FullResCanvas fullResRef={fullResRef} />
-            )}
-          </>
-        ) : (
-          <VideoDisabledPlaceholder />
-        )}
-
-        {/* Player Info Badge */}
-        <PlayerNameBadge>
-          <span className="text-white">{localPlayerName}</span>
-          <span className="rounded bg-purple-500/30 px-1.5 py-0.5 text-xs text-purple-300">
-            You
-          </span>
-        </PlayerNameBadge>
-
-        {/* Media Controls */}
-        <LocalMediaControls
-          videoEnabled={videoEnabled}
-          isAudioMuted={isAudioMuted}
-          cameraPopoverOpen={cameraPopoverOpen}
-          onToggleVideo={toggleVideo}
-          onToggleAudio={toggleLocalAudio}
-          onCameraPopoverOpenChange={setCameraPopoverOpen}
+      {/* Render local player with loading state while stream initializes */}
+      {stream ? (
+        <LocalVideoCard
+          localPlayerName={localPlayerName}
+          stream={stream}
+          videoRef={mediaDeviceVideoRef}
+          enableCardDetection={enableCardDetection}
+          detectorType={detectorType}
+          usePerspectiveWarp={usePerspectiveWarp}
+          onCardCrop={onCardCrop}
+          onToggleVideo={onToggleVideo}
         />
-      </PlayerVideoCard>
+      ) : (
+        <div className="flex h-full items-center justify-center rounded-lg border border-slate-700 bg-slate-800/50">
+          <div className="flex flex-col items-center space-y-3">
+            <div className="relative">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-500/20">
+                <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+              </div>
+              <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/10" />
+            </div>
+            <div className="space-y-1 text-center">
+              <p className="text-sm font-medium text-slate-200">
+                Initializing Camera
+              </p>
+              <p className="text-xs text-slate-400">Starting video stream...</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Render remote players */}
       {players.map((player) => {
@@ -235,8 +172,8 @@ export function VideoStreamGrid({
         const peerTrackState = peerTrackStates.get(player.id)
 
         // Remote players: use peerTrackState which checks if track is 'live'
-        const videoEnabled = peerTrackState?.videoEnabled ?? false
-        const audioEnabled = peerTrackState?.audioEnabled ?? state.audio
+        const peerVideoEnabled = peerTrackState?.videoEnabled ?? false
+        const peerAudioEnabled = peerTrackState?.audioEnabled ?? state.audio
 
         return (
           <Card
@@ -245,7 +182,7 @@ export function VideoStreamGrid({
           >
             <div className="relative flex-1 bg-black">
               {/* Render video elements when enabled, placeholder when disabled */}
-              {videoEnabled ? (
+              {peerVideoEnabled ? (
                 <>
                   {/* Remote player video element */}
                   {remoteStream && (
@@ -356,7 +293,7 @@ export function VideoStreamGrid({
 
               {/* Audio/Video Status Indicators */}
               <div className="absolute right-3 top-3 z-10 flex gap-2">
-                {!audioEnabled && (
+                {!peerAudioEnabled && (
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/20 backdrop-blur-sm">
                     <MicOff className="h-4 w-4 text-red-400" />
                   </div>
@@ -391,15 +328,15 @@ export function VideoStreamGrid({
               <div className="absolute bottom-4 right-4 z-10">
                 <Button
                   size="sm"
-                  variant={audioEnabled ? 'outline' : 'destructive'}
+                  variant={peerAudioEnabled ? 'outline' : 'destructive'}
                   onClick={() => toggleAudio(player.id)}
                   className={`h-10 w-10 p-0 backdrop-blur-sm ${
-                    audioEnabled
+                    peerAudioEnabled
                       ? 'border-slate-700 bg-slate-950/90 text-white hover:bg-slate-800'
                       : 'border-red-600 bg-red-600 text-white hover:bg-red-700'
                   }`}
                 >
-                  {audioEnabled ? (
+                  {peerAudioEnabled ? (
                     <Volume2 className="h-5 w-5" />
                   ) : (
                     <VolumeX className="h-5 w-5" />
