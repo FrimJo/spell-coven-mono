@@ -203,15 +203,17 @@ export async function replaceTrackInSender(
 /**
  * Get a temporary stream for device enumeration (with permissions)
  * This is useful when you need device labels but don't want to keep the stream
- * 
+ *
  * Note: This may fail if no devices are available or permissions are denied.
  * Callers should handle errors gracefully.
  */
 export async function getTemporaryStreamForPermissions(
   kind: 'video' | 'audio',
 ): Promise<{ deviceId: string | null; stream: MediaStream }> {
-  console.log(`[MediaStreamManager] Requesting temporary ${kind} stream for permissions`)
-  
+  console.log(
+    `[MediaStreamManager] Requesting temporary ${kind} stream for permissions`,
+  )
+
   const constraints: MediaStreamConstraints =
     kind === 'video'
       ? { video: true, audio: false }
@@ -221,11 +223,17 @@ export async function getTemporaryStreamForPermissions(
     const stream = await navigator.mediaDevices.getUserMedia(constraints)
     const track = stream.getTracks()[0]
     const deviceId = track?.getSettings().deviceId || null
-    
-    console.log(`[MediaStreamManager] Got temporary ${kind} stream, deviceId:`, deviceId)
+
+    console.log(
+      `[MediaStreamManager] Got temporary ${kind} stream, deviceId:`,
+      deviceId,
+    )
     return { deviceId, stream }
   } catch (error) {
-    console.error(`[MediaStreamManager] Failed to get temporary ${kind} stream:`, error)
+    console.error(
+      `[MediaStreamManager] Failed to get temporary ${kind} stream:`,
+      error,
+    )
     throw error
   }
 }
@@ -237,29 +245,30 @@ export async function getTemporaryStreamForPermissions(
 export async function enumerateMediaDevices(
   kind?: 'videoinput' | 'audioinput' | 'audiooutput',
 ): Promise<MediaDeviceInfo[]> {
-  console.log('[MediaStreamManager] enumerateMediaDevices called with kind:', kind)
+  console.log(
+    '[MediaStreamManager] enumerateMediaDevices called with kind:',
+    kind,
+  )
   const devices = await navigator.mediaDevices.enumerateDevices()
   console.log(
     `[MediaStreamManager] Raw enumerated ${devices.length} total devices:`,
-    devices.map(d => ({ kind: d.kind, deviceId: d.deviceId, label: d.label }))
+    devices.map((d) => ({
+      kind: d.kind,
+      deviceId: d.deviceId,
+      label: d.label,
+    })),
   )
 
   // Filter by kind if specified
   const filtered = kind ? devices.filter((d) => d.kind === kind) : devices
   console.log(
     `[MediaStreamManager] After kind filter (${kind}): ${filtered.length} devices`,
-    filtered.map(d => ({ kind: d.kind, deviceId: d.deviceId, label: d.label }))
+    filtered.map((d) => ({
+      kind: d.kind,
+      deviceId: d.deviceId,
+      label: d.label,
+    })),
   )
 
-  // Filter out mock/virtual devices (e.g., video-file: prefix from testing)
-  const realDevices = filtered.filter(
-    (device) => !device.deviceId.startsWith('video-file:'),
-  )
-
-  console.log(
-    `[MediaStreamManager] Final result: ${realDevices.length} ${kind || 'all'} devices`,
-    realDevices.map(d => ({ kind: d.kind, deviceId: d.deviceId, label: d.label }))
-  )
-
-  return realDevices
+  return filtered
 }
