@@ -13,18 +13,19 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   enumerateMediaDevices,
   getMediaStream,
-  getTemporaryStreamForPermissions,
   stopMediaStream,
 } from '@/lib/media-stream-manager'
+import { useQuery } from '@tanstack/react-query'
 
-export interface MediaDeviceInfo
-  extends Pick<globalThis.MediaDeviceInfo, 'deviceId' | 'label' | 'kind'> {
-  isDefault?: boolean
+export interface MediaDeviceInfo {
+  id: string
+  label: string
+  kind: 'audioinput' | 'audiooutput' | 'videoinput'
 }
 
 export interface UseMediaDeviceOptions {
   /** Type of media device: 'video' or 'audio' */
-  kind: 'videoinput' | 'audioinput'
+  kind: MediaDeviceInfo['kind']
   /** Initial device ID to use */
   initialDeviceId?: string
   /** Video element ref for video devices */
@@ -119,10 +120,8 @@ export function useMediaDevice(
   const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(
     initialDeviceId || null,
   )
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
   const [isActive, setIsActive] = useState(false)
   const [error, setError] = useState<Error | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
 
   const streamRef = useRef<MediaStream | null>(null)
   const onDeviceChangedRef = useRef(onDeviceChanged)
@@ -134,53 +133,17 @@ export function useMediaDevice(
   }, [onDeviceChanged, onError])
 
   /**
-   * Refresh the list of available devices
+   * Fetch and enumerate available media devices using React Query
    */
-  const refreshDevices = useCallback(async () => {
-    console.log(`[useMediaDevice] refreshDevices called for kind: ${kind}`)
-    try {
-      setIsLoading(true)
+  const {
+    data,
+    isLoading,
+    refetch: refetchDevices,
+  } = useQuery({
+    queryKey: ['mediaDevices', kind],
+    queryFn: async () => {
+      console.log(`[useMediaDevice] Fetching devices for kind: ${kind}`)
 
-      // First, request permissions to get device labels
-      // Without permissions, enumerateDevices() returns devices with empty labels
-      let defaultDeviceId: string | null = null
-      try {
-        const { deviceId, stream: tempStream } =
-          await getTemporaryStreamForPermissions(
-            kind === 'videoinput' ? 'video' : 'audio',
-          )
-        defaultDeviceId = deviceId
-        console.log(
-          `[useMediaDevice] Detected default ${kind}:`,
-          defaultDeviceId,
-        )
-        // Clean up the temporary stream immediately
-        stopMediaStream(tempStream)
-      } catch (err) {
-        const error = err as Error
-        console.warn(
-          '[useMediaDevice] Could not get permissions for device enumeration:',
-          err,
-        )
-        console.warn('[useMediaDevice] Error name:', error.name)
-        console.warn('[useMediaDevice] Error message:', error.message)
-
-        if (error.name === 'NotFoundError') {
-          console.error(
-            '[useMediaDevice] NotFoundError: No camera device found. Possible causes:',
-          )
-          console.error('  1. Camera is in use by another application')
-          console.error('  2. Camera is disabled in System Settings')
-          console.error('  3. Browser does not have camera permission')
-        } else if (error.name === 'NotAllowedError') {
-          console.error(
-            '[useMediaDevice] NotAllowedError: User denied camera permission',
-          )
-        }
-        // If we can't get permissions, we'll still enumerate but labels will be empty
-      }
-
-      // Now enumerate devices (will have labels if permissions were granted)
       // Use centralized device enumeration (already filtered by kind)
       const matchingKind = await enumerateMediaDevices(kind)
       console.log(
@@ -200,42 +163,36 @@ export function useMediaDevice(
           (device) => device.deviceId !== 'default' && device.deviceId !== '',
         )
         .map((device, index) => {
-          const isDefault = device.deviceId === defaultDeviceId
           // If no label, use a generic one with index (happens when permissions not granted)
           const baseLabel =
             device.label ||
             `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${index + 1}`
           return {
-            deviceId: device.deviceId,
-            label: isDefault ? `${baseLabel} (Default)` : baseLabel,
+            id: device.deviceId,
+            label: index === 0 ? `${baseLabel} (Default)` : baseLabel,
             kind: device.kind,
-            isDefault,
-          }
+          } satisfies MediaDeviceInfo
         })
 
       console.log(
         `[useMediaDevice] Final filtered ${kind} devices (${filteredDevices.length}):`,
         filteredDevices,
       )
-      setDevices(filteredDevices)
-    } catch (err) {
-      console.error(
-        `[useMediaDevice] Failed to enumerate ${kind} devices:`,
-        err,
-      )
-      console.error(
-        '[useMediaDevice] Error stack:',
-        err instanceof Error ? err.stack : 'No stack trace',
-      )
-      // Set empty array on error
-      setDevices([])
-    } finally {
-      console.log(
-        `[useMediaDevice] refreshDevices completed for ${kind}, isLoading -> false`,
-      )
-      setIsLoading(false)
-    }
-  }, [kind])
+      return {
+        devices: filteredDevices,
+        defaultDeviceId: filteredDevices[0]?.id,
+      }
+    },
+    staleTime: 30000, // 30 seconds
+    gcTime: 60000, // 1 minute (formerly cacheTime)
+  })
+
+  /**
+   * Wrapper for refetch to maintain the expected API (returns Promise<void>)
+   */
+  const refreshDevices = useCallback(async () => {
+    await refetchDevices()
+  }, [refetchDevices])
 
   /**
    * Stop the current stream and clean up
@@ -260,13 +217,9 @@ export function useMediaDevice(
    */
   const start = useCallback(
     async (deviceId?: string) => {
-      let targetDeviceId = deviceId || currentDeviceId
-
-      // If still no device ID, try to find default or first device
-      if (!targetDeviceId && devices.length > 0) {
-        const defaultDevice = devices.find((device) => device.isDefault)
-        targetDeviceId = defaultDevice?.deviceId || devices[0]?.deviceId || null
-      }
+      if (data == null) return
+      const targetDeviceId =
+        deviceId ?? data.defaultDeviceId ?? data.devices[0]?.id
 
       if (!targetDeviceId) {
         const err = new Error('No device ID provided and no devices available')
@@ -344,14 +297,7 @@ export function useMediaDevice(
         throw error
       }
     },
-    [
-      kind,
-      currentDeviceId,
-      devices,
-      videoRef,
-      videoConstraints,
-      audioConstraints,
-    ],
+    [audioConstraints, data, kind, videoConstraints, videoRef],
   )
 
   /**
@@ -364,30 +310,36 @@ export function useMediaDevice(
     [start],
   )
 
-  useEffect(() => {
-    refreshDevices()
-  }, [refreshDevices])
+  // useEffect(() => {
+  //   refreshDevices()
+  // }, [refreshDevices])
 
   // Auto-select default device when devices list changes and no device is selected
-  useEffect(() => {
-    if (devices.length > 0) {
-      const defaultDevice = devices.find((device) => device.isDefault)
-      const deviceToSelect = defaultDevice?.deviceId ?? devices[0]?.deviceId
+  // useEffect(() => {
+  //   console.log('[useMediaDevice] Auto-selecting device')
+  //   if (devices.length > 0) {
+  //     const defaultDevice = devices.find((device) => device.isDefault)
+  //     const deviceToSelect = defaultDevice?.deviceId ?? devices[0]?.deviceId
+  //     console.log('[useMediaDevice] Devices:', {
+  //       devices,
+  //       defaultDevice,
+  //       deviceToSelect,
+  //     })
 
-      if (deviceToSelect) {
-        console.log(
-          `[useMediaDevice] Auto-selecting ${defaultDevice ? 'default' : 'first'} device:`,
-          deviceToSelect,
-        )
-        void start(deviceToSelect)
-      }
-    }
-  }, [devices, start])
+  //     if (deviceToSelect) {
+  //       console.log(
+  //         `[useMediaDevice] Auto-selecting ${defaultDevice ? 'default' : 'first'} device:`,
+  //         deviceToSelect,
+  //       )
+  //       void start(deviceToSelect)
+  //     }
+  //   }
+  // }, [devices, start])
 
   return {
     stream,
     currentDeviceId,
-    devices,
+    devices: data?.devices || [],
     switchDevice,
     start,
     stop,
