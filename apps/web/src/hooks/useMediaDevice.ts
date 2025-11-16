@@ -37,8 +37,8 @@ export interface UseMediaDeviceReturn {
   stream: MediaStream | null
   /** Available devices */
   devices: MediaDeviceInfo[]
-  /** Default device ID */
-  defaultDeviceId: string | null
+  /** Currently selected device ID (starts with default, updates on user selection) */
+  selectedDeviceId: string | null
   /** Start the media stream */
   start: (deviceId: string) => Promise<void>
   /** Stop the media stream */
@@ -113,6 +113,7 @@ export function useMediaDevice(
   } = options
 
   const [stream, setStream] = useState<MediaStream | null>(null)
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null)
 
   const [isActive, setIsActive] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -132,10 +133,11 @@ export function useMediaDevice(
    * Fetch and enumerate available media devices using React Query
    */
   const {
-    data,
+    data: queryData = { devices: [], defaultDeviceId: null },
     isLoading,
     refetch: refetchDevices,
   } = useQuery({
+    // Extract devices and activeDeviceId from query data
     queryKey: ['mediaDevices', kind, mediaDevices.timestamp],
     queryFn: async () => {
       console.log(`[useMediaDevice] Fetching devices for kind: ${kind}`)
@@ -174,14 +176,18 @@ export function useMediaDevice(
         `[useMediaDevice] Final filtered ${kind} devices (${filteredDevices.length}):`,
         filteredDevices,
       )
-      return {
-        devices: filteredDevices,
-        defaultDeviceId: filteredDevices[0]?.deviceId,
-      }
+      return filteredDevices
     },
+    select: (devices) => ({
+      devices,
+      defaultDeviceId: devices[0]?.deviceId ?? null,
+    }),
     staleTime: 30000, // 30 seconds
     gcTime: 60000, // 1 minute (formerly cacheTime)
   })
+
+  const { devices, defaultDeviceId } = queryData
+
   /**
    * Stop the current stream and clean up
    */
@@ -248,6 +254,7 @@ export function useMediaDevice(
         // Update refs and state
         streamRef.current = newStream
         setStream(newStream)
+        setSelectedDeviceId(deviceId)
         setIsActive(true)
 
         // For video devices, set up video element
@@ -280,18 +287,18 @@ export function useMediaDevice(
   )
 
   const autoStartEvent = useEffectEvent(() => {
-    if (!isActive && data?.defaultDeviceId != null) {
-      start(data.defaultDeviceId).catch((err) => {
+    if (!isActive && defaultDeviceId != null) {
+      start(defaultDeviceId).catch((err) => {
         console.error('[useMediaDevice] autoStart start failed:', err)
       })
     }
   })
 
   useEffect(() => {
-    if (data?.defaultDeviceId != null) {
+    if (defaultDeviceId != null && autoStart) {
       autoStartEvent()
     }
-  }, [data?.defaultDeviceId])
+  }, [defaultDeviceId, autoStart])
 
   const refreshDevices = useCallback(async () => {
     await refetchDevices()
@@ -299,8 +306,8 @@ export function useMediaDevice(
 
   return {
     stream,
-    devices: data?.devices ?? [],
-    defaultDeviceId: data?.defaultDeviceId ?? null,
+    devices,
+    selectedDeviceId: selectedDeviceId ?? defaultDeviceId,
     start,
     stop,
     refreshDevices,
