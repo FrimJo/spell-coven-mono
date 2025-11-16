@@ -22,11 +22,6 @@ import {
   SelectValue,
 } from '@repo/ui/components/select'
 
-interface MediaDevice {
-  deviceId: string
-  label: string
-}
-
 interface MediaSetupDialogProps {
   open: boolean
   onComplete: (config: MediaConfig) => void
@@ -46,37 +41,35 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   // Use our consolidated media device hook for video
   const {
     devices: videoDevices,
-    currentDeviceId: selectedVideoId,
-    switchDevice: switchVideoDevice,
+    defaultDeviceId: selectedVideoId,
     error: videoError,
     isActive: isVideoActive,
+    start: switchVideoDevice,
   } = useMediaDevice({
     kind: 'videoinput',
     videoRef,
-    shouldStart: open, // Reactively start/stop when dialog opens/closes
   })
 
   // Use our consolidated media device hook for audio input
   const {
     devices: audioInputDevices,
-    currentDeviceId: selectedAudioInputId,
-    switchDevice: switchAudioInputDevice,
+    defaultDeviceId: selectedAudioInputId,
+    start: switchAudioInputDevice,
     stream: audioInputStream,
     error: audioInputError,
   } = useMediaDevice({
     kind: 'audioinput',
-    shouldStart: open, // Reactively start/stop when dialog opens/closes
   })
 
   // Use our audio output hook for speakers/headphones
   const {
     devices: audioOutputDevices,
     currentDeviceId: selectedAudioOutputId,
-    setOutputDevice: setAudioOutputDevice,
     testOutput: testAudioOutput,
     isTesting: isTestingOutput,
     isSupported: isAudioOutputSupported,
     error: audioOutputError,
+    setOutputDevice: switchAudioOutputDevice,
   } = useAudioOutput({
     initialDeviceId: 'default',
   })
@@ -314,7 +307,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
               <Select
                 value={selectedAudioOutputId}
                 onValueChange={(deviceId) =>
-                  void setAudioOutputDevice(deviceId)
+                  void switchAudioOutputDevice(deviceId)
                 }
                 disabled={!isAudioOutputSupported}
               >

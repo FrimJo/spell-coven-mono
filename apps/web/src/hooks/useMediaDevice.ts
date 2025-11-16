@@ -8,20 +8,12 @@
  * - Race condition prevention
  * - Error handling
  */
-
-import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  enumerateMediaDevices,
-  getMediaStream,
-  stopMediaStream,
-} from '@/lib/media-stream-manager'
+import type { MediaDeviceInfo } from '@/lib/media-stream-manager'
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
+import { getMediaStream, stopMediaStream } from '@/lib/media-stream-manager'
 import { useQuery } from '@tanstack/react-query'
 
-export interface MediaDeviceInfo {
-  id: string
-  label: string
-  kind: 'audioinput' | 'audiooutput' | 'videoinput'
-}
+import { useMediaDeviceChange } from './useMediaDeviceChange'
 
 export interface UseMediaDeviceOptions {
   /** Type of media device: 'video' or 'audio' */
@@ -30,8 +22,6 @@ export interface UseMediaDeviceOptions {
   videoRef?: React.RefObject<HTMLVideoElement | null>
   /** Auto-start on mount (not reactive to changes) */
   autoStart?: boolean
-  /** Reactive trigger to start the device when true (overrides autoStart) */
-  shouldStart?: boolean
   /** Additional video constraints */
   videoConstraints?: MediaTrackConstraints
   /** Additional audio constraints */
@@ -47,6 +37,8 @@ export interface UseMediaDeviceReturn {
   stream: MediaStream | null
   /** Available devices */
   devices: MediaDeviceInfo[]
+  /** Default device ID */
+  defaultDeviceId: string | null
   /** Start the media stream */
   start: (deviceId: string) => Promise<void>
   /** Stop the media stream */
@@ -110,8 +102,7 @@ export function useMediaDevice(
   const {
     kind,
     videoRef,
-    autoStart: autoStart = false,
-    shouldStart,
+    autoStart = false,
     videoConstraints = {
       width: { ideal: 1920 },
       height: { ideal: 1080 },
@@ -130,6 +121,8 @@ export function useMediaDevice(
   const onDeviceChangedRef = useRef(onDeviceChanged)
   const onErrorRef = useRef(onError)
 
+  const mediaDevices = useMediaDeviceChange()
+
   useEffect(() => {
     onDeviceChangedRef.current = onDeviceChanged
     onErrorRef.current = onError
@@ -143,12 +136,12 @@ export function useMediaDevice(
     isLoading,
     refetch: refetchDevices,
   } = useQuery({
-    queryKey: ['mediaDevices', kind],
+    queryKey: ['mediaDevices', kind, mediaDevices.timestamp],
     queryFn: async () => {
       console.log(`[useMediaDevice] Fetching devices for kind: ${kind}`)
 
       // Use centralized device enumeration (already filtered by kind)
-      const matchingKind = await enumerateMediaDevices(kind)
+      const matchingKind = mediaDevices[kind] || []
       console.log(
         `[useMediaDevice] Devices matching kind '${kind}' (${matchingKind.length}):`,
         matchingKind,
@@ -165,13 +158,13 @@ export function useMediaDevice(
         .filter(
           (device) => device.deviceId !== 'default' && device.deviceId !== '',
         )
-        .map((device, index) => {
+        .map((device, index: number) => {
           // If no label, use a generic one with index (happens when permissions not granted)
           const baseLabel =
             device.label ||
             `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${index + 1}`
           return {
-            id: device.deviceId,
+            deviceId: device.deviceId,
             label: index === 0 ? `${baseLabel} (Default)` : baseLabel,
             kind: device.kind,
           } satisfies MediaDeviceInfo
@@ -183,20 +176,12 @@ export function useMediaDevice(
       )
       return {
         devices: filteredDevices,
-        defaultDeviceId: filteredDevices[0]?.id,
+        defaultDeviceId: filteredDevices[0]?.deviceId,
       }
     },
     staleTime: 30000, // 30 seconds
     gcTime: 60000, // 1 minute (formerly cacheTime)
   })
-
-  /**
-   * Wrapper for refetch to maintain the expected API (returns Promise<void>)
-   */
-  const refreshDevices = useCallback(async () => {
-    await refetchDevices()
-  }, [refetchDevices])
-
   /**
    * Stop the current stream and clean up
    */
@@ -237,9 +222,7 @@ export function useMediaDevice(
         }
 
         // Clear video element if present
-        if (videoRef?.current) {
-          videoRef.current.srcObject = null
-        }
+        clearVideoSource(videoRef)
 
         // Get the media stream using centralized manager
         const { stream: newStream } = await getMediaStream(
@@ -296,9 +279,28 @@ export function useMediaDevice(
     [audioConstraints, kind, videoConstraints, videoRef],
   )
 
+  const autoStartEvent = useEffectEvent(() => {
+    if (!isActive && data?.defaultDeviceId != null) {
+      start(data.defaultDeviceId).catch((err) => {
+        console.error('[useMediaDevice] autoStart start failed:', err)
+      })
+    }
+  })
+
+  useEffect(() => {
+    if (data?.defaultDeviceId != null) {
+      autoStartEvent()
+    }
+  }, [data?.defaultDeviceId])
+
+  const refreshDevices = useCallback(async () => {
+    await refetchDevices()
+  }, [refetchDevices])
+
   return {
     stream,
-    devices: data?.devices || [],
+    devices: data?.devices ?? [],
+    defaultDeviceId: data?.defaultDeviceId ?? null,
     start,
     stop,
     refreshDevices,

@@ -8,6 +8,12 @@
  * - Track cleanup
  */
 
+export interface MediaDeviceInfo {
+  deviceId: string
+  label: string
+  kind: 'videoinput' | 'audioinput' | 'audiooutput'
+}
+
 export interface GetMediaStreamOptions {
   /** Video device ID (exact match) */
   videoDeviceId?: string | null
