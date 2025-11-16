@@ -14,6 +14,7 @@ import { getMediaStream, stopMediaStream } from '@/lib/media-stream-manager'
 import { useQuery } from '@tanstack/react-query'
 
 import { useMediaDeviceChange } from './useMediaDeviceChange'
+import { useSelectedMediaDevice } from './useSelectedMediaDevice'
 
 export interface UseMediaDeviceOptions {
   /** Type of media device: 'video' or 'audio' */
@@ -113,8 +114,6 @@ export function useMediaDevice(
   } = options
 
   const [stream, setStream] = useState<MediaStream | null>(null)
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null)
-
   const [isActive, setIsActive] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
@@ -123,6 +122,9 @@ export function useMediaDevice(
   const onErrorRef = useRef(onError)
 
   const mediaDevices = useMediaDeviceChange()
+
+  // Use selected device hook as state manager with localStorage persistence
+  const { selectedDeviceId, saveSelectedDevice } = useSelectedMediaDevice(kind)
 
   useEffect(() => {
     onDeviceChangedRef.current = onDeviceChanged
@@ -254,7 +256,7 @@ export function useMediaDevice(
         // Update refs and state
         streamRef.current = newStream
         setStream(newStream)
-        setSelectedDeviceId(deviceId)
+        saveSelectedDevice(deviceId) // Persist to localStorage
         setIsActive(true)
 
         // For video devices, set up video element
@@ -283,7 +285,7 @@ export function useMediaDevice(
         throw error
       }
     },
-    [audioConstraints, kind, videoConstraints, videoRef],
+    [audioConstraints, kind, videoConstraints, videoRef, saveSelectedDevice],
   )
 
   const autoStartEvent = useEffectEvent(() => {

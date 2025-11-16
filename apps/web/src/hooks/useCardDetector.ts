@@ -1,6 +1,6 @@
 import type { DetectorType } from '@/lib/detectors'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { setupWebcam } from '@/lib/webcam'
+import { setupCardDetector } from '@/lib/setupCardDetector'
 
 interface UseWebcamOptions {
   /** Video element ref (managed by useMediaDevice) */
@@ -76,8 +76,8 @@ export function useCardDetector(options: UseWebcamOptions): UseWebcamReturn {
   const croppedRef = useRef<HTMLCanvasElement>(null)
   const fullResRef = useRef<HTMLCanvasElement>(null)
 
-  const webcamController = useRef<Awaited<
-    ReturnType<typeof setupWebcam>
+  const cardDetectorController = useRef<Awaited<
+    ReturnType<typeof setupCardDetector>
   > | null>(null)
   const isInitialized = useRef(false)
 
@@ -109,7 +109,7 @@ export function useCardDetector(options: UseWebcamOptions): UseWebcamReturn {
         // Reset initialization flag to allow reinitialization when video stream changes
         isInitialized.current = false
 
-        webcamController.current = await setupWebcam({
+        cardDetectorController.current = await setupCardDetector({
           video: videoRef.current,
           overlay: overlayRef.current,
           cropped: croppedRef.current,
@@ -150,8 +150,8 @@ export function useCardDetector(options: UseWebcamOptions): UseWebcamReturn {
   ])
 
   const getCroppedCanvas = () => {
-    if (webcamController.current) {
-      return webcamController.current.getCroppedCanvas()
+    if (cardDetectorController.current) {
+      return cardDetectorController.current.getCroppedCanvas()
     }
     return croppedRef.current
   }

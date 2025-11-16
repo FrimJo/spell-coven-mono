@@ -13,11 +13,6 @@ import { refineBoundingBoxToCorners } from './detectors/geometry/bbox-refinement
 import { warpCardToCanonical } from './detectors/geometry/perspective.js'
 import { createDetector } from './detectors/index.js'
 import { loadingEvents } from './loading-events.js'
-import {
-  enumerateMediaDevices,
-  getMediaStream,
-  stopMediaStream,
-} from './media-stream-manager.js'
 
 // OpenCV removed - using DETR bounding boxes for cropping
 
@@ -50,17 +45,9 @@ let fullResCanvas: HTMLCanvasElement
 let croppedCanvas: HTMLCanvasElement
 
 // ============================================================================
-// Animation State
+// Click Handling State
 // ============================================================================
 
-let animationStarted = false
-
-// ============================================================================
-// Media Stream State
-// ============================================================================
-
-let currentStream: MediaStream | null = null
-let currentDeviceId: string | null = null
 let clickHandler: ((evt: MouseEvent) => void) | null = null
 let isProcessingClick = false // Prevent overlapping click processing
 let lastClickTime = 0 // Track last click timestamp for debouncing
@@ -87,8 +74,6 @@ async function initializeDetector(
       detector.dispose()
       detector = null
       currentDetectorType = undefined
-      // Reset animation flag so detection loop can start again
-      animationStarted = false
       // Stop existing detection loop
       stopDetection()
     }
@@ -517,19 +502,18 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
 }
 
 /**
- * Setup webcam detection system
- * Initializes detector, configures canvases, and sets up event handlers
- * @param args Configuration object
- * @param args.video Video element displaying webcam stream
- * @param args.overlay Canvas for detection overlay rendering
- * @param args.cropped Canvas for cropped card output (315x440px)
- * @param args.fullRes Canvas for full-resolution frame capture
- * @param args.detectorType Optional detector type ('detr', 'owl-vit', 'opencv')
- * @param args.onCrop Optional callback when card is cropped, receives the cropped canvas
+ * Initialize card detector with video element and canvas refs
+ * @param args.video Video element to analyze
+ * @param args.overlay Canvas for drawing detection overlays
+ * @param args.cropped Canvas for storing cropped card images
+ * @param args.fullRes Canvas for full resolution processing
+ * @param args.detectorType Optional detector type to use
+ * @param args.usePerspectiveWarp Whether to apply perspective warp
+ * @param args.onCrop Callback when a card is cropped
  * @param args.onProgress Optional callback for model loading progress
- * @returns Promise resolving to webcam control interface
+ * @returns Promise resolving to card detector control interface
  */
-export async function setupWebcam(args: {
+export async function setupCardDetector(args: {
   video: HTMLVideoElement
   overlay: HTMLCanvasElement
   cropped: HTMLCanvasElement
@@ -652,74 +636,17 @@ export async function setupWebcam(args: {
   overlayEl.addEventListener('mousemove', mouseWarmupHandler)
 
   return {
-    async startVideo(deviceId: string | null = null) {
-      if (currentStream) {
-        stopMediaStream(currentStream)
-        currentStream = null
-      }
-
-      // Handle regular webcam - use centralized media stream manager
-      try {
-        const { stream } = await getMediaStream({
-          videoDeviceId: deviceId,
-          video: true,
-          audio: true,
-          resolution: '1080p',
-          enableFallback: true,
-        })
-        currentStream = stream
-        // Clear src when switching to stream-based source
-        videoEl.src = ''
-        videoEl.srcObject = stream
-        const track = stream.getVideoTracks()[0]
-        const settings = (
-          track?.getSettings ? track.getSettings() : {}
-        ) as MediaTrackSettings
-        currentDeviceId = settings.deviceId || deviceId || null
-        return new Promise<void>((resolve) => {
-          videoEl.onloadedmetadata = () => {
-            void videoEl.play()
-            if (!animationStarted) {
-              animationStarted = true
-              // DISABLED: No automatic detection - only detect on click
-              // startDetection()
-            }
-            resolve()
-          }
-        })
-      } catch {
-        console.error('Failed to request camera access')
-        return null
-      }
-    },
-    async getCameras() {
-      return enumerateMediaDevices('videoinput')
-    },
-    getCurrentDeviceId() {
-      return currentDeviceId
-    },
-    async populateCameraSelect(selectEl: HTMLSelectElement | null | undefined) {
-      if (!selectEl) return
-      const cams = await this.getCameras()
-      const prev = selectEl.value
-      selectEl.innerHTML = ''
-      cams.forEach((cam, idx) => {
-        const opt = document.createElement('option')
-        opt.value = cam.deviceId
-        opt.text = cam.label || `Camera ${idx + 1}`
-        selectEl.appendChild(opt)
-      })
-      if (prev && Array.from(selectEl.options).some((o) => o.value === prev))
-        selectEl.value = prev
-      else if (
-        currentDeviceId &&
-        Array.from(selectEl.options).some((o) => o.value === currentDeviceId)
-      )
-        selectEl.value = currentDeviceId
-    },
+    /**
+     * Get the cropped card canvas
+     * @returns The canvas element containing the cropped card image
+     */
     getCroppedCanvas() {
       return croppedCanvas
     },
+
+    /**
+     * Stop card detection
+     */
     stopDetection() {
       stopDetection()
     },
