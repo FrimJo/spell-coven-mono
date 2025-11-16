@@ -19,8 +19,6 @@ import { useSelectedMediaDevice } from './useSelectedMediaDevice'
 export interface UseMediaDeviceOptions {
   /** Type of media device: 'video' or 'audio' */
   kind: MediaDeviceInfo['kind']
-  /** Video element ref for video devices */
-  videoRef?: React.RefObject<HTMLVideoElement | null>
   /** Auto-start on mount (not reactive to changes) */
   autoStart?: boolean
   /** Additional video constraints */
@@ -85,24 +83,12 @@ export interface UseMediaDeviceReturn {
  * })
  * ```
  */
-/**
- * Helper to clear video element source without triggering React Compiler warnings
- * This encapsulates the DOM mutation in a single place
- */
-function clearVideoSource(
-  videoRef: React.RefObject<HTMLVideoElement | null> | undefined,
-) {
-  if (videoRef?.current) {
-    videoRef.current.srcObject = null
-  }
-}
 
 export function useMediaDevice(
   options: UseMediaDeviceOptions,
 ): UseMediaDeviceReturn {
   const {
     kind,
-    videoRef,
     autoStart = false,
     videoConstraints = {
       width: { ideal: 1920 },
@@ -114,7 +100,7 @@ export function useMediaDevice(
   } = options
 
   const [stream, setStream] = useState<MediaStream | null>(null)
-  const [isActive, setIsActive] = useState(false)
+  const isActive = !!stream
   const [error, setError] = useState<Error | null>(null)
 
   const onDeviceChangedRef = useRef(onDeviceChanged)
@@ -198,9 +184,7 @@ export function useMediaDevice(
       if (prev != null) stopMediaStream(prev)
       return null
     })
-    setIsActive(false)
-    clearVideoSource(videoRef)
-  }, [videoRef])
+  }, [])
 
   /**
    * Start or switch to a specific device
@@ -218,9 +202,6 @@ export function useMediaDevice(
       try {
         console.log(`[useMediaDevice] Starting ${kind} device:`, deviceId)
         setError(null)
-
-        // Clear video element if present
-        clearVideoSource(videoRef)
 
         // Get the media stream using centralized manager
         const { stream: newStream } = await getMediaStream(
@@ -251,35 +232,17 @@ export function useMediaDevice(
         })
         saveSelectedDevice(deviceId) // Persist to localStorage
 
-        // For video devices, set up video element
-        if (kind === 'videoinput' && videoRef?.current) {
-          videoRef.current.srcObject = newStream
-
-          try {
-            await videoRef.current.play()
-            console.log('[useMediaDevice] Video playback started')
-          } catch (playError) {
-            console.error(
-              '[useMediaDevice] Error starting video playback:',
-              playError,
-            )
-          }
-        }
-
-        setIsActive(true)
-
-        // Notify success
+        // Notify success (component handles DOM attachment)
         onDeviceChangedRef.current?.(deviceId, newStream)
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err))
         console.error('[useMediaDevice] Error starting device:', error)
         setError(error)
-        setIsActive(false)
         onErrorRef.current?.(error)
         throw error
       }
     },
-    [audioConstraints, kind, videoConstraints, videoRef, saveSelectedDevice],
+    [audioConstraints, kind, videoConstraints, saveSelectedDevice],
   )
 
   const autoStartEvent = useEffectEvent(() => {

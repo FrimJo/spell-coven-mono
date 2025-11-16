@@ -2,6 +2,7 @@ import type { DetectorType } from '@/lib/detectors'
 import { useCallback, useMemo, useState } from 'react'
 import { useCardDetector } from '@/hooks/useCardDetector'
 import { useLocalVideoState } from '@/hooks/useLocalVideoState'
+import { useVideoStreamAttach } from '@/hooks/useVideoStreamAttach'
 
 import { PlayerVideoCard } from './PlayerVideoCard'
 import {
@@ -62,6 +63,13 @@ export function LocalVideoCard({
   })
 
   const [isAudioMuted, setIsAudioMuted] = useState(false)
+
+  // Attach stream to video element and handle playback
+  useVideoStreamAttach({
+    videoRef,
+    stream,
+    autoPlay: true,
+  })
 
   const toggleLocalAudio = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {

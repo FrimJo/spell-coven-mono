@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAudioOutput } from '@/hooks/useAudioOutput'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
+import { useVideoStreamAttach } from '@/hooks/useVideoStreamAttach'
 import { AlertCircle, Camera, Check, Loader2, Mic, Volume2 } from 'lucide-react'
 
 import { Alert, AlertDescription } from '@repo/ui/components/alert'
@@ -40,7 +41,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
 
   // Memoize hook options to prevent infinite renders from recreated objects
   const videoDeviceOptions = useMemo(
-    () => ({ kind: 'videoinput' as const, videoRef, autoStart: true }),
+    () => ({ kind: 'videoinput' as const, autoStart: true }),
     [],
   )
 
@@ -58,7 +59,15 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     error: videoError,
     isActive: isVideoActive,
     start: switchVideoDevice,
+    stream: videoStream,
   } = useMediaDevice(videoDeviceOptions)
+
+  // Attach video stream to video element
+  useVideoStreamAttach({
+    videoRef,
+    stream: videoStream,
+    autoPlay: true,
+  })
 
   // Use our consolidated media device hook for audio input
   const {
