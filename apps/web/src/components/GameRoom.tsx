@@ -5,6 +5,7 @@ import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
+import { useCardQuery } from '@/hooks/useCardQuery'
 import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
 import { usePeerJS } from '@/hooks/usePeerJS'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
@@ -109,9 +110,7 @@ function GameRoomContent({
     peerTrackStates,
     toggleVideo: togglePeerJSVideo,
     toggleAudio: togglePeerJSAudio,
-    switchCamera,
     initializeLocalMedia,
-    availableCameras,
     error: _peerError,
     isInitialized: _isInitialized,
   } = usePeerJS({
@@ -422,10 +421,8 @@ function GameRoomContent({
               remoteStreams={remoteStreams}
               connectionStates={connectionStates}
               peerTrackStates={peerTrackStates}
-              availableCameras={availableCameras}
               onToggleVideo={togglePeerJSVideo}
               onToggleAudio={togglePeerJSAudio}
-              onSwitchCamera={switchCamera}
             />
           </div>
         </div>
