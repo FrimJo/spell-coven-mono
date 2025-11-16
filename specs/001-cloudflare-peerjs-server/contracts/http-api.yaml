@@ -1,0 +1,222 @@
+openapi: 3.1.0
+info:
+  title: PeerJS Server HTTP API
+  version: 1.0.0
+  description: |
+    HTTP endpoints for health checks and monitoring.
+    These endpoints do NOT require WebSocket upgrade.
+
+servers:
+  - url: https://peerjs.spell-coven.workers.dev
+    description: Production Cloudflare Workers endpoint
+  - url: http://localhost:8787
+    description: Local development (Miniflare)
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: |
+        Returns server health status. Used by monitoring systems and load balancers.
+        Always returns 200 OK if the Worker is running.
+      operationId: getHealth
+      tags:
+        - Monitoring
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "ok"
+                timestamp: 1705420800000
+                version: "1.0.0"
+
+  /metrics:
+    get:
+      summary: Get server metrics
+      description: |
+        Returns basic metrics about the signaling server.
+        Note: Durable Objects metrics are aggregated across all rooms.
+      operationId: getMetrics
+      tags:
+        - Monitoring
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsResponse'
+              example:
+                activeRooms: 42
+                totalConnections: 156
+                messagesPerSecond: 234
+                uptimeSeconds: 86400
+                timestamp: 1705420800000
+
+  /:
+    get:
+      summary: Root endpoint
+      description: |
+        Returns basic information about the PeerJS server.
+        Used to verify the server is running and accessible.
+      operationId: getRoot
+      tags:
+        - Information
+      responses:
+        '200':
+          description: Server information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InfoResponse'
+              example:
+                name: "Cloudflare PeerJS Server"
+                version: "1.0.0"
+                protocol: "peerjs-0.3"
+                websocketUrl: "wss://peerjs.spell-coven.workers.dev/peerjs"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, error]
+          description: Overall health status
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+        version:
+          type: string
+          description: Server version
+          example: "1.0.0"
+        details:
+          type: object
+          description: Optional detailed health information
+          properties:
+            durableObjects:
+              type: string
+              enum: [healthy, degraded, unavailable]
+            websockets:
+              type: string
+              enum: [healthy, degraded, unavailable]
+
+    MetricsResponse:
+      type: object
+      required:
+        - timestamp
+      properties:
+        activeRooms:
+          type: integer
+          description: Number of active game rooms (Durable Objects)
+          minimum: 0
+        totalConnections:
+          type: integer
+          description: Total number of active WebSocket connections
+          minimum: 0
+        messagesPerSecond:
+          type: number
+          format: float
+          description: Average messages per second (last minute)
+          minimum: 0
+        uptimeSeconds:
+          type: integer
+          description: Worker uptime in seconds
+          minimum: 0
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+        errors:
+          type: object
+          description: Error counts by type
+          properties:
+            rateLimitExceeded:
+              type: integer
+              minimum: 0
+            invalidMessages:
+              type: integer
+              minimum: 0
+            connectionTimeouts:
+              type: integer
+              minimum: 0
+            internalErrors:
+              type: integer
+              minimum: 0
+
+    InfoResponse:
+      type: object
+      required:
+        - name
+        - version
+        - protocol
+      properties:
+        name:
+          type: string
+          description: Server name
+          example: "Cloudflare PeerJS Server"
+        version:
+          type: string
+          description: Server version
+          example: "1.0.0"
+        protocol:
+          type: string
+          description: PeerJS protocol version
+          example: "peerjs-0.3"
+        websocketUrl:
+          type: string
+          format: uri
+          description: WebSocket connection URL
+          example: "wss://peerjs.spell-coven.workers.dev/peerjs"
+        documentation:
+          type: string
+          format: uri
+          description: Link to API documentation
+          example: "https://github.com/spell-coven/peerjs-server/blob/main/README.md"
+        limits:
+          type: object
+          description: Server limits and constraints
+          properties:
+            maxPeersPerRoom:
+              type: integer
+              example: 4
+            maxMessagesPerSecond:
+              type: integer
+              example: 100
+            heartbeatIntervalSeconds:
+              type: integer
+              example: 5
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: "not-found"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "The requested resource was not found"
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+
+tags:
+  - name: Monitoring
+    description: Health checks and metrics endpoints
+  - name: Information
+    description: Server information endpoints
