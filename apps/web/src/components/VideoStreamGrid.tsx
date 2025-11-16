@@ -10,7 +10,10 @@ import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
 
 import { LocalVideoCard } from './LocalVideoCard'
-import { PlayerNameBadge, VideoDisabledPlaceholder } from './PlayerVideoCardParts'
+import {
+  PlayerNameBadge,
+  VideoDisabledPlaceholder,
+} from './PlayerVideoCardParts'
 
 interface VideoStreamGridProps {
   // Room and user identification (for fetching participants)
@@ -81,7 +84,6 @@ export function VideoStreamGrid({
   const mediaDeviceVideoRef = useRef<HTMLVideoElement>(null)
   const { stream } = useMediaDevice({
     kind: 'videoinput',
-    videoRef: mediaDeviceVideoRef,
     autoStart: true,
   })
 
