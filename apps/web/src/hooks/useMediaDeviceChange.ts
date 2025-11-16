@@ -18,8 +18,8 @@
  * ```
  */
 
-import { useSyncExternalStore } from 'react'
 import type { MediaDeviceInfo } from '@/lib/media-stream-manager'
+import { useSyncExternalStore } from 'react'
 
 export interface MediaDeviceChangeInfo {
   videoinput: MediaDeviceInfo[]
@@ -34,7 +34,7 @@ export interface MediaDeviceChangeInfo {
  */
 function createMediaDeviceStore() {
   const listeners: Set<() => void> = new Set()
-  
+
   // Initialize cache synchronously with empty state
   // Will be populated on first subscription
   let cachedDevices: MediaDeviceChangeInfo = {

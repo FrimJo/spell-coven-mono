@@ -1,10 +1,10 @@
 /**
  * useAudioOutput - Hook for managing audio output devices (speakers/headphones)
- * 
+ *
  * Unlike audio/video input devices that use getUserMedia(), audio output devices
  * use the HTMLMediaElement.setSinkId() API. This hook provides a consistent
  * interface for audio output device management.
- * 
+ *
  * Browser Support:
  * - Chrome/Edge: Full support
  * - Firefox: Supported (may require flag in older versions)
@@ -13,7 +13,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-export interface AudioOutputDevice extends Pick<globalThis.MediaDeviceInfo, 'deviceId' | 'label'> {
+export interface AudioOutputDevice
+  extends Pick<globalThis.MediaDeviceInfo, 'deviceId' | 'label'> {
   // Audio output devices don't need isDefault since we always include a "System Default" option
 }
 
@@ -49,7 +50,7 @@ export interface UseAudioOutputReturn {
 
 /**
  * Hook for managing audio output devices with setSinkId API
- * 
+ *
  * @example Basic usage
  * ```tsx
  * const {
@@ -61,25 +62,25 @@ export interface UseAudioOutputReturn {
  * } = useAudioOutput({
  *   initialDeviceId: 'default'
  * })
- * 
+ *
  * return (
  *   <div>
  *     {!isSupported && <p>Audio output selection not supported in this browser</p>}
- *     
+ *
  *     <select value={currentDeviceId} onChange={e => setOutputDevice(e.target.value)}>
  *       {devices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
  *     </select>
- *     
+ *
  *     <button onClick={testOutput}>Test Sound</button>
  *   </div>
  * )
  * ```
- * 
+ *
  * @example With audio element
  * ```tsx
  * const audioRef = useRef<HTMLAudioElement>(null)
  * const { currentDeviceId } = useAudioOutput()
- * 
+ *
  * // Automatically sync audio element with selected device
  * useEffect(() => {
  *   if (audioRef.current && 'setSinkId' in audioRef.current) {
@@ -91,14 +92,11 @@ export interface UseAudioOutputReturn {
 export function useAudioOutput(
   options: UseAudioOutputOptions = {},
 ): UseAudioOutputReturn {
-  const {
-    initialDeviceId = 'default',
-    onDeviceChanged,
-    onError,
-  } = options
+  const { initialDeviceId = 'default', onDeviceChanged, onError } = options
 
   const [devices, setDevices] = useState<AudioOutputDevice[]>([])
-  const [currentDeviceId, setCurrentDeviceId] = useState<string>(initialDeviceId)
+  const [currentDeviceId, setCurrentDeviceId] =
+    useState<string>(initialDeviceId)
   const [isSupported, setIsSupported] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -125,13 +123,13 @@ export function useAudioOutput(
     if (!supported) {
       console.warn(
         '[useAudioOutput] setSinkId() not supported in this browser. ' +
-        'Audio output device selection will not work.',
+          'Audio output device selection will not work.',
       )
     }
 
     // Create and store an audio element for testing
     audioElementRef.current = new Audio()
-    
+
     return () => {
       if (audioElementRef.current) {
         audioElementRef.current.pause()
@@ -152,7 +150,7 @@ export function useAudioOutput(
 
     try {
       const allDevices = await navigator.mediaDevices.enumerateDevices()
-      
+
       const audioOutputs = allDevices
         .filter((device) => device.kind === 'audiooutput')
         .map((device) => ({
@@ -173,14 +171,14 @@ export function useAudioOutput(
       // to avoid showing both "Default - MacBook Pro Speakers" and "MacBook Pro Speakers"
       const filteredOutputs = audioOutputs.filter((device) => {
         if (device.deviceId === 'default') return false
-        
+
         // If this device's label matches the default (with or without "Default - " prefix), it's a duplicate
         const cleanLabel = device.label.startsWith('Default - ')
           ? device.label.substring('Default - '.length)
           : device.label
-          
+
         if (defaultDevice && cleanLabel === defaultLabel) return false
-        
+
         return true
       })
 
@@ -197,8 +195,13 @@ export function useAudioOutput(
       setError(null)
 
       // Validate current selection still exists
-      if (currentDeviceId !== 'default' && !outputsWithDefault.find(d => d.deviceId === currentDeviceId)) {
-        console.log('[useAudioOutput] Current device no longer available, switching to default')
+      if (
+        currentDeviceId !== 'default' &&
+        !outputsWithDefault.find((d) => d.deviceId === currentDeviceId)
+      ) {
+        console.log(
+          '[useAudioOutput] Current device no longer available, switching to default',
+        )
         setCurrentDeviceId('default')
       }
     } catch (err) {
@@ -226,7 +229,7 @@ export function useAudioOutput(
 
       try {
         setError(null)
-        
+
         // Set the device on our internal audio element
         if (audioElementRef.current && 'setSinkId' in audioElementRef.current) {
           await (audioElementRef.current as any).setSinkId(deviceId)
@@ -234,11 +237,17 @@ export function useAudioOutput(
 
         setCurrentDeviceId(deviceId)
         onDeviceChangedRef.current?.(deviceId)
-        
-        console.log('[useAudioOutput] Audio output device changed to:', deviceId)
+
+        console.log(
+          '[useAudioOutput] Audio output device changed to:',
+          deviceId,
+        )
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err))
-        console.error('[useAudioOutput] Failed to set audio output device:', error)
+        console.error(
+          '[useAudioOutput] Failed to set audio output device:',
+          error,
+        )
         setError(error)
         onErrorRef.current?.(error)
         throw error
@@ -272,7 +281,7 @@ export function useAudioOutput(
 
       oscillator.connect(gainNode)
       gainNode.connect(destination)
-      
+
       // Set up the tone (A4 note at 440Hz)
       oscillator.frequency.value = 440
       oscillator.type = 'sine'
@@ -281,32 +290,32 @@ export function useAudioOutput(
       // Connect to our audio element
       if (audioElementRef.current) {
         audioElementRef.current.srcObject = destination.stream
-        
+
         // Ensure the audio element is using the current device
         if (isSupported && 'setSinkId' in audioElementRef.current) {
           await (audioElementRef.current as any).setSinkId(currentDeviceId)
         }
-        
+
         await audioElementRef.current.play()
       }
 
       // Play the tone for 500ms
       oscillator.start()
-      
+
       await new Promise<void>((resolve) => {
         setTimeout(() => {
           oscillator.stop()
           audioContext.close()
-          
+
           if (audioElementRef.current) {
             audioElementRef.current.pause()
             audioElementRef.current.srcObject = null
           }
-          
+
           resolve()
         }, 500)
       })
-      
+
       console.log('[useAudioOutput] Test tone played successfully')
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err))
@@ -334,7 +343,10 @@ export function useAudioOutput(
     navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange)
 
     return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange)
+      navigator.mediaDevices.removeEventListener(
+        'devicechange',
+        handleDeviceChange,
+      )
     }
   }, [refreshDevices])
 
@@ -350,4 +362,3 @@ export function useAudioOutput(
     isLoading,
   }
 }
-

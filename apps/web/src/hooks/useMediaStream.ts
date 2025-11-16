@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-
 import { getMediaStream, stopMediaStream } from '@/lib/media-stream-manager'
 
 interface UseMediaStreamOptions {

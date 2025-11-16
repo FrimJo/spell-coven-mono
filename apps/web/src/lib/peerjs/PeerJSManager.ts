@@ -380,7 +380,10 @@ export class PeerJSManager {
         })
       }
     } catch (err) {
-      console.error('[PeerJSManager] initializeLocalMedia failed with error:', err)
+      console.error(
+        '[PeerJSManager] initializeLocalMedia failed with error:',
+        err,
+      )
       console.error('[PeerJSManager] Error details:', {
         name: err instanceof Error ? err.name : 'unknown',
         message: err instanceof Error ? err.message : String(err),
@@ -460,10 +463,10 @@ export class PeerJSManager {
           totalTracks: remoteStream.getTracks().length,
           videoTracks: remoteStream.getVideoTracks().length,
         })
-        
+
         // Update track state immediately
         this.updateTrackState(peerId, remoteStream)
-        
+
         // Create a new Map to trigger React re-render
         const newMap = new Map(this.remoteStreams)
         this.remoteStreams = newMap
@@ -471,15 +474,19 @@ export class PeerJSManager {
       }
 
       remoteStream.onremovetrack = (event) => {
-        console.log('[PeerJSManager] ❌ Track removed from stream from:', peerId, {
-          kind: event.track.kind,
-          totalTracks: remoteStream.getTracks().length,
-          videoTracks: remoteStream.getVideoTracks().length,
-        })
-        
+        console.log(
+          '[PeerJSManager] ❌ Track removed from stream from:',
+          peerId,
+          {
+            kind: event.track.kind,
+            totalTracks: remoteStream.getTracks().length,
+            videoTracks: remoteStream.getVideoTracks().length,
+          },
+        )
+
         // Update track state immediately
         this.updateTrackState(peerId, remoteStream)
-        
+
         // Create a new Map to trigger React re-render
         const newMap = new Map(this.remoteStreams)
         this.remoteStreams = newMap
@@ -489,8 +496,14 @@ export class PeerJSManager {
       // Listen for track events on the peer connection to detect track replacements
       if (call.peerConnection) {
         call.peerConnection.ontrack = (event) => {
-          console.log('[PeerJSManager] Track event received from:', peerId, event.track.kind, 'readyState:', event.track.readyState)
-          
+          console.log(
+            '[PeerJSManager] Track event received from:',
+            peerId,
+            event.track.kind,
+            'readyState:',
+            event.track.readyState,
+          )
+
           // The track is automatically added to the stream by WebRTC
           // The onaddtrack event on the stream will handle the update
         }
@@ -536,7 +549,11 @@ export class PeerJSManager {
     // 3. It's enabled (not disabled via track.enabled = false)
     // 4. It's not muted (muted means no data is flowing, e.g., after replaceTrack(null))
     const newState: PeerTrackState = {
-      videoEnabled: !!videoTrack && videoTrack.readyState === 'live' && videoTrack.enabled && !videoTrack.muted,
+      videoEnabled:
+        !!videoTrack &&
+        videoTrack.readyState === 'live' &&
+        videoTrack.enabled &&
+        !videoTrack.muted,
       audioEnabled: audioTrack?.enabled ?? false,
     }
 
@@ -550,13 +567,15 @@ export class PeerJSManager {
       console.log('[PeerJSManager] 🔄 Track state changed for:', peerId, {
         old: currentState,
         new: newState,
-        videoTrack: videoTrack ? {
-          id: videoTrack.id,
-          kind: videoTrack.kind,
-          readyState: videoTrack.readyState,
-          enabled: videoTrack.enabled,
-          muted: videoTrack.muted,
-        } : null,
+        videoTrack: videoTrack
+          ? {
+              id: videoTrack.id,
+              kind: videoTrack.kind,
+              readyState: videoTrack.readyState,
+              enabled: videoTrack.enabled,
+              muted: videoTrack.muted,
+            }
+          : null,
         totalTracks: stream.getTracks().length,
       })
       this.trackStates.set(peerId, newState)
@@ -576,7 +595,11 @@ export class PeerJSManager {
 
     // Poll every 500ms to detect enabled/disabled state changes
     this.trackStatePollInterval = window.setInterval(() => {
-      console.log('[PeerJSManager] 📊 Polling', this.remoteStreams.size, 'remote streams')
+      console.log(
+        '[PeerJSManager] 📊 Polling',
+        this.remoteStreams.size,
+        'remote streams',
+      )
       for (const [peerId, stream] of this.remoteStreams) {
         const videoTrack = stream.getVideoTracks()[0]
         console.log('[PeerJSManager] 📹 Checking peer:', peerId, {
@@ -749,7 +772,7 @@ export class PeerJSManager {
             videoTrack: newVideoTrack,
             audioTrack: this.localStream.audioTrack,
           }
-          
+
           // Notify about stream change so UI updates
           this.callbacks.onLocalStreamChanged?.(newStream)
         } else {
@@ -834,9 +857,9 @@ export class PeerJSManager {
         if (this.localStream.audioTrack) {
           newStream.addTrack(this.localStream.audioTrack)
         }
-        
+
         this.localStream.stream = newStream
-        
+
         // Notify about stream change so UI updates
         this.callbacks.onLocalStreamChanged?.(newStream)
       }
