@@ -115,7 +115,7 @@ export async function getMediaStream(
         ? {
             ...(resolutionConstraints[currentResolution] || {}),
             ...videoConstraints,
-            ...(videoDeviceId ? { deviceId: { ideal: videoDeviceId } } : {}),
+            ...(videoDeviceId ? { deviceId: { exact: videoDeviceId } } : {}),
           }
         : false
 
@@ -123,7 +123,7 @@ export async function getMediaStream(
       const audioConstraint = audio
         ? {
             ...audioConstraints,
-            ...(audioDeviceId ? { deviceId: { ideal: audioDeviceId } } : {}),
+            ...(audioDeviceId ? { deviceId: { exact: audioDeviceId } } : {}),
           }
         : false
 
