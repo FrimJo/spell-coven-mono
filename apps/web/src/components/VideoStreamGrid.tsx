@@ -3,6 +3,7 @@ import type { ConnectionState, PeerTrackState } from '@/types/peerjs'
 import { useRef, useState } from 'react'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
 import { useWebcam } from '@/hooks/useWebcam'
+import { useMediaDevice } from '@/hooks/useMediaDevice'
 import {
   Camera,
   Mic,
@@ -58,10 +59,6 @@ interface VideoStreamGridProps {
   onToggleVideo?: (enabled: boolean) => Promise<void>
   /** Callback to toggle audio track enabled/disabled (for WebRTC integration) */
   onToggleAudio?: (enabled: boolean) => void
-  /** Callback to switch camera device */
-  onSwitchCamera?: (deviceId: string) => Promise<void>
-  /** Available cameras from PeerJS manager */
-  availableCameras?: MediaDeviceInfo[]
 }
 
 interface StreamState {
@@ -85,18 +82,26 @@ export function VideoStreamGrid({
   localTrackState,
   onToggleVideo,
   onToggleAudio: _onToggleAudio,
-  onSwitchCamera,
-  availableCameras = [],
 }: VideoStreamGridProps) {
   // State declarations first (needed before useWebcam hook)
   const [currentCameraIndex, setCurrentCameraIndex] = useState(0)
-  const [currentCameraId, setCurrentCameraId] = useState<string | undefined>(
-    undefined,
-  )
   const [cameraPopoverOpen, setCameraPopoverOpen] = useState(false)
   const [isAudioMuted, setIsAudioMuted] = useState(false)
 
+  // Create a ref for useMediaDevice to attach the stream
+  // This is separate from useWebcam's videoRef which is for canvas-based processing
+  const mediaDeviceVideoRef = useRef<HTMLVideoElement>(null)
+
+  // Get available cameras and camera switching via useMediaDevice hook
+  // Pass videoRef so the stream is attached to the video element
+  const { devices: availableCameras, selectedDeviceId: currentCameraId, start: switchCamera } = useMediaDevice({
+    kind: 'videoinput',
+    videoRef: mediaDeviceVideoRef,
+    autoStart: false,
+  })
+
   // Initialize webcam with card detection
+  // Uses currentCameraId from useMediaDevice to trigger re-initialization on camera switch
   const { videoRef, overlayRef, croppedRef, fullResRef } = useWebcam({
     enableCardDetection,
     detectorType,
@@ -118,21 +123,17 @@ export function VideoStreamGrid({
   // Find local player (not currently used but may be needed for future features)
   // const localPlayer = players.find((p) => p.name === localPlayerName)
 
-  const selectCamera = async (deviceId: string) => {
+  const handleSelectCamera = async (deviceId: string) => {
     const cameraIndex = availableCameras.findIndex(
       (cam) => cam.deviceId === deviceId,
     )
     if (cameraIndex !== -1) {
-      // Switch camera via the callback (managed by usePeerJS)
-      if (onSwitchCamera) {
-        try {
-          await onSwitchCamera(deviceId)
-          setCurrentCameraIndex(cameraIndex)
-          setCurrentCameraId(deviceId)
-          setCameraPopoverOpen(false)
-        } catch (error) {
-          console.error('[VideoStreamGrid] Failed to switch camera:', error)
-        }
+      try {
+        await switchCamera(deviceId)
+        setCurrentCameraIndex(cameraIndex)
+        setCameraPopoverOpen(false)
+      } catch (error) {
+        console.error('[VideoStreamGrid] Failed to switch camera:', error)
       }
     }
   }
@@ -558,7 +559,7 @@ export function VideoStreamGrid({
                           return (
                             <div
                               key={camera.deviceId}
-                              onClick={() => selectCamera(camera.deviceId)}
+                              onClick={() => void handleSelectCamera(camera.deviceId)}
                               className={
                                 'flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-slate-800/50 ' +
                                 (isActive
