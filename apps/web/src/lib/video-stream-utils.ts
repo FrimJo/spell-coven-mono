@@ -22,20 +22,19 @@
  * ```
  */
 export function attachVideoStream(
-  videoElement: HTMLVideoElement,
+  videoElement: HTMLVideoElement | null,
   stream: MediaStream | null,
 ): (() => void) | undefined {
-  if (!videoElement) return
-
+  if (videoElement == null) return
   // If no stream, clear the element
-  if (!stream) {
+  if (stream == null) {
     videoElement.srcObject = null
     return
   }
 
   console.log('[attachVideoStream] Attaching stream to video element')
   // Intentional: Setting srcObject on the DOM element (not a React state mutation)
-  // eslint-disable-next-line react-compiler/react-compiler
+
   videoElement.srcObject = stream
 
   // Start playback
@@ -59,19 +58,18 @@ export function attachVideoStream(
  * @returns Cleanup function to detach the stream
  */
 export function attachVideoStreamNoAutoPlay(
-  videoElement: HTMLVideoElement,
+  videoElement: HTMLVideoElement | null,
   stream: MediaStream | null,
 ): (() => void) | undefined {
-  if (!videoElement) return
-
+  if (videoElement == null) return
   // If no stream, clear the element
-  if (!stream) {
+  if (stream == null) {
     videoElement.srcObject = null
     return
   }
 
   console.log('[attachVideoStreamNoAutoPlay] Attaching stream to video element')
-  // eslint-disable-next-line react-compiler/react-compiler
+
   videoElement.srcObject = stream
 
   // Return cleanup function
