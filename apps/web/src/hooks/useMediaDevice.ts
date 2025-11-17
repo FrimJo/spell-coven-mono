@@ -9,9 +9,15 @@
  * - Error handling
  */
 import type { MediaDeviceInfo } from '@/lib/media-stream-manager'
-import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { getMediaStream, stopMediaStream } from '@/lib/media-stream-manager'
-import { useQuery } from '@tanstack/react-query'
 
 import { useMediaDeviceChange } from './useMediaDeviceChange'
 import { useSelectedMediaDevice } from './useSelectedMediaDevice'
@@ -40,14 +46,12 @@ export interface UseMediaDeviceReturn {
   start: (deviceId: string) => Promise<void>
   /** Stop the media stream */
   stop: () => void
-  /** Refresh the list of available devices */
-  refreshDevices: () => Promise<void>
   /** Is the stream currently active */
   isActive: boolean
   /** Current error if any */
   error: Error | null
-  /** Is the device list loading */
-  isLoading: boolean
+  /** Save the selected device ID to localStorage */
+  saveSelectedDevice: (deviceId: string) => void
 }
 
 /**
@@ -108,69 +112,43 @@ export function useMediaDevice(
   // Use selected device hook as state manager with localStorage persistence
   const { selectedDeviceId, saveSelectedDevice } = useSelectedMediaDevice(kind)
 
+  // Use centralized device enumeration (already filtered by kind)
+  const matchingKind = mediaDevices[kind] || []
+  console.log(
+    `[useMediaDevice] Devices matching kind '${kind}' (${matchingKind.length}):`,
+    matchingKind,
+  )
+
+  if (matchingKind.length === 0) {
+    console.warn(
+      '[useMediaDevice] enumerateMediaDevices returned 0 devices - this might indicate a browser restriction',
+    )
+  }
+
+  const devices = matchingKind
+    // Filter out the "default" device ID to avoid duplication
+    .filter((device) => device.deviceId !== 'default' && device.deviceId !== '')
+    .map((device, index: number) => {
+      // If no label, use a generic one with index (happens when permissions not granted)
+      const baseLabel =
+        device.label ||
+        `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${index + 1}`
+      return {
+        deviceId: device.deviceId,
+        label: index === 0 ? `${baseLabel} (Default)` : baseLabel,
+        kind: device.kind,
+      } satisfies MediaDeviceInfo
+    })
+
+  console.log(
+    `[useMediaDevice] Final filtered ${kind} devices (${devices.length}):`,
+    devices,
+  )
+
   useEffect(() => {
     onDeviceChangedRef.current = onDeviceChanged
     onErrorRef.current = onError
   }, [onDeviceChanged, onError])
-
-  /**
-   * Fetch and enumerate available media devices using React Query
-   */
-  const {
-    data: queryData = { devices: [], defaultDeviceId: null },
-    isLoading,
-    refetch: refetchDevices,
-  } = useQuery({
-    // Extract devices and activeDeviceId from query data
-    queryKey: ['mediaDevices', kind, mediaDevices.timestamp],
-    queryFn: async () => {
-      console.log(`[useMediaDevice] Fetching devices for kind: ${kind}`)
-
-      // Use centralized device enumeration (already filtered by kind)
-      const matchingKind = mediaDevices[kind] || []
-      console.log(
-        `[useMediaDevice] Devices matching kind '${kind}' (${matchingKind.length}):`,
-        matchingKind,
-      )
-
-      if (matchingKind.length === 0) {
-        console.warn(
-          '[useMediaDevice] enumerateMediaDevices returned 0 devices - this might indicate a browser restriction',
-        )
-      }
-
-      const filteredDevices = matchingKind
-        // Filter out the "default" device ID to avoid duplication
-        .filter(
-          (device) => device.deviceId !== 'default' && device.deviceId !== '',
-        )
-        .map((device, index: number) => {
-          // If no label, use a generic one with index (happens when permissions not granted)
-          const baseLabel =
-            device.label ||
-            `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${index + 1}`
-          return {
-            deviceId: device.deviceId,
-            label: index === 0 ? `${baseLabel} (Default)` : baseLabel,
-            kind: device.kind,
-          } satisfies MediaDeviceInfo
-        })
-
-      console.log(
-        `[useMediaDevice] Final filtered ${kind} devices (${filteredDevices.length}):`,
-        filteredDevices,
-      )
-      return filteredDevices
-    },
-    select: (devices) => ({
-      devices,
-      defaultDeviceId: devices[0]?.deviceId ?? null,
-    }),
-    staleTime: 30000, // 30 seconds
-    gcTime: 60000, // 1 minute (formerly cacheTime)
-  })
-
-  const { devices, defaultDeviceId } = queryData
 
   /**
    * Stop the current stream and clean up
@@ -189,15 +167,11 @@ export function useMediaDevice(
    */
   const start = useCallback(
     async (deviceId: string) => {
-      if (!deviceId) {
-        const err = new Error('No device ID provided and no devices available')
-        setError(err)
-        onErrorRef.current?.(err)
-        throw err
-      }
-
+      console.log(
+        '[foobar useMediaDevice] Starting stream with device ID:',
+        deviceId,
+      )
       try {
-        console.log(`[useMediaDevice] Starting ${kind} device:`, deviceId)
         setError(null)
 
         // Get the media stream using centralized manager
@@ -227,6 +201,7 @@ export function useMediaDevice(
           if (prev != null) stopMediaStream(prev)
           return newStream
         })
+        console.log('[useMediaDevice] saveSelectedDevice', deviceId)
         saveSelectedDevice(deviceId) // Persist to localStorage
 
         // Notify success (component handles DOM attachment)
@@ -242,33 +217,42 @@ export function useMediaDevice(
     [audioConstraints, kind, videoConstraints, saveSelectedDevice],
   )
 
+  const initialDeviceId = useMemo(() => {
+    return selectedDeviceId ?? devices[0]?.deviceId ?? null
+  }, [devices, selectedDeviceId])
+
   const autoStartEvent = useEffectEvent(() => {
-    if (!isActive && defaultDeviceId != null) {
-      start(defaultDeviceId).catch((err) => {
+    if (initialDeviceId != null) {
+      start(initialDeviceId).catch((err) => {
         console.error('[useMediaDevice] autoStart start failed:', err)
       })
     }
   })
 
   useEffect(() => {
-    if (defaultDeviceId != null) {
-      autoStartEvent()
-    }
-  }, [defaultDeviceId])
+    if (!isActive) autoStartEvent()
+  }, [isActive])
 
-  const refreshDevices = useCallback(async () => {
-    await refetchDevices()
-  }, [refetchDevices])
-
-  return {
-    stream,
-    devices,
-    selectedDeviceId: selectedDeviceId ?? defaultDeviceId,
-    start,
-    stop,
-    refreshDevices,
-    isActive,
-    error,
-    isLoading,
-  }
+  return useMemo(
+    () => ({
+      stream,
+      devices,
+      selectedDeviceId: selectedDeviceId ?? devices[0]?.deviceId ?? null,
+      start,
+      stop,
+      isActive,
+      error,
+      saveSelectedDevice,
+    }),
+    [
+      devices,
+      error,
+      isActive,
+      selectedDeviceId,
+      start,
+      stop,
+      stream,
+      saveSelectedDevice,
+    ],
+  )
 }

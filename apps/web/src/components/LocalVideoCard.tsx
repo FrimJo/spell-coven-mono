@@ -1,3 +1,4 @@
+import type { UseLocalVideoStateOptions } from '@/hooks/useLocalVideoState'
 import type { DetectorType } from '@/lib/detectors'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useCardDetector } from '@/hooks/useCardDetector'
@@ -17,7 +18,6 @@ import {
 interface LocalVideoCardProps {
   localPlayerName: string
   stream: MediaStream
-  videoRef: React.RefObject<HTMLVideoElement | null>
   enableCardDetection?: boolean
   detectorType?: DetectorType
   usePerspectiveWarp?: boolean
@@ -36,7 +36,7 @@ export function LocalVideoCard({
 }: LocalVideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   // Manage local video state
-  const localVideoStateOptions = useMemo(
+  const localVideoStateOptions = useMemo<UseLocalVideoStateOptions>(
     () => ({
       stream,
       onVideoStateChanged: onToggleVideo,

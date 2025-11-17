@@ -1,5 +1,6 @@
+import type { UseMediaDeviceOptions } from '@/hooks/useMediaDevice'
 import type { PropsWithChildren } from 'react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
 import {
   Camera,
@@ -143,21 +144,24 @@ export function LocalMediaControls({
 }: LocalMediaControlsProps) {
   const [cameraPopoverOpen, setCameraPopoverOpen] = useState(false)
 
+  // Memoize hook options to prevent infinite renders from recreated objects
+  const videoDeviceOptions = useMemo<UseMediaDeviceOptions>(
+    () => ({ kind: 'videoinput' }),
+    [],
+  )
+
   // Get camera data and control from hook - single source of truth
   // useMediaDevice handles persistence to localStorage internally
   const {
-    devices: availableCameras,
-    selectedDeviceId: currentCameraId,
-    start: switchCamera,
-  } = useMediaDevice({
-    kind: 'videoinput',
-    autoStart: false,
-  })
+    devices: videoDevices,
+    selectedDeviceId: selectedVideoId,
+    start: switchVideoDevice,
+  } = useMediaDevice(videoDeviceOptions)
 
   // Handle camera selection
-  const handleSelectCamera = async (deviceId: string) => {
+  const handleSelectCamera = (deviceId: string) => {
     try {
-      await switchCamera(deviceId) // Persists to localStorage internally
+      switchVideoDevice(deviceId) // Persists to localStorage internally
       setCameraPopoverOpen(false)
     } catch (error) {
       console.error('[LocalMediaControls] Failed to switch camera:', error)
@@ -220,25 +224,24 @@ export function LocalMediaControls({
           <div className="border-b border-slate-800 px-4 py-3">
             <h3 className="text-sm font-semibold text-white">Select Camera</h3>
             <p className="text-xs text-slate-400">
-              {availableCameras.length} camera
-              {availableCameras.length !== 1 ? 's' : ''} available
+              {videoDevices.length} camera
+              {videoDevices.length !== 1 ? 's' : ''} available
             </p>
           </div>
           <div className="max-h-64 overflow-y-auto p-2">
-            {availableCameras.map((camera) => (
+            {videoDevices.map((camera) => (
               <div
                 key={camera.deviceId}
                 onClick={() => void handleSelectCamera(camera.deviceId)}
                 className={`flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-slate-800/50 ${
-                  currentCameraId === camera.deviceId
+                  selectedVideoId === camera.deviceId
                     ? 'bg-purple-500/20 text-white'
                     : 'text-slate-300'
                 }`}
               >
                 <Camera className="h-4 w-4" />
                 <span className="text-sm">
-                  {camera.label ||
-                    `Camera ${availableCameras.indexOf(camera) + 1}`}
+                  {camera.label || `Camera ${videoDevices.indexOf(camera) + 1}`}
                 </span>
               </div>
             ))}

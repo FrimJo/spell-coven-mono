@@ -18,11 +18,11 @@ import { useMemo, useSyncExternalStore } from 'react'
  * Create a subscription manager for a specific video track's state
  * This is the external store that useSyncExternalStore subscribes to
  */
-function createVideoTrackStore(stream: MediaStream) {
+function createVideoTrackStore(stream: MediaStream | null) {
   const listeners: Set<() => void> = new Set()
 
   // Initialize cache with current state
-  let cachedEnabled: boolean = stream.getVideoTracks()[0]?.enabled ?? false
+  let cachedEnabled: boolean = stream?.getVideoTracks()[0]?.enabled ?? false
 
   /**
    * Get current track enabled state from cache
@@ -116,7 +116,7 @@ function createVideoTrackStore(stream: MediaStream) {
  * }
  * ```
  */
-export function useVideoTrackState(stream: MediaStream): boolean {
+export function useVideoTrackState(stream: MediaStream | null): boolean {
   // Create a new store instance for this stream
   // Memoize to avoid recreating on every render
   const store = useMemo(() => createVideoTrackStore(stream), [stream])
