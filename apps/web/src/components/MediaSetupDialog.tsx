@@ -106,7 +106,6 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
 
   // Monitor audio input level using the stream from useMediaDevice hook
   useEffect(() => {
-    console.log('foobar useEffect MediaSetupDialog')
     if (!audioInputStream) return
 
     const setupAudioMonitoring = async () => {
@@ -207,7 +206,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
 
             <Select
               value={selectedVideoId || ''}
-              onValueChange={(deviceId) => void switchVideoDevice(deviceId)}
+              onValueChange={(deviceId) => switchVideoDevice(deviceId)}
             >
               <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200">
                 <SelectValue placeholder="Select camera" />

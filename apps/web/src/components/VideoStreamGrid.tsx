@@ -1,3 +1,4 @@
+import type { UseMediaDeviceOptions } from '@/hooks/useMediaDevice'
 import type { DetectorType } from '@/lib/detectors'
 import type { ConnectionState, PeerTrackState } from '@/types/peerjs'
 import { Suspense, useMemo, useRef, useState } from 'react'
@@ -82,10 +83,12 @@ export function VideoStreamGrid({
 
   // Manage local video stream
 
-  const { stream } = useMediaDevice({
-    kind: 'videoinput',
-    autoStart: true,
-  })
+  const options = useMemo<UseMediaDeviceOptions>(
+    () => ({ kind: 'videoinput' }),
+    [],
+  )
+
+  const { stream } = useMediaDevice(options)
 
   const [streamStates, setStreamStates] = useState<Record<string, StreamState>>(
     players.reduce(
