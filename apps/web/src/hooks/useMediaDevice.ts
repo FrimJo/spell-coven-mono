@@ -9,19 +9,12 @@
  * - Error handling
  */
 import type { MediaDeviceInfo } from '@/lib/media-stream-manager'
-import {
-  useCallback,
-  useEffect,
-  useEffectEvent,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { getMediaStream } from '@/lib/media-stream-manager'
+import { useQuery } from '@tanstack/react-query'
 
 import { useMediaDeviceChange } from './useMediaDeviceChange'
 import { useSelectedMediaDevice } from './useSelectedMediaDevice'
-import { useQuery } from '@tanstack/react-query'
 
 export interface UseMediaDeviceOptions {
   /** Type of media device: 'video' or 'audio' */
@@ -34,25 +27,6 @@ export interface UseMediaDeviceOptions {
   onDeviceChanged?: (deviceId: string, stream: MediaStream) => void
   /** Callback when error occurs */
   onError?: (error: Error) => void
-}
-
-export interface UseMediaDeviceReturn {
-  /** Current media stream */
-  stream: MediaStream | null
-  /** Available devices */
-  devices: MediaDeviceInfo[]
-  /** Currently selected device ID (starts with default, updates on user selection) */
-  selectedDeviceId: string | null
-  /** Start the media stream */
-  start: (deviceId: string) => Promise<void>
-  /** Stop the media stream */
-  stop: () => void
-  /** Is the stream currently active */
-  isActive: boolean
-  /** Current error if any */
-  error: Error | null
-  /** Save the selected device ID to localStorage */
-  saveSelectedDevice: (deviceId: string) => void
 }
 
 /**
@@ -87,9 +61,7 @@ export interface UseMediaDeviceReturn {
  * ```
  */
 
-export function useMediaDevice(
-  options: UseMediaDeviceOptions,
-): UseMediaDeviceReturn {
+export function useMediaDevice(options: UseMediaDeviceOptions) {
   const {
     kind,
     videoConstraints = {
@@ -101,21 +73,22 @@ export function useMediaDevice(
     onError,
   } = options
 
-  
-  const [error, setError] = useState<Error | null>(null)
-
   const onDeviceChangedRef = useRef(onDeviceChanged)
   const onErrorRef = useRef(onError)
 
   const mediaDevices = useMediaDeviceChange()
-  
-  // Use centralized device enumeration (already filtered by kind)
-  const matchingKind = mediaDevices[kind]
 
-  const defaultDevice = matchingKind.find((device) => device.deviceId === 'default') ?? matchingKind[0]
+  const matchingKind = useMemo(() => mediaDevices[kind], [mediaDevices, kind])
+
+  const defaultDevice =
+    matchingKind.find((device) => device.deviceId === 'default') ??
+    matchingKind[0]
 
   // Use selected device hook as state manager with localStorage persistence
-  const { selectedDeviceId, saveSelectedDevice } = useSelectedMediaDevice(kind)
+  const { selectedDeviceId, saveSelectedDevice } = useSelectedMediaDevice(
+    kind,
+    defaultDevice?.deviceId ?? null,
+  )
 
   console.log(
     `[useMediaDevice] Devices matching kind '${kind}' (${matchingKind.length}):`,
@@ -128,24 +101,32 @@ export function useMediaDevice(
     )
   }
 
-  const devices = matchingKind
-    // Filter out the "default" device ID to avoid duplication
-    .filter((device) => device.deviceId !== 'default' && device.deviceId !== '')
-    .map((device, index: number) => {
-      // If no label, use a generic one with index (happens when permissions not granted)
-      const baseLabel =
-        device.label ||
-        `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${index + 1}`
-      return {
-        deviceId: device.deviceId,
-        label: index === 0 ? `${baseLabel} (Default)` : baseLabel,
-        kind: device.kind,
-      } satisfies MediaDeviceInfo
-    })
+  // Memoize filtered devices to avoid recalculating filter/map operations
+  // when matchingKind reference changes but content is the same
+  const filteredDevices = useMemo(
+    () =>
+      matchingKind
+        // Filter out the "default" device ID to avoid duplication
+        .filter(
+          (device) => device.deviceId !== 'default' && device.deviceId !== '',
+        )
+        .map((device, index: number) => {
+          // If no label, use a generic one with index (happens when permissions not granted)
+          const baseLabel =
+            device.label ||
+            `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${index + 1}`
+          return {
+            deviceId: device.deviceId,
+            label: index === 0 ? `${baseLabel} (Default)` : baseLabel,
+            kind: device.kind,
+          } satisfies MediaDeviceInfo
+        }),
+    [matchingKind, kind],
+  )
 
   console.log(
-    `[useMediaDevice] Final filtered ${kind} devices (${devices.length}):`,
-    devices,
+    `[useMediaDevice] Final filtered ${kind} devices (${filteredDevices.length}):`,
+    filteredDevices,
   )
 
   useEffect(() => {
@@ -153,21 +134,14 @@ export function useMediaDevice(
     onErrorRef.current = onError
   }, [onDeviceChanged, onError])
 
-  /**
-   * Stop the current stream and clean up
-   */
-  const stop = useCallback(() => {
-    clearStream()
-  }, [clearStream])
-
-  const mediaStreamQuery = useQuery({
-    queryKey: ["MediaStream", kind, deviceId],
+  const { data, isPending, error } = useQuery({
+    queryKey: ['MediaStream', kind, selectedDeviceId],
     queryFn: async () => {
       // Get the media stream using centralized manager
       const mediaStream = await getMediaStream(
         kind === 'videoinput'
           ? {
-              videoDeviceId: deviceId,
+              videoDeviceId: selectedDeviceId,
               video: true,
               audio: false,
               videoConstraints,
@@ -175,104 +149,33 @@ export function useMediaDevice(
               enableFallback: true,
             }
           : {
-              audioDeviceId: deviceId,
+              audioDeviceId: selectedDeviceId,
               video: false,
               audio: true,
               audioConstraints,
             },
       )
       return mediaStream
-    }
-  })
-
-  /**
-   * Start or switch to a specific device
-   * If no deviceId is provided, will use: currentDeviceId > default device > first device
-   */
-  const start = useCallback(
-    async (deviceId: string) => {
-      console.log(
-        '[foobar useMediaDevice] Starting stream with device ID:',
-        deviceId,
-      )
-      try {
-        setError(null)
-
-        // Get the media stream using centralized manager
-        const { stream: newStream } = await getMediaStream(
-          kind === 'videoinput'
-            ? {
-                videoDeviceId: deviceId,
-                video: true,
-                audio: false,
-                videoConstraints,
-                resolution: '1080p',
-                enableFallback: true,
-              }
-            : {
-                audioDeviceId: deviceId,
-                video: false,
-                audio: true,
-                audioConstraints,
-              },
-        )
-
-        console.log('[useMediaDevice] Got new stream')
-        setStream(newStream)
-
-        console.log('[useMediaDevice] saveSelectedDevice', deviceId)
-        saveSelectedDevice(deviceId) // Persist to localStorage
-
-        // Notify success (component handles DOM attachment)
-        onDeviceChangedRef.current?.(deviceId, newStream)
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err))
-        console.error('[useMediaDevice] Error starting device:', error)
-        setError(error)
-        onErrorRef.current?.(error)
-        throw error
-      }
     },
-    [audioConstraints, kind, saveSelectedDevice, setStream, videoConstraints],
-  )
-
-  const initialDeviceId = useMemo(() => {
-    return selectedDeviceId ?? devices[0]?.deviceId ?? null
-  }, [devices, selectedDeviceId])
-
-  const autoStartEvent = useEffectEvent(() => {
-    console.log('[useMediaDevice] autoStartEvent', initialDeviceId)
-    if (initialDeviceId != null) {
-      start(initialDeviceId).catch((err) => {
-        console.error('[useMediaDevice] autoStart start failed:', err)
-      })
-    }
+    enabled: !!selectedDeviceId,
   })
-
-  useEffect(() => {
-    if (!isActive) autoStartEvent()
-  }, [isActive])
 
   return useMemo(
     () => ({
-      stream,
-      devices,
-      selectedDeviceId: selectedDeviceId ?? devices[0]?.deviceId ?? null,
-      start,
-      stop,
-      isActive,
+      ...data,
+      isPending,
       error,
+      devices: filteredDevices,
+      selectedDeviceId: selectedDeviceId,
       saveSelectedDevice,
     }),
     [
-      devices,
+      data,
       error,
-      isActive,
-      selectedDeviceId,
-      start,
-      stop,
-      stream,
+      filteredDevices,
+      isPending,
       saveSelectedDevice,
+      selectedDeviceId,
     ],
   )
 }

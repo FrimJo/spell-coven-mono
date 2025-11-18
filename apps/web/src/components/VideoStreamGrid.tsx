@@ -5,7 +5,15 @@ import { Suspense, useMemo, useRef, useState } from 'react'
 import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
-import { Loader2, MicOff, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react'
+import {
+  AlertCircle,
+  Loader2,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Wifi,
+  WifiOff,
+} from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
@@ -88,7 +96,7 @@ export function VideoStreamGrid({
     [],
   )
 
-  const { stream } = useMediaDevice(options)
+  const { stream, isPending, error } = useMediaDevice(options)
 
   const [streamStates, setStreamStates] = useState<Record<string, StreamState>>(
     players.reduce(
@@ -139,17 +147,7 @@ export function VideoStreamGrid({
   return (
     <div className={`grid ${getGridClass()} h-full gap-4`}>
       {/* Render local player with loading state while stream initializes */}
-      {stream ? (
-        <LocalVideoCard
-          localPlayerName={localPlayerName}
-          stream={stream}
-          enableCardDetection={enableCardDetection}
-          detectorType={detectorType}
-          usePerspectiveWarp={usePerspectiveWarp}
-          onCardCrop={onCardCrop}
-          onToggleVideo={onToggleVideo}
-        />
-      ) : (
+      {isPending ? (
         <div className="flex h-full items-center justify-center rounded-lg border border-slate-700 bg-slate-800/50">
           <div className="flex flex-col items-center space-y-3">
             <div className="relative">
@@ -166,7 +164,50 @@ export function VideoStreamGrid({
             </div>
           </div>
         </div>
-      )}
+      ) : error ? (
+        <div className="flex h-full items-center justify-center rounded-lg border border-red-800/50 bg-slate-800/50">
+          <div className="flex flex-col items-center space-y-4 px-6 py-8">
+            <div className="relative">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20 ring-4 ring-red-500/10">
+                <AlertCircle className="h-8 w-8 text-red-400" />
+              </div>
+            </div>
+            <div className="space-y-2 text-center">
+              <p className="text-sm font-semibold text-slate-200">
+                Camera Access Failed
+              </p>
+              <p className="max-w-md text-xs leading-relaxed text-slate-400">
+                {error.message ||
+                  'Unable to access your camera. Please check your permissions and try again.'}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 text-xs text-slate-500">
+              <p className="flex items-center gap-1.5">
+                <span className="inline-block h-1 w-1 rounded-full bg-slate-500" />
+                Check browser permissions
+              </p>
+              <p className="flex items-center gap-1.5">
+                <span className="inline-block h-1 w-1 rounded-full bg-slate-500" />
+                Ensure camera is not in use by another app
+              </p>
+              <p className="flex items-center gap-1.5">
+                <span className="inline-block h-1 w-1 rounded-full bg-slate-500" />
+                Try refreshing the page
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : stream != null ? (
+        <LocalVideoCard
+          localPlayerName={localPlayerName}
+          stream={stream}
+          enableCardDetection={enableCardDetection}
+          detectorType={detectorType}
+          usePerspectiveWarp={usePerspectiveWarp}
+          onCardCrop={onCardCrop}
+          onToggleVideo={onToggleVideo}
+        />
+      ) : null}
 
       {/* Render remote players */}
       {players.map((player) => {
