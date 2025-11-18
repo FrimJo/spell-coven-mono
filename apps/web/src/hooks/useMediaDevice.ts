@@ -17,10 +17,11 @@ import {
   useRef,
   useState,
 } from 'react'
-import { getMediaStream, stopMediaStream } from '@/lib/media-stream-manager'
+import { getMediaStream } from '@/lib/media-stream-manager'
 
 import { useMediaDeviceChange } from './useMediaDeviceChange'
 import { useSelectedMediaDevice } from './useSelectedMediaDevice'
+import { useQuery } from '@tanstack/react-query'
 
 export interface UseMediaDeviceOptions {
   /** Type of media device: 'video' or 'audio' */
@@ -100,20 +101,22 @@ export function useMediaDevice(
     onError,
   } = options
 
-  const [stream, setStream] = useState<MediaStream | null>(null)
-  const isActive = !!stream
+  
   const [error, setError] = useState<Error | null>(null)
 
   const onDeviceChangedRef = useRef(onDeviceChanged)
   const onErrorRef = useRef(onError)
 
   const mediaDevices = useMediaDeviceChange()
+  
+  // Use centralized device enumeration (already filtered by kind)
+  const matchingKind = mediaDevices[kind]
+
+  const defaultDevice = matchingKind.find((device) => device.deviceId === 'default') ?? matchingKind[0]
 
   // Use selected device hook as state manager with localStorage persistence
   const { selectedDeviceId, saveSelectedDevice } = useSelectedMediaDevice(kind)
 
-  // Use centralized device enumeration (already filtered by kind)
-  const matchingKind = mediaDevices[kind] || []
   console.log(
     `[useMediaDevice] Devices matching kind '${kind}' (${matchingKind.length}):`,
     matchingKind,
@@ -154,12 +157,33 @@ export function useMediaDevice(
    * Stop the current stream and clean up
    */
   const stop = useCallback(() => {
-    console.log('[useMediaDevice] Stopping stream')
-    setStream((prev) => {
-      if (prev != null) stopMediaStream(prev)
-      return null
-    })
-  }, [])
+    clearStream()
+  }, [clearStream])
+
+  const mediaStreamQuery = useQuery({
+    queryKey: ["MediaStream", kind, deviceId],
+    queryFn: async () => {
+      // Get the media stream using centralized manager
+      const mediaStream = await getMediaStream(
+        kind === 'videoinput'
+          ? {
+              videoDeviceId: deviceId,
+              video: true,
+              audio: false,
+              videoConstraints,
+              resolution: '1080p',
+              enableFallback: true,
+            }
+          : {
+              audioDeviceId: deviceId,
+              video: false,
+              audio: true,
+              audioConstraints,
+            },
+      )
+      return mediaStream
+    }
+  })
 
   /**
    * Start or switch to a specific device
@@ -194,13 +218,8 @@ export function useMediaDevice(
         )
 
         console.log('[useMediaDevice] Got new stream')
+        setStream(newStream)
 
-        setStream((prev) => {
-          console.log('[useMediaDevice] Stopping previous stream')
-          // Stop previous stream
-          if (prev != null) stopMediaStream(prev)
-          return newStream
-        })
         console.log('[useMediaDevice] saveSelectedDevice', deviceId)
         saveSelectedDevice(deviceId) // Persist to localStorage
 
@@ -214,7 +233,7 @@ export function useMediaDevice(
         throw error
       }
     },
-    [audioConstraints, kind, videoConstraints, saveSelectedDevice],
+    [audioConstraints, kind, saveSelectedDevice, setStream, videoConstraints],
   )
 
   const initialDeviceId = useMemo(() => {
@@ -222,6 +241,7 @@ export function useMediaDevice(
   }, [devices, selectedDeviceId])
 
   const autoStartEvent = useEffectEvent(() => {
+    console.log('[useMediaDevice] autoStartEvent', initialDeviceId)
     if (initialDeviceId != null) {
       start(initialDeviceId).catch((err) => {
         console.error('[useMediaDevice] autoStart start failed:', err)
