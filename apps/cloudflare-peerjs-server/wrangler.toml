@@ -1,6 +1,7 @@
 name = "cloudflare-peerjs-server"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
 
 # Durable Objects binding
 [[durable_objects.bindings]]
@@ -20,3 +21,5 @@ name = "cloudflare-peerjs-server-dev"
 # Production configuration
 [env.production]
 name = "cloudflare-peerjs-server"
+# Custom domain can be configured here if needed
+# routes = [{ pattern = "peerjs.spell-coven.com", zone_name = "spell-coven.com" }]

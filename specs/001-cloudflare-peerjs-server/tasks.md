@@ -42,15 +42,15 @@ Project structure: `apps/cloudflare-peerjs-server/` (new Cloudflare Workers serv
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T009 Create PeerJS protocol message type definitions in apps/cloudflare-peerjs-server/src/protocol/messages.ts
-- [ ] T010 [P] Implement message validator with Zod schemas in apps/cloudflare-peerjs-server/src/protocol/validator.ts
-- [ ] T011 [P] Create structured logger utility in apps/cloudflare-peerjs-server/src/lib/logger.ts
-- [ ] T012 [P] Implement rate limiter class in apps/cloudflare-peerjs-server/src/lib/rate-limiter.ts
-- [ ] T013 Create Peer interface and registry in apps/cloudflare-peerjs-server/src/lib/peer-registry.ts
-- [ ] T014 Create Worker entry point skeleton in apps/cloudflare-peerjs-server/src/index.ts with HTTP request routing
-- [ ] T015 [P] Implement health check endpoint handler in apps/cloudflare-peerjs-server/src/handlers/health.ts
-- [ ] T016 [P] Implement metrics endpoint handler (stub) in apps/cloudflare-peerjs-server/src/handlers/health.ts
-- [ ] T017 Add CORS headers configuration in apps/cloudflare-peerjs-server/src/index.ts
+- [x] T009 Create PeerJS protocol message type definitions in apps/cloudflare-peerjs-server/src/protocol/messages.ts
+- [x] T010 [P] Implement message validator with Zod schemas in apps/cloudflare-peerjs-server/src/protocol/validator.ts
+- [x] T011 [P] Create structured logger utility in apps/cloudflare-peerjs-server/src/lib/logger.ts
+- [x] T012 [P] Implement rate limiter class in apps/cloudflare-peerjs-server/src/lib/rate-limiter.ts
+- [x] T013 Create Peer interface and registry in apps/cloudflare-peerjs-server/src/lib/peer-registry.ts
+- [x] T014 Create Worker entry point skeleton in apps/cloudflare-peerjs-server/src/index.ts with HTTP request routing
+- [x] T015 [P] Implement health check endpoint handler in apps/cloudflare-peerjs-server/src/handlers/health.ts
+- [x] T016 [P] Implement metrics endpoint handler (stub) in apps/cloudflare-peerjs-server/src/handlers/health.ts
+- [x] T017 Add CORS headers configuration in apps/cloudflare-peerjs-server/src/index.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -64,18 +64,18 @@ Project structure: `apps/cloudflare-peerjs-server/` (new Cloudflare Workers serv
 
 ### Implementation for User Story 1
 
-- [ ] T018 [P] [US1] Create GameRoomCoordinator Durable Object class skeleton in apps/cloudflare-peerjs-server/src/durable-objects/GameRoomCoordinator.ts
-- [ ] T019 [US1] Implement WebSocket upgrade handler in GameRoomCoordinator.fetch() method
-- [ ] T020 [US1] Implement webSocketMessage() handler for incoming messages in GameRoomCoordinator
-- [ ] T021 [US1] Implement peer registration on WebSocket connection (send OPEN message)
-- [ ] T022 [P] [US1] Implement HEARTBEAT message handler in apps/cloudflare-peerjs-server/src/handlers/heartbeat.ts
-- [ ] T023 [P] [US1] Implement message router for OFFER/ANSWER/CANDIDATE in apps/cloudflare-peerjs-server/src/protocol/router.ts
-- [ ] T024 [US1] Integrate message router into webSocketMessage() handler
-- [ ] T025 [US1] Implement message validation and error responses for invalid messages
-- [ ] T026 [US1] Add peer-to-peer message relay logic (src → dst routing)
-- [ ] T027 [US1] Update Worker index.ts to route /peerjs requests to GameRoomCoordinator Durable Object
-- [ ] T028 [US1] Add query parameter parsing (key, id, token) in WebSocket upgrade handler
-- [ ] T029 [US1] Add structured logging for connection events and message relay
+- [x] T018 [P] [US1] Create GameRoomCoordinator Durable Object class skeleton in apps/cloudflare-peerjs-server/src/durable-objects/GameRoomCoordinator.ts
+- [x] T019 [US1] Implement WebSocket upgrade handler in GameRoomCoordinator.fetch() method
+- [x] T020 [US1] Implement webSocketMessage() handler for incoming messages in GameRoomCoordinator
+- [x] T021 [US1] Implement peer registration on WebSocket connection (send OPEN message)
+- [x] T022 [P] [US1] Implement HEARTBEAT message handler in apps/cloudflare-peerjs-server/src/handlers/heartbeat.ts
+- [x] T023 [P] [US1] Implement message router for OFFER/ANSWER/CANDIDATE in apps/cloudflare-peerjs-server/src/protocol/router.ts
+- [x] T024 [US1] Integrate message router into webSocketMessage() handler
+- [x] T025 [US1] Implement message validation and error responses for invalid messages
+- [x] T026 [US1] Add peer-to-peer message relay logic (src → dst routing)
+- [x] T027 [US1] Update Worker index.ts to route /peerjs requests to GameRoomCoordinator Durable Object
+- [x] T028 [US1] Add query parameter parsing (key, id, token) in WebSocket upgrade handler
+- [x] T029 [US1] Add structured logging for connection events and message relay
 
 **Checkpoint**: Two peers can connect and exchange signaling messages (OFFER, ANSWER, CANDIDATE)
 
@@ -89,16 +89,16 @@ Project structure: `apps/cloudflare-peerjs-server/` (new Cloudflare Workers serv
 
 ### Implementation for User Story 2
 
-- [ ] T030 [P] [US2] Implement webSocketClose() handler in GameRoomCoordinator
-- [ ] T031 [P] [US2] Implement webSocketError() handler in GameRoomCoordinator
-- [ ] T032 [US2] Add peer cleanup logic (remove from registry, notify other peers)
-- [ ] T033 [US2] Implement LEAVE message broadcast to all other peers in room
-- [ ] T034 [US2] Implement EXPIRE message for timeout scenarios
-- [ ] T035 [US2] Add heartbeat timeout detection (5 seconds) with periodic check
-- [ ] T036 [US2] Implement WebSocket Hibernation API configuration in GameRoomCoordinator constructor
-- [ ] T037 [US2] Add hibernation state tracking (lastActivityAt timestamp)
+- [x] T030 [P] [US2] Implement webSocketClose() handler in GameRoomCoordinator
+- [x] T031 [P] [US2] Implement webSocketError() handler in GameRoomCoordinator
+- [x] T032 [US2] Add peer cleanup logic (remove from registry, notify other peers)
+- [x] T033 [US2] Implement LEAVE message broadcast to all other peers in room
+- [x] T034 [US2] Implement EXPIRE message for timeout scenarios
+- [x] T035 [US2] Add heartbeat timeout detection (5 seconds) with periodic check
+- [x] T036 [US2] Implement WebSocket Hibernation API configuration in GameRoomCoordinator constructor
+- [x] T037 [US2] Add hibernation state tracking (lastActivityAt timestamp)
 - [ ] T038 [US2] Test hibernation and reactivation with Miniflare (manual test per quickstart.md)
-- [ ] T039 [US2] Add logging for disconnection events and state cleanup
+- [x] T039 [US2] Add logging for disconnection events and state cleanup
 
 **Checkpoint**: Server accurately tracks peer state, cleans up disconnections, and hibernates during inactivity
 
@@ -112,13 +112,13 @@ Project structure: `apps/cloudflare-peerjs-server/` (new Cloudflare Workers serv
 
 ### Implementation for User Story 3
 
-- [ ] T040 [P] [US3] Add maxPeers constant (4) to GameRoomCoordinator
-- [ ] T041 [US3] Implement room capacity check on new WebSocket connections
-- [ ] T042 [US3] Add room-full error response (429 status) when capacity reached
-- [ ] T043 [US3] Implement peer count tracking in GameRoomCoordinator
-- [ ] T044 [US3] Add validation to ensure messages only route to peers in the same room
-- [ ] T045 [US3] Implement independent connection tracking (no interference between peer pairs)
-- [ ] T046 [US3] Add logging for room capacity events and multi-peer coordination
+- [x] T040 [P] [US3] Add maxPeers constant (4) to GameRoomCoordinator
+- [x] T041 [US3] Implement room capacity check on new WebSocket connections
+- [x] T042 [US3] Add room-full error response (429 status) when capacity reached
+- [x] T043 [US3] Implement peer count tracking in GameRoomCoordinator
+- [x] T044 [US3] Add validation to ensure messages only route to peers in the same room
+- [x] T045 [US3] Implement independent connection tracking (no interference between peer pairs)
+- [x] T046 [US3] Add logging for room capacity events and multi-peer coordination
 - [ ] T047 [US3] Test with 4 concurrent peers using wscat or PeerJS client (manual test per quickstart.md)
 
 **Checkpoint**: Server supports 2-4 concurrent peers with proper capacity enforcement and mesh coordination
@@ -133,15 +133,15 @@ Project structure: `apps/cloudflare-peerjs-server/` (new Cloudflare Workers serv
 
 ### Implementation for User Story 4
 
-- [ ] T048 [P] [US4] Update wrangler.toml with production environment configuration
-- [ ] T049 [P] [US4] Configure custom domain in wrangler.toml (if applicable)
-- [ ] T050 [P] [US4] Add production CORS configuration for Spell Coven web app domain
-- [ ] T051 [US4] Implement secure WebSocket (WSS) support in production
+- [x] T048 [P] [US4] Update wrangler.toml with production environment configuration
+- [x] T049 [P] [US4] Configure custom domain in wrangler.toml (if applicable)
+- [x] T050 [P] [US4] Add production CORS configuration for Spell Coven web app domain
+- [x] T051 [US4] Implement secure WebSocket (WSS) support in production
 - [ ] T052 [US4] Deploy to Cloudflare Workers using wrangler deploy
 - [ ] T053 [US4] Verify Durable Object instantiation in edge location closest to first peer
 - [ ] T054 [US4] Test latency from multiple geographic regions (manual test)
 - [ ] T055 [US4] Configure Cloudflare dashboard monitoring and alerts
-- [ ] T056 [US4] Add production logging configuration for debugging
+- [x] T056 [US4] Add production logging configuration for debugging
 - [ ] T057 [US4] Update Spell Coven web app environment variables to point to production endpoint
 
 **Checkpoint**: Server deployed globally with sub-200ms latency and production monitoring
@@ -152,17 +152,17 @@ Project structure: `apps/cloudflare-peerjs-server/` (new Cloudflare Workers serv
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T058 [P] Add comprehensive error handling for all edge cases (malformed messages, network partitions)
-- [ ] T059 [P] Implement rate limiting enforcement (100 msg/sec per peer) across all message types
-- [ ] T060 [P] Add detailed structured logging for all operations (connection, disconnection, errors)
-- [ ] T061 [P] Create README.md with deployment instructions and architecture overview
+- [x] T058 [P] Add comprehensive error handling for all edge cases (malformed messages, network partitions)
+- [x] T059 [P] Implement rate limiting enforcement (100 msg/sec per peer) across all message types
+- [x] T060 [P] Add detailed structured logging for all operations (connection, disconnection, errors)
+- [x] T061 [P] Create README.md with deployment instructions and architecture overview
 - [ ] T062 [P] Validate quickstart.md instructions with fresh local setup
-- [ ] T063 Code cleanup and refactoring for consistency
-- [ ] T064 [P] Add TypeScript strict mode compliance checks
+- [x] T063 Code cleanup and refactoring for consistency
+- [x] T064 [P] Add TypeScript strict mode compliance checks
 - [ ] T065 [P] Run linting and formatting across all files
-- [ ] T066 Performance optimization: minimize CPU time per message (<10ms target)
-- [ ] T067 [P] Add metrics collection for connection count, message rate, error rate
-- [ ] T068 Security hardening: validate peer IDs, prevent spoofing
+- [x] T066 Performance optimization: minimize CPU time per message (<10ms target)
+- [x] T067 [P] Add metrics collection for connection count, message rate, error rate
+- [x] T068 Security hardening: validate peer IDs, prevent spoofing
 - [ ] T069 [P] Update monorepo documentation to include new Cloudflare Workers service
 
 ---

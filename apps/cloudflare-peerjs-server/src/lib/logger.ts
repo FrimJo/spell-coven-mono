@@ -1,16 +1,16 @@
 /**
  * Structured Logger Utility
- * 
+ *
  * Provides structured logging for Cloudflare Workers with consistent format
  * Logs appear in Cloudflare dashboard and can be tailed with `wrangler tail`
  */
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export interface LogContext {
-  roomId?: string;
-  peerId?: string;
-  messageType?: string;
+  roomId?: string | null;
+  peerId?: string | null;
+  messageType?: string | null;
   [key: string]: unknown;
 }
 
@@ -35,21 +35,21 @@ export class Logger {
    * Log a debug message
    */
   debug(message: string, data?: LogContext): void {
-    this.log('debug', message, data);
+    this.log("debug", message, data);
   }
 
   /**
    * Log an info message
    */
   info(message: string, data?: LogContext): void {
-    this.log('info', message, data);
+    this.log("info", message, data);
   }
 
   /**
    * Log a warning message
    */
   warn(message: string, data?: LogContext): void {
-    this.log('warn', message, data);
+    this.log("warn", message, data);
   }
 
   /**
@@ -58,13 +58,16 @@ export class Logger {
   error(message: string, error?: Error | unknown, data?: LogContext): void {
     const errorData: LogContext = {
       ...data,
-      error: error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      } : error,
+      error:
+        error instanceof Error
+          ? {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+            }
+          : error,
     };
-    this.log('error', message, errorData);
+    this.log("error", message, errorData);
   }
 
   /**
@@ -81,16 +84,16 @@ export class Logger {
 
     // Use appropriate console method based on level
     switch (level) {
-      case 'debug':
+      case "debug":
         console.debug(JSON.stringify(logEntry));
         break;
-      case 'info':
+      case "info":
         console.log(JSON.stringify(logEntry));
         break;
-      case 'warn':
+      case "warn":
         console.warn(JSON.stringify(logEntry));
         break;
-      case 'error':
+      case "error":
         console.error(JSON.stringify(logEntry));
         break;
     }
