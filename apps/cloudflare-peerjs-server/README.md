@@ -44,7 +44,7 @@ This service replaces the existing Node.js PeerJS server with a globally distrib
    npm run dev
    ```
 
-   This starts a Miniflare server on `http://localhost:8787`
+   This starts a Miniflare server on `http://localhost:9000` (configured to match the old peerjs-server port)
 
 3. Run tests:
    ```bash

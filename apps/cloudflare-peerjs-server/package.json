@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Cloudflare Durable Objects-based PeerJS signaling server",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --port 9000",
     "build": "tsc",
     "deploy": "wrangler deploy",
     "test": "vitest run",

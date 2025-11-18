@@ -17,6 +17,8 @@ new_classes = ["GameRoomCoordinator"]
 # Development configuration
 [env.development]
 name = "cloudflare-peerjs-server-dev"
+# Use port 9000 to match old peerjs-server for drop-in replacement
+# Run with: wrangler dev --port 9000
 
 # Production configuration
 [env.production]
