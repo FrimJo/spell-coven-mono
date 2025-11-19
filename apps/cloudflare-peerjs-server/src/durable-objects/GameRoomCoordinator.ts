@@ -16,7 +16,6 @@ import {
 } from "../protocol/validator";
 import type {
   ClientMessage,
-  ServerMessage,
   OpenMessage,
   ServerErrorMessage,
 } from "../protocol/messages";

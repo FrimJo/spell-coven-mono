@@ -176,5 +176,3 @@ export function useVideoStreamAttachment({
     onVideoStopped,
   ])
 }
-
-

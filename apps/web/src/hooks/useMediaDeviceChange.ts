@@ -1,3 +1,7 @@
+import type { MediaDeviceInfo } from '@/lib/media-stream-manager'
+import { useSyncExternalStore } from 'react'
+import { enumerateMediaDevices } from '@/lib/media-stream-manager'
+
 /**
  * useMediaDeviceChange - Listen to media device changes using useSyncExternalStore
  *
@@ -17,9 +21,6 @@
  * })
  * ```
  */
-
-import { enumerateMediaDevices, type MediaDeviceInfo } from '@/lib/media-stream-manager'
-import { useSyncExternalStore } from 'react'
 
 export interface MediaDeviceChangeInfo {
   videoinput: MediaDeviceInfo[]
@@ -57,7 +58,7 @@ function createMediaDeviceStore() {
   async function updateDeviceCache(): Promise<void> {
     // Use sync enumeration - this is fast since it uses cached device info
     const devices = await enumerateMediaDevices()
-    
+
     cachedDevices = {
       videoinput: devices.filter((d) => d.kind === 'videoinput'),
       audioinput: devices.filter((d) => d.kind === 'audioinput'),
@@ -112,7 +113,10 @@ function createMediaDeviceStore() {
 
     // Attach event listener only on first subscription
     if (!isEventListenerAttached) {
-      navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange)
+      navigator.mediaDevices.addEventListener(
+        'devicechange',
+        handleDeviceChange,
+      )
       isEventListenerAttached = true
 
       // Create initialization promise for Suspense support

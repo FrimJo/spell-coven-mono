@@ -155,7 +155,7 @@ export function LocalMediaControls({
   const {
     devices: videoDevices,
     selectedDeviceId: selectedVideoId,
-    start: switchVideoDevice,
+    saveSelectedDevice: switchVideoDevice,
   } = useMediaDevice(videoDeviceOptions)
 
   // Handle camera selection
