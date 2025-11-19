@@ -4,15 +4,24 @@
 
 /**
  * Extension for HTMLAudioElement and HTMLVideoElement to include setSinkId()
- * 
+ *
  * setSinkId() is part of the Media Capture and Streams API and allows selecting
  * the audio output device (speakers/headphones) for media elements.
- * 
+ *
  * Browser Support:
  * - Chrome/Edge: Full support
  * - Firefox: Supported (may require flag in older versions)
  * - Safari: NOT supported as of 2024
- * 
+ *
+ * Fallback Behavior:
+ * In browsers without setSinkId() support, audio will play to the system
+ * default output device. Always check for support using:
+ * ```typescript
+ * if ('setSinkId' in audioElement) {
+ *   await audioElement.setSinkId(deviceId)
+ * }
+ * ```
+ *
  * @see https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/setSinkId
  */
 interface HTMLMediaElement {
@@ -23,4 +32,3 @@ interface HTMLMediaElement {
    */
   setSinkId(deviceId: string): Promise<void>
 }
-
