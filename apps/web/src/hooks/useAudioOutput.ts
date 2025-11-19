@@ -13,10 +13,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-export interface AudioOutputDevice
-  extends Pick<globalThis.MediaDeviceInfo, 'deviceId' | 'label'> {
-  // Audio output devices don't need isDefault since we always include a "System Default" option
-}
+export type AudioOutputDevice = Pick<
+  globalThis.MediaDeviceInfo,
+  'deviceId' | 'label'
+>
 
 export interface UseAudioOutputOptions {
   /** Initial device ID to use (defaults to 'default') */
@@ -232,7 +232,7 @@ export function useAudioOutput(
 
         // Set the device on our internal audio element
         if (audioElementRef.current && 'setSinkId' in audioElementRef.current) {
-          await (audioElementRef.current as any).setSinkId(deviceId)
+          await audioElementRef.current.setSinkId(deviceId)
         }
 
         setCurrentDeviceId(deviceId)
@@ -293,7 +293,7 @@ export function useAudioOutput(
 
         // Ensure the audio element is using the current device
         if (isSupported && 'setSinkId' in audioElementRef.current) {
-          await (audioElementRef.current as any).setSinkId(currentDeviceId)
+          await audioElementRef.current.setSinkId(currentDeviceId)
         }
 
         await audioElementRef.current.play()

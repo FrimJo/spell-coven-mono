@@ -61,8 +61,8 @@ export function handleMetrics(request: Request, env?: { ALLOWED_ORIGINS?: string
  */
 function getCorsHeaders(env?: { ALLOWED_ORIGINS?: string }): Record<string, string> {
   // Get allowed origins from environment or default to wildcard
-  const allowedOrigins = env?.ALLOWED_ORIGINS?.split(',') || ['*'];
-  const origin = allowedOrigins.includes('*') ? '*' : allowedOrigins[0]; // Simple implementation - use first origin or wildcard
+  const allowedOrigins = env?.ALLOWED_ORIGINS?.split(',').filter(Boolean) || ['*'];
+  const origin = allowedOrigins.includes('*') ? '*' : (allowedOrigins[0] as string);
   
   return {
     'Access-Control-Allow-Origin': origin,
