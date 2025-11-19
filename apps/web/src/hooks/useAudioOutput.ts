@@ -9,6 +9,13 @@
  * - Chrome/Edge: Full support
  * - Firefox: Supported (may require flag in older versions)
  * - Safari: NOT supported as of 2024
+ *
+ * Fallback Behavior (Safari/Unsupported Browsers):
+ * - Audio will play to the system default output device
+ * - setOutputDevice() will update state but won't change the actual device
+ * - testOutput() will play to the system default device
+ * - UI controls are disabled when isSupported is false
+ * - No errors are thrown - graceful degradation
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -217,14 +224,23 @@ export function useAudioOutput(
 
   /**
    * Set the audio output device
+   *
+   * In browsers that don't support setSinkId() (e.g., Safari), this will:
+   * - Still update the currentDeviceId state (for UI consistency)
+   * - Use the system default audio output device
+   * - Not throw an error (graceful degradation)
    */
   const setOutputDevice = useCallback(
     async (deviceId: string) => {
       if (!isSupported) {
-        const err = new Error('setSinkId() not supported in this browser')
-        setError(err)
-        onErrorRef.current?.(err)
-        throw err
+        // Graceful degradation: update state but use system default
+        console.log(
+          '[useAudioOutput] setSinkId() not supported, using system default device',
+        )
+        setCurrentDeviceId(deviceId)
+        // Still call the callback so UI can update, but note it's using default
+        onDeviceChangedRef.current?.(deviceId)
+        return
       }
 
       try {
@@ -258,6 +274,8 @@ export function useAudioOutput(
 
   /**
    * Test the current output device by playing a short tone
+   *
+   * In browsers without setSinkId() support, this will play to the system default device
    */
   const testOutput = useCallback(async () => {
     if (!audioElementRef.current) {
@@ -291,10 +309,11 @@ export function useAudioOutput(
       if (audioElementRef.current) {
         audioElementRef.current.srcObject = destination.stream
 
-        // Ensure the audio element is using the current device
+        // Ensure the audio element is using the current device (if supported)
         if (isSupported && 'setSinkId' in audioElementRef.current) {
           await audioElementRef.current.setSinkId(currentDeviceId)
         }
+        // In Safari/unsupported browsers, audio will play to system default
 
         await audioElementRef.current.play()
       }
