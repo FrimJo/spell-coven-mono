@@ -160,6 +160,12 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
     enabled: !!selectedDeviceId,
   })
 
+  useEffect(() => {
+    if (data?.stream && selectedDeviceId) {
+      onDeviceChanged?.(selectedDeviceId, data.stream)
+    }
+  }, [data?.stream, selectedDeviceId, onDeviceChanged])
+
   return useMemo(
     () => ({
       ...data,

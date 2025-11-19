@@ -65,17 +65,18 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     devices: videoDevices,
     selectedDeviceId: selectedVideoId,
     error: videoError,
-    isActive: isVideoActive,
-    start: switchVideoDevice,
+    isPending: isVideoPending,
+    saveSelectedDevice: switchVideoDevice,
   } = useMediaDevice(videoDeviceOptions)
 
   // Use our consolidated media device hook for audio input
   const {
     devices: audioInputDevices,
     selectedDeviceId: selectedAudioInputId,
-    start: switchAudioInputDevice,
     stream: audioInputStream,
     error: audioInputError,
+    isPending: isAudioInputPending,
+    saveSelectedDevice: switchAudioInputDevice,
   } = useMediaDevice(audioInputDeviceOptions)
 
   // Use our audio output hook for speakers/headphones
@@ -232,25 +233,33 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
                 muted
                 className="h-full w-full object-cover"
               />
-              {!selectedVideoId && (
+              {isVideoPending ? (
+                <div className="absolute inset-0 flex items-center justify-center rounded-lg border border-slate-700 bg-slate-800/50">
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className="relative">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-500/20">
+                        <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+                      </div>
+                      <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/10" />
+                    </div>
+                    <div className="space-y-1 text-center">
+                      <p className="text-sm font-medium text-slate-200">
+                        Initializing Camera
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        Starting video stream...
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : !selectedVideoId ? (
                 <div className="absolute inset-0 flex items-center justify-center text-slate-500">
                   <div className="text-center">
                     <Camera className="mx-auto mb-2 h-12 w-12 opacity-50" />
                     <p>No camera selected</p>
                   </div>
                 </div>
-              )}
-              {selectedVideoId && !isVideoActive && (
-                <div className="absolute inset-0 flex items-center justify-center bg-slate-950/90 text-slate-400">
-                  <div className="text-center">
-                    <Loader2 className="mx-auto mb-2 h-12 w-12 animate-spin" />
-                    <p className="text-sm">Loading camera...</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Please allow camera permissions if prompted
-                    </p>
-                  </div>
-                </div>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -261,27 +270,35 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
               <Label className="text-slate-200">Microphone</Label>
             </div>
 
-            <Select
-              value={selectedAudioInputId || ''}
-              onValueChange={(deviceId) =>
-                void switchAudioInputDevice(deviceId)
-              }
-            >
-              <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200">
-                <SelectValue placeholder="Select microphone" />
-              </SelectTrigger>
-              <SelectContent className="border-slate-700 bg-slate-800">
-                {audioInputDevices.map((device) => (
-                  <SelectItem
-                    key={device.deviceId}
-                    value={device.deviceId}
-                    className="text-slate-200 focus:bg-slate-700"
-                  >
-                    {device.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="relative">
+              <Select
+                value={selectedAudioInputId || ''}
+                onValueChange={(deviceId) =>
+                  void switchAudioInputDevice(deviceId)
+                }
+                disabled={isAudioInputPending}
+              >
+                <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200">
+                  <SelectValue placeholder="Select microphone" />
+                </SelectTrigger>
+                <SelectContent className="border-slate-700 bg-slate-800">
+                  {audioInputDevices.map((device) => (
+                    <SelectItem
+                      key={device.deviceId}
+                      value={device.deviceId}
+                      className="text-slate-200 focus:bg-slate-700"
+                    >
+                      {device.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isAudioInputPending && (
+                <div className="absolute right-10 top-1/2 -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+                </div>
+              )}
+            </div>
 
             {/* Audio Level Indicator */}
             <div className="space-y-1">

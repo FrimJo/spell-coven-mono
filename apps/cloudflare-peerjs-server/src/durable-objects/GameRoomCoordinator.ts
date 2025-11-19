@@ -233,11 +233,22 @@ export class GameRoomCoordinator {
       return;
     }
 
-    // Check for timed-out peers before processing new message
-    this.checkHeartbeatTimeouts();
-
     // Route message based on type
     const clientMessage = validation.data!;
+
+    // Process heartbeat messages immediately to update timestamp before timeout check
+    if (clientMessage.type === "HEARTBEAT") {
+      handleHeartbeat(clientMessage, peer, (peerId) =>
+        this.peerRegistry.updateHeartbeat(peerId)
+      );
+      // Check for timed-out peers after processing heartbeat
+      this.checkHeartbeatTimeouts();
+      return;
+    }
+
+    // Check for timed-out peers before processing other message types
+    this.checkHeartbeatTimeouts();
+
     await this.routeMessage(clientMessage, peer);
   }
 
@@ -263,12 +274,7 @@ export class GameRoomCoordinator {
     }
 
     switch (message.type) {
-      case "HEARTBEAT":
-        handleHeartbeat(message, peer, (peerId) =>
-          this.peerRegistry.updateHeartbeat(peerId)
-        );
-        break;
-
+      // HEARTBEAT is handled earlier in webSocketMessage to update timestamp before timeout check
       case "OFFER":
         // Validate destination peer exists
         if (!this.peerRegistry.hasPeer(message.dst)) {
