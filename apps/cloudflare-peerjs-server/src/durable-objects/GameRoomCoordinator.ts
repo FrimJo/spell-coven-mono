@@ -131,27 +131,12 @@ export class GameRoomCoordinator {
       return new Response("Failed to register peer", { status: 500 });
     }
 
-    // Send OPEN message to confirm connection
-    const openMessage: OpenMessage = {
-      type: "OPEN",
-      peerId: peerId,
-    };
-
-    try {
-      server.send(JSON.stringify(openMessage));
-      logger.info("Peer registered and OPEN message sent", { peerId });
-    } catch (error) {
-      logger.error("Failed to send OPEN message", error, { peerId });
-      this.peerRegistry.removePeer(peerId);
-      server.close(1000, "Failed to send OPEN message");
-      return new Response("Failed to send OPEN message", { status: 500 });
-    }
-
     // Update activity timestamp
     this.lastActivityAt = Date.now();
 
-    // Return WebSocket upgrade response
-    return new Response(null, {
+    // Return WebSocket upgrade response immediately
+    // This must be returned synchronously for the upgrade to complete
+    const response = new Response(null, {
       status: 101,
       webSocket: client,
       headers: {
@@ -159,6 +144,31 @@ export class GameRoomCoordinator {
         Connection: "Upgrade",
       },
     });
+
+    // Send OPEN message asynchronously after Response is returned
+    // Use void to explicitly mark that we're not awaiting this
+    // The Response must be returned immediately for the upgrade to work
+    void Promise.resolve()
+      .then(() => {
+        try {
+          const openMessage: OpenMessage = {
+            type: "OPEN",
+            peerId: peerId,
+          };
+          server.send(JSON.stringify(openMessage));
+          logger.info("Peer registered and OPEN message sent", { peerId });
+        } catch (error) {
+          logger.error("Failed to send OPEN message", error, { peerId });
+          // Don't close the connection here - it's already established
+          // The peer will timeout if it doesn't receive OPEN message
+        }
+      })
+      .catch((error) => {
+        // Prevent unhandled promise rejection
+        logger.error("Unhandled error sending OPEN message", error, { peerId });
+      });
+
+    return response;
   }
 
   /**

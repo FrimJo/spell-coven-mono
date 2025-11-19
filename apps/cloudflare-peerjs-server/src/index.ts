@@ -7,6 +7,7 @@
 
 import { handleHealth, handleMetrics } from "./handlers/health";
 import { createLogger } from "./lib/logger";
+import { GameRoomCoordinator } from "./durable-objects/GameRoomCoordinator";
 
 const logger = createLogger({ component: "worker" });
 
@@ -40,44 +41,104 @@ export default {
       }
 
       // PeerJS WebSocket signaling endpoint
-      if (url.pathname === "/peerjs") {
+      // PeerJS library appends /peerjs to the path you provide,
+      // so if path is set to '/peerjs', it becomes '/peerjs/peerjs'
+      // Forward to Durable Object which will handle WebSocket upgrade validation
+      if (url.pathname === "/peerjs/peerjs") {
         return handlePeerJS(request, env);
       }
 
       // 404 for unknown routes
-      return new Response("Not Found", { status: 404 });
+      return new Response(JSON.stringify({ error: "Not Found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
     } catch (error) {
       logger.error("Request handling error", error, { path: url.pathname });
-      return new Response("Internal Server Error", { status: 500 });
+      return new Response(
+        JSON.stringify({
+          error: "Internal Server Error",
+          message: error instanceof Error ? error.message : String(error),
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
   },
 };
+
+// Export Durable Object class for Cloudflare Workers
+export { GameRoomCoordinator };
 
 /**
  * Handle PeerJS WebSocket signaling requests
  */
 async function handlePeerJS(request: Request, env: Env): Promise<Response> {
-  // Extract query parameters
-  const url = new URL(request.url);
-  const key = url.searchParams.get("key");
-  const peerId = url.searchParams.get("id");
-  const token = url.searchParams.get("token");
-
-  // Validate required parameters
-  if (!key || !peerId || !token) {
-    return new Response("Missing required query parameters: key, id, token", {
-      status: 400,
+  try {
+    logger.info("handlePeerJS called", {
+      url: request.url,
+      method: request.method,
+      upgrade: request.headers.get("Upgrade"),
     });
+
+    // Extract token from query parameters to determine which room
+    const url = new URL(request.url);
+    const token = url.searchParams.get("token");
+
+    // Token is required to determine which Durable Object (room) to use
+    if (!token) {
+      logger.warn("Missing token parameter", { url: request.url });
+      return new Response(
+        JSON.stringify({ error: "Missing required query parameter: token" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Use token (Discord channel ID) as room ID for Durable Object
+    const roomId = env.GAME_ROOM.idFromName(token);
+    logger.info("Routing to Durable Object", {
+      token,
+      roomId: roomId.toString(),
+    });
+
+    // Get Durable Object instance for this room
+    const gameRoom = env.GAME_ROOM.get(roomId);
+
+    // Forward request to Durable Object for WebSocket upgrade
+    // The Durable Object will handle all validation and WebSocket upgrade
+    logger.info("Calling Durable Object fetch", { roomId: roomId.toString() });
+    const response = await gameRoom.fetch(request);
+
+    logger.info("Durable Object returned response", {
+      status: response.status,
+      hasWebSocket: "webSocket" in response,
+    });
+
+    // Ensure the response is returned as-is (don't modify WebSocket responses)
+    return response;
+  } catch (error) {
+    logger.error("Error in handlePeerJS", error, {
+      url: request.url,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
+    // Return a proper JSON error response instead of throwing
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : String(error),
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
-
-  // Use token (Discord channel ID) as room ID for Durable Object
-  const roomId = env.GAME_ROOM.idFromName(token);
-
-  // Get Durable Object instance for this room
-  const gameRoom = env.GAME_ROOM.get(roomId);
-
-  // Forward request to Durable Object for WebSocket upgrade
-  return gameRoom.fetch(request);
 }
 
 /**
