@@ -10,10 +10,16 @@
  */
 import type { MediaDeviceInfo } from '@/lib/media-stream-manager'
 import { useEffect, useMemo, useRef } from 'react'
-import { getMediaStream } from '@/lib/media-stream-manager'
-import { useQuery } from '@tanstack/react-query'
+import {
+  enumerateMediaDevices,
+  getMediaStream,
+} from '@/lib/media-stream-manager'
+import {
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query'
 
-import { useMediaDeviceChange } from './useMediaDeviceChange'
 import { useSelectedMediaDevice } from './useSelectedMediaDevice'
 
 export interface UseMediaDeviceOptions {
@@ -76,10 +82,35 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
   const onDeviceChangedRef = useRef(onDeviceChanged)
   const onErrorRef = useRef(onError)
 
-  // This will suspend until first enumeration completes (timestamp > 0)
-  const mediaDevices = useMediaDeviceChange()
+  const queryClient = useQueryClient()
 
-  const matchingKind = useMemo(() => mediaDevices[kind], [mediaDevices, kind])
+  // Use React Query to cache device enumeration and prevent infinite re-renders
+  // React's use() hook requires a stable promise reference from outside (like server components)
+  // Creating promises in useMemo doesn't provide the stability needed for use()
+  const {
+    data: matchingKind = [],
+    isPending: isEnumerating,
+    error: enumerationError,
+  } = useSuspenseQuery({
+    queryKey: ['MediaDevices', kind],
+    queryFn: async () => {
+      const devices = await enumerateMediaDevices(kind)
+      if (devices.length > 0) {
+        return devices as readonly [MediaDeviceInfo] | MediaDeviceInfo[]
+      }
+      throw new Error(`No ${kind} devices found`)
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchOnWindowFocus: true, // Re-enumerate when window regains focus (devices may have changed)
+  })
+
+  useEffect(() => {
+    function handleDeviceChange() {
+      queryClient.invalidateQueries({ queryKey: ['MediaDevices'] })
+    }
+    window.addEventListener('devicechange', handleDeviceChange)
+    return () => window.removeEventListener('devicechange', handleDeviceChange)
+  }, [queryClient])
 
   const defaultDevice =
     matchingKind.find((device) => device.deviceId === 'default') ??
@@ -88,15 +119,17 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
   // Use selected device hook as state manager with localStorage persistence
   const { selectedDeviceId, saveSelectedDevice } = useSelectedMediaDevice(
     kind,
-    defaultDevice?.deviceId ?? null,
+    defaultDevice.deviceId,
   )
 
-  console.log(
-    `[useMediaDevice] Devices matching kind '${kind}' (${matchingKind.length}):`,
-    matchingKind,
-  )
+  if (enumerationError) {
+    console.error(
+      '[useMediaDevice] Failed to enumerate devices:',
+      enumerationError,
+    )
+  }
 
-  if (matchingKind.length === 0) {
+  if (matchingKind.length === 0 && !isEnumerating) {
     console.warn(
       '[useMediaDevice] enumerateMediaDevices returned 0 devices - this might indicate a browser restriction',
     )
@@ -161,17 +194,17 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
     enabled: !!selectedDeviceId,
   })
 
-  // useEffect(() => {
-  //   if (data?.stream && selectedDeviceId) {
-  //     onDeviceChanged?.(selectedDeviceId, data.stream)
-  //   }
-  // }, [data?.stream, selectedDeviceId, onDeviceChanged])
+  useEffect(() => {
+    if (data?.stream && selectedDeviceId) {
+      onDeviceChanged?.(selectedDeviceId, data.stream)
+    }
+  }, [data?.stream, selectedDeviceId, onDeviceChanged])
 
   return useMemo(
     () => ({
       ...data,
-      isPending,
-      error,
+      isPending: isPending || isEnumerating,
+      error: error || enumerationError,
       devices: filteredDevices,
       selectedDeviceId: selectedDeviceId,
       saveSelectedDevice,
@@ -179,7 +212,9 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
     [
       data,
       error,
+      enumerationError,
       filteredDevices,
+      isEnumerating,
       isPending,
       saveSelectedDevice,
       selectedDeviceId,

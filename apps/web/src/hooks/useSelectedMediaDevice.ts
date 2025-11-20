@@ -238,7 +238,7 @@ export interface UseSelectedMediaDeviceReturn {
  */
 export function useSelectedMediaDevice(
   kind: 'videoinput' | 'audioinput' | 'audiooutput',
-  defaultDeviceId: string | null = null,
+  defaultDeviceId: string,
 ): UseSelectedMediaDeviceReturn {
   // Use useSyncExternalStore to sync with the device store
   // All components using this hook will re-render when any device selection changes
