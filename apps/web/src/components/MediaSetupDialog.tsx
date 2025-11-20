@@ -105,8 +105,8 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     // Device cleanup is handled by the useMediaDevice hooks
     // Note: Button is already disabled if devices aren't selected or there are errors
     onComplete({
-      videoDeviceId: selectedVideoId!,
-      audioInputDeviceId: selectedAudioInputId!,
+      videoDeviceId: selectedVideoId,
+      audioInputDeviceId: selectedAudioInputId,
       audioOutputDeviceId: selectedAudioOutputId,
     })
   }
@@ -139,7 +139,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
             </div>
 
             <Select
-              value={selectedVideoId || ''}
+              value={selectedVideoId}
               onValueChange={(deviceId) => switchVideoDevice(deviceId)}
             >
               <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200">
@@ -185,13 +185,6 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
                     </div>
                   </div>
                 </div>
-              ) : !selectedVideoId ? (
-                <div className="absolute inset-0 flex items-center justify-center text-slate-500">
-                  <div className="text-center">
-                    <Camera className="mx-auto mb-2 h-12 w-12 opacity-50" />
-                    <p>No camera selected</p>
-                  </div>
-                </div>
               ) : null}
             </div>
           </div>
@@ -205,7 +198,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
 
             <div className="relative">
               <Select
-                value={selectedAudioInputId || ''}
+                value={selectedAudioInputId}
                 onValueChange={(deviceId) =>
                   void switchAudioInputDevice(deviceId)
                 }

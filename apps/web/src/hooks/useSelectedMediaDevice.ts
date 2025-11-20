@@ -7,7 +7,6 @@
  * Uses useSyncExternalStore with a cached store pattern to ensure all
  * components using this hook re-render when the device selection changes.
  */
-
 import { useCallback, useMemo, useSyncExternalStore } from 'react'
 
 const STORAGE_KEY = 'mtg-selected-media-devices'
@@ -19,19 +18,92 @@ export interface SelectedDeviceState {
 }
 
 /**
- * Create a store for managing selected media devices
- * Uses a cache to avoid repeated localStorage reads
+ * Shared cache and listeners across all store instances
+ * This ensures all hook instances see updates when any instance changes localStorage
  */
-function createSelectedDeviceStore() {
-  const listeners: Set<() => void> = new Set()
-
-  // Initialize cache from localStorage
-  let cachedState: SelectedDeviceState = {
+const sharedState = {
+  // Shared cache from localStorage (updated by all store instances)
+  cachedState: {
     videoinput: null,
     audioinput: null,
     audiooutput: null,
-  }
+  } as SelectedDeviceState,
 
+  // Shared listeners across all store instances
+  listeners: new Set<() => void>(),
+
+  // Storage event handler for cross-tab synchronization
+  boundStorageHandler: null as ((event: StorageEvent) => void) | null,
+
+  /**
+   * Handle storage events from other tabs/windows
+   */
+  handleStorageEvent(event: StorageEvent): void {
+    // Only process events for our storage key
+    if (event.key === STORAGE_KEY && event.newValue !== event.oldValue) {
+      // Reload from localStorage to get the latest value from other tabs
+      loadFromStorage()
+      // Notify all listeners across all store instances
+      this.listeners.forEach((listener) => listener())
+    }
+  },
+
+  /**
+   * Setup storage event listener if not already set up
+   */
+  setupStorageListener(): void {
+    if (!this.boundStorageHandler && typeof window !== 'undefined') {
+      this.boundStorageHandler = this.handleStorageEvent.bind(this)
+      window.addEventListener('storage', this.boundStorageHandler)
+    }
+  },
+
+  /**
+   * Remove storage event listener (when all stores unsubscribe)
+   */
+  removeStorageListener(): void {
+    if (this.boundStorageHandler && typeof window !== 'undefined') {
+      window.removeEventListener('storage', this.boundStorageHandler)
+      this.boundStorageHandler = null
+    }
+  },
+}
+
+/**
+ * Load state from localStorage into shared cache
+ */
+function loadFromStorage(): void {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      // Support both old format (single device) and new format (all devices)
+      if (parsed.videoinput || parsed.audioinput || parsed.audiooutput) {
+        // New format: { videoinput: '...', audioinput: '...', audiooutput: '...' }
+        sharedState.cachedState = {
+          videoinput: parsed.videoinput ?? null,
+          audioinput: parsed.audioinput ?? null,
+          audiooutput: parsed.audiooutput ?? null,
+        }
+      }
+    }
+  } catch (error) {
+    console.error(
+      '[createSelectedDeviceStore] Failed to load from localStorage:',
+      error,
+    )
+  }
+}
+
+/**
+ * Create a store for managing selected media devices
+ * Uses a shared cache to ensure all instances stay in sync
+ */
+function createSelectedDeviceStore(options?: {
+  kind: 'videoinput' | 'audioinput' | 'audiooutput'
+  defaultValue: string
+  availableDeviceIds: readonly string[]
+}) {
   /**
    * Save all devices to localStorage in the new format
    */
@@ -40,9 +112,9 @@ function createSelectedDeviceStore() {
       localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
-          videoinput: cachedState.videoinput,
-          audioinput: cachedState.audioinput,
-          audiooutput: cachedState.audiooutput,
+          videoinput: sharedState.cachedState.videoinput,
+          audioinput: sharedState.cachedState.audioinput,
+          audiooutput: sharedState.cachedState.audiooutput,
           timestamp: Date.now(),
         }),
       )
@@ -54,35 +126,11 @@ function createSelectedDeviceStore() {
     }
   }
 
-  // Load initial state from localStorage
-  function loadFromStorage(): void {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        // Support both old format (single device) and new format (all devices)
-        if (parsed.videoinput || parsed.audioinput || parsed.audiooutput) {
-          // New format: { videoinput: '...', audioinput: '...', audiooutput: '...' }
-          cachedState = {
-            videoinput: parsed.videoinput ?? null,
-            audioinput: parsed.audioinput ?? null,
-            audiooutput: parsed.audiooutput ?? null,
-          }
-        }
-      }
-    } catch (error) {
-      console.error(
-        '[createSelectedDeviceStore] Failed to load from localStorage:',
-        error,
-      )
-    }
-  }
-
   /**
    * Get current device state (synchronous for useSyncExternalStore)
    */
   function getSnapshot(): SelectedDeviceState {
-    return cachedState
+    return sharedState.cachedState
   }
 
   /**
@@ -97,14 +145,14 @@ function createSelectedDeviceStore() {
   }
 
   /**
-   * Notify all listeners of state change
+   * Notify all listeners of state change (across all store instances)
    */
   function notifyListeners(): void {
-    listeners.forEach((listener) => listener())
+    sharedState.listeners.forEach((listener) => listener())
   }
 
   /**
-   * Save device to localStorage and update cache
+   * Save device to localStorage and update shared cache
    * Stores all three device kinds together to avoid overwriting
    */
   function saveDevice(
@@ -112,13 +160,13 @@ function createSelectedDeviceStore() {
     deviceId: string,
   ): void {
     try {
-      // Update cache
-      cachedState[kind] = deviceId
+      // Update shared cache
+      sharedState.cachedState[kind] = deviceId
 
       // Persist all devices to localStorage (new format)
       saveAllDevicesToStorage()
 
-      // Notify listeners
+      // Notify all listeners across all store instances
       notifyListeners()
     } catch (error) {
       console.error(
@@ -129,11 +177,11 @@ function createSelectedDeviceStore() {
   }
 
   /**
-   * Clear device from cache and localStorage
+   * Clear device from shared cache and localStorage
    */
   function clearDevice(): void {
     try {
-      cachedState = {
+      sharedState.cachedState = {
         videoinput: null,
         audioinput: null,
         audiooutput: null,
@@ -156,28 +204,43 @@ function createSelectedDeviceStore() {
    * 1. On first load (no localStorage), the default is used and saved
    * 2. On subsequent loads, the saved value is loaded from localStorage
    * 3. User can override by calling saveSelectedDevice() explicitly
+   *
+   * If validation info is provided, validates that the stored device exists in the
+   * available devices list and updates to default if not. This happens synchronously
+   * during subscription, ensuring the first render has the correct value.
+   *
+   * Also sets up storage event listener for cross-tab synchronization.
    */
-  function subscribe(
-    listener: () => void,
-    defaultValue: Partial<SelectedDeviceState> | undefined,
-  ): () => void {
-    listeners.add(listener)
+  function subscribe(listener: () => void): () => void {
+    const wasFirstListener = sharedState.listeners.size === 0
+    sharedState.listeners.add(listener)
 
-    // Apply defaults if provided (only if no device is selected in localStorage)
-    // This persists the default on first use, then it will be loaded from localStorage
-    if (defaultValue) {
-      if (cachedState.audioinput == null && defaultValue.audioinput != null) {
-        saveDevice('audioinput', defaultValue.audioinput)
-      }
-      if (cachedState.audiooutput == null && defaultValue.audiooutput != null) {
-        saveDevice('audiooutput', defaultValue.audiooutput)
-      }
-      if (cachedState.videoinput == null && defaultValue.videoinput != null) {
-        saveDevice('videoinput', defaultValue.videoinput)
+    // Setup storage event listener on first subscription
+    if (wasFirstListener) {
+      sharedState.setupStorageListener()
+    }
+
+    if (options) {
+      const storedDeviceId = sharedState.cachedState[options.kind]
+      // Apply defaults if provided (only if no device is selected in localStorage)
+      // This persists the default on first use, then it will be loaded from localStorage
+      if (storedDeviceId == null) {
+        saveDevice(options.kind, options.defaultValue)
+      } else {
+        const deviceExists = options.availableDeviceIds.includes(storedDeviceId)
+        if (!deviceExists) {
+          saveDevice(options.kind, options.defaultValue)
+        }
       }
     }
 
-    return () => listeners.delete(listener)
+    return () => {
+      sharedState.listeners.delete(listener)
+      // Remove storage event listener when last subscriber unsubscribes
+      if (sharedState.listeners.size === 0) {
+        sharedState.removeStorageListener()
+      }
+    }
   }
 
   // Load initial state from localStorage once when store is created
@@ -192,12 +255,9 @@ function createSelectedDeviceStore() {
   }
 }
 
-// Create singleton store instance
-export const selectedDeviceStore = createSelectedDeviceStore()
-
 export interface UseSelectedMediaDeviceReturn {
   /** Currently selected device ID from localStorage */
-  selectedDeviceId: string | null
+  selectedDeviceId: string
   /** Save device ID to localStorage */
   saveSelectedDevice: (deviceId: string) => void
   /** Clear saved device from localStorage */
@@ -238,13 +298,26 @@ export interface UseSelectedMediaDeviceReturn {
  */
 export function useSelectedMediaDevice(
   kind: 'videoinput' | 'audioinput' | 'audiooutput',
-  defaultDeviceId: string,
+  devices: MediaDeviceInfo[] | readonly [MediaDeviceInfo],
 ): UseSelectedMediaDeviceReturn {
+  console.log('useSelectedMediaDevice', { kind, devices })
+  // Create singleton store instance
+  const selectedDeviceStore = useMemo(() => {
+    const defaultDevice =
+      devices.find((device) => device.deviceId === 'default') ?? devices[0]
+    console.log('useSelectedMediaDevice defaultDevice', { defaultDevice })
+    return createSelectedDeviceStore({
+      kind,
+      defaultValue: defaultDevice.deviceId,
+      availableDeviceIds: devices.map((device) => device.deviceId),
+    })
+  }, [kind, devices])
+
   // Use useSyncExternalStore to sync with the device store
   // All components using this hook will re-render when any device selection changes
+  // Validation happens synchronously in subscribe, ensuring first render is correct
   const state = useSyncExternalStore(
-    (listener) =>
-      selectedDeviceStore.subscribe(listener, { [kind]: defaultDeviceId }),
+    selectedDeviceStore.subscribe,
     selectedDeviceStore.getSnapshot,
     selectedDeviceStore.getServerSnapshot,
   )
@@ -252,20 +325,22 @@ export function useSelectedMediaDevice(
   // Save device to store
   const saveSelectedDevice = useCallback(
     (deviceId: string) => selectedDeviceStore.saveDevice(kind, deviceId),
-    [kind],
+    [kind, selectedDeviceStore],
   )
 
   // Clear device from store
   const clearSelectedDevice = useCallback(() => {
     selectedDeviceStore.clearDevice()
-  }, [])
+  }, [selectedDeviceStore])
 
-  return useMemo(
-    () => ({
-      selectedDeviceId: state[kind],
+  return useMemo(() => {
+    const selectedDeviceId = state[kind]
+    if (selectedDeviceId == null)
+      throw new Error(`No device selected for kind: ${kind}`)
+    return {
+      selectedDeviceId,
       saveSelectedDevice,
       clearSelectedDevice,
-    }),
-    [clearSelectedDevice, kind, saveSelectedDevice, state],
-  )
+    }
+  }, [clearSelectedDevice, kind, saveSelectedDevice, state])
 }
