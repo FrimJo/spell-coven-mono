@@ -8,7 +8,7 @@
  * - Race condition prevention
  * - Error handling
  */
-import type { MediaDeviceInfo } from '@/lib/media-stream-manager'
+
 import { useEffect, useMemo, useRef } from 'react'
 import {
   enumerateMediaDevices,
@@ -95,8 +95,20 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
     queryKey: ['MediaDevices', kind],
     queryFn: async () => {
       const devices = await enumerateMediaDevices(kind)
-      if (devices.length > 0) {
-        return devices as readonly [MediaDeviceInfo] | MediaDeviceInfo[]
+
+      let filteredDevices = devices.filter((device) => device.deviceId !== '')
+
+      const defaultDevice = devices.find(
+        (device) => device.deviceId === 'default',
+      )
+      if (defaultDevice) {
+        filteredDevices = filteredDevices.filter(
+          (device) => device.groupId === defaultDevice.groupId,
+        )
+      }
+
+      if (filteredDevices.length > 0) {
+        return filteredDevices as readonly [MediaDeviceInfo] | MediaDeviceInfo[]
       }
       throw new Error(`No ${kind} devices found`)
     },
@@ -112,14 +124,10 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
     return () => window.removeEventListener('devicechange', handleDeviceChange)
   }, [queryClient])
 
-  const defaultDevice =
-    matchingKind.find((device) => device.deviceId === 'default') ??
-    matchingKind[0]
-
   // Use selected device hook as state manager with localStorage persistence
   const { selectedDeviceId, saveSelectedDevice } = useSelectedMediaDevice(
     kind,
-    defaultDevice.deviceId,
+    matchingKind,
   )
 
   if (enumerationError) {
@@ -139,22 +147,16 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
   // when matchingKind reference changes but content is the same
   const filteredDevices = useMemo(
     () =>
-      matchingKind
-        // Filter out the "default" device ID to avoid duplication
-        .filter(
-          (device) => device.deviceId !== 'default' && device.deviceId !== '',
-        )
-        .map((device, index: number) => {
-          // If no label, use a generic one with index (happens when permissions not granted)
-          const baseLabel =
-            device.label ||
-            `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${index + 1}`
-          return {
-            deviceId: device.deviceId,
-            label: index === 0 ? `${baseLabel} (Default)` : baseLabel,
-            kind: device.kind,
-          } satisfies MediaDeviceInfo
-        }),
+      matchingKind.map<MediaDeviceInfo>((device, index: number) => {
+        // If no label, use a generic one with index (happens when permissions not granted)
+        const baseLabel =
+          device.label ||
+          `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${index + 1}`
+        return {
+          ...device,
+          label: index === 0 ? `${baseLabel} (Default)` : baseLabel,
+        }
+      }),
     [matchingKind, kind],
   )
 
@@ -195,7 +197,7 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
   })
 
   useEffect(() => {
-    if (data?.stream && selectedDeviceId) {
+    if (data?.stream) {
       onDeviceChanged?.(selectedDeviceId, data.stream)
     }
   }, [data?.stream, selectedDeviceId, onDeviceChanged])

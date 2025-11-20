@@ -1,4 +1,3 @@
-import type { MediaDeviceInfo } from '@/lib/media-stream-manager'
 import { enumerateMediaDevices } from '@/lib/media-stream-manager'
 
 export interface MediaDeviceChangeInfo {
