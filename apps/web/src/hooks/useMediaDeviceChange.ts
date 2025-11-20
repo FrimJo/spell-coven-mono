@@ -1,5 +1,5 @@
 import type { MediaDeviceInfo } from '@/lib/media-stream-manager'
-import { useSyncExternalStore } from 'react'
+import { use, useSyncExternalStore } from 'react'
 import { enumerateMediaDevices } from '@/lib/media-stream-manager'
 
 /**
@@ -48,22 +48,32 @@ function createMediaDeviceStore() {
   // Track if event listener is attached
   let isEventListenerAttached = false
 
-  // Track if cache has been initialized (timestamp > 0 means initialized)
-  let initializationPromise: Promise<void> | null = null
+  // Promise resolver for Suspense - resolves when initial enumeration completes
+  // We only store the resolve function; the promise is created on-demand
+  let resolveInitialization: (() => void) | null = null
 
   /**
    * Enumerate devices synchronously from cache
    * The cache is updated when devicechange event fires
    */
   async function updateDeviceCache(): Promise<void> {
+    console.log('updateDeviceCache', { cachedDevices })
     // Use sync enumeration - this is fast since it uses cached device info
     const devices = await enumerateMediaDevices()
+
+    const wasInitialized = cachedDevices.timestamp !== 0
 
     cachedDevices = {
       videoinput: devices.filter((d) => d.kind === 'videoinput'),
       audioinput: devices.filter((d) => d.kind === 'audioinput'),
       audiooutput: devices.filter((d) => d.kind === 'audiooutput'),
       timestamp: Date.now(),
+    }
+
+    // Resolve the promise if this was the first initialization
+    if (!wasInitialized && resolveInitialization) {
+      resolveInitialization()
+      resolveInitialization = null
     }
 
     // Notify all listeners after cache update
@@ -74,21 +84,54 @@ function createMediaDeviceStore() {
    * Handle device change event - shared across all subscriptions
    */
   function handleDeviceChange(): void {
-    console.log('[useMediaDeviceChange] Device list changed')
-    // Update cache asynchronously
     updateDeviceCache()
   }
 
   /**
    * Get current device state (synchronous for useSyncExternalStore)
-   * Throws a promise if cache hasn't been initialized yet (for Suspense)
+   * Always returns current state, even if not initialized
    */
   function getSnapshot(): MediaDeviceChangeInfo {
-    // If cache hasn't been initialized (timestamp === 0), throw promise for Suspense
-    if (cachedDevices.timestamp === 0 && initializationPromise) {
-      throw initializationPromise
-    }
+    console.log('getSnapshot', { cachedDevices })
     return cachedDevices
+  }
+
+  // Store the promise so multiple callers get the same instance
+  let initializationPromise: Promise<void> | null = null
+
+  /**
+   * Get or create the initialization promise
+   * Returns null if already initialized, otherwise returns a promise that resolves when initialization completes
+   */
+  function getInitializationPromise(): Promise<void> | null {
+    console.log('getInitializationPromise', { cachedDevices })
+    // If already initialized, no promise needed
+    if (cachedDevices.timestamp !== 0) {
+      return null
+    }
+
+    // Create promise if it doesn't exist (lazy initialization)
+    if (!initializationPromise) {
+      initializationPromise = new Promise<void>((resolve) => {
+        resolveInitialization = resolve
+      })
+
+      // CRITICAL: Start initialization immediately when promise is created
+      // This ensures initialization happens even if subscribe() hasn't been called yet
+      // Attach event listener if not already attached
+      if (!isEventListenerAttached) {
+        navigator.mediaDevices.addEventListener(
+          'devicechange',
+          handleDeviceChange,
+        )
+        isEventListenerAttached = true
+      }
+
+      // Trigger initial enumeration - this will resolve the promise when complete
+      updateDeviceCache()
+    }
+
+    return initializationPromise
   }
 
   /**
@@ -109,26 +152,16 @@ function createMediaDeviceStore() {
    * and removed when the last subscriber unsubscribes.
    */
   function subscribe(listener: () => void): () => void {
+    console.log('subscribe', { listeners, isEventListenerAttached })
     listeners.add(listener)
 
-    // Attach event listener only on first subscription
+    // Attach event listener and start initialization on first subscription
     if (!isEventListenerAttached) {
       navigator.mediaDevices.addEventListener(
         'devicechange',
         handleDeviceChange,
       )
       isEventListenerAttached = true
-
-      // Create initialization promise for Suspense support
-      // The promise resolves when updateDeviceCache completes
-      if (!initializationPromise) {
-        initializationPromise = updateDeviceCache().then(() => {
-          // Clear the promise after it resolves so subsequent calls don't suspend
-          initializationPromise = null
-        })
-      }
-
-      // Initial cache population (already started above via promise creation)
     }
 
     // Return unsubscribe function
@@ -142,14 +175,16 @@ function createMediaDeviceStore() {
           handleDeviceChange,
         )
         isEventListenerAttached = false
-        // Reset initialization state when last subscriber unsubscribes
-        initializationPromise = null
+        // Reset state when last subscriber unsubscribes
         cachedDevices = {
           videoinput: [],
           audioinput: [],
           audiooutput: [],
           timestamp: 0,
         }
+        resolveInitialization = null
+        // Null the promise so a new one can be created if needed after reset
+        initializationPromise = null
       }
     }
   }
@@ -158,6 +193,7 @@ function createMediaDeviceStore() {
     getSnapshot,
     getServerSnapshot,
     subscribe,
+    getInitializationPromise,
   }
 }
 
@@ -167,8 +203,8 @@ const mediaDeviceStore = createMediaDeviceStore()
 /**
  * Hook to listen for media device changes
  *
- * Supports React Suspense - wrap components using this hook in a Suspense boundary
- * to show a fallback while devices are being enumerated.
+ * Uses React 19's `use` hook for Suspense support - wrap components using this hook
+ * in a Suspense boundary to show a fallback while devices are being enumerated.
  *
  * @returns Current device state with videoinput, audioinput, audiooutput arrays
  *
@@ -202,6 +238,13 @@ export function useMediaDeviceChange(): MediaDeviceChangeInfo {
     mediaDeviceStore.getSnapshot,
     mediaDeviceStore.getServerSnapshot,
   )
+
+  // Use React 19's `use` hook to handle initialization promise
+  // This suspends the component until devices are enumerated
+  const initializationPromise = mediaDeviceStore.getInitializationPromise()
+  if (initializationPromise) {
+    use(initializationPromise)
+  }
 
   return devices
 }

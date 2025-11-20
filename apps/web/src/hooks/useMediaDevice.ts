@@ -76,6 +76,7 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
   const onDeviceChangedRef = useRef(onDeviceChanged)
   const onErrorRef = useRef(onError)
 
+  // This will suspend until first enumeration completes (timestamp > 0)
   const mediaDevices = useMediaDeviceChange()
 
   const matchingKind = useMemo(() => mediaDevices[kind], [mediaDevices, kind])
@@ -160,11 +161,11 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
     enabled: !!selectedDeviceId,
   })
 
-  useEffect(() => {
-    if (data?.stream && selectedDeviceId) {
-      onDeviceChanged?.(selectedDeviceId, data.stream)
-    }
-  }, [data?.stream, selectedDeviceId, onDeviceChanged])
+  // useEffect(() => {
+  //   if (data?.stream && selectedDeviceId) {
+  //     onDeviceChanged?.(selectedDeviceId, data.stream)
+  //   }
+  // }, [data?.stream, selectedDeviceId, onDeviceChanged])
 
   return useMemo(
     () => ({
