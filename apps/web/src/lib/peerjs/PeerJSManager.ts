@@ -119,8 +119,9 @@ export class PeerJSManager {
     if (!PeerJSManager.websocketPatched) {
       PeerJSManager.originalWebSocket = window.WebSocket
 
-      // @ts-expect-error - We're patching WebSocket to add token to PeerJS connections
-      window.WebSocket = class PatchedWebSocket extends PeerJSManager.originalWebSocket! {
+      window.WebSocket = class PatchedWebSocket extends (
+        (PeerJSManager.originalWebSocket!)
+      ) {
         constructor(url: string | URL, protocols?: string | string[]) {
           // Parse URL and add token parameter if it's a PeerJS connection URL
           let finalUrl: string | URL
