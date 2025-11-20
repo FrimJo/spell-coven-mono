@@ -99,7 +99,7 @@ async function handlePeerJS(request: Request, env: Env): Promise<Response> {
       );
     }
 
-    // Use token (Discord channel ID) as room ID for Durable Object
+    // Use token (room/game ID) as room ID for Durable Object
     const roomId = env.GAME_ROOM.idFromName(token);
     logger.info("Routing to Durable Object", {
       token,

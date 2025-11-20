@@ -116,7 +116,7 @@ routes = [{ pattern = "peerjs.spell-coven.com", zone_name = "spell-coven.com" }]
 
 - `key`: API key (currently unused, reserved for future)
 - `id`: Unique peer identifier (client-provided, 1-64 alphanumeric characters)
-- `token`: Room token (Discord channel ID)
+- `token`: Room token (game/room ID)
 
 ### Health Check
 
