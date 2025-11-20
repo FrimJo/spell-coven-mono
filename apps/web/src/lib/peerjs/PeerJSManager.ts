@@ -54,9 +54,13 @@ export class PeerJSManager {
   private isRetryingId = false
   private idRetryTimeout: NodeJS.Timeout | null = null
   private lastVideoDeviceId: string | undefined = undefined
+  private static websocketPatched = false
+  private static originalWebSocket: typeof WebSocket | null = null
+  private static currentToken: string | null = null
 
   constructor(
     private localPlayerId: string,
+    private roomId: string,
     private callbacks: PeerJSManagerCallbacks = {},
   ) {}
 
@@ -103,8 +107,54 @@ export class PeerJSManager {
 
     const protocol = peerConfig.secure ? 'wss' : 'ws'
     console.log(
-      `[PeerJSManager] Connecting to PeerJS server at ${protocol}://${peerConfig.host}:${peerConfig.port}${peerConfig.path}`,
+      `[PeerJSManager] Connecting to PeerJS server at ${protocol}://${peerConfig.host}:${peerConfig.port}${peerConfig.path} with roomId: ${this.roomId}`,
     )
+
+    // Patch WebSocket constructor to add token parameter
+    // This needs to be active for both initial connection and reconnections
+    // We patch it once and keep it patched, but only modify PeerJS URLs
+    // Update the current token for this instance
+    PeerJSManager.currentToken = this.roomId
+
+    if (!PeerJSManager.websocketPatched) {
+      PeerJSManager.originalWebSocket = window.WebSocket
+
+      // @ts-expect-error - We're patching WebSocket to add token to PeerJS connections
+      window.WebSocket = class PatchedWebSocket extends PeerJSManager.originalWebSocket! {
+        constructor(url: string | URL, protocols?: string | string[]) {
+          // Parse URL and add token parameter if it's a PeerJS connection URL
+          let finalUrl: string | URL
+          if (typeof url === 'string') {
+            const urlObj = new URL(url)
+            // Only add token if this looks like a PeerJS connection (has key and id params)
+            // and doesn't already have a token (to avoid duplicates)
+            if (
+              urlObj.searchParams.has('key') &&
+              urlObj.searchParams.has('id') &&
+              !urlObj.searchParams.has('token') &&
+              PeerJSManager.currentToken
+            ) {
+              urlObj.searchParams.set('token', PeerJSManager.currentToken)
+            }
+            finalUrl = urlObj.toString()
+          } else {
+            // URL object
+            if (
+              url.searchParams.has('key') &&
+              url.searchParams.has('id') &&
+              !url.searchParams.has('token') &&
+              PeerJSManager.currentToken
+            ) {
+              url.searchParams.set('token', PeerJSManager.currentToken)
+            }
+            finalUrl = url
+          }
+          super(finalUrl, protocols)
+        }
+      }
+
+      PeerJSManager.websocketPatched = true
+    }
 
     this.peer = new Peer(this.localPlayerId, peerConfig)
 
