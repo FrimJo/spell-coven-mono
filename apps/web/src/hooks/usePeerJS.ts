@@ -16,6 +16,7 @@ import { PeerJSManager } from '@/lib/peerjs/PeerJSManager'
 export interface UsePeerJSProps {
   localPlayerId: string
   remotePlayerIds: string[]
+  roomId: string
   onError?: (error: PeerJSError) => void
 }
 
@@ -43,6 +44,7 @@ export interface UsePeerJSReturn {
 export function usePeerJS({
   localPlayerId,
   remotePlayerIds,
+  roomId,
   onError,
 }: UsePeerJSProps): UsePeerJSReturn {
   const managerRef = useRef<PeerJSManager | null>(null)
@@ -93,7 +95,7 @@ export function usePeerJS({
 
     initializationAttemptedRef.current = true
 
-    const manager = new PeerJSManager(localPlayerId, {
+    const manager = new PeerJSManager(localPlayerId, roomId, {
       onLocalStreamChanged: (stream) => {
         setLocalStream(stream)
       },
@@ -157,7 +159,7 @@ export function usePeerJS({
       initializationAttemptedRef.current = false
       // Don't reset initializationFailedRef here - we want to remember failures
     }
-  }, [localPlayerId])
+  }, [localPlayerId, roomId])
 
   // Connect to remote peers when they change
   useEffect(() => {
