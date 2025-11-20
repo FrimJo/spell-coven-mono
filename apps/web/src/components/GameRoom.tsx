@@ -113,6 +113,7 @@ function GameRoomContent({
   } = usePeerJS({
     localPlayerId: userId,
     remotePlayerIds: remotePlayerIds,
+    roomId: roomId,
     onError: (error) => {
       console.error('[GameRoom] PeerJS error:', error)
       toast.error(error.message)
