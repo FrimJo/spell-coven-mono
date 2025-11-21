@@ -160,8 +160,11 @@ function createSelectedDeviceStore(options?: {
     deviceId: string,
   ): void {
     try {
-      // Update shared cache
-      sharedState.cachedState[kind] = deviceId
+      // Update shared cache with a new object to trigger rerender
+      sharedState.cachedState = {
+        ...sharedState.cachedState,
+        [kind]: deviceId,
+      }
 
       // Persist all devices to localStorage (new format)
       saveAllDevicesToStorage()
