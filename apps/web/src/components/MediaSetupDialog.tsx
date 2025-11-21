@@ -29,13 +29,7 @@ import { AudioLevelIndicator } from './AudioLevelIndicator'
 
 interface MediaSetupDialogProps {
   open: boolean
-  onComplete: (config: MediaConfig) => void
-}
-
-export interface MediaConfig {
-  videoDeviceId: string
-  audioInputDeviceId: string
-  audioOutputDeviceId: string
+  onComplete: () => void
 }
 
 export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
@@ -104,11 +98,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   const handleComplete = () => {
     // Device cleanup is handled by the useMediaDevice hooks
     // Note: Button is already disabled if devices aren't selected or there are errors
-    onComplete({
-      videoDeviceId: selectedVideoId,
-      audioInputDeviceId: selectedAudioInputId,
-      audioOutputDeviceId: selectedAudioOutputId,
-    })
+    onComplete()
   }
 
   return (

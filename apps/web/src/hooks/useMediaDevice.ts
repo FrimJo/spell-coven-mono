@@ -8,7 +8,7 @@
  * - Race condition prevention
  * - Error handling
  */
-
+import type { MediaStreamResult } from '@/lib/media-stream-manager'
 import { useEffect, useMemo, useRef } from 'react'
 import { getMediaStream } from '@/lib/media-stream-manager'
 import { useQuery } from '@tanstack/react-query'
@@ -28,6 +28,40 @@ export interface UseMediaDeviceOptions {
   /** Callback when error occurs */
   onError?: (error: Error) => void
 }
+
+type UseMediaDeviceBase = {
+  devices: MediaDeviceInfo[]
+  selectedDeviceId: string
+  saveSelectedDevice: (deviceId: string) => void
+}
+
+type UseMediaDevicePending = UseMediaDeviceBase & {
+  isPending: true
+  error: Error | null
+  stream: undefined
+  videoTrack: undefined
+  audioTrack: undefined
+  actualResolution: undefined
+}
+
+type UseMediaDeviceError = UseMediaDeviceBase & {
+  isPending: false
+  error: Error
+  stream: undefined
+  videoTrack: undefined
+  audioTrack: undefined
+  actualResolution: undefined
+}
+
+type UseMediaDeviceSuccess = UseMediaDeviceBase & {
+  isPending: false
+  error: null
+} & MediaStreamResult
+
+export type UseMediaDeviceReturn =
+  | UseMediaDevicePending
+  | UseMediaDeviceError
+  | UseMediaDeviceSuccess
 
 /**
  * Hook for managing media device (camera/microphone) with automatic cleanup
@@ -61,7 +95,9 @@ export interface UseMediaDeviceOptions {
  * ```
  */
 
-export function useMediaDevice(options: UseMediaDeviceOptions) {
+export function useMediaDevice(
+  options: UseMediaDeviceOptions,
+): UseMediaDeviceReturn {
   const {
     kind,
     videoConstraints = {
@@ -179,24 +215,54 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
     }
   }, [enumerationError])
 
-  return useMemo(
-    () => ({
-      ...data,
-      isPending: isGettingStream || isEnumerating,
-      error: getStreamError || enumerationError,
+  return useMemo((): UseMediaDeviceReturn => {
+    const isPending = isGettingStream || isEnumerating
+    const error = getStreamError || enumerationError
+
+    const base = {
       devices: filteredDevices,
       selectedDeviceId: selectedDeviceId,
       saveSelectedDevice,
-    }),
-    [
-      data,
-      getStreamError,
-      enumerationError,
-      filteredDevices,
-      isEnumerating,
-      isGettingStream,
-      saveSelectedDevice,
-      selectedDeviceId,
-    ],
-  )
+    }
+
+    if (isPending) {
+      return {
+        ...base,
+        isPending: true,
+        error,
+        stream: undefined,
+        videoTrack: undefined,
+        audioTrack: undefined,
+        actualResolution: undefined,
+      } satisfies UseMediaDevicePending
+    }
+
+    if (error) {
+      return {
+        ...base,
+        isPending: false,
+        error,
+        stream: undefined,
+        videoTrack: undefined,
+        audioTrack: undefined,
+        actualResolution: undefined,
+      } satisfies UseMediaDeviceError
+    }
+
+    return {
+      ...base,
+      ...data,
+      isPending: false,
+      error: null,
+    } satisfies UseMediaDeviceSuccess
+  }, [
+    data,
+    getStreamError,
+    enumerationError,
+    filteredDevices,
+    isEnumerating,
+    isGettingStream,
+    saveSelectedDevice,
+    selectedDeviceId,
+  ])
 }

@@ -341,12 +341,8 @@ function GameRoomContent({
   }, [])
 
   // Show dialog until user completes media setup
-  const handleDialogComplete = async (config: {
-    videoDeviceId: string
-    audioInputDeviceId: string
-    audioOutputDeviceId: string
-  }) => {
-    console.log('[GameRoom] Media dialog completed with config:', config)
+  const handleDialogComplete = async () => {
+    console.log('[GameRoom] Media dialog completed')
 
     // Save to localStorage that setup has been completed for this room and the selected device
     localStorage.setItem(`media-setup-${roomId}`, 'true')
