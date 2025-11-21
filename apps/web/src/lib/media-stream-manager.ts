@@ -27,7 +27,7 @@ export interface GetMediaStreamOptions {
   enableFallback?: boolean
 }
 
-export interface MediaStreamResult {
+export type MediaStreamResult = {
   stream: MediaStream
   videoTrack: MediaStreamTrack | null
   audioTrack: MediaStreamTrack | null

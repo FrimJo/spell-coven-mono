@@ -9,6 +9,11 @@
  * - Error handling
  */
 import type { MediaStreamResult } from '@/lib/media-stream-manager'
+import type {
+  AsyncResourceError,
+  AsyncResourcePending,
+  AsyncResourceSuccess,
+} from '@/types/async-resource'
 import { useEffect, useMemo, useRef } from 'react'
 import { getMediaStream } from '@/lib/media-stream-manager'
 import { useQuery } from '@tanstack/react-query'
@@ -35,28 +40,24 @@ type UseMediaDeviceBase = {
   saveSelectedDevice: (deviceId: string) => void
 }
 
-type UseMediaDevicePending = UseMediaDeviceBase & {
-  isPending: true
-  error: Error | null
+type UseMediaDevicePending = AsyncResourcePending<UseMediaDeviceBase> & {
   stream: undefined
   videoTrack: undefined
   audioTrack: undefined
   actualResolution: undefined
 }
 
-type UseMediaDeviceError = UseMediaDeviceBase & {
-  isPending: false
-  error: Error
+type UseMediaDeviceError = AsyncResourceError<UseMediaDeviceBase> & {
   stream: undefined
   videoTrack: undefined
   audioTrack: undefined
   actualResolution: undefined
 }
 
-type UseMediaDeviceSuccess = UseMediaDeviceBase & {
-  isPending: false
-  error: null
-} & MediaStreamResult
+type UseMediaDeviceSuccess = AsyncResourceSuccess<
+  UseMediaDeviceBase,
+  MediaStreamResult
+>
 
 export type UseMediaDeviceReturn =
   | UseMediaDevicePending
