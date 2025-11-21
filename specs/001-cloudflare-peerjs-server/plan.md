@@ -11,32 +11,32 @@ Create a Cloudflare Durable Objects-based WebSocket signaling server that implem
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.3+ / JavaScript ES2022 (Cloudflare Workers runtime)  
-**Primary Dependencies**: 
+**Language/Version**: TypeScript 5.3+ / JavaScript ES2024 (Cloudflare Workers runtime)
+**Primary Dependencies**:
 - Cloudflare Workers runtime
 - Durable Objects API
 - WebSocket Hibernation API
 - Wrangler CLI (deployment)
 - NEEDS CLARIFICATION: PeerJS protocol specification version and message format details
 
-**Storage**: Durable Objects in-memory state (ephemeral, no persistent storage required)  
-**Testing**: Vitest for unit tests, Miniflare for local Durable Objects testing, NEEDS CLARIFICATION: integration testing strategy for WebSocket connections  
-**Target Platform**: Cloudflare Workers (edge runtime, globally distributed)  
-**Project Type**: Single service (signaling server)  
-**Performance Goals**: 
+**Storage**: Durable Objects in-memory state (ephemeral, no persistent storage required)
+**Testing**: Vitest for unit tests, Miniflare for local Durable Objects testing, NEEDS CLARIFICATION: integration testing strategy for WebSocket connections
+**Target Platform**: Cloudflare Workers (edge runtime, globally distributed)
+**Project Type**: Single service (signaling server)
+**Performance Goals**:
 - Sub-200ms signaling latency (95th percentile) globally
 - Support 1000 concurrent game rooms (4000 peer connections)
 - 99.9% connection success rate
 - Sub-100ms Durable Object reactivation from hibernation
 
-**Constraints**: 
+**Constraints**:
 - Cloudflare Workers CPU time limits (50ms per request, 30s per WebSocket message)
 - Durable Objects memory limits (128MB per object)
 - WebSocket connection limits per Durable Object (NEEDS CLARIFICATION: exact limit)
 - Must be protocol-compatible with existing PeerJS client library (no client changes)
 - Free tier limits: 100,000 requests/day, 1000 Durable Objects
 
-**Scale/Scope**: 
+**Scale/Scope**:
 - 2-4 peers per game room (mesh topology)
 - Up to 1000 concurrent game rooms initially
 - Message types: heartbeat, offer, answer, candidate, leave
@@ -136,7 +136,7 @@ apps/cloudflare-peerjs-server/     # New Cloudflare Workers service
 **All NEEDS CLARIFICATION items resolved**
 
 ### ✅ Phase 1: Design & Contracts (COMPLETE)
-**Outputs**: 
+**Outputs**:
 - `data-model.md` - Entity definitions and relationships
 - `contracts/websocket-api.yaml` - WebSocket message protocol
 - `contracts/http-api.yaml` - Health check endpoints

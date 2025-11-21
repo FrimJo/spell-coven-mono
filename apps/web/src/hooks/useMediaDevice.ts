@@ -10,16 +10,10 @@
  */
 
 import { useEffect, useMemo, useRef } from 'react'
-import {
-  enumerateMediaDevices,
-  getMediaStream,
-} from '@/lib/media-stream-manager'
-import {
-  useQuery,
-  useQueryClient,
-  useSuspenseQuery,
-} from '@tanstack/react-query'
+import { getMediaStream } from '@/lib/media-stream-manager'
+import { useQuery } from '@tanstack/react-query'
 
+import { useEnumeratedMediaDevices } from './useEnumeratedMediaDevices'
 import { useSelectedMediaDevice } from './useSelectedMediaDevice'
 
 export interface UseMediaDeviceOptions {
@@ -82,52 +76,26 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
   const onDeviceChangedRef = useRef(onDeviceChanged)
   const onErrorRef = useRef(onError)
 
-  const queryClient = useQueryClient()
-
-  // Use React Query to cache device enumeration and prevent infinite re-renders
-  // React's use() hook requires a stable promise reference from outside (like server components)
-  // Creating promises in useMemo doesn't provide the stability needed for use()
   const {
-    data: matchingKind = [],
+    data: mediaDevicesByKind,
     isPending: isEnumerating,
     error: enumerationError,
-  } = useSuspenseQuery({
-    queryKey: ['MediaDevices', kind],
-    queryFn: async () => {
-      const devices = await enumerateMediaDevices(kind)
+  } = useEnumeratedMediaDevices()
 
-      let filteredDevices = devices.filter((device) => device.deviceId !== '')
-
-      const defaultDevice = devices.find(
-        (device) => device.deviceId === 'default',
-      )
-      if (defaultDevice) {
-        filteredDevices = filteredDevices.filter(
-          (device) => device.groupId === defaultDevice.groupId,
-        )
-      }
-
-      if (filteredDevices.length > 0) {
-        return filteredDevices as readonly [MediaDeviceInfo] | MediaDeviceInfo[]
-      }
+  const mediaDevices = useMemo(() => {
+    const mediaDevices = mediaDevicesByKind[kind]
+    if (mediaDevices.length > 0) {
+      return mediaDevices as readonly [MediaDeviceInfo] | MediaDeviceInfo[]
+    } else {
+      // Trigger error boundary
       throw new Error(`No ${kind} devices found`)
-    },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    refetchOnWindowFocus: true, // Re-enumerate when window regains focus (devices may have changed)
-  })
-
-  useEffect(() => {
-    function handleDeviceChange() {
-      queryClient.invalidateQueries({ queryKey: ['MediaDevices'] })
     }
-    window.addEventListener('devicechange', handleDeviceChange)
-    return () => window.removeEventListener('devicechange', handleDeviceChange)
-  }, [queryClient])
+  }, [kind, mediaDevicesByKind])
 
   // Use selected device hook as state manager with localStorage persistence
   const { selectedDeviceId, saveSelectedDevice } = useSelectedMediaDevice(
     kind,
-    matchingKind,
+    mediaDevices,
   )
 
   if (enumerationError) {
@@ -137,7 +105,7 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
     )
   }
 
-  if (matchingKind.length === 0 && !isEnumerating) {
+  if (mediaDevices.length === 0 && !isEnumerating) {
     console.warn(
       '[useMediaDevice] enumerateMediaDevices returned 0 devices - this might indicate a browser restriction',
     )
@@ -147,17 +115,22 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
   // when matchingKind reference changes but content is the same
   const filteredDevices = useMemo(
     () =>
-      matchingKind.map<MediaDeviceInfo>((device, index: number) => {
+      mediaDevices.map<MediaDeviceInfo>((device, index) => {
         // If no label, use a generic one with index (happens when permissions not granted)
         const baseLabel =
           device.label ||
           `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${index + 1}`
+
+        console.log('foobar', { device })
         return {
-          ...device,
-          label: index === 0 ? `${baseLabel} (Default)` : baseLabel,
+          deviceId: device.deviceId,
+          groupId: device.groupId,
+          kind: device.kind,
+          label: baseLabel,
+          toJSON: device.toJSON,
         }
       }),
-    [matchingKind, kind],
+    [mediaDevices, kind],
   )
 
   console.log(
@@ -170,7 +143,11 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
     onErrorRef.current = onError
   }, [onDeviceChanged, onError])
 
-  const { data, isPending, error } = useQuery({
+  const {
+    data,
+    isPending: isGettingStream,
+    error: getStreamError,
+  } = useQuery({
     queryKey: ['MediaStream', kind, selectedDeviceId],
     queryFn: async () => {
       // Get the media stream using centralized manager
@@ -198,26 +175,32 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
 
   useEffect(() => {
     if (data?.stream) {
-      onDeviceChanged?.(selectedDeviceId, data.stream)
+      onDeviceChangedRef.current?.(selectedDeviceId, data.stream)
     }
-  }, [data?.stream, selectedDeviceId, onDeviceChanged])
+  }, [data?.stream, selectedDeviceId])
+
+  useEffect(() => {
+    if (enumerationError) {
+      onErrorRef.current?.(enumerationError)
+    }
+  }, [enumerationError])
 
   return useMemo(
     () => ({
       ...data,
-      isPending: isPending || isEnumerating,
-      error: error || enumerationError,
+      isPending: isGettingStream || isEnumerating,
+      error: getStreamError || enumerationError,
       devices: filteredDevices,
       selectedDeviceId: selectedDeviceId,
       saveSelectedDevice,
     }),
     [
       data,
-      error,
+      getStreamError,
       enumerationError,
       filteredDevices,
       isEnumerating,
-      isPending,
+      isGettingStream,
       saveSelectedDevice,
       selectedDeviceId,
     ],

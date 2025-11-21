@@ -11,25 +11,25 @@ Enable peer-to-peer WebRTC video streaming between players in game rooms. Player
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.x (ES2022 target), React 19  
-**Primary Dependencies**: Browser WebRTC APIs (RTCPeerConnection, RTCSessionDescription, RTCIceCandidate, MediaStream), TanStack Start (`@tanstack/react-start`), existing VideoStreamGrid component  
-**Storage**: N/A (peer-to-peer connections, no persistent storage required)  
-**Testing**: N/A (tests optional per constitution, may add integration tests for WebRTC flows)  
-**Target Platform**: Modern browsers with WebRTC support (Chrome, Firefox, Safari, Edge)  
-**Project Type**: Web application (frontend: React, backend: TanStack Start)  
-**Performance Goals**: 
+**Language/Version**: TypeScript 5.x (ES2024 target), React 19
+**Primary Dependencies**: Browser WebRTC APIs (RTCPeerConnection, RTCSessionDescription, RTCIceCandidate, MediaStream), TanStack Start (`@tanstack/react-start`), existing VideoStreamGrid component
+**Storage**: N/A (peer-to-peer connections, no persistent storage required)
+**Testing**: N/A (tests optional per constitution, may add integration tests for WebRTC flows)
+**Target Platform**: Modern browsers with WebRTC support (Chrome, Firefox, Safari, Edge)
+**Project Type**: Web application (frontend: React, backend: TanStack Start)
+**Performance Goals**:
 - 95% of peer connections establish within 10 seconds (SC-001)
 - Video streams maintain at least 15 FPS (SC-002)
 - Support 4 simultaneous video streams without >500ms latency increase per stream (SC-006)
 - Connection state changes reflected within 1 second (SC-007)
 
-**Constraints**: 
+**Constraints**:
 - STUN-only NAT traversal (no TURN servers initially)
 - Graceful degradation when permissions denied or connections fail
 - Must reuse existing VideoStreamGrid UI components
 - Must not depend on Discord-specific APIs for signaling
 
-**Scale/Scope**: 
+**Scale/Scope**:
 - Up to 4 players per room simultaneously streaming video (FR-012)
 - Typical room size 2-4 players
 - Browser-native WebRTC (no server-side media processing)
@@ -43,7 +43,7 @@ Enable peer-to-peer WebRTC video streaming between players in game rooms. Player
 - **Rationale**: WebRTC runs entirely in browser. No backend media processing required. Signaling backend only routes messages, not media streams. STUN server is external service (Google's public STUN).
 
 ### II. Data Contract Discipline ✅
-- **Status**: COMPLIANT  
+- **Status**: COMPLIANT
 - **Rationale**: Signaling messages will have explicit schemas (offers, answers, ICE candidates). Peer connection state transitions documented. Versioned message format if schema evolves.
 
 ### III. User-Centric Prioritization ✅
