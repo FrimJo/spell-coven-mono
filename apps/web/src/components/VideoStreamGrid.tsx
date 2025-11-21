@@ -39,6 +39,12 @@ interface VideoStreamGridProps {
   /** Callback when a card is cropped */
   onCardCrop?: (canvas: HTMLCanvasElement) => void
   // WebRTC streams and states
+  /** Local media stream */
+  localStream?: MediaStream | null
+  /** Local stream error */
+  localStreamError?: Error | null
+  /** Local stream pending state */
+  isLocalStreamPending?: boolean
   /** Remote streams from WebRTC (player ID -> MediaStream) */
   remoteStreams?: Map<string, MediaStream | null>
   /** Connection states from WebRTC (player ID -> ConnectionState) */
@@ -65,6 +71,9 @@ export function VideoStreamGrid({
   detectorType,
   usePerspectiveWarp = true,
   onCardCrop,
+  localStream,
+  localStreamError,
+  isLocalStreamPending = false,
   remoteStreams = new Map(),
   connectionStates = new Map(),
   peerTrackStates = new Map(),
@@ -88,15 +97,6 @@ export function VideoStreamGrid({
         name: participant.username,
       }))
   }, [gameRoomParticipants, localPlayerName])
-
-  // Manage local video stream
-
-  const options = useMemo<UseMediaDeviceOptions>(
-    () => ({ kind: 'videoinput' }),
-    [],
-  )
-
-  const { stream, isPending, error } = useMediaDevice(options)
 
   const [streamStates, setStreamStates] = useState<Record<string, StreamState>>(
     players.reduce(
@@ -147,7 +147,7 @@ export function VideoStreamGrid({
   return (
     <div className={`grid ${getGridClass()} h-full gap-4`}>
       {/* Render local player with loading state while stream initializes */}
-      {isPending ? (
+      {isLocalStreamPending ? (
         <div className="flex h-full items-center justify-center rounded-lg border border-slate-700 bg-slate-800/50">
           <div className="flex flex-col items-center space-y-3">
             <div className="relative">
@@ -164,7 +164,7 @@ export function VideoStreamGrid({
             </div>
           </div>
         </div>
-      ) : error ? (
+      ) : localStreamError ? (
         <div className="flex h-full items-center justify-center rounded-lg border border-red-800/50 bg-slate-800/50">
           <div className="flex flex-col items-center space-y-4 px-6 py-8">
             <div className="relative">
@@ -177,7 +177,7 @@ export function VideoStreamGrid({
                 Camera Access Failed
               </p>
               <p className="max-w-md text-xs leading-relaxed text-slate-400">
-                {error.message ||
+                {localStreamError.message ||
                   'Unable to access your camera. Please check your permissions and try again.'}
               </p>
             </div>
@@ -197,10 +197,10 @@ export function VideoStreamGrid({
             </div>
           </div>
         </div>
-      ) : stream != null ? (
+      ) : localStream != null ? (
         <LocalVideoCard
           localPlayerName={localPlayerName}
-          stream={stream}
+          stream={localStream}
           enableCardDetection={enableCardDetection}
           detectorType={detectorType}
           usePerspectiveWarp={usePerspectiveWarp}

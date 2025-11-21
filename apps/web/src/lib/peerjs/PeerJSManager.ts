@@ -11,7 +11,6 @@
 
 import type {
   ConnectionState,
-  LocalMediaStream,
   PeerJSError,
   PeerTrackState,
 } from '@/types/peerjs'
@@ -19,7 +18,6 @@ import type { MediaConnection } from 'peerjs'
 import { env } from '@/env'
 import Peer from 'peerjs'
 
-import { getMediaStream, stopMediaStream } from '../media-stream-manager'
 import { createPeerJSError, logError } from './errors'
 import { DEFAULT_RETRY_CONFIG, retryWithBackoff } from './retry'
 import { DEFAULT_TIMEOUT_CONFIG, executeWithTimeout } from './timeout'
@@ -35,7 +33,7 @@ export interface PeerJSManagerCallbacks {
 
 export class PeerJSManager {
   private peer: Peer | null = null
-  private localStream: LocalMediaStream | null = null
+  private localStream: MediaStream | null = null
   private calls = new Map<string, MediaConnection>()
   private calledPeers = new Set<string>()
   private pendingIncomingCalls = new Map<string, MediaConnection>()
@@ -53,7 +51,6 @@ export class PeerJSManager {
   private initializationErrorLogged = false
   private isRetryingId = false
   private idRetryTimeout: NodeJS.Timeout | null = null
-  private lastVideoDeviceId: string | undefined = undefined
   private static websocketPatched = false
   private static originalWebSocket: typeof WebSocket | null = null
   private static currentToken: string | null = null
@@ -370,81 +367,121 @@ export class PeerJSManager {
   }
 
   /**
-   * Initialize local media stream
+   * Update the local media stream
+   * This method is called whenever the external source (e.g., useMediaDevice) changes the stream.
    */
-  async initializeLocalMedia(deviceId?: string): Promise<void> {
+  async updateLocalStream(stream: MediaStream | null): Promise<void> {
     if (this.isDestroyed) {
-      throw new Error('Manager has been destroyed')
+      return
     }
 
-    try {
-      // Use centralized media stream manager with automatic fallback
-      const { stream, videoTrack, audioTrack, actualResolution } =
-        await getMediaStream({
-          videoDeviceId: deviceId,
-          video: true,
-          audio: true,
-          resolution: '4k',
-          enableFallback: true,
-        })
+    console.log('[PeerJSManager] Updating local stream:', {
+      hasStream: !!stream,
+      tracks: stream ? stream.getTracks().length : 0,
+    })
 
-      console.log(
-        `[PeerJSManager] Local stream initialized with ${actualResolution}`,
-      )
+    this.localStream = stream
+    this.callbacks.onLocalStreamChanged?.(stream)
 
-      // Store the device ID for later reinitialization
-      if (videoTrack) {
-        const settings = videoTrack.getSettings()
-        this.lastVideoDeviceId = settings.deviceId || deviceId
-      }
+    // Broadcast local track state immediately
+    this.broadcastLocalTrackState()
 
-      this.localStream = {
-        stream,
-        videoTrack,
-        audioTrack,
-      }
-
-      console.log('[PeerJSManager] Local stream initialized:', {
-        hasVideo: !!videoTrack,
-        hasAudio: !!audioTrack,
-        videoDeviceId: deviceId,
-      })
-
-      this.callbacks.onLocalStreamChanged?.(stream)
-
-      // Notify about initial local track state
-      this.callbacks.onTrackStateChanged?.(this.localPlayerId, {
-        videoEnabled: !!videoTrack && videoTrack.readyState === 'live',
-        audioEnabled: !!audioTrack && audioTrack.enabled,
-      })
-
+    // If we have a new stream, update all active calls
+    if (stream) {
       // Answer any pending incoming calls
       this.answerPendingCalls(stream)
 
-      // Automatically connect to current remote peers
-      if (this.currentRemotePlayerIds.length > 0) {
-        this.connectToPeers(this.currentRemotePlayerIds).catch((err) => {
-          console.error(
-            '[PeerJSManager] Failed to connect to peers after stream init:',
-            err,
+      // Replace tracks in active calls
+      for (const [peerId, call] of this.calls) {
+        if (!call.open || !call.peerConnection) continue
+
+        const senders = call.peerConnection.getSenders()
+
+        // Replace video track
+        const videoSender = senders.find((s) => s.track?.kind === 'video')
+        const videoTrack = stream.getVideoTracks()[0] || null
+        if (videoSender) {
+          try {
+            await videoSender.replaceTrack(videoTrack)
+            console.log('[PeerJSManager] Replaced video track for:', peerId)
+          } catch (err) {
+            console.error(
+              `[PeerJSManager] Failed to replace video track for ${peerId}:`,
+              err,
+            )
+          }
+        } else if (videoTrack) {
+          // If no sender exists but we have a track, we might need to add it
+          // Note: Standard WebRTC replaceTrack doesn't support adding new tracks easily
+          // without renegotiation, which PeerJS abstracts away.
+          // For now, we primarily support replacing existing tracks.
+          console.warn(
+            `[PeerJSManager] No video sender found for ${peerId}, cannot add new track`,
           )
-        })
+        }
+
+        // Replace audio track
+        const audioSender = senders.find((s) => s.track?.kind === 'audio')
+        const audioTrack = stream.getAudioTracks()[0] || null
+        if (audioSender) {
+          try {
+            await audioSender.replaceTrack(audioTrack)
+            console.log('[PeerJSManager] Replaced audio track for:', peerId)
+          } catch (err) {
+            console.error(
+              `[PeerJSManager] Failed to replace audio track for ${peerId}:`,
+              err,
+            )
+          }
+        }
       }
-    } catch (err) {
-      console.error(
-        '[PeerJSManager] initializeLocalMedia failed with error:',
-        err,
-      )
-      console.error('[PeerJSManager] Error details:', {
-        name: err instanceof Error ? err.name : 'unknown',
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      })
-      const peerError = createPeerJSError(err)
-      logError(peerError, { context: 'initializeLocalMedia' })
-      this.callbacks.onError?.(peerError)
-      throw peerError
+    } else {
+      // If stream is null, we should probably stop sending
+      for (const [peerId, call] of this.calls) {
+        if (!call.open || !call.peerConnection) continue
+        const senders = call.peerConnection.getSenders()
+        for (const sender of senders) {
+          try {
+            await sender.replaceTrack(null)
+          } catch (err) {
+            console.error(
+              `[PeerJSManager] Failed to clear track for ${peerId}:`,
+              err,
+            )
+          }
+        }
+      }
     }
+
+    // Automatically connect to stored remote peers if we now have a stream
+    if (stream && this.currentRemotePlayerIds.length > 0) {
+      this.connectToPeers(this.currentRemotePlayerIds).catch((err) => {
+        console.error(
+          '[PeerJSManager] Failed to connect to peers after stream update:',
+          err,
+        )
+      })
+    }
+  }
+
+  /**
+   * Broadcast local track state to listeners
+   */
+  private broadcastLocalTrackState(): void {
+    const stream = this.localStream
+    const videoTrack = stream?.getVideoTracks()[0]
+    const audioTrack = stream?.getAudioTracks()[0]
+
+    const state: PeerTrackState = {
+      videoEnabled:
+        !!videoTrack &&
+        videoTrack.readyState === 'live' &&
+        videoTrack.enabled &&
+        !videoTrack.muted,
+      audioEnabled: audioTrack?.enabled ?? false,
+    }
+
+    this.callbacks.onTrackStateChanged?.(this.localPlayerId, state)
   }
 
   /**
@@ -468,7 +505,7 @@ export class PeerJSManager {
     console.log('[PeerJSManager] Incoming call from:', peerId)
     console.log('[PeerJSManager] Call metadata:', call.metadata)
 
-    if (!this.localStream?.stream) {
+    if (!this.localStream) {
       console.log(
         '[PeerJSManager] No local stream, deferring call from:',
         peerId,
@@ -479,7 +516,7 @@ export class PeerJSManager {
     }
 
     console.log('[PeerJSManager] Answering incoming call from:', peerId)
-    call.answer(this.localStream.stream)
+    call.answer(this.localStream)
     this.setupCallHandlers(call, peerId)
     this.calls.set(peerId, call)
   }
@@ -646,19 +683,8 @@ export class PeerJSManager {
 
     // Poll every 500ms to detect enabled/disabled state changes
     this.trackStatePollInterval = window.setInterval(() => {
-      console.log(
-        '[PeerJSManager] 📊 Polling',
-        this.remoteStreams.size,
-        'remote streams',
-      )
+      // console.log('[PeerJSManager] 📊 Polling', this.remoteStreams.size, 'remote streams')
       for (const [peerId, stream] of this.remoteStreams) {
-        const videoTrack = stream.getVideoTracks()[0]
-        console.log('[PeerJSManager] 📹 Checking peer:', peerId, {
-          hasVideoTrack: !!videoTrack,
-          readyState: videoTrack?.readyState,
-          enabled: videoTrack?.enabled,
-          muted: videoTrack?.muted,
-        })
         this.updateTrackState(peerId, stream)
       }
     }, 500)
@@ -685,7 +711,7 @@ export class PeerJSManager {
     // Store current remote player IDs for later connection when stream is ready
     this.currentRemotePlayerIds = remotePlayerIds
 
-    if (!this.localStream?.stream) {
+    if (!this.localStream) {
       console.log(
         '[PeerJSManager] No local stream yet, stored remote player IDs for later connection:',
         remotePlayerIds,
@@ -720,7 +746,7 @@ export class PeerJSManager {
    * Create outgoing call to a remote peer
    */
   private async createOutgoingCall(remotePlayerId: string): Promise<void> {
-    if (!this.peer || !this.localStream?.stream) {
+    if (!this.peer || !this.localStream) {
       return
     }
 
@@ -742,7 +768,7 @@ export class PeerJSManager {
           return await retryWithBackoff(
             () =>
               Promise.resolve(
-                this.peer!.call(remotePlayerId, this.localStream!.stream, {
+                this.peer!.call(remotePlayerId, this.localStream!, {
                   metadata: {
                     callerId: this.localPlayerId,
                     timestamp: Date.now(),
@@ -771,273 +797,10 @@ export class PeerJSManager {
   }
 
   /**
-   * Toggle video track
-   * When disabling, stops the track completely (camera turns off)
-   * When enabling, gets a new track from getUserMedia and replaces it in all connections
-   */
-  async toggleVideo(enabled: boolean): Promise<void> {
-    if (enabled) {
-      // Re-enable: Get a new video track from the camera
-      try {
-        // Use centralized media stream manager
-        const { stream: videoStream, videoTrack: newVideoTrack } =
-          await getMediaStream({
-            videoDeviceId: this.lastVideoDeviceId,
-            video: true,
-            audio: false,
-            resolution: '4k',
-            enableFallback: true,
-          })
-
-        if (!newVideoTrack) {
-          stopMediaStream(videoStream)
-          throw new Error('No video track in new stream')
-        }
-
-        // Store the device ID for future use
-        const settings = newVideoTrack.getSettings()
-        if (settings.deviceId) {
-          this.lastVideoDeviceId = settings.deviceId
-        }
-
-        // Stop any audio tracks that might have been created (shouldn't happen)
-        videoStream.getAudioTracks().forEach((track) => track.stop())
-
-        // If we have an existing stream, create a new MediaStream with the new track
-        // This ensures React detects the reference change and updates video elements
-        if (this.localStream?.stream) {
-          // Remove old track if it exists
-          if (this.localStream.videoTrack) {
-            this.localStream.videoTrack.stop()
-          }
-
-          // Create a new MediaStream with audio (if exists) and new video track
-          const newStream = new MediaStream()
-          if (this.localStream.audioTrack) {
-            newStream.addTrack(this.localStream.audioTrack)
-          }
-          newStream.addTrack(newVideoTrack)
-
-          this.localStream = {
-            stream: newStream,
-            videoTrack: newVideoTrack,
-            audioTrack: this.localStream.audioTrack,
-          }
-
-          // Notify about stream change so UI updates
-          this.callbacks.onLocalStreamChanged?.(newStream)
-        } else {
-          // No existing stream, create new one
-          const audioTrack = this.localStream?.audioTrack || null
-          const stream = new MediaStream()
-          if (audioTrack) {
-            stream.addTrack(audioTrack)
-          }
-          stream.addTrack(newVideoTrack)
-
-          this.localStream = {
-            stream,
-            videoTrack: newVideoTrack,
-            audioTrack: audioTrack,
-          }
-          this.callbacks.onLocalStreamChanged?.(stream)
-        }
-
-        // Replace track in all active calls
-        for (const [peerId, call] of this.calls) {
-          if (!call.open) {
-            continue
-          }
-
-          const peerConnection = call.peerConnection
-          if (!peerConnection) {
-            continue
-          }
-
-          const sender = peerConnection
-            .getSenders()
-            .find((s) => s.track?.kind === 'video')
-          if (sender) {
-            try {
-              await sender.replaceTrack(newVideoTrack)
-              console.log('[PeerJSManager] Video track replaced for:', peerId)
-            } catch (err) {
-              console.error(
-                `[PeerJSManager] Failed to replace video track for ${peerId}:`,
-                err,
-              )
-            }
-          } else {
-            // No video sender exists, add track to connection
-            // This can happen if the call was created while video was off
-            try {
-              peerConnection.addTrack(newVideoTrack, this.localStream!.stream)
-              console.log(
-                '[PeerJSManager] Video track added to connection for:',
-                peerId,
-              )
-            } catch (err) {
-              console.error(
-                `[PeerJSManager] Failed to add video track to connection for ${peerId}:`,
-                err,
-              )
-            }
-          }
-        }
-
-        console.log('[PeerJSManager] Video enabled, camera turned on')
-      } catch (err) {
-        const peerError = createPeerJSError(err)
-        logError(peerError, { context: 'toggleVideo', action: 'enable' })
-        this.callbacks.onError?.(peerError)
-        throw peerError
-      }
-    } else {
-      // Disable: Stop the track completely (camera turns off)
-      if (!this.localStream?.videoTrack) {
-        return
-      }
-
-      // Stop the track (this turns off the camera)
-      this.localStream.videoTrack.stop()
-
-      // Create a new MediaStream without the video track
-      // This ensures React detects the reference change and updates video elements
-      if (this.localStream.stream) {
-        const newStream = new MediaStream()
-        if (this.localStream.audioTrack) {
-          newStream.addTrack(this.localStream.audioTrack)
-        }
-
-        this.localStream.stream = newStream
-
-        // Notify about stream change so UI updates
-        this.callbacks.onLocalStreamChanged?.(newStream)
-      }
-
-      // Remove track from all active calls using replaceTrack(null)
-      for (const [peerId, call] of this.calls) {
-        if (!call.open) {
-          continue
-        }
-
-        const sender = call.peerConnection
-          ?.getSenders()
-          .find((s) => s.track?.kind === 'video')
-        if (sender) {
-          try {
-            await sender.replaceTrack(null)
-            console.log('[PeerJSManager] Video track removed for:', peerId)
-          } catch (err) {
-            console.error(
-              `[PeerJSManager] Failed to remove video track for ${peerId}:`,
-              err,
-            )
-          }
-        }
-      }
-
-      // Clear the video track reference
-      this.localStream.videoTrack = null
-
-      console.log('[PeerJSManager] Video disabled, camera turned off')
-    }
-
-    // Notify about local track state change
-    this.callbacks.onTrackStateChanged?.(this.localPlayerId, {
-      videoEnabled: enabled,
-      audioEnabled: this.localStream?.audioTrack?.enabled ?? false,
-    })
-  }
-
-  /**
-   * Toggle audio track
-   */
-  toggleAudio(enabled: boolean): void {
-    if (!this.localStream?.audioTrack) {
-      return
-    }
-
-    this.localStream.audioTrack.enabled = enabled
-    console.log('[PeerJSManager] Audio toggled:', enabled)
-
-    // Notify about local track state change
-    this.callbacks.onTrackStateChanged?.(this.localPlayerId, {
-      videoEnabled: this.localStream.videoTrack?.enabled ?? false,
-      audioEnabled: enabled,
-    })
-  }
-
-  /**
-   * Switch camera device
-   */
-  async switchCamera(deviceId: string): Promise<void> {
-    if (!this.localStream?.stream || !this.localStream.videoTrack) {
-      throw new Error('No video track available')
-    }
-
-    try {
-      // Stop old track
-      this.localStream.videoTrack.stop()
-
-      // Get new stream with centralized manager
-      const { stream: newStream, videoTrack: newVideoTrack } =
-        await getMediaStream({
-          videoDeviceId: deviceId,
-          video: true,
-          audio: false,
-          resolution: '4k',
-          enableFallback: true,
-        })
-
-      if (!newVideoTrack) {
-        stopMediaStream(newStream)
-        throw new Error('No video track in new stream')
-      }
-
-      // Update local stream
-      this.localStream.stream.removeTrack(this.localStream.videoTrack)
-      this.localStream.stream.addTrack(newVideoTrack)
-      this.localStream.videoTrack = newVideoTrack
-
-      // Update stored device ID for future reinitialization
-      this.lastVideoDeviceId = deviceId
-
-      // Replace track in all active calls
-      for (const [peerId, call] of this.calls) {
-        // Only replace track if call is open
-        if (!call.open) {
-          console.log(
-            '[PeerJSManager] Call not open, skipping track replacement for:',
-            peerId,
-          )
-          continue
-        }
-
-        const sender = call.peerConnection
-          ?.getSenders()
-          .find((s) => s.track?.kind === 'video')
-        if (sender) {
-          await sender.replaceTrack(newVideoTrack)
-          console.log('[PeerJSManager] Video track replaced for:', peerId)
-        }
-      }
-
-      // Notify about stream change
-      this.callbacks.onLocalStreamChanged?.(this.localStream.stream)
-    } catch (err) {
-      const peerError = createPeerJSError(err)
-      logError(peerError, { context: 'switchCamera' })
-      this.callbacks.onError?.(peerError)
-      throw peerError
-    }
-  }
-
-  /**
    * Get current local stream
    */
   getLocalStream(): MediaStream | null {
-    return this.localStream?.stream ?? null
+    return this.localStream
   }
 
   /**
@@ -1084,10 +847,7 @@ export class PeerJSManager {
       this.idRetryTimeout = null
     }
 
-    // Stop local stream tracks
-    if (this.localStream?.stream) {
-      stopMediaStream(this.localStream.stream)
-    }
+    // Drop reference to stream (ownership is external)
     this.localStream = null
 
     // Destroy peer

@@ -1,11 +1,13 @@
+import type { UseMediaDeviceOptions } from '@/hooks/useMediaDevice'
 import type { DetectorType } from '@/lib/detectors'
 import type { LoadingEvent } from '@/lib/loading-events'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
 import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
+import { useMediaDevice } from '@/hooks/useMediaDevice'
 import { usePeerJS } from '@/hooks/usePeerJS'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
@@ -100,20 +102,77 @@ function GameRoomContent({
     return filtered
   }, [gameRoomParticipants, userId])
 
+  // --- Local Media Management ---
+
+  // Memoize hook options
+  const videoOptions = useMemo<UseMediaDeviceOptions>(
+    () => ({ kind: 'videoinput' }),
+    [],
+  )
+  const audioOptions = useMemo<UseMediaDeviceOptions>(
+    () => ({ kind: 'audioinput' }),
+    [],
+  )
+
+  // Use media device hooks
+  const {
+    stream: videoStream,
+    error: videoError,
+    isPending: isVideoPending,
+  } = useMediaDevice(videoOptions)
+
+  const {
+    stream: audioStream,
+    error: audioError,
+    isPending: isAudioPending,
+  } = useMediaDevice(audioOptions)
+
+  // Combine streams into a single MediaStream for PeerJS
+  const localStream = useMemo(() => {
+    if (!videoStream && !audioStream) return null
+
+    const tracks: MediaStreamTrack[] = []
+    if (videoStream) tracks.push(...videoStream.getVideoTracks())
+    if (audioStream) tracks.push(...audioStream.getAudioTracks())
+
+    if (tracks.length === 0) return null
+
+    // Return a new MediaStream instance to trigger updates
+    // Dependency used: streamUpdateTrigger (to force re-evaluation)
+
+    return new MediaStream(tracks)
+  }, [videoStream, audioStream])
+
+  const toggleVideo = useCallback(
+    async (enabled: boolean) => {
+      if (localStream) {
+        localStream.getVideoTracks().forEach((t) => (t.enabled = enabled))
+      }
+    },
+    [localStream],
+  )
+
+  const toggleAudio = useCallback(
+    (enabled: boolean) => {
+      if (localStream) {
+        localStream.getAudioTracks().forEach((t) => (t.enabled = enabled))
+      }
+    },
+    [localStream],
+  )
+
   // PeerJS hook for peer-to-peer video streaming
   const {
     remoteStreams,
     connectionStates,
     peerTrackStates,
-    toggleVideo: togglePeerJSVideo,
-    toggleAudio: togglePeerJSAudio,
-    initializeLocalMedia,
     error: _peerError,
     isInitialized: _isInitialized,
   } = usePeerJS({
     localPlayerId: userId,
     remotePlayerIds: remotePlayerIds,
     roomId: roomId,
+    localStream, // Pass the managed local stream
     onError: (error) => {
       console.error('[GameRoom] PeerJS error:', error)
       toast.error(error.message)
@@ -291,16 +350,9 @@ function GameRoomContent({
 
     // Save to localStorage that setup has been completed for this room and the selected device
     localStorage.setItem(`media-setup-${roomId}`, 'true')
-    localStorage.setItem(`media-device-${roomId}`, config.videoDeviceId)
-    setMediaDialogOpen(false)
 
-    console.log(
-      '[GameRoom] Initializing local media with device:',
-      config.videoDeviceId,
-    )
-    // Initialize local media stream after user selects their camera
-    await initializeLocalMedia(config.videoDeviceId)
-    console.log('[GameRoom] Local media initialization complete')
+    setMediaDialogOpen(false)
+    console.log('[GameRoom] Media setup complete')
   }
 
   const handleCopyShareLink = () => {
@@ -337,7 +389,7 @@ function GameRoomContent({
       <Toaster />
 
       {/* Header */}
-      <header className="flex-shrink-0 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
+      <header className="shrink-0 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-4">
             <Button
@@ -414,11 +466,16 @@ function GameRoomContent({
               onCardCrop={(canvas: HTMLCanvasElement) => {
                 query(canvas)
               }}
+              // Pass local stream
+              localStream={localStream}
+              localStreamError={videoError || audioError}
+              isLocalStreamPending={isVideoPending || isAudioPending}
+              // Pass remote streams
               remoteStreams={remoteStreams}
               connectionStates={connectionStates}
               peerTrackStates={peerTrackStates}
-              onToggleVideo={togglePeerJSVideo}
-              onToggleAudio={togglePeerJSAudio}
+              onToggleVideo={toggleVideo}
+              onToggleAudio={toggleAudio}
             />
           </div>
         </div>

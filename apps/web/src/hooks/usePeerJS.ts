@@ -10,29 +10,25 @@ import type {
   PeerJSError,
   PeerTrackState,
 } from '@/types/peerjs'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PeerJSManager } from '@/lib/peerjs/PeerJSManager'
 
 export interface UsePeerJSProps {
   localPlayerId: string
   remotePlayerIds: string[]
   roomId: string
+  localStream: MediaStream | null
   onError?: (error: PeerJSError) => void
 }
 
 export interface UsePeerJSReturn {
-  // Local media stream
+  // Local media stream (passed through for convenience)
   localStream: MediaStream | null
   localTrackState: PeerTrackState
   // Remote peer streams and states
   remoteStreams: Map<string, MediaStream>
   peerTrackStates: Map<string, PeerTrackState>
   connectionStates: Map<string, ConnectionState>
-  // WebRTC track control
-  toggleVideo: (enabled: boolean) => Promise<void>
-  toggleAudio: (enabled: boolean) => void
-  // Local media initialization (media device selection)
-  initializeLocalMedia: (deviceId?: string) => Promise<void>
   // Error and status
   error: PeerJSError | null
   isInitialized: boolean
@@ -45,6 +41,7 @@ export function usePeerJS({
   localPlayerId,
   remotePlayerIds,
   roomId,
+  localStream,
   onError,
 }: UsePeerJSProps): UsePeerJSReturn {
   const managerRef = useRef<PeerJSManager | null>(null)
@@ -58,7 +55,6 @@ export function usePeerJS({
   }, [onError])
 
   // State
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [localTrackState, setLocalTrackState] = useState<PeerTrackState>({
     videoEnabled: false,
     audioEnabled: false,
@@ -96,9 +92,6 @@ export function usePeerJS({
     initializationAttemptedRef.current = true
 
     const manager = new PeerJSManager(localPlayerId, roomId, {
-      onLocalStreamChanged: (stream) => {
-        setLocalStream(stream)
-      },
       onRemoteStreamAdded: (peerId, stream) => {
         setRemoteStreams((prev) => new Map(prev).set(peerId, stream))
       },
@@ -161,6 +154,13 @@ export function usePeerJS({
     }
   }, [localPlayerId, roomId])
 
+  // Update local stream in manager when it changes
+  useEffect(() => {
+    if (managerRef.current) {
+      managerRef.current.updateLocalStream(localStream)
+    }
+  }, [localStream])
+
   // Connect to remote peers when they change
   useEffect(() => {
     if (!isInitialized || !managerRef.current) {
@@ -179,34 +179,12 @@ export function usePeerJS({
     })
   }, [remotePlayerIds, isInitialized])
 
-  // Initialize local media when called
-  const initializeLocalMedia = useCallback(async (deviceId?: string) => {
-    if (!managerRef.current) {
-      throw new Error('Manager not initialized')
-    }
-    await managerRef.current.initializeLocalMedia(deviceId)
-  }, [])
-
-  // Toggle video
-  const toggleVideo = useCallback(async (enabled: boolean) => {
-    if (!managerRef.current) return
-    await managerRef.current.toggleVideo(enabled)
-  }, [])
-
-  // Toggle audio
-  const toggleAudio = useCallback((enabled: boolean) => {
-    managerRef.current?.toggleAudio(enabled)
-  }, [])
-
   return {
     localStream,
     localTrackState,
     remoteStreams,
     peerTrackStates,
     connectionStates,
-    toggleVideo,
-    toggleAudio,
-    initializeLocalMedia,
     error,
     isInitialized,
   }
