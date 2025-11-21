@@ -1,10 +1,15 @@
 {
   "extends": "@repo/typescript-config/base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
-    "lib": ["ES2022"],
-    "types": ["@cloudflare/workers-types", "node"],
+    "target": "ES2024",
+    "module": "ES2024",
+    "lib": [
+      "ES2024"
+    ],
+    "types": [
+      "@cloudflare/workers-types",
+      "node"
+    ],
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
@@ -17,6 +22,13 @@
     "outDir": "./dist",
     "rootDir": "./src"
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", ".wrangler", "tests"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".wrangler",
+    "tests"
+  ]
 }
