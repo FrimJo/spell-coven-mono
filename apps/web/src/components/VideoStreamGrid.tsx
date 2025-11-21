@@ -1,9 +1,9 @@
 import type { UseMediaDeviceOptions } from '@/hooks/useMediaDevice'
 import type { DetectorType } from '@/lib/detectors'
-import type { ConnectionState, PeerTrackState } from '@/types/peerjs'
-import { Suspense, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
 import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
+import { usePeerJS } from '@/hooks/usePeerJS'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
 import {
   AlertCircle,
@@ -14,6 +14,7 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
@@ -38,24 +39,6 @@ interface VideoStreamGridProps {
   usePerspectiveWarp?: boolean
   /** Callback when a card is cropped */
   onCardCrop?: (canvas: HTMLCanvasElement) => void
-  // WebRTC streams and states
-  /** Local media stream */
-  localStream?: MediaStream | null
-  /** Local stream error */
-  localStreamError?: Error | null
-  /** Local stream pending state */
-  isLocalStreamPending?: boolean
-  /** Remote streams from WebRTC (player ID -> MediaStream) */
-  remoteStreams?: Map<string, MediaStream | null>
-  /** Connection states from WebRTC (player ID -> ConnectionState) */
-  connectionStates?: Map<string, ConnectionState>
-  /** Peer track states from PeerJS (player ID -> track state) */
-  peerTrackStates?: Map<string, PeerTrackState>
-  // Callbacks
-  /** Callback to toggle video track enabled/disabled (for WebRTC integration) */
-  onToggleVideo?: (enabled: boolean) => Promise<void>
-  /** Callback to toggle audio track enabled/disabled (for WebRTC integration) */
-  onToggleAudio?: (enabled: boolean) => void
 }
 
 interface StreamState {
@@ -71,14 +54,6 @@ export function VideoStreamGrid({
   detectorType,
   usePerspectiveWarp = true,
   onCardCrop,
-  localStream,
-  localStreamError,
-  isLocalStreamPending = false,
-  remoteStreams = new Map(),
-  connectionStates = new Map(),
-  peerTrackStates = new Map(),
-  onToggleVideo,
-  onToggleAudio: _onToggleAudio,
 }: VideoStreamGridProps) {
   // Fetch remote players (exclude local player)
   const { participants: gameRoomParticipants } = useGameRoomParticipants({
@@ -87,6 +62,107 @@ export function VideoStreamGrid({
     username: localPlayerName,
     enabled: true,
   })
+
+  // Compute remote player IDs for PeerJS
+  const remotePlayerIds = useMemo(() => {
+    const filtered = gameRoomParticipants
+      .filter((p) => p.id !== userId)
+      .map((p) => p.id)
+    console.log('[VideoStreamGrid] remotePlayerIds calculated:', {
+      allParticipants: gameRoomParticipants.length,
+      localUserId: userId,
+      remotePlayerIds: filtered,
+    })
+    return filtered
+  }, [gameRoomParticipants, userId])
+
+  // --- Local Media Management ---
+
+  // Memoize hook options
+  const videoOptions = useMemo<UseMediaDeviceOptions>(
+    () => ({ kind: 'videoinput' }),
+    [],
+  )
+  const audioOptions = useMemo<UseMediaDeviceOptions>(
+    () => ({ kind: 'audioinput' }),
+    [],
+  )
+
+  // Use media device hooks
+  const {
+    stream: videoStream,
+    error: videoError,
+    isPending: isVideoPending,
+  } = useMediaDevice(videoOptions)
+
+  const {
+    stream: audioStream,
+    error: audioError,
+    isPending: isAudioPending,
+  } = useMediaDevice(audioOptions)
+
+  // Combine streams into a single MediaStream for PeerJS
+  const localStream = useMemo(() => {
+    if (!videoStream && !audioStream) return null
+
+    const tracks: MediaStreamTrack[] = []
+    if (videoStream) tracks.push(...videoStream.getVideoTracks())
+    if (audioStream) tracks.push(...audioStream.getAudioTracks())
+
+    if (tracks.length === 0) return null
+
+    return new MediaStream(tracks)
+  }, [videoStream, audioStream])
+
+  const toggleLocalVideo = useCallback(
+    async (enabled: boolean) => {
+      if (localStream) {
+        localStream.getVideoTracks().forEach((t) => (t.enabled = enabled))
+      }
+    },
+    [localStream],
+  )
+
+  const toggleLocalAudio = useCallback(
+    (enabled: boolean) => {
+      if (localStream) {
+        localStream.getAudioTracks().forEach((t) => (t.enabled = enabled))
+      }
+    },
+    [localStream],
+  )
+
+  // PeerJS hook for peer-to-peer video streaming
+  const {
+    remoteStreams,
+    connectionStates,
+    peerTrackStates,
+    error: _peerError,
+    isInitialized: _isInitialized,
+  } = usePeerJS({
+    localPlayerId: userId,
+    remotePlayerIds: remotePlayerIds,
+    roomId: roomId,
+    localStream, // Pass the managed local stream
+    onError: (error) => {
+      console.error('[VideoStreamGrid] PeerJS error:', error)
+      toast.error(error.message)
+    },
+  })
+
+  // Debug: Log remote streams state
+  // useEffect(() => {
+  //   console.log('[VideoStreamGrid] 🎥 Remote streams update:', {
+  //     size: remoteStreams.size,
+  //     keys: Array.from(remoteStreams.keys()),
+  //     gameRoomParticipants: gameRoomParticipants.map((p) => p.id),
+  //     remotePlayerIds,
+  //   })
+  // }, [remoteStreams, gameRoomParticipants, remotePlayerIds])
+
+  // Local stream error and pending state
+  const localStreamError = videoError || audioError
+  const isLocalStreamPending = isVideoPending || isAudioPending
 
   // Build remote player list
   const players = useMemo(() => {
@@ -205,7 +281,8 @@ export function VideoStreamGrid({
           detectorType={detectorType}
           usePerspectiveWarp={usePerspectiveWarp}
           onCardCrop={onCardCrop}
-          onToggleVideo={onToggleVideo}
+          onToggleVideo={toggleLocalVideo}
+          onToggleAudio={toggleLocalAudio}
         />
       ) : null}
 
