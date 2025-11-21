@@ -77,7 +77,7 @@ export function isSuccessState<
  * Type guard to check if an async resource is in error state
  */
 export function isAsyncResourceError<
-  TBase extends Record<string, unknown> = {},
+  TBase extends Record<string, unknown> = Record<string, unknown>,
 >(
   resource: AsyncResource<TBase, Record<string, unknown>>,
 ): resource is AsyncResourceError<TBase> {
@@ -88,7 +88,7 @@ export function isAsyncResourceError<
  * Type guard to check if an async resource is pending
  */
 export function isAsyncResourcePending<
-  TBase extends Record<string, unknown> = {},
+  TBase extends Record<string, unknown> = Record<string, unknown>,
 >(
   resource: AsyncResource<TBase, Record<string, unknown>>,
 ): resource is AsyncResourcePending<TBase> {
@@ -100,17 +100,29 @@ export function isAsyncResourcePending<
  * The combined resource is available when both resources are in success state
  */
 export type CombinedAsyncResource<
-  TResource1 extends AsyncResource<{}, { stream: MediaStream }>,
-  TResource2 extends AsyncResource<{}, { stream: MediaStream }>,
+  TResource1 extends AsyncResource<
+    Record<string, unknown>,
+    { stream: MediaStream }
+  >,
+  TResource2 extends AsyncResource<
+    Record<string, unknown>,
+    { stream: MediaStream }
+  >,
 > =
-  | (TResource1 extends AsyncResourceSuccess<{}, { stream: MediaStream }>
-      ? TResource2 extends AsyncResourceSuccess<{}, { stream: MediaStream }>
+  | (TResource1 extends AsyncResourceSuccess<
+      Record<string, unknown>,
+      { stream: MediaStream }
+    >
+      ? TResource2 extends AsyncResourceSuccess<
+          Record<string, unknown>,
+          { stream: MediaStream }
+        >
         ? { stream: MediaStream | null }
         : { stream: null }
       : { stream: null })
-  | (TResource1 extends AsyncResourcePending<{}>
+  | (TResource1 extends AsyncResourcePending<Record<string, unknown>>
       ? { stream: null }
-      : TResource1 extends AsyncResourceError<{}>
+      : TResource1 extends AsyncResourceError<Record<string, unknown>>
         ? { stream: null }
         : never)
 
@@ -118,4 +130,6 @@ export type CombinedAsyncResource<
  * Type helper to extract the stream from an async resource when it's in success state
  */
 export type ExtractStream<T extends AsyncResource> =
-  T extends AsyncResourceSuccess<{}, { stream: infer S }> ? S : null
+  T extends AsyncResourceSuccess<Record<string, unknown>, { stream: infer S }>
+    ? S
+    : null
