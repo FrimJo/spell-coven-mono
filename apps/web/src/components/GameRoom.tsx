@@ -1,14 +1,11 @@
-import type { UseMediaDeviceOptions } from '@/hooks/useMediaDevice'
 import type { DetectorType } from '@/lib/detectors'
 import type { LoadingEvent } from '@/lib/loading-events'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
 import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
-import { useMediaDevice } from '@/hooks/useMediaDevice'
-import { usePeerJS } from '@/hooks/usePeerJS'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
 import { loadOpenCV } from '@/lib/opencv-loader'
@@ -83,111 +80,12 @@ function GameRoomContent({
 
   // Get remote player IDs from GAME ROOM participants (not voice channel!)
   // Game room participation is independent of Discord voice channels
-  const { participants: gameRoomParticipants } = useGameRoomParticipants({
+  const { participants: _gameRoomParticipants } = useGameRoomParticipants({
     roomId,
     userId,
     username, // Use generated username from temp user
     enabled: true,
   })
-
-  const remotePlayerIds = useMemo(() => {
-    const filtered = gameRoomParticipants
-      .filter((p) => p.id !== userId)
-      .map((p) => p.id)
-    console.log('[GameRoom] remotePlayerIds calculated:', {
-      allParticipants: gameRoomParticipants.length,
-      localUserId: userId,
-      remotePlayerIds: filtered,
-    })
-    return filtered
-  }, [gameRoomParticipants, userId])
-
-  // --- Local Media Management ---
-
-  // Memoize hook options
-  const videoOptions = useMemo<UseMediaDeviceOptions>(
-    () => ({ kind: 'videoinput' }),
-    [],
-  )
-  const audioOptions = useMemo<UseMediaDeviceOptions>(
-    () => ({ kind: 'audioinput' }),
-    [],
-  )
-
-  // Use media device hooks
-  const {
-    stream: videoStream,
-    error: videoError,
-    isPending: isVideoPending,
-  } = useMediaDevice(videoOptions)
-
-  const {
-    stream: audioStream,
-    error: audioError,
-    isPending: isAudioPending,
-  } = useMediaDevice(audioOptions)
-
-  // Combine streams into a single MediaStream for PeerJS
-  const localStream = useMemo(() => {
-    if (!videoStream && !audioStream) return null
-
-    const tracks: MediaStreamTrack[] = []
-    if (videoStream) tracks.push(...videoStream.getVideoTracks())
-    if (audioStream) tracks.push(...audioStream.getAudioTracks())
-
-    if (tracks.length === 0) return null
-
-    // Return a new MediaStream instance to trigger updates
-    // Dependency used: streamUpdateTrigger (to force re-evaluation)
-
-    return new MediaStream(tracks)
-  }, [videoStream, audioStream])
-
-  const toggleVideo = useCallback(
-    async (enabled: boolean) => {
-      if (localStream) {
-        localStream.getVideoTracks().forEach((t) => (t.enabled = enabled))
-      }
-    },
-    [localStream],
-  )
-
-  const toggleAudio = useCallback(
-    (enabled: boolean) => {
-      if (localStream) {
-        localStream.getAudioTracks().forEach((t) => (t.enabled = enabled))
-      }
-    },
-    [localStream],
-  )
-
-  // PeerJS hook for peer-to-peer video streaming
-  const {
-    remoteStreams,
-    connectionStates,
-    peerTrackStates,
-    error: _peerError,
-    isInitialized: _isInitialized,
-  } = usePeerJS({
-    localPlayerId: userId,
-    remotePlayerIds: remotePlayerIds,
-    roomId: roomId,
-    localStream, // Pass the managed local stream
-    onError: (error) => {
-      console.error('[GameRoom] PeerJS error:', error)
-      toast.error(error.message)
-    },
-  })
-
-  // Debug: Log remote streams state
-  useEffect(() => {
-    console.log('[GameRoom] 🎥 Remote streams update:', {
-      size: remoteStreams.size,
-      keys: Array.from(remoteStreams.keys()),
-      gameRoomParticipants: gameRoomParticipants.map((p) => p.id),
-      remotePlayerIds,
-    })
-  }, [remoteStreams, gameRoomParticipants, remotePlayerIds])
 
   // Voice channel validation is now done in the route's beforeLoad hook
   // If user is not in voice channel, they won't reach this component
@@ -462,16 +360,6 @@ function GameRoomContent({
               onCardCrop={(canvas: HTMLCanvasElement) => {
                 query(canvas)
               }}
-              // Pass local stream
-              localStream={localStream}
-              localStreamError={videoError || audioError}
-              isLocalStreamPending={isVideoPending || isAudioPending}
-              // Pass remote streams
-              remoteStreams={remoteStreams}
-              connectionStates={connectionStates}
-              peerTrackStates={peerTrackStates}
-              onToggleVideo={toggleVideo}
-              onToggleAudio={toggleAudio}
             />
           </div>
         </div>

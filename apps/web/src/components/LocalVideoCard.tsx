@@ -1,6 +1,6 @@
 import type { UseLocalVideoStateOptions } from '@/hooks/useLocalVideoState'
 import type { DetectorType } from '@/lib/detectors'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import { useCardDetector } from '@/hooks/useCardDetector'
 import { useLocalVideoState } from '@/hooks/useLocalVideoState'
 import { attachVideoStream } from '@/lib/video-stream-utils'
@@ -23,6 +23,7 @@ interface LocalVideoCardProps {
   usePerspectiveWarp?: boolean
   onCardCrop?: (canvas: HTMLCanvasElement) => void
   onToggleVideo?: (enabled: boolean) => Promise<void>
+  onToggleAudio?: (enabled: boolean) => void
 }
 
 export function LocalVideoCard({
@@ -33,6 +34,7 @@ export function LocalVideoCard({
   usePerspectiveWarp = true,
   onCardCrop,
   onToggleVideo,
+  onToggleAudio,
 }: LocalVideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   // Manage local video state
@@ -59,7 +61,11 @@ export function LocalVideoCard({
     reinitializeTrigger: stream ? 1 : 0,
   })
 
-  const [isAudioMuted, setIsAudioMuted] = useState(false)
+  // Track audio muted state by checking the stream tracks
+  const isAudioMuted = useMemo(() => {
+    const audioTracks = stream.getAudioTracks()
+    return audioTracks.length > 0 && !audioTracks[0]?.enabled
+  }, [stream])
 
   // Callback ref that combines ref assignment with stream attachment
   // Called when video element is mounted/unmounted
@@ -75,15 +81,17 @@ export function LocalVideoCard({
   )
 
   const toggleLocalAudio = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const mediaStream = videoRef.current.srcObject as MediaStream
-      const audioTracks = mediaStream.getAudioTracks()
+    if (onToggleAudio) {
+      // Use centralized toggle function if provided
+      onToggleAudio(!isAudioMuted)
+    } else {
+      // Fallback to local implementation if prop not provided
+      const audioTracks = stream.getAudioTracks()
       audioTracks.forEach((track) => {
         track.enabled = !track.enabled
       })
-      setIsAudioMuted(!isAudioMuted)
     }
-  }, [isAudioMuted, videoRef])
+  }, [onToggleAudio, isAudioMuted, stream])
 
   return (
     <PlayerVideoCard>
