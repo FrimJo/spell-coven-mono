@@ -5,6 +5,7 @@ import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
 import { usePeerJS } from '@/hooks/usePeerJS'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
+import { isSuccessState } from '@/types/async-resource'
 import {
   AlertCircle,
   Loader2,
@@ -89,30 +90,43 @@ export function VideoStreamGrid({
   )
 
   // Use media device hooks
+  const videoResult = useMediaDevice(videoOptions)
+  const audioResult = useMediaDevice(audioOptions)
+
+  // Extract individual properties for convenience
   const {
-    stream: videoStream,
+    stream: _videoStream,
     error: videoError,
     isPending: isVideoPending,
-  } = useMediaDevice(videoOptions)
+  } = videoResult
 
   const {
-    stream: audioStream,
+    stream: _audioStream,
     error: audioError,
     isPending: isAudioPending,
-  } = useMediaDevice(audioOptions)
+  } = audioResult
 
   // Combine streams into a single MediaStream for PeerJS
-  const localStream = useMemo(() => {
-    if (!videoStream && !audioStream) return null
+  // TypeScript knows localStream is defined when both streams are not pending and have no errors
+  const localStream = useMemo((): MediaStream | null => {
+    // Use type guards to check if both resources are in success state
+    if (!isSuccessState(videoResult) || !isSuccessState(audioResult)) {
+      return null
+    }
+
+    // At this point, TypeScript knows both streams are in success state
+    // Extract streams (they may be undefined if not available, but no errors)
+    const video = videoResult.stream
+    const audio = audioResult.stream
 
     const tracks: MediaStreamTrack[] = []
-    if (videoStream) tracks.push(...videoStream.getVideoTracks())
-    if (audioStream) tracks.push(...audioStream.getAudioTracks())
+    if (video) tracks.push(...video.getVideoTracks())
+    if (audio) tracks.push(...audio.getAudioTracks())
 
     if (tracks.length === 0) return null
 
     return new MediaStream(tracks)
-  }, [videoStream, audioStream])
+  }, [videoResult, audioResult])
 
   const toggleLocalVideo = useCallback(
     async (enabled: boolean) => {
