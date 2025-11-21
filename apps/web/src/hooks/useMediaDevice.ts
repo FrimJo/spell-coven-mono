@@ -105,12 +105,6 @@ export function useMediaDevice(options: UseMediaDeviceOptions) {
     )
   }
 
-  if (mediaDevices.length === 0 && !isEnumerating) {
-    console.warn(
-      '[useMediaDevice] enumerateMediaDevices returned 0 devices - this might indicate a browser restriction',
-    )
-  }
-
   // Memoize filtered devices to avoid recalculating filter/map operations
   // when matchingKind reference changes but content is the same
   const filteredDevices = useMemo(
