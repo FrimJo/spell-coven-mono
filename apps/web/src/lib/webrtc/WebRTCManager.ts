@@ -226,7 +226,6 @@ export class WebRTCManager {
 
       switch (state) {
         case 'connecting':
-        case 'checking':
           connectionState = 'connecting'
           break
         case 'connected':
@@ -259,11 +258,8 @@ export class WebRTCManager {
       }
     }
 
-    // Handle errors
-    pc.onerror = (event) => {
-      const error = new Error(`RTCPeerConnection error: ${String(event)}`)
-      this.callbacks.onError?.(remotePeerId, error)
-    }
+    // Handle errors via connectionstatechange (onerror is deprecated)
+    // Errors will be caught through connectionstatechange -> 'failed' state
 
     return pc
   }
@@ -362,8 +358,8 @@ export class WebRTCManager {
   destroy(): void {
     this.stopTrackStatePolling()
 
-    for (const [peerId, pc] of this.peers) {
-      pc.close()
+    for (const [_peerId, peerInfo] of this.peers) {
+      peerInfo.pc.close()
     }
 
     this.peers.clear()

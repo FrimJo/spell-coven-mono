@@ -305,11 +305,11 @@ export function VideoStreamGrid({
         const state = streamStates[player.id] || { video: true, audio: true }
         const remoteStream = remoteStreams.get(player.id)
         const connectionState = connectionStates.get(player.id)
-        const peerTrackState = peerTrackStates.get(player.id)
+        const trackState = trackStates.get(player.id)
 
-        // Remote players: use peerTrackState which checks if track is 'live'
-        const peerVideoEnabled = peerTrackState?.videoEnabled ?? false
-        const peerAudioEnabled = peerTrackState?.audioEnabled ?? state.audio
+        // Remote players: use trackState which checks if track is 'live'
+        const peerVideoEnabled = trackState?.videoEnabled ?? false
+        const peerAudioEnabled = trackState?.audioEnabled ?? state.audio
 
         return (
           <Card

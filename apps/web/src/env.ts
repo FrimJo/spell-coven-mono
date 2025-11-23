@@ -28,21 +28,18 @@ export const env = createEnv({
    */
   clientPrefix: 'VITE_',
   client: {
-    VITE_SUPABASE_URL: z.string().url().min(1, 'VITE_SUPABASE_URL is required'),
+    VITE_SUPABASE_URL: z.url().min(1, 'VITE_SUPABASE_URL is required'),
     VITE_SUPABASE_ANON_KEY: z
       .string()
       .min(1, 'VITE_SUPABASE_ANON_KEY is required'),
-    VITE_BASE_URL: z.string().url().optional().default('http://localhost:1234'),
+    VITE_BASE_URL: z.url().optional().default('http://localhost:1234'),
     VITE_EMBEDDINGS_VERSION: z.string().optional().default('v1.3'),
     VITE_EMBEDDINGS_FORMAT: z
       .enum(['float32', 'float16'])
       .optional()
       .default('float32'),
     VITE_QUERY_CONTRAST: z.string().optional().default('1.5'),
-    VITE_BLOB_STORAGE_URL: z
-      .string()
-      .url()
-      .min(1, 'Blob storage URL is required'),
+    VITE_BLOB_STORAGE_URL: z.url().min(1, 'Blob storage URL is required'),
   },
 
   /**

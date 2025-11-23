@@ -1,91 +1,40 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useServerFn } from '@tanstack/react-start'
 
-import type {
-  CleanupResult,
-  ListResult,
-} from '../../server/handlers/admin-cleanup.server'
-import {
-  cleanupAppChannels,
-  listAppChannels,
-} from '../../server/handlers/admin-cleanup.server'
+// Admin cleanup functionality removed - server-side code no longer exists
+// This route is kept for reference but functionality is disabled
 
 export const Route = createFileRoute('/admin/cleanup')({
   component: AdminCleanup,
 })
 
-type ChannelsReult =
-  | (CleanupResult & { type: 'cleanup' })
-  | (ListResult & { type: 'list' })
-  | { type: 'cleanup' | 'list'; error: string; success: false }
+type ChannelsResult = {
+  type: 'cleanup' | 'list'
+  error: string
+  success: false
+}
 
 function AdminCleanup() {
   const [secret, setSecret] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<ChannelsReult | null>(null)
-
-  const listChannels = useServerFn(listAppChannels)
-  const cleanup = useServerFn(cleanupAppChannels)
+  const [loading] = useState(false)
+  const [result, setResult] = useState<ChannelsResult | null>(null)
 
   const handleList = async () => {
-    if (!secret.trim()) {
-      setResult(null)
-      return
-    }
-
-    setLoading(true)
-    try {
-      const response = await listChannels({ data: { secret } })
-      setResult({
-        type: 'list',
-        ...response,
-      })
-    } catch (error) {
-      setResult({
-        type: 'list',
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      })
-    } finally {
-      setLoading(false)
-    }
+    setResult({
+      type: 'list',
+      success: false,
+      error:
+        'Admin cleanup functionality has been removed. Server-side code no longer exists.',
+    })
   }
 
   const handleCleanup = async () => {
-    if (!secret.trim()) {
-      setResult({
-        type: 'cleanup',
-        success: false,
-        error: 'Please enter admin secret',
-      })
-      return
-    }
-
-    if (
-      !confirm(
-        'Are you sure you want to delete all app-created channels? This cannot be undone.',
-      )
-    ) {
-      return
-    }
-
-    setLoading(true)
-    try {
-      const response = await cleanup({ data: { secret } })
-      setResult({
-        type: 'cleanup',
-        ...response,
-      })
-    } catch (error) {
-      setResult({
-        type: 'cleanup',
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      })
-    } finally {
-      setLoading(false)
-    }
+    setResult({
+      type: 'cleanup',
+      success: false,
+      error:
+        'Admin cleanup functionality has been removed. Server-side code no longer exists.',
+    })
   }
 
   return (
@@ -155,89 +104,7 @@ function AdminCleanup() {
                 </div>
               )}
 
-              {result.type === 'list' && result.success && (
-                <div>
-                  <p className="mb-4 text-gray-700">
-                    Found{' '}
-                    <span className="font-bold">{result.channels.length}</span>{' '}
-                    app-created channels:
-                  </p>
-                  {result.channels.length > 0 ? (
-                    <div className="space-y-2">
-                      {result.channels.map(
-                        (
-                          channel: {
-                            id: string
-                            name: string
-                            userLimit?: number
-                            permissionOverwriteCount: number
-                          },
-                          idx: number,
-                        ) => (
-                          <div
-                            key={channel.id}
-                            className="rounded bg-white p-3 text-sm"
-                          >
-                            <div className="font-medium text-gray-900">
-                              {idx + 1}. {channel.name}
-                            </div>
-                            <div className="mt-1 text-gray-600">
-                              <div>ID: {channel.id}</div>
-                              {channel.userLimit && (
-                                <div>User Limit: {channel.userLimit}</div>
-                              )}
-                              <div>
-                                Permission Overwrites:{' '}
-                                {channel.permissionOverwriteCount}
-                              </div>
-                            </div>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-gray-600">
-                      No app-created channels found
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {result.type === 'cleanup' && result.success && (
-                <div>
-                  <p className="mb-4 text-gray-700">
-                    Successfully deleted{' '}
-                    <span className="font-bold">
-                      {result.deletedChannels.length}
-                    </span>{' '}
-                    channels:
-                  </p>
-                  {result.deletedChannels.length > 0 ? (
-                    <div className="space-y-2">
-                      {result.deletedChannels.map(
-                        (
-                          channel: { id: string; name: string },
-                          idx: number,
-                        ) => (
-                          <div
-                            key={channel.id}
-                            className="rounded bg-white p-3 text-sm"
-                          >
-                            <div className="font-medium text-gray-900">
-                              {idx + 1}. {channel.name}
-                            </div>
-                            <div className="text-gray-600">
-                              ID: {channel.id}
-                            </div>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-gray-600">No channels were deleted</p>
-                  )}
-                </div>
-              )}
+              {/* Success cases removed - functionality disabled */}
             </div>
           )}
 

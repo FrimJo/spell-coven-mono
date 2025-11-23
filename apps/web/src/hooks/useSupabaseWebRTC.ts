@@ -52,6 +52,7 @@ export function useSupabaseWebRTC({
   const signalingManagerRef = useRef<SignalingManager | null>(null)
   const webrtcManagerRef = useRef<WebRTCManager | null>(null)
   const onErrorRef = useRef(onError)
+  const previousRemotePlayerIdsRef = useRef<string[]>([])
 
   // Update error callback ref
   useEffect(() => {
@@ -170,27 +171,34 @@ export function useSupabaseWebRTC({
       return
     }
 
-    // Connect to each remote peer
+    const previousRemotePlayerIds = previousRemotePlayerIdsRef.current
+
+    // Connect to new remote peers
     for (const remotePlayerId of remotePlayerIds) {
       if (remotePlayerId !== localPlayerId) {
-        webrtcManagerRef.current
-          .callPeer(remotePlayerId, roomId)
-          .catch((err) => {
-            const error = err instanceof Error ? err : new Error(String(err))
-            setError(error)
-            onErrorRef.current?.(error)
-          })
+        // Only call if this peer wasn't in the previous list
+        if (!previousRemotePlayerIds.includes(remotePlayerId)) {
+          webrtcManagerRef.current
+            .callPeer(remotePlayerId, roomId)
+            .catch((err) => {
+              const error = err instanceof Error ? err : new Error(String(err))
+              setError(error)
+              onErrorRef.current?.(error)
+            })
+        }
       }
     }
 
     // Close connections to peers that are no longer in the list
-    const currentRemoteStreams = Array.from(remoteStreams.keys())
-    for (const peerId of currentRemoteStreams) {
+    for (const peerId of previousRemotePlayerIds) {
       if (!remotePlayerIds.includes(peerId)) {
         webrtcManagerRef.current.closePeer(peerId)
       }
     }
-  }, [remotePlayerIds, isInitialized, roomId, localPlayerId, remoteStreams])
+
+    // Update ref for next comparison
+    previousRemotePlayerIdsRef.current = remotePlayerIds
+  }, [remotePlayerIds, isInitialized, roomId, localPlayerId])
 
   return {
     localStream,
