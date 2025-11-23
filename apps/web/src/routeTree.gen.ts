@@ -12,12 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GameGameIdRouteImport } from './routes/game.$gameId'
 import { Route as DebugSessionStorageRouteImport } from './routes/debug/session-storage'
-import { Route as ApiStreamRouteImport } from './routes/api/stream'
 import { Route as AdminCleanupRouteImport } from './routes/admin/cleanup'
 import { Route as DebugVoiceChannelChannelIdRouteImport } from './routes/debug/voice-channel.$channelId'
-import { Route as ApiGameroomStreamRouteImport } from './routes/api/gameroom/stream'
-import { Route as ApiGameroomLeaveRouteImport } from './routes/api/gameroom/leave'
-import { Route as ApiGameroomJoinRouteImport } from './routes/api/gameroom/join'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,11 +30,6 @@ const DebugSessionStorageRoute = DebugSessionStorageRouteImport.update({
   path: '/debug/session-storage',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiStreamRoute = ApiStreamRouteImport.update({
-  id: '/api/stream',
-  path: '/api/stream',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminCleanupRoute = AdminCleanupRouteImport.update({
   id: '/admin/cleanup',
   path: '/admin/cleanup',
@@ -50,54 +41,27 @@ const DebugVoiceChannelChannelIdRoute =
     path: '/debug/voice-channel/$channelId',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiGameroomStreamRoute = ApiGameroomStreamRouteImport.update({
-  id: '/api/gameroom/stream',
-  path: '/api/gameroom/stream',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiGameroomLeaveRoute = ApiGameroomLeaveRouteImport.update({
-  id: '/api/gameroom/leave',
-  path: '/api/gameroom/leave',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiGameroomJoinRoute = ApiGameroomJoinRouteImport.update({
-  id: '/api/gameroom/join',
-  path: '/api/gameroom/join',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin/cleanup': typeof AdminCleanupRoute
-  '/api/stream': typeof ApiStreamRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/api/gameroom/join': typeof ApiGameroomJoinRoute
-  '/api/gameroom/leave': typeof ApiGameroomLeaveRoute
-  '/api/gameroom/stream': typeof ApiGameroomStreamRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/cleanup': typeof AdminCleanupRoute
-  '/api/stream': typeof ApiStreamRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/api/gameroom/join': typeof ApiGameroomJoinRoute
-  '/api/gameroom/leave': typeof ApiGameroomLeaveRoute
-  '/api/gameroom/stream': typeof ApiGameroomStreamRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin/cleanup': typeof AdminCleanupRoute
-  '/api/stream': typeof ApiStreamRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
-  '/api/gameroom/join': typeof ApiGameroomJoinRoute
-  '/api/gameroom/leave': typeof ApiGameroomLeaveRoute
-  '/api/gameroom/stream': typeof ApiGameroomStreamRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
 export interface FileRouteTypes {
@@ -105,46 +69,30 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin/cleanup'
-    | '/api/stream'
     | '/debug/session-storage'
     | '/game/$gameId'
-    | '/api/gameroom/join'
-    | '/api/gameroom/leave'
-    | '/api/gameroom/stream'
     | '/debug/voice-channel/$channelId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin/cleanup'
-    | '/api/stream'
     | '/debug/session-storage'
     | '/game/$gameId'
-    | '/api/gameroom/join'
-    | '/api/gameroom/leave'
-    | '/api/gameroom/stream'
     | '/debug/voice-channel/$channelId'
   id:
     | '__root__'
     | '/'
     | '/admin/cleanup'
-    | '/api/stream'
     | '/debug/session-storage'
     | '/game/$gameId'
-    | '/api/gameroom/join'
-    | '/api/gameroom/leave'
-    | '/api/gameroom/stream'
     | '/debug/voice-channel/$channelId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminCleanupRoute: typeof AdminCleanupRoute
-  ApiStreamRoute: typeof ApiStreamRoute
   DebugSessionStorageRoute: typeof DebugSessionStorageRoute
   GameGameIdRoute: typeof GameGameIdRoute
-  ApiGameroomJoinRoute: typeof ApiGameroomJoinRoute
-  ApiGameroomLeaveRoute: typeof ApiGameroomLeaveRoute
-  ApiGameroomStreamRoute: typeof ApiGameroomStreamRoute
   DebugVoiceChannelChannelIdRoute: typeof DebugVoiceChannelChannelIdRoute
 }
 
@@ -171,13 +119,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DebugSessionStorageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/stream': {
-      id: '/api/stream'
-      path: '/api/stream'
-      fullPath: '/api/stream'
-      preLoaderRoute: typeof ApiStreamRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/cleanup': {
       id: '/admin/cleanup'
       path: '/admin/cleanup'
@@ -192,39 +133,14 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DebugVoiceChannelChannelIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/gameroom/stream': {
-      id: '/api/gameroom/stream'
-      path: '/api/gameroom/stream'
-      fullPath: '/api/gameroom/stream'
-      preLoaderRoute: typeof ApiGameroomStreamRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/gameroom/leave': {
-      id: '/api/gameroom/leave'
-      path: '/api/gameroom/leave'
-      fullPath: '/api/gameroom/leave'
-      preLoaderRoute: typeof ApiGameroomLeaveRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/gameroom/join': {
-      id: '/api/gameroom/join'
-      path: '/api/gameroom/join'
-      fullPath: '/api/gameroom/join'
-      preLoaderRoute: typeof ApiGameroomJoinRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminCleanupRoute: AdminCleanupRoute,
-  ApiStreamRoute: ApiStreamRoute,
   DebugSessionStorageRoute: DebugSessionStorageRoute,
   GameGameIdRoute: GameGameIdRoute,
-  ApiGameroomJoinRoute: ApiGameroomJoinRoute,
-  ApiGameroomLeaveRoute: ApiGameroomLeaveRoute,
-  ApiGameroomStreamRoute: ApiGameroomStreamRoute,
   DebugVoiceChannelChannelIdRoute: DebugVoiceChannelChannelIdRoute,
 }
 export const routeTree = rootRouteImport
