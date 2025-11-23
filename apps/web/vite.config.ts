@@ -6,7 +6,7 @@ import { defineConfig } from 'vite'
 import mkcert from 'vite-plugin-mkcert'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 
-// WebSocket support is handled by TanStack Start's built-in WebSocket routes
+// SPA mode - static CDN deployment
 
 export default defineConfig(() => {
   return {
