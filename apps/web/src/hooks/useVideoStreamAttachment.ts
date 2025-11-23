@@ -3,14 +3,14 @@
  * Handles the complex logic of attaching/detaching streams based on track states
  */
 
-import type { PeerTrackState } from '@/types/peerjs'
+import type { TrackState } from '@/types/connection'
 import { useEffect, useRef } from 'react'
 
 interface UseVideoStreamAttachmentOptions {
   /** Map of player IDs to their MediaStreams */
   remoteStreams: Map<string, MediaStream | null>
   /** Map of player IDs to their track states */
-  peerTrackStates: Map<string, PeerTrackState>
+  trackStates: Map<string, TrackState>
   /** Ref to video elements map */
   videoElementsRef: React.MutableRefObject<Map<string, HTMLVideoElement>>
   /** Ref to track attached streams */
@@ -27,7 +27,7 @@ interface UseVideoStreamAttachmentOptions {
  */
 export function useVideoStreamAttachment({
   remoteStreams,
-  peerTrackStates,
+  trackStates,
   videoElementsRef,
   attachedStreamsRef,
   onVideoPlaying,
@@ -35,13 +35,13 @@ export function useVideoStreamAttachment({
 }: UseVideoStreamAttachmentOptions) {
   // Track last known states to detect actual changes
   const lastStreamsRef = useRef<Map<string, MediaStream | null>>(new Map())
-  const lastTrackStatesRef = useRef<Map<string, PeerTrackState>>(new Map())
+  const lastTrackStatesRef = useRef<Map<string, TrackState>>(new Map())
 
   useEffect(() => {
     // Quick check: compare sizes first
     if (
       remoteStreams.size === lastStreamsRef.current.size &&
-      peerTrackStates.size === lastTrackStatesRef.current.size
+      trackStates.size === lastTrackStatesRef.current.size
     ) {
       // Check if any streams changed
       let streamsChanged = false
@@ -55,7 +55,7 @@ export function useVideoStreamAttachment({
       // Check if any track states changed
       let trackStatesChanged = false
       if (!streamsChanged) {
-        for (const [id, state] of peerTrackStates) {
+        for (const [id, state] of trackStates) {
           const last = lastTrackStatesRef.current.get(id)
           if (
             !last ||
@@ -76,14 +76,14 @@ export function useVideoStreamAttachment({
 
     // Update refs with current state
     lastStreamsRef.current = new Map(remoteStreams)
-    lastTrackStatesRef.current = new Map(peerTrackStates)
+    lastTrackStatesRef.current = new Map(trackStates)
 
     // Process each stream
     for (const [playerId, stream] of remoteStreams) {
       const videoElement = videoElementsRef.current.get(playerId)
       if (!videoElement) continue
 
-      const trackState = peerTrackStates.get(playerId)
+      const trackState = trackStates.get(playerId)
       const currentAttachedStream = attachedStreamsRef.current.get(playerId)
 
       // Handle no stream case
@@ -169,7 +169,7 @@ export function useVideoStreamAttachment({
     }
   }, [
     remoteStreams,
-    peerTrackStates,
+    trackStates,
     videoElementsRef,
     attachedStreamsRef,
     onVideoPlaying,

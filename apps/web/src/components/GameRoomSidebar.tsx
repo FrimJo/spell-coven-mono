@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
+import { useSupabasePresence } from '@/hooks/useSupabasePresence'
 import { getTempUser } from '@/lib/temp-user'
 
 import { Card } from '@repo/ui/components/card'
@@ -30,8 +30,8 @@ function SidebarContent({
   const tempUser = getTempUser()
   const username = tempUser.username
 
-  // Get game room participants (replaces Discord voice channel members)
-  const { participants } = useGameRoomParticipants({
+  // Get game room participants
+  const { participants } = useSupabasePresence({
     roomId,
     userId,
     username,
@@ -68,8 +68,8 @@ function SidebarLoading({ roomId, userId }: GameRoomSidebarProps) {
   const tempUser = getTempUser()
   const username = tempUser.username
 
-  // Get game room participants (replaces Discord voice channel members)
-  const { participants } = useGameRoomParticipants({
+  // Get game room participants
+  const { participants } = useSupabasePresence({
     roomId,
     userId,
     username,
