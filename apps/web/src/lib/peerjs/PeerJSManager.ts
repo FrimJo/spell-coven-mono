@@ -54,6 +54,7 @@ export class PeerJSManager {
   private static websocketPatched = false
   private static originalWebSocket: typeof WebSocket | null = null
   private static currentToken: string | null = null
+  private static currentLocalPeerId: string | null = null
 
   constructor(
     private localPlayerId: string,
@@ -107,11 +108,12 @@ export class PeerJSManager {
       `[PeerJSManager] Connecting to PeerJS server at ${protocol}://${peerConfig.host}:${peerConfig.port}${peerConfig.path} with roomId: ${this.roomId}`,
     )
 
-    // Patch WebSocket constructor to add token parameter
+    // Patch WebSocket constructor to add token parameter and transform messages
     // This needs to be active for both initial connection and reconnections
-    // We patch it once and keep it patched, but only modify PeerJS URLs
-    // Update the current token for this instance
+    // We patch it once and keep it patched, but only modify PeerJS URLs and messages
+    // Update the current token and local peer ID for this instance
     PeerJSManager.currentToken = this.roomId
+    PeerJSManager.currentLocalPeerId = this.localPlayerId
 
     if (!PeerJSManager.websocketPatched) {
       PeerJSManager.originalWebSocket = window.WebSocket
@@ -119,6 +121,10 @@ export class PeerJSManager {
       window.WebSocket = class PatchedWebSocket extends (
         (PeerJSManager.originalWebSocket!)
       ) {
+        private originalSend: typeof WebSocket.prototype.send
+        private originalOnMessage: ((event: MessageEvent) => void) | null = null
+        private messageListeners = new Set<(event: MessageEvent) => void>()
+
         constructor(url: string | URL, protocols?: string | string[]) {
           // Parse URL and add token parameter if it's a PeerJS connection URL
           let finalUrl: string | URL
@@ -148,6 +154,402 @@ export class PeerJSManager {
             finalUrl = url
           }
           super(finalUrl, protocols)
+
+          // Store original send method
+          this.originalSend = super.send.bind(this)
+
+          // Intercept onmessage to transform incoming messages
+          Object.defineProperty(this, 'onmessage', {
+            get: () => this.originalOnMessage,
+            set: (handler: ((event: MessageEvent) => void) | null) => {
+              this.originalOnMessage = handler
+              if (handler) {
+                super.onmessage = (event: MessageEvent) => {
+                  const transformedEvent = this.transformIncomingMessage(event)
+                  handler(transformedEvent)
+                }
+              } else {
+                super.onmessage = null
+              }
+            },
+            configurable: true,
+            enumerable: true,
+          })
+
+          // Intercept addEventListener to transform incoming messages
+          const originalAddEventListener = super.addEventListener.bind(this)
+          this.addEventListener = (
+            type: string,
+            listener: EventListener | EventListenerObject | null,
+            options?: boolean | AddEventListenerOptions,
+          ) => {
+            // Handle null listener - just pass through to original
+            if (listener === null) {
+              // Call original addEventListener directly without type assertion
+              return (
+                super.addEventListener as (
+                  type: string,
+                  listener: EventListener | EventListenerObject | null,
+                  options?: boolean | AddEventListenerOptions,
+                ) => void
+              )(type, listener, options)
+            }
+
+            // Transform message events
+            if (type === 'message') {
+              const transformedListener = (event: Event) => {
+                if (event instanceof MessageEvent) {
+                  const transformedEvent = this.transformIncomingMessage(event)
+                  if (
+                    'handleEvent' in listener &&
+                    typeof listener.handleEvent === 'function'
+                  ) {
+                    listener.handleEvent(transformedEvent)
+                  } else if (typeof listener === 'function') {
+                    listener(transformedEvent)
+                  }
+                } else {
+                  if (
+                    'handleEvent' in listener &&
+                    typeof listener.handleEvent === 'function'
+                  ) {
+                    listener.handleEvent(event)
+                  } else if (typeof listener === 'function') {
+                    listener(event)
+                  }
+                }
+              }
+              this.messageListeners.add(
+                transformedListener as (event: MessageEvent) => void,
+              )
+              return originalAddEventListener(
+                type as keyof WebSocketEventMap,
+                transformedListener,
+                options,
+              )
+            }
+
+            // For other event types, pass through
+            return originalAddEventListener(
+              type as keyof WebSocketEventMap,
+              listener as EventListenerOrEventListenerObject,
+              options,
+            )
+          }
+        }
+
+        /**
+         * Transform outgoing message from PeerJS format to Cloudflare server format
+         */
+        private transformOutgoingMessage(
+          data: string | ArrayBuffer | Blob,
+        ): string | ArrayBuffer | Blob {
+          try {
+            // Only transform if it's a string (JSON message)
+            if (typeof data !== 'string') {
+              return data
+            }
+
+            let message: unknown
+            try {
+              message = JSON.parse(data)
+            } catch {
+              // Not JSON, pass through
+              return data
+            }
+
+            // Check if this is a PeerJS message that needs transformation
+            if (
+              typeof message === 'object' &&
+              message !== null &&
+              'type' in message
+            ) {
+              const msg = message as Record<string, unknown>
+              const msgType = String(msg.type).toUpperCase()
+
+              // Check if message already has src/dst but needs payload.candidate fix
+              if (
+                msgType === 'CANDIDATE' &&
+                'src' in msg &&
+                'dst' in msg &&
+                'payload' in msg
+              ) {
+                const payload = msg.payload as Record<string, unknown>
+                // If payload.candidate is an object, convert it to string
+                if (
+                  payload.candidate &&
+                  typeof payload.candidate === 'object' &&
+                  'candidate' in payload.candidate
+                ) {
+                  const candidateObj = payload.candidate as Record<
+                    string,
+                    unknown
+                  >
+                  const transformed = {
+                    ...msg,
+                    payload: {
+                      candidate: String(candidateObj.candidate || ''),
+                      sdpMid: candidateObj.sdpMid ?? payload.sdpMid ?? null,
+                      sdpMLineIndex:
+                        candidateObj.sdpMLineIndex ??
+                        payload.sdpMLineIndex ??
+                        null,
+                      usernameFragment:
+                        candidateObj.usernameFragment ??
+                        payload.usernameFragment ??
+                        null,
+                    },
+                  }
+                  if (process.env.NODE_ENV === 'development') {
+                    console.debug(
+                      '[PeerJSManager] Fixed candidate payload format',
+                      {
+                        original: msg,
+                        transformed,
+                      },
+                    )
+                  }
+                  return JSON.stringify(transformed)
+                }
+              }
+
+              // Transform OFFER, ANSWER, CANDIDATE messages
+              if (msgType === 'OFFER' || msgType === 'ANSWER') {
+                // PeerJS sends: { type: 'OFFER'/'ANSWER', sdp: string, dst: string } or similar
+                // Cloudflare expects: { type: 'OFFER'/'ANSWER', src: string, dst: string, payload: { type: 'offer'/'answer', sdp: string } }
+                const dst = msg.dst || msg.destination || msg.to
+                if (dst && PeerJSManager.currentLocalPeerId) {
+                  const transformed = {
+                    type: msgType,
+                    src: PeerJSManager.currentLocalPeerId,
+                    dst: String(dst),
+                    payload: {
+                      type: msgType.toLowerCase(),
+                      sdp: msg.sdp || '',
+                    },
+                  }
+                  if (process.env.NODE_ENV === 'development') {
+                    console.debug(
+                      '[PeerJSManager] Transformed outgoing',
+                      msgType,
+                      {
+                        original: msg,
+                        transformed,
+                      },
+                    )
+                  }
+                  return JSON.stringify(transformed)
+                }
+              } else if (msgType === 'CANDIDATE') {
+                // PeerJS sends: { type: 'CANDIDATE', candidate: RTCIceCandidateInit, dst: string } or similar
+                // Cloudflare expects: { type: 'CANDIDATE', src: string, dst: string, payload: { candidate: string, sdpMid?, sdpMLineIndex?, usernameFragment? } }
+                const dst = msg.dst || msg.destination || msg.to
+                const candidate = msg.candidate || msg.payload
+                if (dst && candidate && PeerJSManager.currentLocalPeerId) {
+                  // Handle candidate - it might be an object or already a string
+                  let candidateString: string
+                  if (typeof candidate === 'string') {
+                    candidateString = candidate
+                  } else if (
+                    typeof candidate === 'object' &&
+                    candidate !== null &&
+                    'candidate' in candidate
+                  ) {
+                    candidateString = String(candidate.candidate)
+                  } else {
+                    // Try to stringify the candidate object
+                    candidateString = JSON.stringify(candidate)
+                  }
+
+                  const transformed = {
+                    type: 'CANDIDATE',
+                    src: PeerJSManager.currentLocalPeerId,
+                    dst: String(dst),
+                    payload: {
+                      candidate: candidateString,
+                      sdpMid:
+                        typeof candidate === 'object' &&
+                        candidate !== null &&
+                        'sdpMid' in candidate
+                          ? candidate.sdpMid
+                          : null,
+                      sdpMLineIndex:
+                        typeof candidate === 'object' &&
+                        candidate !== null &&
+                        'sdpMLineIndex' in candidate
+                          ? candidate.sdpMLineIndex
+                          : null,
+                      usernameFragment:
+                        typeof candidate === 'object' &&
+                        candidate !== null &&
+                        'usernameFragment' in candidate
+                          ? candidate.usernameFragment
+                          : null,
+                    },
+                  }
+                  if (process.env.NODE_ENV === 'development') {
+                    console.debug(
+                      '[PeerJSManager] Transformed outgoing CANDIDATE',
+                      {
+                        original: msg,
+                        transformed,
+                      },
+                    )
+                  }
+                  return JSON.stringify(transformed)
+                }
+              } else if (msgType === 'HEARTBEAT') {
+                // Heartbeat messages are already in the correct format
+                return data
+              }
+            }
+
+            // Not a message we need to transform, pass through
+            return data
+          } catch (error) {
+            console.warn(
+              '[PeerJSManager] Failed to transform outgoing message:',
+              error,
+            )
+            return data
+          }
+        }
+
+        /**
+         * Transform incoming message from Cloudflare server format to PeerJS format
+         */
+        private transformIncomingMessage(event: MessageEvent): MessageEvent {
+          try {
+            // Only transform if it's a string (JSON message)
+            if (typeof event.data !== 'string') {
+              return event
+            }
+
+            let message: unknown
+            try {
+              message = JSON.parse(event.data)
+            } catch {
+              // Not JSON, pass through
+              return event
+            }
+
+            // Check if this is a Cloudflare server message that needs transformation
+            if (
+              typeof message === 'object' &&
+              message !== null &&
+              'type' in message
+            ) {
+              const msg = message as Record<string, unknown>
+              const msgType = String(msg.type).toUpperCase()
+
+              // Handle ERROR messages - filter out non-fatal "unknown-peer" errors for CANDIDATE
+              if (msgType === 'ERROR') {
+                const payload = msg.payload as
+                  | Record<string, unknown>
+                  | undefined
+                const errorType = payload?.type as string | undefined
+                const errorMessage = payload?.message as string | undefined
+
+                // Suppress "unknown-peer" errors for CANDIDATE messages during connection establishment
+                // These are expected when ICE candidates are sent before the peer connects
+                if (
+                  errorType === 'unknown-peer' &&
+                  errorMessage &&
+                  (errorMessage.includes('CANDIDATE') ||
+                    errorMessage.includes('Destination peer not found'))
+                ) {
+                  if (process.env.NODE_ENV === 'development') {
+                    console.debug(
+                      '[PeerJSManager] Suppressing non-fatal unknown-peer error for CANDIDATE:',
+                      errorMessage,
+                    )
+                  }
+                  // Return a no-op event that won't trigger PeerJS error handling
+                  // Create an empty message that PeerJS will ignore
+                  const noopEvent = new MessageEvent('message', {
+                    data: JSON.stringify({ type: 'HEARTBEAT' }),
+                    origin: event.origin,
+                    lastEventId: event.lastEventId,
+                    source: event.source,
+                    ports: event.ports ? [...event.ports] : [],
+                  })
+                  return noopEvent
+                }
+                // For other errors, pass through (they may be legitimate)
+              }
+
+              // Transform OFFER, ANSWER, CANDIDATE messages from server
+              if (msgType === 'OFFER' || msgType === 'ANSWER') {
+                // Cloudflare sends: { type: 'OFFER'/'ANSWER', src: string, payload: { type: 'offer'/'answer', sdp: string } }
+                // PeerJS expects: { type: 'OFFER'/'ANSWER', sdp: string, src: string }
+                if (
+                  'payload' in msg &&
+                  typeof msg.payload === 'object' &&
+                  msg.payload !== null
+                ) {
+                  const payload = msg.payload as Record<string, unknown>
+                  const transformed = {
+                    type: msgType,
+                    sdp: payload.sdp || '',
+                    src: msg.src || '',
+                  }
+                  const transformedEvent = new MessageEvent(event.type, {
+                    data: JSON.stringify(transformed),
+                    origin: event.origin,
+                    lastEventId: event.lastEventId,
+                    source: event.source,
+                    ports: event.ports ? [...event.ports] : [],
+                  })
+                  return transformedEvent
+                }
+              } else if (msgType === 'CANDIDATE') {
+                // Cloudflare sends: { type: 'CANDIDATE', src: string, payload: { candidate: string, sdpMid?, sdpMLineIndex?, usernameFragment? } }
+                // PeerJS expects: { type: 'CANDIDATE', candidate: RTCIceCandidateInit, src: string }
+                if (
+                  'payload' in msg &&
+                  typeof msg.payload === 'object' &&
+                  msg.payload !== null
+                ) {
+                  const payload = msg.payload as Record<string, unknown>
+                  const transformed = {
+                    type: 'CANDIDATE',
+                    candidate: {
+                      candidate: payload.candidate || '',
+                      sdpMid: payload.sdpMid ?? null,
+                      sdpMLineIndex: payload.sdpMLineIndex ?? null,
+                      usernameFragment: payload.usernameFragment ?? null,
+                    },
+                    src: msg.src || '',
+                  }
+                  const transformedEvent = new MessageEvent(event.type, {
+                    data: JSON.stringify(transformed),
+                    origin: event.origin,
+                    lastEventId: event.lastEventId,
+                    source: event.source,
+                    ports: event.ports ? [...event.ports] : [],
+                  })
+                  return transformedEvent
+                }
+              }
+              // OPEN, LEAVE, EXPIRE messages are already compatible
+            }
+
+            // Not a message we need to transform, pass through
+            return event
+          } catch (error) {
+            console.warn(
+              '[PeerJSManager] Failed to transform incoming message:',
+              error,
+            )
+            return event
+          }
+        }
+
+        send(data: string | ArrayBuffer | Blob): void {
+          const transformed = this.transformOutgoingMessage(data)
+          // TypeScript doesn't know that transformed is the same type as data
+          // but we know it is (either string or unchanged ArrayBuffer/Blob)
+          this.originalSend(transformed as string | ArrayBuffer | Blob)
         }
       }
 
@@ -244,6 +646,29 @@ export class PeerJSManager {
       this.peer!.on('error', (err) => {
         const peerError = createPeerJSError(err)
 
+        // Always log raw error details for unknown errors to help debugging
+        if (peerError.type === 'unknown') {
+          console.error(
+            '[PeerJSManager] Unknown error from PeerJS - raw details:',
+            {
+              error: err,
+              type: typeof err,
+              isError: err instanceof Error,
+              constructor: err?.constructor?.name,
+              keys: err && typeof err === 'object' ? Object.keys(err) : [],
+              stringified: String(err),
+              // Try to extract any enumerable properties
+              ...(err && typeof err === 'object'
+                ? Object.fromEntries(
+                    Object.entries(
+                      err as unknown as Record<string, unknown>,
+                    ).slice(0, 10), // Limit to first 10 properties
+                  )
+                : {}),
+            },
+          )
+        }
+
         // Handle ID taken error with retry
         if (peerError.type === 'unavailable-id') {
           console.log('[PeerJSManager] ID taken, retrying...')
@@ -295,13 +720,47 @@ export class PeerJSManager {
             '[PeerJSManager] To start the PeerJS server, run: cd apps/peerjs-server && bun run dev',
           )
           this.initializationErrorLogged = true
+        } else if (peerError.type === 'server-error') {
+          // Server errors might indicate authentication, protocol mismatch, or server configuration issues
+          const protocol = peerConfig.secure ? 'wss' : 'ws'
+          const serverUrl = `${protocol}://${peerConfig.host}:${peerConfig.port}${peerConfig.path}`
+          console.error(
+            '[PeerJSManager] PeerJS server error:',
+            peerError.message,
+          )
+          console.error(
+            `[PeerJSManager] Server at ${serverUrl} returned an error. This might indicate:`,
+          )
+          console.error(
+            '  - Protocol mismatch: PeerJS client (v1.5.4) may not be compatible with the server',
+          )
+          console.error(
+            '  - Authentication token validation failed (check roomId/token)',
+          )
+          console.error(
+            '  - Message format mismatch: Server expects messages with src/dst fields',
+          )
+          console.error('  - Server is experiencing internal errors')
+          console.error(
+            '[PeerJSManager] Check server logs for detailed validation errors',
+          )
+          logError(err, {
+            context: 'peer initialization',
+            peerId: this.localPlayerId,
+            roomId: this.roomId,
+            serverUrl,
+          })
         } else if (
           peerError.type !== 'network' &&
           peerError.type !== 'socket-error' &&
           peerError.type !== 'socket-closed'
         ) {
-          // Log other errors normally
-          logError(peerError, { context: 'peer initialization' })
+          // Log other errors normally, including the raw error for unknown types
+          logError(err, {
+            context: 'peer initialization',
+            peerId: this.localPlayerId,
+            roomId: this.roomId,
+          })
         }
 
         this.callbacks.onError?.(peerError)
