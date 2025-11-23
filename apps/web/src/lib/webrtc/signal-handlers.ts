@@ -1,0 +1,101 @@
+/**
+ * WebRTC signal handling logic
+ *
+ * Pure functions for processing offer/answer/candidate signals.
+ * Separated from WebRTCManager for testability.
+ */
+
+import type {
+  AnswerSignal,
+  CandidateSignal,
+  OfferSignal,
+  WebRTCSignal,
+} from '@/types/webrtc-signal'
+
+/**
+ * Handle an offer signal
+ */
+export async function handleOffer(
+  pc: RTCPeerConnection,
+  signal: OfferSignal,
+): Promise<void> {
+  if (!signal.payload.sdp) {
+    throw new Error('Offer signal missing SDP')
+  }
+
+  const offer = new RTCSessionDescription({
+    type: 'offer',
+    sdp: signal.payload.sdp,
+  })
+
+  await pc.setRemoteDescription(offer)
+
+  const answer = await pc.createAnswer()
+  await pc.setLocalDescription(answer)
+}
+
+/**
+ * Handle an answer signal
+ */
+export async function handleAnswer(
+  pc: RTCPeerConnection,
+  signal: AnswerSignal,
+): Promise<void> {
+  if (!signal.payload.sdp) {
+    throw new Error('Answer signal missing SDP')
+  }
+
+  const answer = new RTCSessionDescription({
+    type: 'answer',
+    sdp: signal.payload.sdp,
+  })
+
+  await pc.setRemoteDescription(answer)
+}
+
+/**
+ * Handle an ICE candidate signal
+ */
+export async function handleCandidate(
+  pc: RTCPeerConnection,
+  signal: CandidateSignal,
+): Promise<void> {
+  if (!signal.payload.candidate) {
+    throw new Error('Candidate signal missing candidate')
+  }
+
+  const candidate = new RTCIceCandidate({
+    candidate: signal.payload.candidate,
+    sdpMid: signal.payload.sdpMid ?? null,
+    sdpMLineIndex: signal.payload.sdpMLineIndex ?? null,
+    usernameFragment: signal.payload.usernameFragment ?? null,
+  })
+
+  await pc.addIceCandidate(candidate)
+}
+
+/**
+ * Route a signal to the appropriate handler
+ */
+export async function handleSignal(
+  pc: RTCPeerConnection,
+  signal: WebRTCSignal,
+): Promise<void> {
+  switch (signal.type) {
+    case 'offer':
+      await handleOffer(pc, signal)
+      break
+    case 'answer':
+      await handleAnswer(pc, signal)
+      break
+    case 'candidate':
+      await handleCandidate(pc, signal)
+      break
+    case 'leave':
+      // No action needed for leave signals
+      break
+    default:
+      throw new Error(`Unknown signal type: ${(signal as WebRTCSignal).type}`)
+  }
+}
+
