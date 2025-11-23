@@ -54,7 +54,9 @@ export class SignalingManager {
 
     // Subscribe to channel
     const status = await this.channel.subscribe()
-    if (status !== 'SUBSCRIBED') {
+    if (status === 'SUBSCRIBED') {
+      // Channel subscribed successfully
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
       throw new Error(`Failed to subscribe to signaling channel: ${status}`)
     }
   }
@@ -79,14 +81,14 @@ export class SignalingManager {
       roomId: this.roomId!,
     }
 
-    const { error } = await this.channel.send({
+    const response = await this.channel.send({
       type: 'broadcast',
       event: 'webrtc:signal',
       payload: signalWithRoomId,
     })
 
-    if (error) {
-      throw new Error(`Failed to send signal: ${error.message}`)
+    if (response === 'error') {
+      throw new Error('Failed to send signal: channel send returned error')
     }
   }
 

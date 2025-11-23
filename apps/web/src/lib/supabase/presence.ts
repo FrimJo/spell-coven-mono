@@ -57,7 +57,28 @@ export class PresenceManager {
       },
     })
 
-    // Set presence state
+    // Subscribe to presence changes
+    this.channel.on('presence', { event: 'sync' }, () => {
+      this.handlePresenceSync()
+    })
+
+    this.channel.on('presence', { event: 'join' }, () => {
+      this.handlePresenceSync()
+    })
+
+    this.channel.on('presence', { event: 'leave' }, () => {
+      this.handlePresenceSync()
+    })
+
+    // Subscribe to channel first (required before tracking presence)
+    const status = await this.channel.subscribe()
+    if (status === 'SUBSCRIBED') {
+      // Channel subscribed successfully
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      throw new Error(`Failed to subscribe to presence channel: ${status}`)
+    }
+
+    // Set presence state (must be after subscription)
     const presenceState: SupabasePresenceState = {
       userId,
       username,
@@ -66,25 +87,6 @@ export class PresenceManager {
     }
 
     await this.channel.track(presenceState)
-
-    // Subscribe to presence changes
-    this.channel.on('presence', { event: 'sync' }, () => {
-      this.handlePresenceSync()
-    })
-
-    this.channel.on('presence', { event: 'join' }, ({ key, newPresences }) => {
-      this.handlePresenceSync()
-    })
-
-    this.channel.on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-      this.handlePresenceSync()
-    })
-
-    // Subscribe to channel
-    const status = await this.channel.subscribe()
-    if (status !== 'SUBSCRIBED') {
-      throw new Error(`Failed to subscribe to presence channel: ${status}`)
-    }
   }
 
   /**
@@ -112,7 +114,7 @@ export class PresenceManager {
     const presence = this.channel.presenceState()
     const participants: Participant[] = []
 
-    for (const [userId, presences] of Object.entries(presence)) {
+    for (const [_userId, presences] of Object.entries(presence)) {
       // presences is an array, but we only track one per user
       const state = presences[0] as SupabasePresenceState | undefined
       if (state) {
@@ -142,7 +144,7 @@ export class PresenceManager {
     const presence = this.channel.presenceState()
     const participants: Participant[] = []
 
-    for (const [userId, presences] of Object.entries(presence)) {
+    for (const [_userId, presences] of Object.entries(presence)) {
       const state = presences[0] as SupabasePresenceState | undefined
       if (state) {
         participants.push({
