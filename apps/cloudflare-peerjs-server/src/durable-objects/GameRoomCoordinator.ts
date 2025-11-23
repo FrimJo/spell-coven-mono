@@ -30,12 +30,25 @@ import { createLogger } from "../lib/logger";
 
 const logger = createLogger({ component: "GameRoomCoordinator" });
 
+interface QueuedMessage {
+  message: ClientMessage;
+  timestamp: number;
+  senderId: string;
+}
+
 export class GameRoomCoordinator {
   private state: DurableObjectState;
   private env: unknown;
   private peerRegistry: PeerRegistry;
   private rateLimiter: RateLimiter;
   private lastActivityAt: number;
+  // Queue for messages (especially CANDIDATE) sent to peers that haven't registered yet
+  // Key: destination peer ID, Value: array of queued messages
+  private messageQueue: Map<string, QueuedMessage[]>;
+  // Maximum time to keep messages in queue (5 seconds)
+  private readonly MESSAGE_QUEUE_TIMEOUT_MS = 5000;
+  // Maximum number of messages to queue per peer (prevent memory issues)
+  private readonly MAX_QUEUED_MESSAGES_PER_PEER = 50;
 
   constructor(state: DurableObjectState, env: unknown) {
     this.state = state;
@@ -49,6 +62,7 @@ export class GameRoomCoordinator {
       windowDuration: 1000,
     });
     this.lastActivityAt = Date.now();
+    this.messageQueue = new Map();
 
     // Configure WebSocket Hibernation API
     // This allows the Durable Object to hibernate while maintaining WebSocket connections
@@ -132,6 +146,9 @@ export class GameRoomCoordinator {
 
     // Update activity timestamp
     this.lastActivityAt = Date.now();
+
+    // Process any queued messages for this peer now that they're registered
+    this.processQueuedMessages(peerId);
 
     // Return WebSocket upgrade response immediately
     // This must be returned synchronously for the upgrade to complete
@@ -248,6 +265,11 @@ export class GameRoomCoordinator {
     // Check for timed-out peers before processing other message types
     this.checkHeartbeatTimeouts();
 
+    // Periodically clean up expired queued messages (every ~100 messages)
+    if (Math.random() < 0.01) {
+      this.cleanupExpiredQueuedMessages();
+    }
+
     await this.routeMessage(clientMessage, peer);
   }
 
@@ -275,17 +297,29 @@ export class GameRoomCoordinator {
     switch (message.type) {
       // HEARTBEAT is handled earlier in webSocketMessage to update timestamp before timeout check
       case "OFFER":
-        // Validate destination peer exists
+        // Check if destination peer exists
         if (!this.peerRegistry.hasPeer(message.dst)) {
-          logger.warn("Destination peer not found for OFFER", {
-            src: message.src,
-            dst: message.dst,
-          });
-          this.sendError(
-            peer,
-            "unknown-peer",
-            `Destination peer not found: ${message.dst}`
-          );
+          // Queue the OFFER message instead of rejecting it
+          // This handles the race condition where an OFFER is sent
+          // before the destination peer has fully registered with the server
+          const queued = this.queueMessage(message, peer.id);
+          if (queued) {
+            logger.debug("Queued OFFER for peer not yet registered", {
+              src: message.src,
+              dst: message.dst,
+              queueSize: this.messageQueue.get(message.dst)?.length || 0,
+            });
+          } else {
+            logger.warn("Failed to queue OFFER - queue full or too old", {
+              src: message.src,
+              dst: message.dst,
+            });
+            this.sendError(
+              peer,
+              "unknown-peer",
+              `Destination peer not found: ${message.dst}`
+            );
+          }
           return;
         }
         routeOffer(message, peer, (peerId) =>
@@ -294,17 +328,29 @@ export class GameRoomCoordinator {
         break;
 
       case "ANSWER":
-        // Validate destination peer exists
+        // Check if destination peer exists
         if (!this.peerRegistry.hasPeer(message.dst)) {
-          logger.warn("Destination peer not found for ANSWER", {
-            src: message.src,
-            dst: message.dst,
-          });
-          this.sendError(
-            peer,
-            "unknown-peer",
-            `Destination peer not found: ${message.dst}`
-          );
+          // Queue the ANSWER message instead of rejecting it
+          // This handles the race condition where an ANSWER is sent
+          // before the destination peer has fully registered with the server
+          const queued = this.queueMessage(message, peer.id);
+          if (queued) {
+            logger.debug("Queued ANSWER for peer not yet registered", {
+              src: message.src,
+              dst: message.dst,
+              queueSize: this.messageQueue.get(message.dst)?.length || 0,
+            });
+          } else {
+            logger.warn("Failed to queue ANSWER - queue full or too old", {
+              src: message.src,
+              dst: message.dst,
+            });
+            this.sendError(
+              peer,
+              "unknown-peer",
+              `Destination peer not found: ${message.dst}`
+            );
+          }
           return;
         }
         routeAnswer(message, peer, (peerId) =>
@@ -313,17 +359,29 @@ export class GameRoomCoordinator {
         break;
 
       case "CANDIDATE":
-        // Validate destination peer exists
+        // Check if destination peer exists
         if (!this.peerRegistry.hasPeer(message.dst)) {
-          logger.warn("Destination peer not found for CANDIDATE", {
-            src: message.src,
-            dst: message.dst,
-          });
-          this.sendError(
-            peer,
-            "unknown-peer",
-            `Destination peer not found: ${message.dst}`
-          );
+          // Queue the CANDIDATE message instead of rejecting it
+          // This handles the common race condition where ICE candidates are generated
+          // before the destination peer has fully registered with the server
+          const queued = this.queueMessage(message, peer.id);
+          if (queued) {
+            logger.debug("Queued CANDIDATE for peer not yet registered", {
+              src: message.src,
+              dst: message.dst,
+              queueSize: this.messageQueue.get(message.dst)?.length || 0,
+            });
+          } else {
+            logger.warn("Failed to queue CANDIDATE - queue full or too old", {
+              src: message.src,
+              dst: message.dst,
+            });
+            this.sendError(
+              peer,
+              "unknown-peer",
+              `Destination peer not found: ${message.dst}`
+            );
+          }
           return;
         }
         routeCandidate(message, peer, (peerId) =>
@@ -451,6 +509,160 @@ export class GameRoomCoordinator {
       }
     }
     return undefined;
+  }
+
+  /**
+   * Queue a message for a peer that hasn't registered yet
+   * Returns true if message was queued, false if queue is full or message is too old
+   */
+  private queueMessage(message: ClientMessage, senderId: string): boolean {
+    if (!("dst" in message)) {
+      return false;
+    }
+
+    const dstPeerId = message.dst;
+    const now = Date.now();
+
+    // Get or create queue for this peer
+    let queue = this.messageQueue.get(dstPeerId);
+    if (!queue) {
+      queue = [];
+      this.messageQueue.set(dstPeerId, queue);
+    }
+
+    // Clean up old messages from queue
+    queue = queue.filter(
+      (qm) => now - qm.timestamp < this.MESSAGE_QUEUE_TIMEOUT_MS
+    );
+
+    // Check if queue is full
+    if (queue.length >= this.MAX_QUEUED_MESSAGES_PER_PEER) {
+      logger.warn("Message queue full for peer", {
+        peerId: dstPeerId,
+        queueSize: queue.length,
+      });
+      return false;
+    }
+
+    // Add message to queue
+    queue.push({
+      message,
+      timestamp: now,
+      senderId,
+    });
+
+    // Update the map with the cleaned queue
+    this.messageQueue.set(dstPeerId, queue);
+
+    return true;
+  }
+
+  /**
+   * Process queued messages for a peer that just registered
+   * Delivers all queued messages that haven't timed out
+   */
+  private processQueuedMessages(peerId: string): void {
+    const queue = this.messageQueue.get(peerId);
+    if (!queue || queue.length === 0) {
+      return;
+    }
+
+    const now = Date.now();
+    const peer = this.peerRegistry.getPeer(peerId);
+    if (!peer) {
+      return;
+    }
+
+    let deliveredCount = 0;
+    let expiredCount = 0;
+
+    for (const queuedMsg of queue) {
+      // Skip expired messages
+      if (now - queuedMsg.timestamp > this.MESSAGE_QUEUE_TIMEOUT_MS) {
+        expiredCount++;
+        continue;
+      }
+
+      // Deliver the message based on its type
+      try {
+        switch (queuedMsg.message.type) {
+          case "CANDIDATE":
+            routeCandidate(queuedMsg.message, { id: queuedMsg.senderId } as Peer, (pid) =>
+              this.peerRegistry.getPeer(pid)
+            );
+            deliveredCount++;
+            break;
+          case "OFFER":
+            routeOffer(queuedMsg.message, { id: queuedMsg.senderId } as Peer, (pid) =>
+              this.peerRegistry.getPeer(pid)
+            );
+            deliveredCount++;
+            break;
+          case "ANSWER":
+            routeAnswer(queuedMsg.message, { id: queuedMsg.senderId } as Peer, (pid) =>
+              this.peerRegistry.getPeer(pid)
+            );
+            deliveredCount++;
+            break;
+          default:
+            // Other message types shouldn't be queued, but handle gracefully
+            logger.warn("Unexpected message type in queue", {
+              type: queuedMsg.message.type,
+              peerId,
+            });
+        }
+      } catch (error) {
+        logger.error("Failed to deliver queued message", error, {
+          peerId,
+          messageType: queuedMsg.message.type,
+        });
+      }
+    }
+
+    // Remove the queue for this peer
+    this.messageQueue.delete(peerId);
+
+    if (deliveredCount > 0 || expiredCount > 0) {
+      logger.info("Processed queued messages for newly registered peer", {
+        peerId,
+        delivered: deliveredCount,
+        expired: expiredCount,
+        total: queue.length,
+      });
+    }
+  }
+
+  /**
+   * Clean up expired messages from all queues
+   * Should be called periodically to prevent memory leaks
+   */
+  private cleanupExpiredQueuedMessages(): void {
+    const now = Date.now();
+    let totalCleaned = 0;
+
+    for (const [peerId, queue] of this.messageQueue.entries()) {
+      const originalSize = queue.length;
+      const filtered = queue.filter(
+        (qm) => now - qm.timestamp < this.MESSAGE_QUEUE_TIMEOUT_MS
+      );
+
+      if (filtered.length === 0) {
+        // Queue is empty, remove it
+        this.messageQueue.delete(peerId);
+        totalCleaned += originalSize;
+      } else if (filtered.length < originalSize) {
+        // Some messages expired, update queue
+        this.messageQueue.set(peerId, filtered);
+        totalCleaned += originalSize - filtered.length;
+      }
+    }
+
+    if (totalCleaned > 0) {
+      logger.debug("Cleaned up expired queued messages", {
+        count: totalCleaned,
+        remainingQueues: this.messageQueue.size,
+      });
+    }
   }
 
   /**
