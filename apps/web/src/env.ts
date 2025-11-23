@@ -24,56 +24,14 @@ import { z } from 'zod'
  */
 export const env = createEnv({
   /**
-   * Server-side environment variables (secrets, not exposed to client)
-   */
-  server: {
-    // Discord Configuration
-    DISCORD_BOT_TOKEN: z.string().min(1, 'Discord Bot Token is required'),
-    DISCORD_BOT_USER_ID: z.string().min(1, 'Discord Bot User ID is required'),
-    DISCORD_CLIENT_SECRET: z
-      .string()
-      .min(1, 'Discord Client Secret is required'),
-
-    // Hub & WebSocket Configuration
-    HUB_SECRET: z.string().min(32, 'Hub Secret must be at least 32 characters'),
-    ROOM_TOKEN_SECRET: z
-      .string()
-      .min(32, 'Room Token Secret must be at least 32 characters'),
-    WS_AUTH_SECRET: z.string().optional(),
-
-    // Gateway Configuration
-    GATEWAY_WS_URL: z.string().url().optional().default('ws://localhost:8080'),
-    LINK_TOKEN: z.string().optional(),
-
-    // JWT Configuration
-    JWT_ISSUER: z.string().optional(),
-    JWT_AUDIENCE: z.string().optional(),
-    JWT_PUBLIC_JWK_URL: z.string().url().optional(),
-
-    // Admin Configuration
-    ADMIN_CLEANUP_SECRET: z.string().optional(),
-
-    // Logging
-    LOG_LEVEL: z
-      .enum(['debug', 'info', 'warn', 'error'])
-      .optional()
-      .default('info'),
-
-    // Development
-    WS_PORT: z.string().optional().default('4321'),
-
-    // Blob Storage
-    BLOB_READ_WRITE_TOKEN: z.string().optional(),
-  },
-
-  /**
    * Client-side environment variables (public, prefixed with VITE_)
-   * These are available on both client and server
    */
   clientPrefix: 'VITE_',
   client: {
-    VITE_DISCORD_CLIENT_ID: z.string().min(1, 'Discord Client ID is required'),
-    VITE_DISCORD_GUILD_ID: z.string().min(1, 'Discord Guild ID is required'),
+    VITE_SUPABASE_URL: z.string().url().min(1, 'VITE_SUPABASE_URL is required'),
+    VITE_SUPABASE_ANON_KEY: z
+      .string()
+      .min(1, 'VITE_SUPABASE_ANON_KEY is required'),
     VITE_BASE_URL: z.string().url().optional().default('http://localhost:1234'),
     VITE_EMBEDDINGS_VERSION: z.string().optional().default('v1.3'),
     VITE_EMBEDDINGS_FORMAT: z
@@ -85,60 +43,21 @@ export const env = createEnv({
       .string()
       .url()
       .min(1, 'Blob storage URL is required'),
-    // PeerJS Configuration
-    VITE_PEERJS_HOST: z.string().optional().default('localhost'),
-    VITE_PEERJS_PORT: z.string().optional().default('9000'),
-    VITE_PEERJS_PATH: z.string().optional().default('/peerjs'),
-    VITE_PEERJS_SSL: z
-      .union([z.string(), z.boolean()])
-      .optional()
-      .transform((val) => {
-        // Default to true unless explicitly 'false' or '0'
-        if (val === undefined || val === null || val === '') return true
-        if (typeof val === 'boolean') return val
-        return val !== 'false' && val !== '0'
-      })
-      .pipe(z.boolean())
-      .default(true),
   },
 
   /**
    * Runtime environment variables
    *
-   * For TanStack Start, we need to manually specify which variables to read from.
-   * - Client variables come from import.meta.env (Vite exposes VITE_* vars)
-   * - Server variables come from process.env
+   * Client variables come from import.meta.env (Vite exposes VITE_* vars)
    */
   runtimeEnv: {
-    // Server-only variables (from process.env)
-    DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN,
-    DISCORD_BOT_USER_ID: process.env.DISCORD_BOT_USER_ID,
-    DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET,
-    HUB_SECRET: process.env.HUB_SECRET,
-    ROOM_TOKEN_SECRET: process.env.ROOM_TOKEN_SECRET,
-    WS_AUTH_SECRET: process.env.WS_AUTH_SECRET,
-    GATEWAY_WS_URL: process.env.GATEWAY_WS_URL,
-    LINK_TOKEN: process.env.LINK_TOKEN,
-    JWT_ISSUER: process.env.JWT_ISSUER,
-    JWT_AUDIENCE: process.env.JWT_AUDIENCE,
-    JWT_PUBLIC_JWK_URL: process.env.JWT_PUBLIC_JWK_URL,
-    ADMIN_CLEANUP_SECRET: process.env.ADMIN_CLEANUP_SECRET,
-    LOG_LEVEL: process.env.LOG_LEVEL,
-    WS_PORT: process.env.WS_PORT,
-    BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
-
-    // Client variables (from import.meta.env - Vite exposes these)
-    VITE_DISCORD_CLIENT_ID: import.meta.env.VITE_DISCORD_CLIENT_ID,
-    VITE_DISCORD_GUILD_ID: import.meta.env.VITE_DISCORD_GUILD_ID,
+    VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
+    VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
     VITE_BASE_URL: import.meta.env.VITE_BASE_URL,
     VITE_EMBEDDINGS_VERSION: import.meta.env.VITE_EMBEDDINGS_VERSION,
     VITE_EMBEDDINGS_FORMAT: import.meta.env.VITE_EMBEDDINGS_FORMAT,
     VITE_QUERY_CONTRAST: import.meta.env.VITE_QUERY_CONTRAST,
     VITE_BLOB_STORAGE_URL: import.meta.env.VITE_BLOB_STORAGE_URL,
-    VITE_PEERJS_HOST: import.meta.env.VITE_PEERJS_HOST,
-    VITE_PEERJS_PORT: import.meta.env.VITE_PEERJS_PORT,
-    VITE_PEERJS_PATH: import.meta.env.VITE_PEERJS_PATH,
-    VITE_PEERJS_SSL: import.meta.env.VITE_PEERJS_SSL,
   },
 
   /**
@@ -180,16 +99,12 @@ export const isClient = typeof window !== 'undefined'
  */
 export function getClientEnv() {
   return {
-    VITE_DISCORD_CLIENT_ID: env.VITE_DISCORD_CLIENT_ID,
-    VITE_DISCORD_GUILD_ID: env.VITE_DISCORD_GUILD_ID,
+    VITE_SUPABASE_URL: env.VITE_SUPABASE_URL,
+    VITE_SUPABASE_ANON_KEY: env.VITE_SUPABASE_ANON_KEY,
     VITE_BASE_URL: env.VITE_BASE_URL,
     VITE_EMBEDDINGS_VERSION: env.VITE_EMBEDDINGS_VERSION,
     VITE_EMBEDDINGS_FORMAT: env.VITE_EMBEDDINGS_FORMAT,
     VITE_QUERY_CONTRAST: env.VITE_QUERY_CONTRAST,
     VITE_BLOB_STORAGE_URL: env.VITE_BLOB_STORAGE_URL,
-    VITE_PEERJS_HOST: env.VITE_PEERJS_HOST,
-    VITE_PEERJS_PORT: env.VITE_PEERJS_PORT,
-    VITE_PEERJS_PATH: env.VITE_PEERJS_PATH,
-    VITE_PEERJS_SSL: env.VITE_PEERJS_SSL,
   }
 }

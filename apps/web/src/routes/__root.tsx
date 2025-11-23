@@ -1,5 +1,4 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { env } from '@/env'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import {
   createRootRouteWithContext,
@@ -17,26 +16,9 @@ export interface MyRouterContext {
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
-  beforeLoad: async () => {
-    // Only initialize on server
-    if (typeof window !== 'undefined') {
-      return
-    }
-  },
   loader: async () => {
-    // Get guild ID from environment
-    const guildId = env.VITE_DISCORD_GUILD_ID
-
-    if (!guildId) {
-      throw new Error('Guild ID not found')
-    }
-
-    // Auth is fetched on the client side where localStorage is available
-    // Server-side loader cannot access client-only functions
-    return {
-      guildId,
-      auth: null,
-    }
+    // Client-side loader - return minimal data
+    return {}
   },
   head: () => ({
     meta: [
