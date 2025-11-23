@@ -1,9 +1,9 @@
 import type { UseMediaDeviceOptions } from '@/hooks/useMediaDevice'
 import type { DetectorType } from '@/lib/detectors'
 import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
-import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
+import { useSupabasePresence } from '@/hooks/useSupabasePresence'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
-import { usePeerJS } from '@/hooks/usePeerJS'
+import { useSupabaseWebRTC } from '@/hooks/useSupabaseWebRTC'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
 import { isSuccessState } from '@/types/async-resource'
 import {
@@ -57,14 +57,14 @@ export function VideoStreamGrid({
   onCardCrop,
 }: VideoStreamGridProps) {
   // Fetch remote players (exclude local player)
-  const { participants: gameRoomParticipants } = useGameRoomParticipants({
+  const { participants: gameRoomParticipants } = useSupabasePresence({
     roomId,
     userId,
     username: localPlayerName,
     enabled: true,
   })
 
-  // Compute remote player IDs for PeerJS
+  // Compute remote player IDs for WebRTC
   const remotePlayerIds = useMemo(() => {
     const filtered = gameRoomParticipants
       .filter((p) => p.id !== userId)
@@ -146,20 +146,20 @@ export function VideoStreamGrid({
     [localStream],
   )
 
-  // PeerJS hook for peer-to-peer video streaming
+  // WebRTC hook for peer-to-peer video streaming
   const {
     remoteStreams,
     connectionStates,
-    peerTrackStates,
-    error: _peerError,
+    trackStates,
+    error: _webrtcError,
     isInitialized: _isInitialized,
-  } = usePeerJS({
+  } = useSupabaseWebRTC({
     localPlayerId: userId,
     remotePlayerIds: remotePlayerIds,
     roomId: roomId,
     localStream, // Pass the managed local stream
     onError: (error) => {
-      console.error('[VideoStreamGrid] PeerJS error:', error)
+      console.error('[VideoStreamGrid] WebRTC error:', error)
       toast.error(error.message)
     },
   })
@@ -229,7 +229,7 @@ export function VideoStreamGrid({
   // This handles all the complex logic of attaching/detaching streams
   useVideoStreamAttachment({
     remoteStreams,
-    peerTrackStates,
+    trackStates,
     videoElementsRef: remoteVideoRefs,
     attachedStreamsRef,
   })
@@ -347,13 +347,13 @@ export function VideoStreamGrid({
                         const videoElement = remoteVideoRefs.current.get(
                           player.id,
                         )
-                        const peerTrackState = peerTrackStates.get(player.id)
+                        const trackState = trackStates.get(player.id)
                         const state = streamStates[player.id] || {
                           video: true,
                           audio: true,
                         }
                         const videoEnabled =
-                          (peerTrackState?.videoEnabled ?? state.video) &&
+                          (trackState?.videoEnabled ?? state.video) &&
                           !!remoteStream
 
                         if (
@@ -381,13 +381,13 @@ export function VideoStreamGrid({
                         const videoElement = remoteVideoRefs.current.get(
                           player.id,
                         )
-                        const peerTrackState = peerTrackStates.get(player.id)
+                        const trackState = trackStates.get(player.id)
                         const state = streamStates[player.id] || {
                           video: true,
                           audio: true,
                         }
                         const videoEnabled =
-                          (peerTrackState?.videoEnabled ?? state.video) &&
+                          (trackState?.videoEnabled ?? state.video) &&
                           !!remoteStream
 
                         if (

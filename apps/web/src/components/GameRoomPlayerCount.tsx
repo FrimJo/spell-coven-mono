@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
+import { useSupabasePresence } from '@/hooks/useSupabasePresence'
 import { getTempUser } from '@/lib/temp-user'
 import { Loader2, Users } from 'lucide-react'
 
@@ -14,7 +14,7 @@ function PlayerCountContent({ roomId, userId }: GameRoomPlayerCountProps) {
   const username = tempUser.username
 
   // Get game room participants (replaces Discord voice channel members)
-  const { participants } = useGameRoomParticipants({
+  const { participants } = useSupabasePresence({
     roomId,
     userId,
     username,

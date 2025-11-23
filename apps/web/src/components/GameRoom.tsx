@@ -5,7 +5,7 @@ import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
-import { useGameRoomParticipants } from '@/hooks/useGameRoomParticipants'
+import { useSupabasePresence } from '@/hooks/useSupabasePresence'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
 import { loadOpenCV } from '@/lib/opencv-loader'
@@ -78,9 +78,8 @@ function GameRoomContent({
     return unsubscribe
   }, [])
 
-  // Get remote player IDs from GAME ROOM participants (not voice channel!)
-  // Game room participation is independent of Discord voice channels
-  const { participants: _gameRoomParticipants } = useGameRoomParticipants({
+  // Get remote player IDs from GAME ROOM participants
+  const { participants: _gameRoomParticipants } = useSupabasePresence({
     roomId,
     userId,
     username, // Use generated username from temp user
