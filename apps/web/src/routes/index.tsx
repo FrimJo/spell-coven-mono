@@ -21,30 +21,48 @@ function LandingPageContent() {
   const navigate = useNavigate()
   const search = Route.useSearch()
   const [error, setError] = useState<string | null>(search.error || null)
+  const [isCreatingGame, setIsCreatingGame] = useState(false)
+  const [createdGameId, setCreatedGameId] = useState<string | null>(null)
   const tempUser = getTempUser()
 
   const handleCreateGame = async () => {
     setError(null)
+    setIsCreatingGame(true)
+    setCreatedGameId(null)
 
     try {
       // Generate short unique ID for the game
       const shortId = Math.random().toString(36).substring(2, 8).toUpperCase()
       const gameId = `game-${shortId}`
 
-      console.log('[LandingPage] Creating new game:', gameId)
+      console.log('[LandingPage] Creating new game room:', gameId)
+
+      // Save to session storage
       sessionStorage.saveGameState({
         gameId,
         playerName: tempUser.username,
         timestamp: Date.now(),
       })
 
-      // Navigate directly to game room
-      navigate({ to: '/game/$gameId', params: { gameId } })
+      // Simulate brief creation delay for UX
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      console.log('[LandingPage] Game room ID generated successfully')
+
+      // Show success state
+      setCreatedGameId(gameId)
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to create game room'
       setError(message)
       console.error('Failed to create game room:', err)
+      setIsCreatingGame(false)
+    }
+  }
+
+  const handleNavigateToRoom = () => {
+    if (createdGameId) {
+      navigate({ to: '/game/$gameId', params: { gameId: createdGameId } })
     }
   }
 
@@ -73,7 +91,9 @@ function LandingPageContent() {
       <LandingPage
         onCreateGame={handleCreateGame}
         onJoinGame={handleJoinGame}
-        isCreatingGame={false}
+        isCreatingGame={isCreatingGame}
+        createdGameId={createdGameId}
+        onNavigateToRoom={handleNavigateToRoom}
         inviteState={null}
         onRefreshInvite={() => {}}
         isRefreshingInvite={false}
