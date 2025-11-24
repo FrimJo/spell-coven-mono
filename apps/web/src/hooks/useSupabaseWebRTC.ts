@@ -214,25 +214,36 @@ export function useSupabaseWebRTC({
       if (remotePlayerId !== localPlayerId) {
         // Only call if this peer wasn't in the previous list
         if (!previousRemotePlayerIds.includes(remotePlayerId)) {
-          console.log(
-            `[WebRTC:Hook] Calling new peer: ${remotePlayerId} in room ${roomId}`,
-          )
-          webrtcManagerRef.current
-            .callPeer(remotePlayerId, roomId)
-            .then(() => {
-              console.log(
-                `[WebRTC:Hook] Successfully initiated call to ${remotePlayerId}`,
-              )
-            })
-            .catch((err) => {
-              console.error(
-                `[WebRTC:Hook] Error calling peer ${remotePlayerId}:`,
-                err,
-              )
-              const error = err instanceof Error ? err : new Error(String(err))
-              setError(error)
-              onErrorRef.current?.(error)
-            })
+          // To avoid race conditions where both peers try to call each other,
+          // only the peer with the lexicographically smaller ID initiates the call
+          const shouldInitiate = localPlayerId < remotePlayerId
+
+          if (shouldInitiate) {
+            console.log(
+              `[WebRTC:Hook] Initiating call to peer: ${remotePlayerId} in room ${roomId} (we have smaller ID)`,
+            )
+            webrtcManagerRef.current
+              .callPeer(remotePlayerId, roomId)
+              .then(() => {
+                console.log(
+                  `[WebRTC:Hook] Successfully initiated call to ${remotePlayerId}`,
+                )
+              })
+              .catch((err) => {
+                console.error(
+                  `[WebRTC:Hook] Error calling peer ${remotePlayerId}:`,
+                  err,
+                )
+                const error =
+                  err instanceof Error ? err : new Error(String(err))
+                setError(error)
+                onErrorRef.current?.(error)
+              })
+          } else {
+            console.log(
+              `[WebRTC:Hook] Waiting for peer ${remotePlayerId} to call us (they have smaller ID)`,
+            )
+          }
         } else {
           console.log(
             `[WebRTC:Hook] Skipping peer ${remotePlayerId} - already connected`,
