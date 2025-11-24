@@ -7,7 +7,7 @@
  * Uses useSyncExternalStore with a cached store pattern to ensure all
  * components using this hook re-render when the device selection changes.
  */
-import { useCallback, useMemo, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
 
 const STORAGE_KEY = 'mtg-selected-media-devices'
 
@@ -99,11 +99,7 @@ function loadFromStorage(): void {
  * Create a store for managing selected media devices
  * Uses a shared cache to ensure all instances stay in sync
  */
-function createSelectedDeviceStore(options?: {
-  kind: 'videoinput' | 'audioinput' | 'audiooutput'
-  defaultValue: string
-  availableDeviceIds: readonly string[]
-}) {
+function createSelectedDeviceStore() {
   /**
    * Save all devices to localStorage in the new format
    */
@@ -202,16 +198,6 @@ function createSelectedDeviceStore(options?: {
   /**
    * Subscribe to state changes
    *
-   * If a default value is provided and no device is currently selected for that kind,
-   * the default will be persisted to localStorage. This ensures that:
-   * 1. On first load (no localStorage), the default is used and saved
-   * 2. On subsequent loads, the saved value is loaded from localStorage
-   * 3. User can override by calling saveSelectedDevice() explicitly
-   *
-   * If validation info is provided, validates that the stored device exists in the
-   * available devices list and updates to default if not. This happens synchronously
-   * during subscription, ensuring the first render has the correct value.
-   *
    * Also sets up storage event listener for cross-tab synchronization.
    */
   function subscribe(listener: () => void): () => void {
@@ -221,20 +207,6 @@ function createSelectedDeviceStore(options?: {
     // Setup storage event listener on first subscription
     if (wasFirstListener) {
       sharedState.setupStorageListener()
-    }
-
-    if (options) {
-      const storedDeviceId = sharedState.cachedState[options.kind]
-      // Apply defaults if provided (only if no device is selected in localStorage)
-      // This persists the default on first use, then it will be loaded from localStorage
-      if (storedDeviceId == null) {
-        saveDevice(options.kind, options.defaultValue)
-      } else {
-        const deviceExists = options.availableDeviceIds.includes(storedDeviceId)
-        if (!deviceExists) {
-          saveDevice(options.kind, options.defaultValue)
-        }
-      }
     }
 
     return () => {
@@ -257,6 +229,9 @@ function createSelectedDeviceStore(options?: {
     clearDevice,
   }
 }
+
+// Create a single global store instance
+const globalStore = createSelectedDeviceStore()
 
 export interface UseSelectedMediaDeviceReturn {
   /** Currently selected device ID from localStorage */
@@ -303,38 +278,48 @@ export function useSelectedMediaDevice(
   kind: 'videoinput' | 'audioinput' | 'audiooutput',
   devices: MediaDeviceInfo[] | readonly [MediaDeviceInfo],
 ): UseSelectedMediaDeviceReturn {
-  console.log('useSelectedMediaDevice', { kind, devices })
-  // Create singleton store instance
-  const selectedDeviceStore = useMemo(() => {
-    const defaultDevice =
-      devices.find((device) => device.deviceId === 'default') ?? devices[0]
-    console.log('useSelectedMediaDevice defaultDevice', { defaultDevice })
-    return createSelectedDeviceStore({
-      kind,
-      defaultValue: defaultDevice.deviceId,
-      availableDeviceIds: devices.map((device) => device.deviceId),
-    })
-  }, [kind, devices])
-
-  // Use useSyncExternalStore to sync with the device store
-  // All components using this hook will re-render when any device selection changes
-  // Validation happens synchronously in subscribe, ensuring first render is correct
-  const state = useSyncExternalStore(
-    selectedDeviceStore.subscribe,
-    selectedDeviceStore.getSnapshot,
-    selectedDeviceStore.getServerSnapshot,
+  // Get default device
+  const defaultDevice = useMemo(
+    () => devices.find((device) => device.deviceId === 'default') ?? devices[0],
+    [devices],
   )
+
+  const deviceIds = useMemo(() => devices.map((d) => d.deviceId), [devices])
+
+  // Use useSyncExternalStore with the global store
+  const state = useSyncExternalStore(
+    globalStore.subscribe,
+    globalStore.getSnapshot,
+    globalStore.getServerSnapshot,
+  )
+
+  // Initialize default device if none is selected
+  // This runs once when the hook mounts
+  useEffect(() => {
+    const storedDeviceId = state[kind]
+
+    // If no device is stored, save the default
+    if (storedDeviceId == null) {
+      globalStore.saveDevice(kind, defaultDevice.deviceId)
+    } else {
+      // Validate that the stored device still exists
+      const deviceExists = deviceIds.includes(storedDeviceId)
+      if (!deviceExists) {
+        globalStore.saveDevice(kind, defaultDevice.deviceId)
+      }
+    }
+  }, [kind, defaultDevice.deviceId, deviceIds, state])
 
   // Save device to store
   const saveSelectedDevice = useCallback(
-    (deviceId: string) => selectedDeviceStore.saveDevice(kind, deviceId),
-    [kind, selectedDeviceStore],
+    (deviceId: string) => globalStore.saveDevice(kind, deviceId),
+    [kind],
   )
 
   // Clear device from store
   const clearSelectedDevice = useCallback(() => {
-    selectedDeviceStore.clearDevice()
-  }, [selectedDeviceStore])
+    globalStore.clearDevice()
+  }, [])
 
   return useMemo(() => {
     const selectedDeviceId = state[kind]
