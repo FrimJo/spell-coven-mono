@@ -5,6 +5,7 @@
  */
 
 import type { Participant } from '@/types/participant'
+
 import type { SupabasePresenceState } from './types'
 import { supabase } from './client'
 
@@ -49,7 +50,16 @@ export class PresenceManager {
     this.currentUsername = username
 
     const channelName = `game:${roomId}`
-    this.channel = supabase.channel(channelName, {
+    console.log('[WebRTC:Presence] Creating channel:', channelName)
+
+    // Generate a unique channel name for presence to avoid conflicts with signaling
+    const presenceChannelName = `${channelName}:presence`
+    console.log(
+      '[WebRTC:Presence] Using presence channel name:',
+      presenceChannelName,
+    )
+
+    this.channel = supabase.channel(presenceChannelName, {
       config: {
         presence: {
           key: userId,
@@ -71,12 +81,23 @@ export class PresenceManager {
     })
 
     // Subscribe to channel first (required before tracking presence)
-    const status = await this.channel.subscribe()
-    if (status === 'SUBSCRIBED') {
-      // Channel subscribed successfully
-    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-      throw new Error(`Failed to subscribe to presence channel: ${status}`)
-    }
+    await new Promise<void>((resolve, reject) => {
+      this.channel!.subscribe((subscribeStatus, err) => {
+        if (subscribeStatus === 'SUBSCRIBED') {
+          resolve()
+        } else if (
+          subscribeStatus === 'CHANNEL_ERROR' ||
+          subscribeStatus === 'TIMED_OUT' ||
+          subscribeStatus === 'CLOSED'
+        ) {
+          reject(
+            new Error(
+              `Failed to subscribe to presence channel: ${subscribeStatus}${err ? ` - ${err.message}` : ''}`,
+            ),
+          )
+        }
+      })
+    })
 
     // Set presence state (must be after subscription)
     const presenceState: SupabasePresenceState = {
@@ -86,7 +107,53 @@ export class PresenceManager {
       joinedAt: Date.now(),
     }
 
-    await this.channel.track(presenceState)
+    console.log(
+      '[WebRTC:Presence] Tracking presence state:',
+      presenceState,
+      'with key:',
+      userId,
+    )
+    console.log(
+      '[WebRTC:Presence] Channel state before track:',
+      this.channel.state,
+    )
+
+    try {
+      // Add timeout to track operation
+      const trackPromise = this.channel.track(presenceState)
+      console.log(
+        '[WebRTC:Presence] Track promise created, waiting for response...',
+      )
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          console.log('[WebRTC:Presence] Track operation timed out!')
+          reject(new Error('Presence track timeout after 10s'))
+        }, 10000)
+      })
+
+      const result = await Promise.race([trackPromise, timeoutPromise])
+      console.log('[WebRTC:Presence] Track result:', result)
+
+      if (result === 'error') {
+        throw new Error('Failed to track presence: channel returned error')
+      }
+
+      console.log('[WebRTC:Presence] Presence tracked successfully')
+
+      // Trigger an immediate sync to check current state
+      const immediatePresence = this.channel.presenceState()
+      console.log(
+        '[WebRTC:Presence] Immediate presence state after track:',
+        immediatePresence,
+      )
+
+      // Manually trigger sync callback with current state
+      this.handlePresenceSync()
+    } catch (error) {
+      console.error('[WebRTC:Presence] Error tracking presence:', error)
+      throw error
+    }
   }
 
   /**
@@ -112,24 +179,45 @@ export class PresenceManager {
     }
 
     const presence = this.channel.presenceState()
+    console.log(
+      '[WebRTC:Presence] Presence sync - raw presence state:',
+      presence,
+    )
     const participants: Participant[] = []
 
-    for (const [_userId, presences] of Object.entries(presence)) {
+    for (const [presenceKey, presences] of Object.entries(presence)) {
+      console.log(
+        `[WebRTC:Presence] Processing presence key: ${presenceKey}, presences:`,
+        presences,
+      )
       // presences is an array, but we only track one per user
       const state = presences[0] as SupabasePresenceState | undefined
       if (state) {
+        console.log(
+          `[WebRTC:Presence] Found valid state for key ${presenceKey}:`,
+          state,
+        )
         participants.push({
           id: state.userId,
           username: state.username,
           avatar: state.avatar,
           joinedAt: state.joinedAt,
         })
+      } else {
+        console.warn(
+          `[WebRTC:Presence] Invalid or missing state for key ${presenceKey}`,
+          presences,
+        )
       }
     }
 
     // Sort by joinedAt
     participants.sort((a, b) => a.joinedAt - b.joinedAt)
 
+    console.log(
+      '[WebRTC:Presence] Presence sync complete - participants:',
+      participants,
+    )
     this.callbacks.onParticipantsUpdate?.(participants)
   }
 
@@ -167,4 +255,3 @@ export class PresenceManager {
     this.callbacks = {}
   }
 }
-
