@@ -14,6 +14,7 @@ import type {
 
 /**
  * Handle an offer signal
+ * Note: Only sets remote description. The caller is responsible for creating the answer.
  */
 export async function handleOffer(
   pc: RTCPeerConnection,
@@ -29,9 +30,6 @@ export async function handleOffer(
   })
 
   await pc.setRemoteDescription(offer)
-
-  const answer = await pc.createAnswer()
-  await pc.setLocalDescription(answer)
 }
 
 /**

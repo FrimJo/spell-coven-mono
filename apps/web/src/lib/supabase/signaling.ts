@@ -2,12 +2,14 @@
  * Signaling Manager - Manages WebRTC signal broadcast/receive via Supabase Realtime
  *
  * Isolated from React hooks for testability and reusability.
+ * Uses shared ChannelManager to reuse channels across presence and signaling.
  */
 
 import type { WebRTCSignal } from '@/types/webrtc-signal'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { validateWebRTCSignal } from '@/types/webrtc-signal'
 
-import { supabase } from './client'
+import { channelManager } from './channel-manager'
 
 export interface SignalingManagerCallbacks {
   onSignal?: (signal: WebRTCSignal) => void
@@ -15,7 +17,7 @@ export interface SignalingManagerCallbacks {
 }
 
 export class SignalingManager {
-  private channel: ReturnType<typeof supabase.channel> | null = null
+  private channel: RealtimeChannel | null = null
   private localPeerId: string | null = null
   private roomId: string | null = null
   private callbacks: SignalingManagerCallbacks = {}
@@ -41,9 +43,8 @@ export class SignalingManager {
     this.roomId = roomId
     this.localPeerId = localPeerId
 
-    const channelName = `game:${roomId}`
-    console.log('[WebRTC:Signaling] Creating channel:', channelName)
-    this.channel = supabase.channel(channelName)
+    console.log('[WebRTC:Signaling] Getting shared channel for room:', roomId)
+    this.channel = channelManager.getChannel(roomId)
 
     // Subscribe to broadcast events
     this.channel.on('broadcast', { event: 'webrtc:signal' }, (payload) => {
@@ -54,29 +55,44 @@ export class SignalingManager {
       this.handleSignal(payload.payload)
     })
 
-    // Subscribe to channel
-    await new Promise<void>((resolve, reject) => {
-      this.channel!.subscribe((subscribeStatus, err) => {
-        console.log(
-          `[WebRTC:Signaling] Subscription status: ${subscribeStatus}`,
-          err ? `error: ${err.message}` : '',
-        )
-        if (subscribeStatus === 'SUBSCRIBED') {
-          console.log('[WebRTC:Signaling] Channel subscribed successfully')
-          resolve()
-        } else if (
-          subscribeStatus === 'CHANNEL_ERROR' ||
-          subscribeStatus === 'TIMED_OUT' ||
-          subscribeStatus === 'CLOSED'
-        ) {
-          reject(
-            new Error(
-              `Failed to subscribe to signaling channel: ${subscribeStatus}${err ? ` - ${err.message}` : ''}`,
-            ),
+    // Subscribe to channel (only if not already subscribed by another manager)
+    const subscriptionCount = channelManager.getSubscriptionCount(roomId)
+    console.log(
+      `[WebRTC:Signaling] Current subscriptions for room ${roomId}: ${subscriptionCount}`,
+    )
+
+    if (subscriptionCount === 0) {
+      console.log('[WebRTC:Signaling] Subscribing to channel...')
+      await new Promise<void>((resolve, reject) => {
+        this.channel!.subscribe((subscribeStatus, err) => {
+          console.log(
+            `[WebRTC:Signaling] Subscription status: ${subscribeStatus}`,
+            err ? `error: ${err.message}` : '',
           )
-        }
+          if (subscribeStatus === 'SUBSCRIBED') {
+            console.log('[WebRTC:Signaling] Channel subscribed successfully')
+            channelManager.markSubscribed(roomId)
+            resolve()
+          } else if (
+            subscribeStatus === 'CHANNEL_ERROR' ||
+            subscribeStatus === 'TIMED_OUT' ||
+            subscribeStatus === 'CLOSED'
+          ) {
+            reject(
+              new Error(
+                `Failed to subscribe to signaling channel: ${subscribeStatus}${err ? ` - ${err.message}` : ''}`,
+              ),
+            )
+          }
+        })
       })
-    })
+    } else {
+      console.log(
+        '[WebRTC:Signaling] Channel already subscribed, marking subscription',
+      )
+      channelManager.markSubscribed(roomId)
+    }
+
     console.log('[WebRTC:Signaling] Initialization complete')
   }
 
@@ -122,7 +138,10 @@ export class SignalingManager {
     )
     const validation = validateWebRTCSignal(data)
     if (!validation.success) {
-      console.error('[WebRTC:Signaling] Signal validation failed:', validation.error)
+      console.error(
+        '[WebRTC:Signaling] Signal validation failed:',
+        validation.error,
+      )
       this.callbacks.onError?.(validation.error)
       return
     }
@@ -160,9 +179,25 @@ export class SignalingManager {
    * Clean up the manager
    */
   async cleanup(): Promise<void> {
-    if (this.channel) {
-      await this.channel.unsubscribe()
-      supabase.removeChannel(this.channel)
+    if (this.channel && this.roomId) {
+      console.log(
+        '[WebRTC:Signaling] Cleaning up channel for room:',
+        this.roomId,
+      )
+      channelManager.markUnsubscribed(this.roomId)
+
+      // Only unsubscribe if this was the last subscription
+      const subscriptionCount = channelManager.getSubscriptionCount(this.roomId)
+      if (subscriptionCount === 0) {
+        console.log('[WebRTC:Signaling] Last subscription - unsubscribing')
+        await this.channel.unsubscribe()
+        channelManager.removeChannel(this.roomId)
+      } else {
+        console.log(
+          `[WebRTC:Signaling] Not unsubscribing - ${subscriptionCount} subscription(s) remaining`,
+        )
+      }
+
       this.channel = null
     }
     this.localPeerId = null

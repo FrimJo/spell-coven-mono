@@ -2,12 +2,15 @@
  * Presence Manager - Manages Supabase Presence API for game room participants
  *
  * Isolated from React hooks for testability and reusability.
+ * Uses shared ChannelManager to reuse channels across presence and signaling.
  */
 
 import type { Participant } from '@/types/participant'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 import type { SupabasePresenceState } from './types'
-import { supabase } from './client'
+import { channelManager } from './channel-manager'
+import { validatePresenceState } from './types'
 
 export interface PresenceManagerCallbacks {
   onParticipantsUpdate?: (participants: Participant[]) => void
@@ -15,9 +18,8 @@ export interface PresenceManagerCallbacks {
 }
 
 export class PresenceManager {
-  private channel: ReturnType<typeof supabase.channel> | null = null
-  private currentUserId: string | null = null
-  private currentUsername: string | null = null
+  private channel: RealtimeChannel | null = null
+  private roomId: string | null = null
   private callbacks: PresenceManagerCallbacks = {}
 
   constructor(callbacks: PresenceManagerCallbacks = {}) {
@@ -46,25 +48,13 @@ export class PresenceManager {
     // Leave previous room if any
     await this.leave()
 
-    this.currentUserId = userId
-    this.currentUsername = username
+    this.roomId = roomId
 
-    const channelName = `game:${roomId}`
-    console.log('[WebRTC:Presence] Creating channel:', channelName)
+    console.log('[WebRTC:Presence] Getting shared channel for room:', roomId)
 
-    // Generate a unique channel name for presence to avoid conflicts with signaling
-    const presenceChannelName = `${channelName}:presence`
-    console.log(
-      '[WebRTC:Presence] Using presence channel name:',
-      presenceChannelName,
-    )
-
-    this.channel = supabase.channel(presenceChannelName, {
-      config: {
-        presence: {
-          key: userId,
-        },
-      },
+    // Use shared channel with presence config
+    this.channel = channelManager.getChannel(roomId, {
+      presence: { key: userId },
     })
 
     // Subscribe to presence changes
@@ -81,23 +71,39 @@ export class PresenceManager {
     })
 
     // Subscribe to channel first (required before tracking presence)
-    await new Promise<void>((resolve, reject) => {
-      this.channel!.subscribe((subscribeStatus, err) => {
-        if (subscribeStatus === 'SUBSCRIBED') {
-          resolve()
-        } else if (
-          subscribeStatus === 'CHANNEL_ERROR' ||
-          subscribeStatus === 'TIMED_OUT' ||
-          subscribeStatus === 'CLOSED'
-        ) {
-          reject(
-            new Error(
-              `Failed to subscribe to presence channel: ${subscribeStatus}${err ? ` - ${err.message}` : ''}`,
-            ),
-          )
-        }
+    // Only if not already subscribed by another manager
+    const subscriptionCount = channelManager.getSubscriptionCount(roomId)
+    console.log(
+      `[WebRTC:Presence] Current subscriptions for room ${roomId}: ${subscriptionCount}`,
+    )
+
+    if (subscriptionCount === 0) {
+      console.log('[WebRTC:Presence] Subscribing to channel...')
+      await new Promise<void>((resolve, reject) => {
+        this.channel!.subscribe((subscribeStatus, err) => {
+          if (subscribeStatus === 'SUBSCRIBED') {
+            console.log('[WebRTC:Presence] Channel subscribed successfully')
+            channelManager.markSubscribed(roomId)
+            resolve()
+          } else if (
+            subscribeStatus === 'CHANNEL_ERROR' ||
+            subscribeStatus === 'TIMED_OUT' ||
+            subscribeStatus === 'CLOSED'
+          ) {
+            reject(
+              new Error(
+                `Failed to subscribe to presence channel: ${subscribeStatus}${err ? ` - ${err.message}` : ''}`,
+              ),
+            )
+          }
+        })
       })
-    })
+    } else {
+      console.log(
+        '[WebRTC:Presence] Channel already subscribed, marking subscription',
+      )
+      channelManager.markSubscribed(roomId)
+    }
 
     // Set presence state (must be after subscription)
     const presenceState: SupabasePresenceState = {
@@ -160,14 +166,29 @@ export class PresenceManager {
    * Leave the current room
    */
   async leave(): Promise<void> {
-    if (this.channel) {
+    if (this.channel && this.roomId) {
+      console.log('[WebRTC:Presence] Leaving room:', this.roomId)
+
+      // Untrack presence first
       await this.channel.untrack()
-      await this.channel.unsubscribe()
-      supabase.removeChannel(this.channel)
+
+      channelManager.markUnsubscribed(this.roomId)
+
+      // Only unsubscribe if this was the last subscription
+      const subscriptionCount = channelManager.getSubscriptionCount(this.roomId)
+      if (subscriptionCount === 0) {
+        console.log('[WebRTC:Presence] Last subscription - unsubscribing')
+        await this.channel.unsubscribe()
+        channelManager.removeChannel(this.roomId)
+      } else {
+        console.log(
+          `[WebRTC:Presence] Not unsubscribing - ${subscriptionCount} subscription(s) remaining`,
+        )
+      }
+
       this.channel = null
     }
-    this.currentUserId = null
-    this.currentUsername = null
+    this.roomId = null
   }
 
   /**
@@ -191,24 +212,38 @@ export class PresenceManager {
         presences,
       )
       // presences is an array, but we only track one per user
-      const state = presences[0] as SupabasePresenceState | undefined
-      if (state) {
-        console.log(
-          `[WebRTC:Presence] Found valid state for key ${presenceKey}:`,
-          state,
-        )
-        participants.push({
-          id: state.userId,
-          username: state.username,
-          avatar: state.avatar,
-          joinedAt: state.joinedAt,
-        })
-      } else {
+      const rawState = presences[0]
+
+      if (!rawState) {
         console.warn(
-          `[WebRTC:Presence] Invalid or missing state for key ${presenceKey}`,
-          presences,
+          `[WebRTC:Presence] No presence data for key ${presenceKey}`,
         )
+        continue
       }
+
+      // Validate presence state with Zod
+      const validation = validatePresenceState(rawState)
+      if (!validation.success) {
+        console.error(
+          `[WebRTC:Presence] Invalid presence state for key ${presenceKey}:`,
+          validation.error,
+        )
+        this.callbacks.onError?.(validation.error)
+        continue
+      }
+
+      const state = validation.data
+      console.log(
+        `[WebRTC:Presence] Validated presence state for key ${presenceKey}:`,
+        state,
+      )
+
+      participants.push({
+        id: state.userId,
+        username: state.username,
+        avatar: state.avatar,
+        joinedAt: state.joinedAt,
+      })
     }
 
     // Sort by joinedAt
@@ -233,15 +268,29 @@ export class PresenceManager {
     const participants: Participant[] = []
 
     for (const [_userId, presences] of Object.entries(presence)) {
-      const state = presences[0] as SupabasePresenceState | undefined
-      if (state) {
-        participants.push({
-          id: state.userId,
-          username: state.username,
-          avatar: state.avatar,
-          joinedAt: state.joinedAt,
-        })
+      const rawState = presences[0]
+
+      if (!rawState) {
+        continue
       }
+
+      // Validate presence state with Zod
+      const validation = validatePresenceState(rawState)
+      if (!validation.success) {
+        console.error(
+          '[WebRTC:Presence] Invalid presence state in getParticipants:',
+          validation.error,
+        )
+        continue
+      }
+
+      const state = validation.data
+      participants.push({
+        id: state.userId,
+        username: state.username,
+        avatar: state.avatar,
+        joinedAt: state.joinedAt,
+      })
     }
 
     return participants.sort((a, b) => a.joinedAt - b.joinedAt)

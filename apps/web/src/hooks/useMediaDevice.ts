@@ -152,7 +152,6 @@ export function useMediaDevice(
           device.label ||
           `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${index + 1}`
 
-        console.log('foobar', { device })
         return {
           deviceId: device.deviceId,
           groupId: device.groupId,
@@ -162,11 +161,6 @@ export function useMediaDevice(
         }
       }),
     [mediaDevices, kind],
-  )
-
-  console.log(
-    `[useMediaDevice] Final filtered ${kind} devices (${filteredDevices.length}):`,
-    filteredDevices,
   )
 
   useEffect(() => {
