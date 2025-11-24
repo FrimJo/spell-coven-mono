@@ -5,6 +5,7 @@ import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
+import { useGameRoom } from '@/hooks/useGameRoom'
 import { useSupabasePresence } from '@/hooks/useSupabasePresence'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
@@ -46,6 +47,18 @@ function GameRoomContent({
 
   const { query } = useCardQueryContext()
   const [copied, setCopied] = useState(false)
+
+  // Track room participant count
+  const { participantCount } = useGameRoom({
+    roomId,
+    onParticipantCountChange: (count) => {
+      console.log('[GameRoom] Participant count changed:', count)
+    },
+    onError: (error) => {
+      console.error('[GameRoom] Room error:', error)
+      toast.error(`Room error: ${error.message}`)
+    },
+  })
 
   // Compute shareable link (only on client)
   const shareLink = useMemo(() => {
@@ -320,7 +333,12 @@ function GameRoomContent({
           </div>
 
           <div className="flex items-center gap-3">
-            <GameRoomPlayerCount roomId={roomId} userId={userId} />
+            <GameRoomPlayerCount
+              roomId={roomId}
+              userId={userId}
+              maxPlayers={4}
+              currentCount={participantCount}
+            />
 
             <Button
               variant="ghost"

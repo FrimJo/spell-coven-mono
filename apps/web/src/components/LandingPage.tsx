@@ -14,11 +14,14 @@ import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
 
 import type { CreatorInviteState } from '../lib/session-storage.js'
+import { CreateGameDialog } from './CreateGameDialog.js'
 
 interface LandingPageProps {
   onCreateGame: () => void | Promise<void>
   onJoinGame: (playerName: string, gameId: string) => void
   isCreatingGame?: boolean
+  createdGameId?: string | null
+  onNavigateToRoom?: () => void
   inviteState?: CreatorInviteState | null
   onRefreshInvite?: () => void | Promise<void>
   isRefreshingInvite?: boolean
@@ -28,6 +31,8 @@ export function LandingPage({
   onCreateGame,
   onJoinGame,
   isCreatingGame,
+  createdGameId,
+  onNavigateToRoom,
   inviteState: _inviteState,
   onRefreshInvite: _onRefreshInvite,
   isRefreshingInvite: _isRefreshingInvite,
@@ -35,8 +40,10 @@ export function LandingPage({
   const [joinName, setJoinName] = useState('')
   const [joinGameId, setJoinGameId] = useState('')
   const [joinDialogOpen, setJoinDialogOpen] = useState(false)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
 
   const handleCreateClick = () => {
+    setCreateDialogOpen(true)
     onCreateGame()
   }
 
@@ -53,7 +60,7 @@ export function LandingPage({
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* Background with gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-slate-950 to-blue-900/20" />
+      <div className="bg-linear-to-br absolute inset-0 from-purple-900/20 via-slate-950 to-blue-900/20" />
 
       {/* Animated background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -100,7 +107,7 @@ export function LandingPage({
 
             <h1 className="text-5xl text-white md:text-7xl">
               Play Magic: The Gathering
-              <span className="block bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r block from-purple-400 to-blue-400 bg-clip-text text-transparent">
                 With Friends, Anywhere
               </span>
             </h1>
@@ -176,6 +183,15 @@ export function LandingPage({
                   </div>
                 </DialogContent>
               </Dialog>
+
+              {/* Create Game Dialog */}
+              <CreateGameDialog
+                open={createDialogOpen}
+                onOpenChange={setCreateDialogOpen}
+                isCreating={isCreatingGame ?? false}
+                createdGameId={createdGameId ?? null}
+                onNavigateToRoom={onNavigateToRoom ?? (() => {})}
+              />
             </div>
           </div>
         </section>
@@ -188,7 +204,7 @@ export function LandingPage({
             </h2>
             <div className="grid gap-8 md:grid-cols-3">
               <Card className="border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-purple-500/20">
+                <div className="mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-purple-500/20">
                   <Video className="h-6 w-6 text-purple-400" />
                 </div>
                 <h3 className="mb-2 text-xl text-white">Video Chat</h3>
@@ -199,7 +215,7 @@ export function LandingPage({
               </Card>
 
               <Card className="border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-500/20">
+                <div className="mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-500/20">
                   <Camera className="h-6 w-6 text-blue-400" />
                 </div>
                 <h3 className="mb-2 text-xl text-white">Card Recognition</h3>
@@ -210,7 +226,7 @@ export function LandingPage({
               </Card>
 
               <Card className="border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-green-500/20">
+                <div className="mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-green-500/20">
                   <Users className="h-6 w-6 text-green-400" />
                 </div>
                 <h3 className="mb-3 text-xl text-white">Game Management</h3>
@@ -231,7 +247,7 @@ export function LandingPage({
             </h2>
             <div className="space-y-8">
               <div className="flex items-start gap-6">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 text-white">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-600 text-white">
                   1
                 </div>
                 <div>
@@ -246,7 +262,7 @@ export function LandingPage({
               </div>
 
               <div className="flex items-start gap-6">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 text-white">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-600 text-white">
                   2
                 </div>
                 <div>
@@ -261,7 +277,7 @@ export function LandingPage({
               </div>
 
               <div className="flex items-start gap-6">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 text-white">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-600 text-white">
                   3
                 </div>
                 <div>
