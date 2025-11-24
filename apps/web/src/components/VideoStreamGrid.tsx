@@ -69,10 +69,14 @@ export function VideoStreamGrid({
     const filtered = gameRoomParticipants
       .filter((p) => p.id !== userId)
       .map((p) => p.id)
-    console.log('[VideoStreamGrid] remotePlayerIds calculated:', {
+    console.log('[WebRTC:VideoStreamGrid] remotePlayerIds calculated:', {
       allParticipants: gameRoomParticipants.length,
       localUserId: userId,
       remotePlayerIds: filtered,
+      gameRoomParticipants: gameRoomParticipants.map((p) => ({
+        id: p.id,
+        username: p.username,
+      })),
     })
     return filtered
   }, [gameRoomParticipants, userId])
