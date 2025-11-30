@@ -66,58 +66,17 @@ export const Route = createFileRoute('/game/$gameId')({
   params: {
     parse: (params) => gameParamsSchema.parse(params),
   },
-  beforeLoad: async ({ params }) => {
-    console.log(
-      '[GameRoute] beforeLoad: Room ID validated by params.parse:',
-      params.gameId,
-    )
-
-    // Return context that will be available to loader and component
-    return {
-      roomId: params.gameId,
-      validatedAt: Date.now(),
-    }
-  },
-  loader: async ({ params, context }) => {
-    console.log('[GameRoute] loader: Loading initial room data:', params.gameId)
-
-    // Note: With Supabase Realtime, channels are created automatically
-    // when the first person subscribes. We can't really check if a room
-    // "exists" without creating a catch-22. Instead, we just prepare
-    // the initial context.
-
-    // The initial participant count will be 0 until someone joins,
-    // and it will update in real-time via the useGameRoom hook
-
-    console.log('[GameRoute] loader: Initial room context prepared')
-
-    return {
-      roomId: params.gameId,
-      initialParticipantCount: 0,
-      loadedAt: Date.now(),
-      // Pass through context from beforeLoad
-      validatedAt: context.validatedAt,
-    }
-  },
 })
 
 function GameRoomRoute() {
   const { gameId } = Route.useParams()
   const { detector, usePerspectiveWarp } = Route.useSearch()
-  const loaderData = Route.useLoaderData()
   const navigate = useNavigate()
 
   const handleLeaveGame = () => {
     sessionStorage.clearGameState()
     navigate({ to: '/' })
   }
-
-  console.log('[GameRoomRoute] Rendering with loader data:', {
-    roomId: loaderData.roomId,
-    initialParticipantCount: loaderData.initialParticipantCount,
-    loadedAt: new Date(loaderData.loadedAt).toISOString(),
-    validatedAt: new Date(loaderData.validatedAt).toISOString(),
-  })
 
   return (
     <ErrorBoundary
