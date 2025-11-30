@@ -265,6 +265,9 @@ export function useSupabaseWebRTC({
     console.log('[WebRTC:Hook] Updated previous remote player IDs ref:', [
       ...previousRemotePlayerIdsRef.current,
     ])
+    // Note: remoteStreams is intentionally NOT in the dependency array.
+    // The effect's callbacks (onRemoteStream) update remoteStreams, so including
+    // it would create a dependency cycle causing unnecessary re-runs.
   }, [remotePlayerIds, isInitialized, roomId, localPlayerId, localStream])
 
   return {

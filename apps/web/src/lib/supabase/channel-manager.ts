@@ -9,6 +9,8 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 
 import { supabase } from './client'
 
+export type { RealtimeChannel }
+
 interface ChannelConfig {
   presence?: { key: string }
 }

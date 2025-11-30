@@ -5,7 +5,6 @@ import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
-import { useGameRoom } from '@/hooks/useGameRoom'
 import { useSupabasePresence } from '@/hooks/useSupabasePresence'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
@@ -48,17 +47,19 @@ function GameRoomContent({
   const { query } = useCardQueryContext()
   const [copied, setCopied] = useState(false)
 
-  // Track room participant count
-  const { participantCount } = useGameRoom({
-    roomId,
-    onParticipantCountChange: (count) => {
-      console.log('[GameRoom] Participant count changed:', count)
-    },
-    onError: (error) => {
-      console.error('[GameRoom] Room error:', error)
-      toast.error(`Room error: ${error.message}`)
-    },
-  })
+  // Track room presence (shares store with GameRoomSidebar and GameRoomPlayerCount)
+  const { error: presenceError, isLoading: isPresenceLoading } =
+    useSupabasePresence({
+      roomId,
+      userId,
+      username,
+    })
+
+  useEffect(() => {
+    if (presenceError) {
+      toast.error(`Room error: ${presenceError.message}`)
+    }
+  }, [presenceError])
 
   // Compute shareable link (only on client)
   const shareLink = useMemo(() => {
@@ -66,7 +67,11 @@ function GameRoomContent({
     return `${window.location.origin}/game/${roomId}`
   }, [roomId])
 
-  const [isLoading, setIsLoading] = useState(true)
+  const [isEventLoading, setIsEventLoading] = useState(true)
+
+  // Consider loaded once we have participants (even if 0 initially triggers sync)
+  const isLoading = isEventLoading || isPresenceLoading
+
   // HOOK: Dialog open state - only show on first visit to this room
   const [mediaDialogOpen, setMediaDialogOpen] = useState<boolean>(() => {
     // Check if user has already completed setup for this room
@@ -76,7 +81,7 @@ function GameRoomContent({
   })
 
   const handleLoadingComplete = () => {
-    setIsLoading(false)
+    setIsEventLoading(false)
   }
 
   // Listen to loading events and complete when voice-channel step reaches 95%
@@ -90,14 +95,6 @@ function GameRoomContent({
     const unsubscribe = loadingEvents.subscribe(handleLoadingEvent)
     return unsubscribe
   }, [])
-
-  // Get remote player IDs from GAME ROOM participants
-  const { participants: _gameRoomParticipants } = useSupabasePresence({
-    roomId,
-    userId,
-    username, // Use generated username from temp user
-    enabled: true,
-  })
 
   // Voice channel validation is now done in the route's beforeLoad hook
   // If user is not in voice channel, they won't reach this component
@@ -333,13 +330,7 @@ function GameRoomContent({
           </div>
 
           <div className="flex items-center gap-3">
-            <GameRoomPlayerCount
-              roomId={roomId}
-              userId={userId}
-              maxPlayers={4}
-              currentCount={participantCount}
-            />
-
+            <GameRoomPlayerCount roomId={roomId} maxPlayers={4} />
             <Button
               variant="ghost"
               size="sm"

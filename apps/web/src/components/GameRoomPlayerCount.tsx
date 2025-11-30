@@ -5,27 +5,22 @@ import { Loader2, Users } from 'lucide-react'
 
 interface GameRoomPlayerCountProps {
   roomId: string
-  userId: string
   maxPlayers?: number
   currentCount?: number
 }
 
 function PlayerCountContent({
   roomId,
-  userId,
   maxPlayers = 4,
   currentCount: providedCount,
 }: GameRoomPlayerCountProps) {
-  // Get current user info for username
+  // Get user info for presence (shares store with other components)
   const tempUser = getTempUser()
-  const username = tempUser.username
 
-  // Get game room participants (replaces Discord voice channel members)
   const { participants } = useSupabasePresence({
     roomId,
-    userId,
-    username,
-    enabled: true,
+    userId: tempUser.id,
+    username: tempUser.username,
   })
 
   const currentCount = providedCount ?? participants.length

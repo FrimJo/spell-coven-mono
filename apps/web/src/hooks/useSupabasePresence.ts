@@ -6,7 +6,7 @@
  */
 
 import type { Participant } from '@/types/participant'
-import { useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 import { PresenceManager } from '@/lib/supabase/presence'
 
 interface UseSupabasePresenceProps {
@@ -19,14 +19,16 @@ interface UseSupabasePresenceProps {
 
 interface UseSupabasePresenceReturn {
   participants: Participant[]
+  isLoading: boolean
   error: Error | null
 }
 
 /**
- * Store snapshot containing both participants and error state
+ * Store snapshot containing participants, loading, and error state
  */
 interface PresenceSnapshot {
   participants: Participant[]
+  isLoading: boolean
   error: Error | null
 }
 
@@ -45,6 +47,12 @@ interface PresenceStore {
   } | null
 }
 
+const DEFAULT_PRESENCE_SNAPSHOT: PresenceSnapshot = {
+  participants: [],
+  isLoading: true,
+  error: null,
+}
+
 /**
  * Global map of room stores
  * Key: roomId
@@ -52,31 +60,20 @@ interface PresenceStore {
 const roomStores = new Map<string, PresenceStore>()
 
 /**
- * Create a key for the room store
- */
-function getRoomStoreKey(roomId: string): string {
-  return roomId
-}
-
-/**
  * Get or create a store for a specific room
  */
 function getOrCreateRoomStore(roomId: string): PresenceStore {
-  const key = getRoomStoreKey(roomId)
-  let store = roomStores.get(key)
+  let store = roomStores.get(roomId)
 
   if (!store) {
     console.log('[PresenceStore] Creating new store for room:', roomId)
     store = {
-      snapshot: {
-        participants: [],
-        error: null,
-      },
+      snapshot: DEFAULT_PRESENCE_SNAPSHOT,
       listeners: new Set(),
       manager: null,
       roomConfig: null,
     }
-    roomStores.set(key, store)
+    roomStores.set(roomId, store)
   }
 
   return store
@@ -106,26 +103,23 @@ function initializeManager(
 
   console.log('[PresenceStore] Initializing PresenceManager for room:', roomId)
 
-  // Create manager
   const manager = new PresenceManager({
     onParticipantsUpdate: (updatedParticipants) => {
       console.log('[PresenceStore] Participants updated:', updatedParticipants)
-      // Update snapshot immutably
       store.snapshot = {
         participants: updatedParticipants,
+        isLoading: false,
         error: null,
       }
-      // Notify all listeners
       notifyListeners(store)
     },
     onError: (err) => {
       console.error('[PresenceStore] Error:', err)
-      // Update snapshot immutably
       store.snapshot = {
         ...store.snapshot,
+        isLoading: false,
         error: err,
       }
-      // Notify all listeners
       notifyListeners(store)
     },
   })
@@ -133,27 +127,25 @@ function initializeManager(
   store.manager = manager
   store.roomConfig = { roomId, userId, username, avatar }
 
-  // Join room asynchronously
   manager
     .join(roomId, userId, username, avatar)
     .then(() => {
       console.log('[PresenceStore] Successfully joined room:', roomId)
-      // Initial sync
       const currentParticipants = manager.getParticipants()
       store.snapshot = {
         participants: currentParticipants,
+        isLoading: false,
         error: null,
       }
-      // Notify all listeners
       notifyListeners(store)
     })
     .catch((err) => {
       console.error('[PresenceStore] Error joining room:', err)
       store.snapshot = {
         participants: [],
+        isLoading: false,
         error: err instanceof Error ? err : new Error(String(err)),
       }
-      // Notify all listeners
       notifyListeners(store)
     })
 }
@@ -169,19 +161,14 @@ function destroyManager(store: PresenceStore, roomId: string): void {
   const managerToDestroy = store.manager
   store.manager = null
   store.roomConfig = null
-  store.snapshot = {
-    participants: [],
-    error: null,
-  }
+  store.snapshot = DEFAULT_PRESENCE_SNAPSHOT
 
   managerToDestroy.destroy().catch((err) => {
     console.error('[PresenceStore] Error destroying manager:', err)
   })
 
-  // Remove store from global map if no listeners
   if (store.listeners.size === 0) {
-    const key = getRoomStoreKey(roomId)
-    roomStores.delete(key)
+    roomStores.delete(roomId)
     console.log('[PresenceStore] Removed store for room:', roomId)
   }
 }
@@ -189,42 +176,34 @@ function destroyManager(store: PresenceStore, roomId: string): void {
 /**
  * Subscribe to presence updates for a room
  */
-function subscribe(
+function subscribeToRoom(
   roomId: string,
   userId: string,
   username: string,
   avatar: string | null | undefined,
   enabled: boolean,
-): (callback: () => void) => () => void {
-  return (callback: () => void) => {
-    // If not enabled or missing required params, don't initialize
-    if (!enabled || !roomId || !userId || !username) {
-      // Return a no-op unsubscribe function
-      return () => {}
-    }
+  callback: () => void,
+): () => void {
+  if (!enabled || !roomId || !userId || !username) {
+    return () => {}
+  }
 
-    const store = getOrCreateRoomStore(roomId)
+  const store = getOrCreateRoomStore(roomId)
+  store.listeners.add(callback)
 
-    // Add listener
-    store.listeners.add(callback)
+  if (!store.manager) {
+    initializeManager(store, roomId, userId, username, avatar)
+  }
 
-    // Initialize manager if needed
-    if (!store.manager) {
-      initializeManager(store, roomId, userId, username, avatar)
-    }
+  return () => {
+    store.listeners.delete(callback)
 
-    // Cleanup function
-    return () => {
-      store.listeners.delete(callback)
-
-      // If this was the last listener, destroy the manager
-      if (store.listeners.size === 0 && store.manager) {
-        console.log(
-          '[PresenceStore] Last listener removed, destroying manager for room:',
-          roomId,
-        )
-        destroyManager(store, roomId)
-      }
+    if (store.listeners.size === 0 && store.manager) {
+      console.log(
+        '[PresenceStore] Last listener removed, destroying manager for room:',
+        roomId,
+      )
+      destroyManager(store, roomId)
     }
   }
 }
@@ -233,14 +212,10 @@ function subscribe(
  * Get current snapshot for a room
  */
 function getSnapshot(roomId: string): PresenceSnapshot {
-  const key = getRoomStoreKey(roomId)
-  const store = roomStores.get(key)
+  const store = roomStores.get(roomId)
 
   if (!store) {
-    return {
-      participants: [],
-      error: null,
-    }
+    return DEFAULT_PRESENCE_SNAPSHOT
   }
 
   return store.snapshot
@@ -250,10 +225,7 @@ function getSnapshot(roomId: string): PresenceSnapshot {
  * Get server-side snapshot (always returns empty state)
  */
 function getServerSnapshot(): PresenceSnapshot {
-  return {
-    participants: [],
-    error: null,
-  }
+  return DEFAULT_PRESENCE_SNAPSHOT
 }
 
 /**
@@ -266,15 +238,25 @@ export function useSupabasePresence({
   avatar,
   enabled = true,
 }: UseSupabasePresenceProps): UseSupabasePresenceReturn {
-  // Use useSyncExternalStore with room-specific store functions
+  // Memoize subscribe function to prevent re-subscriptions on every render
+  const subscribe = useCallback(
+    (callback: () => void) =>
+      subscribeToRoom(roomId, userId, username, avatar, enabled, callback),
+    [roomId, userId, username, avatar, enabled],
+  )
+
+  // Memoize getSnapshot function
+  const getSnapshotForRoom = useCallback(() => getSnapshot(roomId), [roomId])
+
   const snapshot = useSyncExternalStore(
-    subscribe(roomId, userId, username, avatar, enabled),
-    () => getSnapshot(roomId),
+    subscribe,
+    getSnapshotForRoom,
     getServerSnapshot,
   )
 
   return {
     participants: snapshot.participants,
+    isLoading: snapshot.isLoading,
     error: snapshot.error,
   }
 }
