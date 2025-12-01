@@ -1,11 +1,10 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { TanStackDevtools } from '@tanstack/react-devtools'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import {
   createRootRouteWithContext,
   HeadContent,
   Scripts,
 } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 
 import { AuthProvider } from '../contexts/AuthContext.js'
 import globalCss from '../globals.css?url'
@@ -50,7 +49,34 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   notFoundComponent: () => <div>Not Found</div>,
 })
 
+const TanStackDevtoolsProduction = lazy(() =>
+  import('@tanstack/react-devtools').then((d) => ({
+    default: d.TanStackDevtools,
+  })),
+)
+
+const TanStackRouterDevtoolsPanelProduction = lazy(() =>
+  import('@tanstack/react-router-devtools').then((d) => ({
+    default: d.TanStackRouterDevtoolsPanel,
+  })),
+)
+
+const SpeedInsightsProduction = lazy(() =>
+  import('@vercel/speed-insights/react').then((d) => ({
+    default: d.SpeedInsights,
+  })),
+)
+
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const [showDevtools, setShowDevtools] = useState(
+    import.meta.env.MODE === 'development',
+  )
+
+  useEffect(() => {
+    // @ts-expect-error: Enable toogle devtools in production
+    window.toggleDevtools = () => setShowDevtools((old) => !old)
+  }, [])
+
   return (
     <html lang="en">
       <head>
@@ -59,20 +85,25 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body className="dark min-h-screen bg-slate-950">
         <AuthProvider>
           {children}
-          <TanStackDevtools
-            config={{
-              position: 'bottom-right',
-            }}
-            plugins={[
-              {
-                name: 'Tanstack Router',
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-              TanStackQueryDevtools,
-            ]}
-          />
+          <Suspense fallback={null}>
+            {showDevtools && (
+              <TanStackDevtoolsProduction
+                config={{
+                  position: 'bottom-right',
+                }}
+                plugins={[
+                  {
+                    name: 'Tanstack Router',
+                    render: <TanStackRouterDevtoolsPanelProduction />,
+                  },
+                  TanStackQueryDevtools,
+                ]}
+              />
+            )}
+          </Suspense>
         </AuthProvider>
         <Scripts />
+        {import.meta.env.MODE === 'production' && <SpeedInsightsProduction />}
       </body>
     </html>
   )
