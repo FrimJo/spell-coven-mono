@@ -1,10 +1,15 @@
 /**
- * Temporary User Identity System
+ * @deprecated This file is no longer used. Authentication is now handled via
+ * Supabase Auth with Discord OAuth. See:
+ * - src/lib/supabase/auth.ts
+ * - src/contexts/AuthContext.tsx
+ *
+ * This file is kept for reference only and can be safely deleted.
+ *
+ * ---
+ * Temporary User Identity System (DEPRECATED)
  *
  * Generates random user ID and username, stored in localStorage.
- * This replaces Discord authentication during migration.
- *
- * TODO: Replace with proper authentication system later.
  */
 
 interface TempUser {

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { LandingPage } from '@/components/LandingPage'
+import { useAuth } from '@/contexts/AuthContext'
 import { sessionStorage } from '@/lib/session-storage'
-import { getTempUser } from '@/lib/temp-user'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { ErrorBoundary } from 'react-error-boundary'
@@ -20,12 +20,17 @@ export const Route = createFileRoute('/')({
 function LandingPageContent() {
   const navigate = useNavigate()
   const search = Route.useSearch()
+  const { user, isLoading: isAuthLoading, signIn, signOut } = useAuth()
   const [error, setError] = useState<string | null>(search.error || null)
   const [isCreatingGame, setIsCreatingGame] = useState(false)
   const [createdGameId, setCreatedGameId] = useState<string | null>(null)
-  const tempUser = getTempUser()
 
   const handleCreateGame = async () => {
+    if (!user) {
+      setError('Please sign in to create a game')
+      return
+    }
+
     setError(null)
     setIsCreatingGame(true)
     setCreatedGameId(null)
@@ -40,7 +45,7 @@ function LandingPageContent() {
       // Save to session storage
       sessionStorage.saveGameState({
         gameId,
-        playerName: tempUser.username,
+        playerName: user.username,
         timestamp: Date.now(),
       })
 
@@ -97,6 +102,10 @@ function LandingPageContent() {
         inviteState={null}
         onRefreshInvite={() => {}}
         isRefreshingInvite={false}
+        user={user}
+        isAuthLoading={isAuthLoading}
+        onSignIn={signIn}
+        onSignOut={signOut}
       />
     </ErrorBoundary>
   )

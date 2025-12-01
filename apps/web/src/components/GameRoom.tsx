@@ -1,6 +1,7 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { LoadingEvent } from '@/lib/loading-events'
 import { useEffect, useMemo, useState } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   CardQueryProvider,
   useCardQueryContext,
@@ -9,7 +10,6 @@ import { useSupabasePresence } from '@/hooks/useSupabasePresence'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
 import { loadOpenCV } from '@/lib/opencv-loader'
-import { getTempUser } from '@/lib/temp-user'
 import { ArrowLeft, Check, Copy, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -39,10 +39,13 @@ function GameRoomContent({
   detectorType,
   usePerspectiveWarp = true,
 }: GameRoomProps) {
-  // Get or create temporary user identity (replaces Discord auth)
-  const tempUser = getTempUser()
-  const userId = tempUser.id
-  const username = tempUser.username
+  // Get authenticated user from Supabase Auth (Discord OAuth)
+  const { user } = useAuth()
+
+  // User should always be authenticated at this point (protected route)
+  // But we provide safe defaults just in case
+  const userId = user?.id ?? ''
+  const username = user?.username ?? 'Unknown'
 
   const { query } = useCardQueryContext()
   const [copied, setCopied] = useState(false)
@@ -53,6 +56,7 @@ function GameRoomContent({
       roomId,
       userId,
       username,
+      avatar: user?.avatar,
     })
 
   useEffect(() => {

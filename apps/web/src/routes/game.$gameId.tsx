@@ -2,9 +2,11 @@ import type { DetectorType } from '@/lib/detectors'
 import { Suspense } from 'react'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
+import { useAuth } from '@/contexts/AuthContext'
 import { sessionStorage } from '@/lib/session-storage'
 import {
   createFileRoute,
+  Navigate,
   stripSearchParams,
   useNavigate,
 } from '@tanstack/react-router'
@@ -72,10 +74,32 @@ function GameRoomRoute() {
   const { gameId } = Route.useParams()
   const { detector, usePerspectiveWarp } = Route.useSearch()
   const navigate = useNavigate()
+  const { user, isLoading, isAuthenticated } = useAuth()
 
   const handleLeaveGame = () => {
     sessionStorage.clearGameState()
     navigate({ to: '/' })
+  }
+
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-950">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="relative">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-500/20">
+              <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+            </div>
+          </div>
+          <p className="text-sm text-slate-400">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Redirect to home if not authenticated
+  if (!isAuthenticated) {
+    return <Navigate to="/" />
   }
 
   return (
@@ -85,7 +109,6 @@ function GameRoomRoute() {
       )}
       onReset={() => window.location.reload()}
     >
-      {/* Only render GameRoom if user is in voice channel (modal is closed) */}
       <Suspense
         fallback={
           <div className="flex h-screen items-center justify-center">
@@ -95,7 +118,7 @@ function GameRoomRoute() {
       >
         <GameRoom
           roomId={gameId}
-          playerName={'Temp'}
+          playerName={user?.username ?? 'Player'}
           onLeaveGame={handleLeaveGame}
           detectorType={detector as DetectorType | undefined}
           usePerspectiveWarp={usePerspectiveWarp}

@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 import { useSupabasePresence } from '@/hooks/useSupabasePresence'
-import { getTempUser } from '@/lib/temp-user'
 import { Loader2, Users } from 'lucide-react'
 
 interface GameRoomPlayerCountProps {
@@ -14,13 +14,14 @@ function PlayerCountContent({
   maxPlayers = 4,
   currentCount: providedCount,
 }: GameRoomPlayerCountProps) {
-  // Get user info for presence (shares store with other components)
-  const tempUser = getTempUser()
+  // Get user info from auth context
+  const { user } = useAuth()
 
   const { participants } = useSupabasePresence({
     roomId,
-    userId: tempUser.id,
-    username: tempUser.username,
+    userId: user?.id ?? '',
+    username: user?.username ?? 'Unknown',
+    avatar: user?.avatar,
   })
 
   const currentCount = providedCount ?? participants.length
