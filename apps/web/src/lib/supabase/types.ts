@@ -15,6 +15,8 @@ export const supabasePresenceStateSchema = z.object({
   username: z.string().min(1, 'username is required'),
   avatar: z.string().nullable().optional(),
   joinedAt: z.number().positive('joinedAt must be a positive timestamp'),
+  /** Unique session ID per browser tab - used for duplicate detection */
+  sessionId: z.string().min(1, 'sessionId is required'),
 })
 
 export type SupabasePresenceState = z.infer<typeof supabasePresenceStateSchema>

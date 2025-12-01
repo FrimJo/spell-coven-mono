@@ -58,8 +58,8 @@ export function VideoStreamGrid({
   usePerspectiveWarp = true,
   onCardCrop,
 }: VideoStreamGridProps) {
-  // Fetch remote players (exclude local player)
-  const { participants: gameRoomParticipants } = useSupabasePresence({
+  // Fetch remote players (exclude local player, use uniqueParticipants to avoid duplicates)
+  const { uniqueParticipants: gameRoomParticipants } = useSupabasePresence({
     roomId,
     userId,
     username: localPlayerName,
@@ -238,9 +238,9 @@ export function VideoStreamGrid({
   }
 
   const getGridClass = () => {
-    if (players.length === 1) return 'grid-cols-1'
-    if (players.length === 2) return 'grid-cols-1 lg:grid-cols-2'
-    return 'grid-cols-1 lg:grid-cols-2'
+    if (players.length === 0) return 'grid-cols-1' // Only local player, fill space
+    if (players.length === 1) return 'grid-cols-1 lg:grid-cols-2' // Local + 1 remote
+    return 'grid-cols-1 lg:grid-cols-2' // Local + multiple remotes
   }
 
   // Store refs for remote video elements
@@ -278,7 +278,7 @@ export function VideoStreamGrid({
           </div>
         </div>
       ) : needsPermissionDialog || permissionsBlocked ? (
-        <div className="flex h-full items-center justify-center rounded-lg border border-slate-700 bg-slate-800/50">
+        <div className="h-full rounded-lg border border-slate-700 bg-slate-800/50">
           <MediaPermissionGate
             permissions={{ camera: true, microphone: true }}
             loadingFallback={

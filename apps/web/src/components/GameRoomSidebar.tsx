@@ -31,8 +31,8 @@ function SidebarContent({
   const { user } = useAuth()
   const username = user?.username ?? playerName
 
-  // Get game room participants
-  const { participants } = useSupabasePresence({
+  // Get game room participants (use uniqueParticipants to avoid showing same user twice)
+  const { uniqueParticipants } = useSupabasePresence({
     roomId,
     userId,
     username,
@@ -43,7 +43,7 @@ function SidebarContent({
   return (
     <div className="w-64 flex-shrink-0 space-y-4 overflow-y-auto">
       <PlayerList
-        players={participants.map((participant) => ({
+        players={uniqueParticipants.map((participant) => ({
           id: participant.id,
           name: participant.username,
           isOnline: true, // Game room participants are always online
@@ -64,8 +64,8 @@ function SidebarLoading({ roomId, userId }: GameRoomSidebarProps) {
   const { user } = useAuth()
   const username = user?.username ?? 'Unknown'
 
-  // Get game room participants
-  const { participants } = useSupabasePresence({
+  // Get game room participants (use uniqueParticipants to avoid showing same user twice)
+  const { uniqueParticipants } = useSupabasePresence({
     roomId,
     userId,
     username,
@@ -91,7 +91,7 @@ function SidebarLoading({ roomId, userId }: GameRoomSidebarProps) {
 
           {/* Player items - show generic loading state */}
           <div className="space-y-2">
-            {[currentUser, ...participants].map((p) => (
+            {[currentUser, ...uniqueParticipants].map((p) => (
               <div
                 key={p.id}
                 className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-800/50 p-2"

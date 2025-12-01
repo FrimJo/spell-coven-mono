@@ -6,7 +6,7 @@
  */
 
 import type { Participant } from '@/types/participant'
-import { useCallback, useEffect, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
 import { channelManager } from '@/lib/supabase/channel-manager'
 import { supabase } from '@/lib/supabase/client'
 import { PresenceManager } from '@/lib/supabase/presence'
@@ -18,10 +18,17 @@ interface UseSupabasePresenceProps {
   avatar?: string | null
   enabled?: boolean
   onKicked?: () => void
+  /** Called when a duplicate session is detected (same user in another tab) */
+  onDuplicateSession?: (existingSessionId: string) => void
+  /** Called when this session should be closed (transfer happened in another tab) */
+  onSessionTransferred?: () => void
 }
 
 interface UseSupabasePresenceReturn {
+  /** All participants including duplicate sessions */
   participants: Participant[]
+  /** Participants deduplicated by userId (for display - shows oldest session per user) */
+  uniqueParticipants: Participant[]
   isLoading: boolean
   error: Error | null
   /** The ID of the room owner (first participant to join) */
@@ -32,6 +39,12 @@ interface UseSupabasePresenceReturn {
   kickPlayer: (playerId: string) => Promise<void>
   /** Ban a player (persistent - they cannot rejoin until unbanned) */
   banPlayer: (playerId: string) => Promise<void>
+  /** Current session ID for this tab */
+  sessionId: string
+  /** Whether there's a duplicate session for this user */
+  hasDuplicateSession: boolean
+  /** Transfer session to this tab (kicks other tabs) */
+  transferSession: () => Promise<void>
 }
 
 /**
@@ -55,7 +68,26 @@ interface PresenceStore {
     userId: string
     username: string
     avatar?: string | null
+    sessionId: string
   } | null
+}
+
+/**
+ * Generate or retrieve a stable session ID for this browser tab.
+ * Uses sessionStorage to persist across page reloads within the same tab,
+ * but generates a new ID for each new tab.
+ */
+function getOrCreateSessionId(): string {
+  const storageKey = 'spell-coven-session-id'
+  let sessionId = sessionStorage.getItem(storageKey)
+
+  if (!sessionId) {
+    sessionId = crypto.randomUUID()
+    sessionStorage.setItem(storageKey, sessionId)
+    console.log('[PresenceStore] Generated new session ID:', sessionId)
+  }
+
+  return sessionId
 }
 
 const DEFAULT_PRESENCE_SNAPSHOT: PresenceSnapshot = {
@@ -105,14 +137,15 @@ function initializeManager(
   roomId: string,
   userId: string,
   username: string,
-  avatar?: string | null,
+  avatar: string | null | undefined,
+  sessionId: string,
 ): void {
   if (store.manager) {
     console.log('[PresenceStore] Manager already exists for room:', roomId)
     return
   }
 
-  console.log('[PresenceStore] Initializing PresenceManager for room:', roomId)
+  console.log('[PresenceStore] Initializing PresenceManager for room:', roomId, 'sessionId:', sessionId)
 
   const manager = new PresenceManager({
     onParticipantsUpdate: (updatedParticipants) => {
@@ -136,10 +169,10 @@ function initializeManager(
   })
 
   store.manager = manager
-  store.roomConfig = { roomId, userId, username, avatar }
+  store.roomConfig = { roomId, userId, username, avatar, sessionId }
 
   manager
-    .join(roomId, userId, username, avatar)
+    .join(roomId, userId, username, avatar, sessionId)
     .then(() => {
       console.log('[PresenceStore] Successfully joined room:', roomId)
       const currentParticipants = manager.getParticipants()
@@ -192,6 +225,7 @@ function subscribeToRoom(
   userId: string,
   username: string,
   avatar: string | null | undefined,
+  sessionId: string,
   enabled: boolean,
   callback: () => void,
 ): () => void {
@@ -203,7 +237,7 @@ function subscribeToRoom(
   store.listeners.add(callback)
 
   if (!store.manager) {
-    initializeManager(store, roomId, userId, username, avatar)
+    initializeManager(store, roomId, userId, username, avatar, sessionId)
   }
 
   return () => {
@@ -249,6 +283,18 @@ interface KickEventPayload {
 }
 
 /**
+ * Session transfer event payload type
+ */
+interface SessionTransferPayload {
+  /** User ID that is transferring */
+  userId: string
+  /** Session ID of the new session (the one taking over) */
+  newSessionId: string
+  /** Session ID(s) to close */
+  closeSessionIds: string[]
+}
+
+/**
  * Broadcast a kick/ban event to remove a player from the room
  * This tells the player's client to leave immediately
  */
@@ -275,6 +321,35 @@ async function broadcastRemovalEvent(
 
   if (response === 'error') {
     throw new Error('Failed to broadcast removal event')
+  }
+}
+
+/**
+ * Broadcast a session transfer event to close other tabs with the same user
+ */
+async function broadcastSessionTransfer(
+  roomId: string,
+  userId: string,
+  newSessionId: string,
+  closeSessionIds: string[],
+): Promise<void> {
+  const channel = channelManager.getChannel(roomId)
+
+  const payload: SessionTransferPayload = {
+    userId,
+    newSessionId,
+    closeSessionIds,
+  }
+
+  console.log('[PresenceStore] Broadcasting session transfer:', payload)
+  const response = await channel.send({
+    type: 'broadcast',
+    event: 'session:transfer',
+    payload,
+  })
+
+  if (response === 'error') {
+    throw new Error('Failed to broadcast session transfer event')
   }
 }
 
@@ -321,12 +396,17 @@ export function useSupabasePresence({
   avatar,
   enabled = true,
   onKicked,
+  onDuplicateSession,
+  onSessionTransferred,
 }: UseSupabasePresenceProps): UseSupabasePresenceReturn {
+  // Get stable session ID for this tab
+  const sessionId = useMemo(() => getOrCreateSessionId(), [])
+
   // Memoize subscribe function to prevent re-subscriptions on every render
   const subscribe = useCallback(
     (callback: () => void) =>
-      subscribeToRoom(roomId, userId, username, avatar, enabled, callback),
-    [roomId, userId, username, avatar, enabled],
+      subscribeToRoom(roomId, userId, username, avatar, sessionId, enabled, callback),
+    [roomId, userId, username, avatar, sessionId, enabled],
   )
 
   // Memoize getSnapshot function
@@ -338,16 +418,46 @@ export function useSupabasePresence({
     getServerSnapshot,
   )
 
-  // Listen for kick/ban events
+  // Detect duplicate sessions (same userId, different sessionId)
+  const duplicateSessions = useMemo(() => {
+    return snapshot.participants.filter(
+      (p) => p.id === userId && p.sessionId !== sessionId
+    )
+  }, [snapshot.participants, userId, sessionId])
+
+  const hasDuplicateSession = duplicateSessions.length > 0
+
+  // Deduplicate participants by userId (keep oldest session per user)
+  // This is useful for UI display where we don't want to show the same user twice
+  const uniqueParticipants = useMemo(() => {
+    const seen = new Map<string, Participant>()
+    // participants are already sorted by joinedAt, so first occurrence is oldest
+    for (const p of snapshot.participants) {
+      if (!seen.has(p.id)) {
+        seen.set(p.id, p)
+      }
+    }
+    return Array.from(seen.values())
+  }, [snapshot.participants])
+
+  // Notify about duplicate session when detected
   useEffect(() => {
-    if (!enabled || !roomId || !userId || !onKicked) return
+    if (hasDuplicateSession && onDuplicateSession && duplicateSessions[0]) {
+      console.log('[PresenceStore] Duplicate session detected:', duplicateSessions[0].sessionId)
+      onDuplicateSession(duplicateSessions[0].sessionId)
+    }
+  }, [hasDuplicateSession, duplicateSessions, onDuplicateSession])
+
+  // Listen for kick/ban events and session transfer events
+  useEffect(() => {
+    if (!enabled || !roomId || !userId) return
 
     const channel = channelManager.getChannel(roomId)
 
     const handleKickEvent = (payload: { payload: KickEventPayload }) => {
       console.log('[PresenceStore] Received removal event:', payload.payload)
 
-      if (payload.payload.kickedUserId === userId) {
+      if (payload.payload.kickedUserId === userId && onKicked) {
         const action = payload.payload.isBan ? 'banned' : 'kicked'
         console.log(
           `[PresenceStore] Current user was ${action}, calling onKicked`,
@@ -356,13 +466,27 @@ export function useSupabasePresence({
       }
     }
 
+    const handleSessionTransfer = (payload: { payload: SessionTransferPayload }) => {
+      console.log('[PresenceStore] Received session transfer event:', payload.payload)
+
+      // Check if this session should be closed
+      if (
+        payload.payload.userId === userId &&
+        payload.payload.closeSessionIds.includes(sessionId)
+      ) {
+        console.log('[PresenceStore] This session should be closed due to transfer')
+        onSessionTransferred?.()
+      }
+    }
+
     channel.on('broadcast', { event: 'player:kicked' }, handleKickEvent)
+    channel.on('broadcast', { event: 'session:transfer' }, handleSessionTransfer)
 
     return () => {
       // Note: Supabase doesn't have a direct off() method for specific handlers,
       // but the channel cleanup happens when the presence subscription ends
     }
-  }, [roomId, userId, enabled, onKicked])
+  }, [roomId, userId, sessionId, enabled, onKicked, onSessionTransferred])
 
   // Kick a player (temporary - they can rejoin)
   const kickPlayer = useCallback(
@@ -392,17 +516,37 @@ export function useSupabasePresence({
     [roomId, userId],
   )
 
+  // Transfer session to this tab (close other tabs with same user)
+  const transferSession = useCallback(async (): Promise<void> => {
+    if (!roomId || !userId) {
+      throw new Error('Cannot transfer session: not connected to room')
+    }
+
+    const sessionsToClose = duplicateSessions.map((p) => p.sessionId)
+    if (sessionsToClose.length === 0) {
+      console.log('[PresenceStore] No duplicate sessions to close')
+      return
+    }
+
+    console.log('[PresenceStore] Transferring session, closing:', sessionsToClose)
+    await broadcastSessionTransfer(roomId, userId, sessionId, sessionsToClose)
+  }, [roomId, userId, sessionId, duplicateSessions])
+
   // Compute owner ID - the first participant (sorted by joinedAt) is the room creator
   const ownerId = snapshot.participants[0]?.id ?? null
   const isOwner = ownerId !== null && ownerId === userId
 
   return {
     participants: snapshot.participants,
+    uniqueParticipants,
     isLoading: snapshot.isLoading,
     error: snapshot.error,
     ownerId,
     isOwner,
     kickPlayer,
     banPlayer,
+    sessionId,
+    hasDuplicateSession,
+    transferSession,
   }
 }

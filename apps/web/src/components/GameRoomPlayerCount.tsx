@@ -17,14 +17,15 @@ function PlayerCountContent({
   // Get user info from auth context
   const { user } = useAuth()
 
-  const { participants } = useSupabasePresence({
+  // Use uniqueParticipants to count unique users (not duplicate sessions)
+  const { uniqueParticipants } = useSupabasePresence({
     roomId,
     userId: user?.id ?? '',
     username: user?.username ?? 'Unknown',
     avatar: user?.avatar,
   })
 
-  const currentCount = providedCount ?? participants.length
+  const currentCount = providedCount ?? uniqueParticipants.length
 
   return (
     <div className="flex items-center gap-2 text-slate-400">
