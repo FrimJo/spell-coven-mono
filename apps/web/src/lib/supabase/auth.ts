@@ -50,7 +50,7 @@ export async function signInWithDiscord(): Promise<void> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'discord',
     options: {
-      redirectTo: `${window.location.origin}/`,
+      redirectTo: window.location.origin,
       scopes: 'identify',
     },
   })
