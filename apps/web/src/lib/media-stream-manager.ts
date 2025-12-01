@@ -201,15 +201,18 @@ export async function replaceTrackInSender(
 }
 
 /**
- * Get a temporary stream for device enumeration (with permissions)
- * This is useful when you need device labels but don't want to keep the stream
+ * Request temporary media permission and immediately release the stream.
+ * This triggers the browser's permission prompt and allows enumerateDevices()
+ * to return real device IDs instead of empty strings.
  *
  * Note: This may fail if no devices are available or permissions are denied.
  * Callers should handle errors gracefully.
+ *
+ * @returns The default deviceId for this kind, or null if unavailable
  */
 export async function getTemporaryStreamForPermissions(
   kind: 'video' | 'audio',
-): Promise<{ deviceId: string | null; stream: MediaStream }> {
+): Promise<string | null> {
   console.log(
     `[MediaStreamManager] Requesting temporary ${kind} stream for permissions`,
   )
@@ -222,16 +225,19 @@ export async function getTemporaryStreamForPermissions(
   try {
     const stream = await navigator.mediaDevices.getUserMedia(constraints)
     const track = stream.getTracks()[0]
-    const deviceId = track?.getSettings().deviceId || null
+    const deviceId = track?.getSettings().deviceId ?? null
+
+    // Immediately stop all tracks - we just needed permission, not the stream
+    stream.getTracks().forEach((t) => t.stop())
 
     console.log(
-      `[MediaStreamManager] Got temporary ${kind} stream, deviceId:`,
+      `[MediaStreamManager] Got ${kind} permission, default deviceId:`,
       deviceId,
     )
-    return { deviceId, stream }
+    return deviceId
   } catch (error) {
     console.error(
-      `[MediaStreamManager] Failed to get temporary ${kind} stream:`,
+      `[MediaStreamManager] Failed to get ${kind} permission:`,
       error,
     )
     throw error
