@@ -3,5 +3,5 @@
   "installCommand": "cd ../.. && bun install",
   "buildCommand": "cd ../.. && bunx turbo run build --filter=@repo/web",
   "outputDirectory": "dist/client",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "/_shell.html" }]
 }
