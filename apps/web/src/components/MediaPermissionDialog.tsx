@@ -69,7 +69,6 @@ export function MediaPermissionDialog({
   const hasBlockedPermissions = blocked.camera || blocked.microphone
   const bothPermissions = permissions.camera && permissions.microphone
   const cameraOnly = permissions.camera && !permissions.microphone
-  const _microphoneOnly = !permissions.camera && permissions.microphone
 
   const permissionLabel = bothPermissions
     ? 'camera and microphone'
