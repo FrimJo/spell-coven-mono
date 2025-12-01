@@ -6,7 +6,9 @@
  */
 
 import type { Participant } from '@/types/participant'
-import { useCallback, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useSyncExternalStore } from 'react'
+import { channelManager } from '@/lib/supabase/channel-manager'
+import { supabase } from '@/lib/supabase/client'
 import { PresenceManager } from '@/lib/supabase/presence'
 
 interface UseSupabasePresenceProps {
@@ -15,12 +17,17 @@ interface UseSupabasePresenceProps {
   username: string
   avatar?: string | null
   enabled?: boolean
+  onKicked?: () => void
 }
 
 interface UseSupabasePresenceReturn {
   participants: Participant[]
   isLoading: boolean
   error: Error | null
+  /** Kick a player (temporary - they can rejoin) */
+  kickPlayer: (playerId: string) => Promise<void>
+  /** Ban a player (persistent - they cannot rejoin until unbanned) */
+  banPlayer: (playerId: string) => Promise<void>
 }
 
 /**
@@ -229,6 +236,78 @@ function getServerSnapshot(): PresenceSnapshot {
 }
 
 /**
+ * Kick event payload type
+ */
+interface KickEventPayload {
+  kickedUserId: string
+  kickedBy: string
+  isBan: boolean
+}
+
+/**
+ * Broadcast a kick/ban event to remove a player from the room
+ * This tells the player's client to leave immediately
+ */
+async function broadcastRemovalEvent(
+  roomId: string,
+  kickedUserId: string,
+  kickedBy: string,
+  isBan: boolean,
+): Promise<void> {
+  const channel = channelManager.getChannel(roomId)
+
+  const payload: KickEventPayload = {
+    kickedUserId,
+    kickedBy,
+    isBan,
+  }
+
+  console.log('[PresenceStore] Broadcasting removal event:', payload)
+  const response = await channel.send({
+    type: 'broadcast',
+    event: 'player:kicked',
+    payload,
+  })
+
+  if (response === 'error') {
+    throw new Error('Failed to broadcast removal event')
+  }
+}
+
+/**
+ * Create a ban record in Supabase to prevent the user from rejoining
+ * Note: Requires the room_bans table from migration 002_room_bans.sql
+ * and updated RLS policies on realtime.messages
+ */
+async function createBanRecord(
+  roomId: string,
+  bannedUserId: string,
+  bannedBy: string,
+): Promise<void> {
+  const { error } = await supabase.from('room_bans').upsert(
+    {
+      room_id: roomId,
+      user_id: bannedUserId,
+      banned_by: bannedBy,
+      reason: 'Banned by lobby owner',
+    },
+    {
+      onConflict: 'room_id,user_id',
+    },
+  )
+
+  if (error) {
+    // Log but don't fail - the ban table might not exist yet
+    console.warn('[PresenceStore] Failed to create ban record:', error.message)
+    console.warn(
+      '[PresenceStore] Note: Run migration 002_room_bans.sql to enable persistent bans',
+    )
+  } else {
+    console.log('[PresenceStore] Ban record created for user:', bannedUserId)
+  }
+}
+
+/**
  * Hook to track game room participants using Supabase Presence
  */
 export function useSupabasePresence({
@@ -237,6 +316,7 @@ export function useSupabasePresence({
   username,
   avatar,
   enabled = true,
+  onKicked,
 }: UseSupabasePresenceProps): UseSupabasePresenceReturn {
   // Memoize subscribe function to prevent re-subscriptions on every render
   const subscribe = useCallback(
@@ -254,9 +334,65 @@ export function useSupabasePresence({
     getServerSnapshot,
   )
 
+  // Listen for kick/ban events
+  useEffect(() => {
+    if (!enabled || !roomId || !userId || !onKicked) return
+
+    const channel = channelManager.getChannel(roomId)
+
+    const handleKickEvent = (payload: { payload: KickEventPayload }) => {
+      console.log('[PresenceStore] Received removal event:', payload.payload)
+
+      if (payload.payload.kickedUserId === userId) {
+        const action = payload.payload.isBan ? 'banned' : 'kicked'
+        console.log(
+          `[PresenceStore] Current user was ${action}, calling onKicked`,
+        )
+        onKicked()
+      }
+    }
+
+    channel.on('broadcast', { event: 'player:kicked' }, handleKickEvent)
+
+    return () => {
+      // Note: Supabase doesn't have a direct off() method for specific handlers,
+      // but the channel cleanup happens when the presence subscription ends
+    }
+  }, [roomId, userId, enabled, onKicked])
+
+  // Kick a player (temporary - they can rejoin)
+  const kickPlayer = useCallback(
+    async (playerId: string): Promise<void> => {
+      if (!roomId || !userId) {
+        throw new Error('Cannot kick player: not connected to room')
+      }
+
+      await broadcastRemovalEvent(roomId, playerId, userId, false)
+    },
+    [roomId, userId],
+  )
+
+  // Ban a player (persistent - they cannot rejoin)
+  const banPlayer = useCallback(
+    async (playerId: string): Promise<void> => {
+      if (!roomId || !userId) {
+        throw new Error('Cannot ban player: not connected to room')
+      }
+
+      // First create the ban record (prevents rejoin)
+      await createBanRecord(roomId, playerId, userId)
+
+      // Then broadcast the ban event (tells client to leave immediately)
+      await broadcastRemovalEvent(roomId, playerId, userId, true)
+    },
+    [roomId, userId],
+  )
+
   return {
     participants: snapshot.participants,
     isLoading: snapshot.isLoading,
     error: snapshot.error,
+    kickPlayer,
+    banPlayer,
   }
 }

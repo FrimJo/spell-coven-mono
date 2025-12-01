@@ -1,6 +1,6 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { LoadingEvent } from '@/lib/loading-events'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   CardQueryProvider,
@@ -50,14 +50,25 @@ function GameRoomContent({
   const { query } = useCardQueryContext()
   const [copied, setCopied] = useState(false)
 
+  // Handle being kicked from the room
+  const handleKicked = useCallback(() => {
+    toast.error('You have been removed from the game')
+    onLeaveGame()
+  }, [onLeaveGame])
+
   // Track room presence (shares store with GameRoomSidebar and GameRoomPlayerCount)
-  const { error: presenceError, isLoading: isPresenceLoading } =
-    useSupabasePresence({
-      roomId,
-      userId,
-      username,
-      avatar: user?.avatar,
-    })
+  const {
+    error: presenceError,
+    isLoading: isPresenceLoading,
+    kickPlayer,
+    banPlayer,
+  } = useSupabasePresence({
+    roomId,
+    userId,
+    username,
+    avatar: user?.avatar,
+    onKicked: handleKicked,
+  })
 
   useEffect(() => {
     if (presenceError) {
@@ -278,9 +289,24 @@ function GameRoomContent({
     // This will broadcast to other players via SSE
   }
 
-  const handleRemovePlayer = (_playerId: string) => {
-    throw new Error('Not implemented')
-    toast.success('Player removed from game')
+  const handleKickPlayer = async (playerId: string) => {
+    try {
+      await kickPlayer(playerId)
+      toast.success('Player kicked from game')
+    } catch (error) {
+      console.error('[GameRoom] Failed to kick player:', error)
+      toast.error('Failed to kick player')
+    }
+  }
+
+  const handleBanPlayer = async (playerId: string) => {
+    try {
+      await banPlayer(playerId)
+      toast.success('Player banned from game')
+    } catch (error) {
+      console.error('[GameRoom] Failed to ban player:', error)
+      toast.error('Failed to ban player')
+    }
   }
 
   return (
@@ -358,7 +384,8 @@ function GameRoomContent({
             playerName={username}
             isLobbyOwner={isLobbyOwner}
             onNextTurn={handleNextTurn}
-            onRemovePlayer={handleRemovePlayer}
+            onKickPlayer={handleKickPlayer}
+            onBanPlayer={handleBanPlayer}
           />
 
           {/* Main Area - Video Stream Grid */}
