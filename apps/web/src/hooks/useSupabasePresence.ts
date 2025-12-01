@@ -24,6 +24,10 @@ interface UseSupabasePresenceReturn {
   participants: Participant[]
   isLoading: boolean
   error: Error | null
+  /** The ID of the room owner (first participant to join) */
+  ownerId: string | null
+  /** Whether the current user is the room owner */
+  isOwner: boolean
   /** Kick a player (temporary - they can rejoin) */
   kickPlayer: (playerId: string) => Promise<void>
   /** Ban a player (persistent - they cannot rejoin until unbanned) */
@@ -388,10 +392,16 @@ export function useSupabasePresence({
     [roomId, userId],
   )
 
+  // Compute owner ID - the first participant (sorted by joinedAt) is the room creator
+  const ownerId = snapshot.participants[0]?.id ?? null
+  const isOwner = ownerId !== null && ownerId === userId
+
   return {
     participants: snapshot.participants,
     isLoading: snapshot.isLoading,
     error: snapshot.error,
+    ownerId,
+    isOwner,
     kickPlayer,
     banPlayer,
   }

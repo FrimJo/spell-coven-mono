@@ -26,7 +26,6 @@ interface GameRoomProps {
   roomId: string
   playerName: string
   onLeaveGame: () => void
-  isLobbyOwner?: boolean
   detectorType?: DetectorType
   usePerspectiveWarp?: boolean
 }
@@ -35,7 +34,6 @@ function GameRoomContent({
   roomId,
   playerName: _playerName,
   onLeaveGame,
-  isLobbyOwner = true,
   detectorType,
   usePerspectiveWarp = true,
 }: GameRoomProps) {
@@ -60,6 +58,8 @@ function GameRoomContent({
   const {
     error: presenceError,
     isLoading: isPresenceLoading,
+    ownerId,
+    isOwner,
     kickPlayer,
     banPlayer,
   } = useSupabasePresence({
@@ -382,7 +382,8 @@ function GameRoomContent({
             roomId={roomId}
             userId={userId}
             playerName={username}
-            isLobbyOwner={isLobbyOwner}
+            isLobbyOwner={isOwner}
+            ownerId={ownerId}
             onNextTurn={handleNextTurn}
             onKickPlayer={handleKickPlayer}
             onBanPlayer={handleBanPlayer}
