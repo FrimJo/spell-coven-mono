@@ -2,6 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "cd ../.. && bun install",
   "buildCommand": "cd ../.. && bunx turbo run build --filter=@repo/web",
-  "outputDirectory": ".output/static/client",
-  "rewrites": [{ "source": "/(.*)", "destination": "/_shell.html" }]
+  "outputDirectory": "dist/client",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
