@@ -15,7 +15,8 @@ interface GameRoomSidebarProps {
   playerName: string
   isLobbyOwner: boolean
   onNextTurn: () => void
-  onRemovePlayer: (playerId: string) => void
+  onKickPlayer: (playerId: string) => void
+  onBanPlayer: (playerId: string) => void
 }
 
 function SidebarContent({
@@ -24,7 +25,8 @@ function SidebarContent({
   playerName,
   isLobbyOwner,
   onNextTurn,
-  onRemovePlayer,
+  onKickPlayer,
+  onBanPlayer,
 }: GameRoomSidebarProps) {
   // Get current user info from auth context
   const { user } = useAuth()
@@ -56,7 +58,8 @@ function SidebarContent({
         }))}
         isLobbyOwner={isLobbyOwner}
         localPlayerName={playerName}
-        onRemovePlayer={onRemovePlayer}
+        onKickPlayer={onKickPlayer}
+        onBanPlayer={onBanPlayer}
         ownerId={userId || undefined}
       />
       <CardPreview playerName={playerName} onClose={() => {}} />
