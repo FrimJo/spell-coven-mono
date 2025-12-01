@@ -96,4 +96,3 @@ export async function handleSignal(
       throw new Error(`Unknown signal type: ${(signal as WebRTCSignal).type}`)
   }
 }
-

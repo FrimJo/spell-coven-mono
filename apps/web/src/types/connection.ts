@@ -13,4 +13,3 @@ export interface TrackState {
   videoEnabled: boolean
   audioEnabled: boolean
 }
-
