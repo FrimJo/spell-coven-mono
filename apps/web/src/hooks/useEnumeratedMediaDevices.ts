@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { getTemporaryStreamForPermissions } from '@/lib/media-stream-manager'
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 
 export interface MediaDevicesByKind {
@@ -17,15 +16,11 @@ export const useEnumeratedMediaDevices = () => {
   const mediaDevicesByKindQuery = useSuspenseQuery<MediaDevicesByKind>({
     queryKey: ['MediaDevices'],
     queryFn: async () => {
-      // First, request permission to access media devices.
+      // Just enumerate devices - don't request permissions here.
+      // Permission handling is done by MediaPermissionGate in the UI.
       // Before permission is granted, enumerateDevices() returns devices with empty deviceId
-      // values for privacy reasons. We need permission first to get real device IDs.
-      // The streams are automatically stopped inside getTemporaryStreamForPermissions.
-      await Promise.allSettled([
-        getTemporaryStreamForPermissions('video'),
-        getTemporaryStreamForPermissions('audio'),
-      ])
-
+      // values for privacy reasons. After MediaPermissionGate grants access, invalidate
+      // this query to get real device IDs.
       const devices = await navigator.mediaDevices.enumerateDevices()
 
       // Filter out devices with empty deviceId (may still happen if permission was denied)

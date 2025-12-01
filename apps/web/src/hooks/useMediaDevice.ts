@@ -7,6 +7,7 @@
  * - Automatic playback handling
  * - Race condition prevention
  * - Error handling
+ * - Respects user's permission dialog preferences (won't trigger native dialog if user declined)
  */
 import type { MediaStreamResult } from '@/lib/media-stream-manager'
 import type {
@@ -16,6 +17,7 @@ import type {
 } from '@/types/async-resource'
 import { useEffect, useMemo, useRef } from 'react'
 import { getMediaStream } from '@/lib/media-stream-manager'
+import { shouldShowPermissionDialog } from '@/lib/permission-storage'
 import { useQuery } from '@tanstack/react-query'
 
 import { useEnumeratedMediaDevices } from './useEnumeratedMediaDevices'
@@ -113,6 +115,11 @@ export function useMediaDevice(
   const onDeviceChangedRef = useRef(onDeviceChanged)
   const onErrorRef = useRef(onError)
 
+  // Check if user has declined our custom permission dialog
+  // If declined, we should NOT trigger the native browser dialog
+  const permissionType = kind === 'videoinput' ? 'camera' : 'microphone'
+  const userDeclinedPermission = !shouldShowPermissionDialog(permissionType)
+
   const {
     data: mediaDevicesByKind,
     isPending: isEnumerating,
@@ -120,13 +127,10 @@ export function useMediaDevice(
   } = useEnumeratedMediaDevices()
 
   const mediaDevices = useMemo(() => {
-    const mediaDevices = mediaDevicesByKind[kind]
-    if (mediaDevices.length > 0) {
-      return mediaDevices as readonly [MediaDeviceInfo] | MediaDeviceInfo[]
-    } else {
-      // Trigger error boundary
-      throw new Error(`No ${kind} devices found`)
-    }
+    // Return devices array (may be empty if permissions not granted yet)
+    // The permission gate in the UI will handle prompting for permissions
+    const devices = mediaDevicesByKind[kind]
+    return devices as readonly MediaDeviceInfo[]
   }, [kind, mediaDevicesByKind])
 
   // Use selected device hook as state manager with localStorage persistence
@@ -195,7 +199,10 @@ export function useMediaDevice(
       )
       return mediaStream
     },
-    enabled: !!selectedDeviceId,
+    // Don't trigger getUserMedia if:
+    // - No device selected
+    // - User declined our custom permission dialog (would trigger native prompt)
+    enabled: !!selectedDeviceId && !userDeclinedPermission,
   })
 
   useEffect(() => {
@@ -212,12 +219,33 @@ export function useMediaDevice(
 
   return useMemo((): UseMediaDeviceReturn => {
     const isPending = isGettingStream || isEnumerating
-    const error = getStreamError || enumerationError
+
+    // Create specific error if user declined permission dialog
+    const permissionDeclinedError = userDeclinedPermission
+      ? new Error(
+          `${permissionType === 'camera' ? 'Camera' : 'Microphone'} access was declined. Please enable permissions to use this feature.`,
+        )
+      : null
+
+    const error = permissionDeclinedError || getStreamError || enumerationError
 
     const base = {
       devices: filteredDevices,
       selectedDeviceId: selectedDeviceId,
       saveSelectedDevice,
+    }
+
+    // If user declined permission, return error state (don't show as pending)
+    if (userDeclinedPermission && permissionDeclinedError) {
+      return {
+        ...base,
+        isPending: false,
+        error: permissionDeclinedError,
+        stream: undefined,
+        videoTrack: undefined,
+        audioTrack: undefined,
+        actualResolution: undefined,
+      } satisfies UseMediaDeviceError
     }
 
     if (isPending) {
@@ -257,7 +285,9 @@ export function useMediaDevice(
     filteredDevices,
     isEnumerating,
     isGettingStream,
+    permissionType,
     saveSelectedDevice,
     selectedDeviceId,
+    userDeclinedPermission,
   ])
 }
