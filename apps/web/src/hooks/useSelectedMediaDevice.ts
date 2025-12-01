@@ -276,9 +276,9 @@ export interface UseSelectedMediaDeviceReturn {
  */
 export function useSelectedMediaDevice(
   kind: 'videoinput' | 'audioinput' | 'audiooutput',
-  devices: MediaDeviceInfo[] | readonly [MediaDeviceInfo],
+  devices: readonly MediaDeviceInfo[],
 ): UseSelectedMediaDeviceReturn {
-  // Get default device
+  // Get default device (may be undefined if no devices available)
   const defaultDevice = useMemo(
     () => devices.find((device) => device.deviceId === 'default') ?? devices[0],
     [devices],
@@ -296,6 +296,9 @@ export function useSelectedMediaDevice(
   // Initialize default device if none is selected
   // This runs once when the hook mounts
   useEffect(() => {
+    // Skip if no devices available (permissions not granted yet)
+    if (!defaultDevice) return
+
     const storedDeviceId = state[kind]
 
     // If no device is stored, save the default
@@ -308,7 +311,7 @@ export function useSelectedMediaDevice(
         globalStore.saveDevice(kind, defaultDevice.deviceId)
       }
     }
-  }, [kind, defaultDevice.deviceId, deviceIds, state])
+  }, [kind, defaultDevice, deviceIds, state])
 
   // Save device to store
   const saveSelectedDevice = useCallback(
@@ -323,10 +326,9 @@ export function useSelectedMediaDevice(
 
   return useMemo(() => {
     const selectedDeviceId = state[kind]
-    if (selectedDeviceId == null)
-      throw new Error(`No device selected for kind: ${kind}`)
+    // Return empty string if no device selected (permissions not granted yet)
     return {
-      selectedDeviceId,
+      selectedDeviceId: selectedDeviceId ?? '',
       saveSelectedDevice,
       clearSelectedDevice,
     }

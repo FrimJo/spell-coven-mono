@@ -88,6 +88,7 @@ function GameRoomContent({
   const isLoading = isEventLoading || isPresenceLoading
 
   // HOOK: Dialog open state - only show on first visit to this room
+  // Note: Permissions are handled locally in VideoStreamGrid and MediaSetupDialog
   const [mediaDialogOpen, setMediaDialogOpen] = useState<boolean>(() => {
     // Check if user has already completed setup for this room
     if (typeof window === 'undefined') return false
@@ -312,6 +313,7 @@ function GameRoomContent({
   return (
     <div className="flex h-screen flex-col bg-slate-950">
       {/* Media Setup Dialog - modal - only render when open to avoid Select component issues */}
+      {/* Note: MediaSetupDialog handles permissions internally */}
       {mediaDialogOpen && (
         <MediaSetupDialog
           open={mediaDialogOpen}

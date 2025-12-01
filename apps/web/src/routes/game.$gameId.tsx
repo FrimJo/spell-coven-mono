@@ -109,6 +109,7 @@ function GameRoomRoute() {
       )}
       onReset={() => window.location.reload()}
     >
+      {/* Permission handling is done locally in VideoStreamGrid and MediaSetupDialog */}
       <Suspense
         fallback={
           <div className="flex h-screen items-center justify-center">

@@ -1,8 +1,9 @@
 import type { UseMediaDeviceOptions } from '@/hooks/useMediaDevice'
 import type { DetectorType } from '@/lib/detectors'
 import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
-import { useSupabasePresence } from '@/hooks/useSupabasePresence'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
+import { useMediaPermissions } from '@/hooks/useMediaPermissions'
+import { useSupabasePresence } from '@/hooks/useSupabasePresence'
 import { useSupabaseWebRTC } from '@/hooks/useSupabaseWebRTC'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
 import { isSuccessState } from '@/types/async-resource'
@@ -21,6 +22,7 @@ import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
 
 import { LocalVideoCard } from './LocalVideoCard'
+import { MediaPermissionGate } from './MediaPermissionGate'
 import {
   PlayerNameBadge,
   VideoDisabledPlaceholder,
@@ -82,6 +84,24 @@ export function VideoStreamGrid({
   }, [gameRoomParticipants, userId])
 
   // --- Local Media Management ---
+
+  // Check media permissions first - this determines if we show permission dialog
+  const {
+    camera: cameraPermission,
+    microphone: microphonePermission,
+    isChecking: isCheckingPermissions,
+  } = useMediaPermissions()
+
+  // Determine if we need to show permission dialog in the local player card area
+  const needsPermissionDialog =
+    !isCheckingPermissions &&
+    (cameraPermission.shouldShowDialog || microphonePermission.shouldShowDialog)
+
+  // Check if permissions are blocked (user denied in browser)
+  const permissionsBlocked =
+    !isCheckingPermissions &&
+    (cameraPermission.browserState === 'denied' ||
+      microphonePermission.browserState === 'denied')
 
   // Memoize hook options
   const videoOptions = useMemo<UseMediaDeviceOptions>(
@@ -240,8 +260,39 @@ export function VideoStreamGrid({
 
   return (
     <div className={`grid ${getGridClass()} h-full gap-4`}>
-      {/* Render local player with loading state while stream initializes */}
-      {isLocalStreamPending ? (
+      {/* Render local player with permission gate, loading state, or video */}
+      {isCheckingPermissions ? (
+        <div className="flex h-full items-center justify-center rounded-lg border border-slate-700 bg-slate-800/50">
+          <div className="flex flex-col items-center space-y-3">
+            <div className="relative">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-500/20">
+                <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+              </div>
+            </div>
+            <div className="space-y-1 text-center">
+              <p className="text-sm font-medium text-slate-200">
+                Checking Permissions
+              </p>
+              <p className="text-xs text-slate-400">Please wait...</p>
+            </div>
+          </div>
+        </div>
+      ) : needsPermissionDialog || permissionsBlocked ? (
+        <div className="flex h-full items-center justify-center rounded-lg border border-slate-700 bg-slate-800/50">
+          <MediaPermissionGate
+            permissions={{ camera: true, microphone: true }}
+            loadingFallback={
+              <div className="flex flex-col items-center space-y-3">
+                <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+                <p className="text-sm text-slate-400">Requesting access...</p>
+              </div>
+            }
+          >
+            {/* This renders after permissions are granted - triggers re-render */}
+            <div />
+          </MediaPermissionGate>
+        </div>
+      ) : isLocalStreamPending ? (
         <div className="flex h-full items-center justify-center rounded-lg border border-slate-700 bg-slate-800/50">
           <div className="flex flex-col items-center space-y-3">
             <div className="relative">
