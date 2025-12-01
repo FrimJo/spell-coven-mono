@@ -111,13 +111,17 @@ export function MediaPermissionInline({
                   <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
                     2
                   </span>
-                  <span>Find &quot;Camera&quot; and &quot;Microphone&quot;</span>
+                  <span>
+                    Find &quot;Camera&quot; and &quot;Microphone&quot;
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
                     3
                   </span>
-                  <span>Change from &quot;Block&quot; to &quot;Allow&quot;</span>
+                  <span>
+                    Change from &quot;Block&quot; to &quot;Allow&quot;
+                  </span>
                 </li>
               </ol>
             </div>
@@ -195,7 +199,10 @@ export function MediaPermissionInline({
 
         {/* Action buttons */}
         <div className="flex gap-2">
-          <DropdownMenu open={showDeclineMenu} onOpenChange={setShowDeclineMenu}>
+          <DropdownMenu
+            open={showDeclineMenu}
+            onOpenChange={setShowDeclineMenu}
+          >
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
@@ -250,4 +257,3 @@ export function MediaPermissionInline({
     </div>
   )
 }
-

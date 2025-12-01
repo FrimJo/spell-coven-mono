@@ -20,4 +20,3 @@ export function createIceConfiguration(): RTCConfiguration {
     iceCandidatePoolSize: 10,
   }
 }
-

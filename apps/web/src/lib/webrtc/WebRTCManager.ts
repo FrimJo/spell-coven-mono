@@ -7,6 +7,7 @@
 
 import type { ConnectionState, TrackState } from '@/types/connection'
 import type { WebRTCSignal } from '@/types/webrtc-signal'
+
 import { createIceConfiguration } from './ice-config'
 import { handleSignal } from './signal-handlers'
 import { getTrackState } from './track-utils'
@@ -267,10 +268,7 @@ export class WebRTCManager {
   /**
    * Update peer connection tracks with local stream
    */
-  private updatePeerTracks(
-    pc: RTCPeerConnection,
-    peerId: string,
-  ): void {
+  private updatePeerTracks(pc: RTCPeerConnection, peerId: string): void {
     if (!this.localStream) {
       return
     }
@@ -367,4 +365,3 @@ export class WebRTCManager {
     this.localStream = null
   }
 }
-

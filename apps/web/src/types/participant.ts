@@ -8,4 +8,3 @@ export interface Participant {
   avatar?: string | null
   joinedAt: number
 }
-

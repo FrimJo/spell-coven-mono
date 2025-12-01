@@ -29,11 +29,5 @@ export function getTrackState(stream: MediaStream | null): TrackState {
  * Check if a track is enabled and active
  */
 export function isTrackEnabled(track: MediaStreamTrack | null): boolean {
-  return (
-    !!track &&
-    track.readyState === 'live' &&
-    track.enabled &&
-    !track.muted
-  )
+  return !!track && track.readyState === 'live' && track.enabled && !track.muted
 }
-

@@ -10,8 +10,8 @@
  * - "Allow" triggers native browser prompt
  * - "Not Now" with option to be reminded later or not asked again
  */
-import { useState } from 'react'
 import type { DeclineType } from '@/lib/permission-storage'
+import { useState } from 'react'
 import {
   AlertTriangle,
   Camera,
@@ -69,7 +69,7 @@ export function MediaPermissionDialog({
   const hasBlockedPermissions = blocked.camera || blocked.microphone
   const bothPermissions = permissions.camera && permissions.microphone
   const cameraOnly = permissions.camera && !permissions.microphone
-  const microphoneOnly = !permissions.camera && permissions.microphone
+  const _microphoneOnly = !permissions.camera && permissions.microphone
 
   const permissionLabel = bothPermissions
     ? 'camera and microphone'
@@ -134,7 +134,9 @@ export function MediaPermissionDialog({
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-700 text-xs text-slate-300">
                     3
                   </span>
-                  <span>Change from &quot;Block&quot; to &quot;Allow&quot;</span>
+                  <span>
+                    Change from &quot;Block&quot; to &quot;Allow&quot;
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-700 text-xs text-slate-300">
@@ -231,7 +233,10 @@ export function MediaPermissionDialog({
 
           {/* Action buttons */}
           <div className="flex gap-3">
-            <DropdownMenu open={showDeclineMenu} onOpenChange={setShowDeclineMenu}>
+            <DropdownMenu
+              open={showDeclineMenu}
+              onOpenChange={setShowDeclineMenu}
+            >
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
@@ -286,4 +291,3 @@ export function MediaPermissionDialog({
     </Dialog>
   )
 }
-

@@ -7,7 +7,6 @@ import { Skeleton } from '@repo/ui/components/skeleton'
 
 import { CardPreview } from './CardPreview'
 import { PlayerList } from './PlayerList'
-import { TurnTracker } from './TurnTracker'
 
 interface GameRoomSidebarProps {
   roomId: string
@@ -15,7 +14,6 @@ interface GameRoomSidebarProps {
   playerName: string
   isLobbyOwner: boolean
   ownerId: string | null
-  onNextTurn: () => void
   onKickPlayer: (playerId: string) => void
   onBanPlayer: (playerId: string) => void
 }
@@ -26,7 +24,6 @@ function SidebarContent({
   playerName,
   isLobbyOwner,
   ownerId,
-  onNextTurn,
   onKickPlayer,
   onBanPlayer,
 }: GameRoomSidebarProps) {
@@ -45,13 +42,6 @@ function SidebarContent({
 
   return (
     <div className="w-64 flex-shrink-0 space-y-4 overflow-y-auto">
-      <TurnTracker
-        players={participants.map((participant) => ({
-          id: participant.id,
-          name: participant.username,
-        }))}
-        onNextTurn={onNextTurn}
-      />
       <PlayerList
         players={participants.map((participant) => ({
           id: participant.id,
@@ -90,9 +80,6 @@ function SidebarLoading({ roomId, userId }: GameRoomSidebarProps) {
 
   return (
     <div className="w-64 flex-shrink-0 space-y-4">
-      {/* Turn Tracker - Rendered but disabled */}
-      <TurnTracker players={[]} onNextTurn={() => {}} />
-
       {/* Player List Skeleton */}
       <Card className="border-slate-800 bg-slate-900 p-4">
         <div className="space-y-3">

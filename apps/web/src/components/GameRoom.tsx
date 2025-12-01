@@ -285,11 +285,6 @@ function GameRoomContent({
     setMediaDialogOpen(true)
   }
 
-  const handleNextTurn = () => {
-    // TODO: Implement turn advancement with peer-to-peer game state
-    // This will broadcast to other players via SSE
-  }
-
   const handleKickPlayer = async (playerId: string) => {
     try {
       await kickPlayer(playerId)
@@ -379,14 +374,13 @@ function GameRoomContent({
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
         <div className="flex h-full gap-4 p-4">
-          {/* Left Sidebar - Turn Tracker & Player List */}
+          {/* Left Sidebar - Player List */}
           <GameRoomSidebar
             roomId={roomId}
             userId={userId}
             playerName={username}
             isLobbyOwner={isOwner}
             ownerId={ownerId}
-            onNextTurn={handleNextTurn}
             onKickPlayer={handleKickPlayer}
             onBanPlayer={handleBanPlayer}
           />
