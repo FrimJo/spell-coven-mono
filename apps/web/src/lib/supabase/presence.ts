@@ -37,12 +37,16 @@ export class PresenceManager {
     userId: string,
     username: string,
     avatar?: string | null,
+    sessionId?: string,
   ): Promise<void> {
     await this.leave()
 
     this.roomId = roomId
+    // Use sessionId as presence key to allow multiple tabs per user
+    // This ensures each tab gets its own presence entry
+    const presenceKey = sessionId ?? userId
     this.channel = channelManager.getChannel(roomId, {
-      presence: { key: userId },
+      presence: { key: presenceKey },
     })
 
     // Subscribe to presence changes
@@ -68,8 +72,15 @@ export class PresenceManager {
       await this.waitForChannelReady()
     }
 
-    // Track presence state
-    await this.trackPresence({ userId, username, avatar, joinedAt: Date.now() })
+    // Track presence state with session ID
+    const effectiveSessionId = sessionId ?? crypto.randomUUID()
+    await this.trackPresence({
+      userId,
+      username,
+      avatar,
+      joinedAt: Date.now(),
+      sessionId: effectiveSessionId,
+    })
     this.handlePresenceSync()
   }
 
@@ -199,6 +210,7 @@ export class PresenceManager {
         username: state.username,
         avatar: state.avatar,
         joinedAt: state.joinedAt,
+        sessionId: state.sessionId,
       })
     }
 

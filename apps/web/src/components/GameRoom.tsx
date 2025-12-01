@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { Button } from '@repo/ui/components/button'
 import { Toaster } from '@repo/ui/components/sonner'
 
+import { DuplicateSessionDialog } from './DuplicateSessionDialog.js'
 import { GameRoomLoader } from './GameRoomLoader.js'
 import { GameRoomPlayerCount } from './GameRoomPlayerCount.js'
 import { GameRoomSidebar } from './GameRoomSidebar.js'
@@ -47,11 +48,30 @@ function GameRoomContent({
 
   const { query } = useCardQueryContext()
   const [copied, setCopied] = useState(false)
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false)
 
   // Handle being kicked from the room
   const handleKicked = useCallback(() => {
     toast.error('You have been removed from the game')
     onLeaveGame()
+  }, [onLeaveGame])
+
+  // Handle duplicate session detection
+  const handleDuplicateSession = useCallback(() => {
+    console.log('[GameRoom] Duplicate session detected, showing dialog')
+    setShowDuplicateDialog(true)
+  }, [])
+
+  // Handle session being transferred to another tab
+  const handleSessionTransferred = useCallback(() => {
+    console.log(
+      '[GameRoom] Session transferred to another tab, closing this one',
+    )
+    toast.info('Session transferred to another tab')
+    // Give user a moment to see the toast, then leave
+    setTimeout(() => {
+      onLeaveGame()
+    }, 1500)
   }, [onLeaveGame])
 
   // Track room presence (shares store with GameRoomSidebar and GameRoomPlayerCount)
@@ -62,12 +82,15 @@ function GameRoomContent({
     isOwner,
     kickPlayer,
     banPlayer,
+    transferSession,
   } = useSupabasePresence({
     roomId,
     userId,
     username,
     avatar: user?.avatar,
     onKicked: handleKicked,
+    onDuplicateSession: handleDuplicateSession,
+    onSessionTransferred: handleSessionTransferred,
   })
 
   useEffect(() => {
@@ -305,8 +328,33 @@ function GameRoomContent({
     }
   }
 
+  // Handle transfer session to this tab
+  const handleTransferSession = async () => {
+    try {
+      await transferSession()
+      setShowDuplicateDialog(false)
+      toast.success('Session transferred to this tab')
+    } catch (error) {
+      console.error('[GameRoom] Failed to transfer session:', error)
+      toast.error('Failed to transfer session')
+    }
+  }
+
+  // Handle closing this tab (user wants to keep other session)
+  const handleCloseDuplicateTab = () => {
+    setShowDuplicateDialog(false)
+    onLeaveGame()
+  }
+
   return (
     <div className="flex h-screen flex-col bg-slate-950">
+      {/* Duplicate Session Dialog - shown when user is already connected from another tab */}
+      <DuplicateSessionDialog
+        open={showDuplicateDialog}
+        onTransfer={handleTransferSession}
+        onClose={handleCloseDuplicateTab}
+      />
+
       {/* Media Setup Dialog - modal - only render when open to avoid Select component issues */}
       {/* Note: MediaSetupDialog handles permissions internally */}
       {mediaDialogOpen && (

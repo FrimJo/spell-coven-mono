@@ -7,4 +7,6 @@ export interface Participant {
   username: string
   avatar?: string | null
   joinedAt: number
+  /** Unique session ID per browser tab - used for duplicate detection */
+  sessionId: string
 }

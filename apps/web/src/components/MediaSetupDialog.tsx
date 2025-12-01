@@ -5,6 +5,7 @@ import { useAudioOutput } from '@/hooks/useAudioOutput'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
 import { useMediaPermissions } from '@/hooks/useMediaPermissions'
 import { attachVideoStream } from '@/lib/video-stream-utils'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   AlertCircle,
   Camera,
@@ -44,6 +45,7 @@ interface MediaSetupDialogProps {
 
 export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const queryClient = useQueryClient()
 
   // Check media permissions
   const {
@@ -135,6 +137,11 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
         audio: true,
       })
       stream.getTracks().forEach((track) => track.stop())
+
+      // Invalidate the media devices query so it re-enumerates with real device IDs
+      // (Before permission, enumerateDevices returns devices with empty deviceId)
+      await queryClient.invalidateQueries({ queryKey: ['MediaDevices'] })
+
       await recheckPermissions()
     } catch {
       await recheckPermissions()
@@ -192,15 +199,17 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
                     <SelectValue placeholder="Select camera" />
                   </SelectTrigger>
                   <SelectContent className="border-slate-700 bg-slate-800">
-                    {videoDevices.map((device) => (
-                      <SelectItem
-                        key={device.deviceId}
-                        value={device.deviceId}
-                        className="text-slate-200 focus:bg-slate-700"
-                      >
-                        {device.label}
-                      </SelectItem>
-                    ))}
+                    {videoDevices
+                      .filter((device) => device.deviceId !== '')
+                      .map((device) => (
+                        <SelectItem
+                          key={device.deviceId}
+                          value={device.deviceId}
+                          className="text-slate-200 focus:bg-slate-700"
+                        >
+                          {device.label}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
 
@@ -268,15 +277,17 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
                     <SelectValue placeholder="Select microphone" />
                   </SelectTrigger>
                   <SelectContent className="border-slate-700 bg-slate-800">
-                    {audioInputDevices.map((device) => (
-                      <SelectItem
-                        key={device.deviceId}
-                        value={device.deviceId}
-                        className="text-slate-200 focus:bg-slate-700"
-                      >
-                        {device.label}
-                      </SelectItem>
-                    ))}
+                    {audioInputDevices
+                      .filter((device) => device.deviceId !== '')
+                      .map((device) => (
+                        <SelectItem
+                          key={device.deviceId}
+                          value={device.deviceId}
+                          className="text-slate-200 focus:bg-slate-700"
+                        >
+                          {device.label}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 {isAudioInputPending && (
@@ -317,15 +328,17 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
                     />
                   </SelectTrigger>
                   <SelectContent className="border-slate-700 bg-slate-800">
-                    {audioOutputDevices.map((device) => (
-                      <SelectItem
-                        key={device.deviceId}
-                        value={device.deviceId}
-                        className="text-slate-200 focus:bg-slate-700"
-                      >
-                        {device.label}
-                      </SelectItem>
-                    ))}
+                    {audioOutputDevices
+                      .filter((device) => device.deviceId !== '')
+                      .map((device) => (
+                        <SelectItem
+                          key={device.deviceId}
+                          value={device.deviceId}
+                          className="text-slate-200 focus:bg-slate-700"
+                        >
+                          {device.label}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
 
