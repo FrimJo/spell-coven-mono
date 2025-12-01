@@ -26,7 +26,11 @@
     "LOG_LEVEL",
     "PEERJS_PORT",
     "PEERJS_PATH",
-    "PEERJS_SSL"
+    "PEERJS_SSL",
+    "VITE_BLOB_STORAGE_URL",
+    "VITE_QUERY_CONTRAST",
+    "VITE_EMBEDDINGS_FORMAT",
+    "VITE_EMBEDDINGS_VERSION"
   ],
   "tasks": {
     "build": {
