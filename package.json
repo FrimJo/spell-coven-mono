@@ -42,7 +42,8 @@
       "typescript-eslint": "^8.24.1",
       "playwright": "^1.55.1",
       "@playwright/test": "^1.55.1",
-      "dotenv-cli": "^7.4.2"
+      "dotenv-cli": "^7.4.2",
+      "tailwindcss": "^4.1.11"
     }
   }
 }
