@@ -2,11 +2,17 @@ import type { AuthUser } from '@/lib/supabase/auth'
 import { useState } from 'react'
 import {
   Camera,
+  Gamepad2,
+  Heart,
   LogIn,
   LogOut,
+  Menu,
   Play,
   Plus,
+  Scan,
+  Settings,
   Sparkles,
+  Swords,
   Users,
   Video,
 } from 'lucide-react'
@@ -15,6 +21,13 @@ import logo from '../assets/logo_1024x1024.png'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/components/avatar'
 import { Button } from '@repo/ui/components/button'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@repo/ui/components/sheet'
 import SpotlightCard from './SpotlightCard'
 import {
   Dialog,
@@ -88,6 +101,27 @@ export function LandingPage({
 
   return (
     <div className="relative min-h-screen overflow-hidden">
+      <style>{`
+        @keyframes float {
+          0% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+          100% { transform: translateY(0px); }
+        }
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+        @keyframes sparkle {
+          0%, 100% { opacity: 0; transform: scale(0); }
+          50% { opacity: 1; transform: scale(1); }
+        }
+        .animate-sparkle {
+          animation: sparkle 3s ease-in-out infinite;
+        }
+        .delay-700 { animation-delay: 700ms; }
+        .delay-1000 { animation-delay: 1000ms; }
+        .delay-1500 { animation-delay: 1500ms; }
+      `}</style>
+
       {/* Background with gradient overlay */}
       <div className="bg-linear-to-br absolute inset-0 from-purple-900/20 via-slate-950 to-blue-900/20" />
 
@@ -109,16 +143,16 @@ export function LandingPage({
               />
               <span className="text-xl font-bold text-white">Spell Coven</span>
             </div>
-            <nav className="flex items-center gap-6">
+            <nav className="hidden md:flex items-center gap-6">
               <a
                 href="#features"
-                className="hidden text-slate-300 transition-colors hover:text-white md:block"
+                className="text-slate-300 transition-colors hover:text-white"
               >
                 Features
               </a>
               <a
                 href="#how-it-works"
-                className="hidden text-slate-300 transition-colors hover:text-white md:block"
+                className="text-slate-300 transition-colors hover:text-white"
               >
                 How It Works
               </a>
@@ -139,7 +173,7 @@ export function LandingPage({
                           {user.username.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="hidden md:inline">{user.username}</span>
+                      <span className="inline">{user.username}</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
@@ -163,20 +197,101 @@ export function LandingPage({
                   className="gap-2 border-purple-500/50 text-purple-300 hover:bg-purple-500/20 hover:text-purple-200"
                 >
                   <LogIn className="h-4 w-4" />
-                  <span className="hidden sm:inline">Sign in with Discord</span>
-                  <span className="sm:hidden">Sign in</span>
+                  <span>Sign in with Discord</span>
                 </Button>
               )}
             </nav>
+
+            {/* Mobile Menu */}
+            <div className="md:hidden">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-slate-300 hover:bg-slate-800 hover:text-white"
+                  >
+                    <Menu className="h-6 w-6" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="border-slate-800 bg-slate-950 text-white">
+                  <SheetHeader>
+                    <SheetTitle className="text-white">Menu</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex flex-col gap-4 pt-8">
+                    <a
+                      href="#features"
+                      className="text-lg font-medium text-slate-300 transition-colors hover:text-white"
+                    >
+                      Features
+                    </a>
+                    <a
+                      href="#how-it-works"
+                      className="text-lg font-medium text-slate-300 transition-colors hover:text-white"
+                    >
+                      How It Works
+                    </a>
+                    <div className="pt-4 border-t border-slate-800">
+                      {isAuthLoading ? (
+                        <div className="h-9 w-24 animate-pulse rounded-md bg-slate-800" />
+                      ) : isAuthenticated && user ? (
+                        <div className="flex flex-col gap-4">
+                           <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={user.avatar || undefined} />
+                              <AvatarFallback className="bg-purple-600 text-white">
+                                {user.username.slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-slate-300">{user.username}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            onClick={onSignOut}
+                            className="justify-start px-0 text-slate-300 hover:text-white hover:bg-transparent"
+                          >
+                            <LogOut className="mr-2 h-4 w-4" />
+                            Sign Out
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          onClick={onSignIn}
+                          className="w-full gap-2 border-purple-500/50 text-purple-300 hover:bg-purple-500/20 hover:text-purple-200"
+                        >
+                          <LogIn className="h-4 w-4" />
+                          Sign in with Discord
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
         </header>
 
         {/* Hero Section */}
         <section className="container mx-auto px-4 py-20 md:py-32">
           <div className="mx-auto max-w-4xl space-y-8 text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-4 py-2">
+            <div className="animate-float relative mx-auto h-32 w-32 md:h-48 md:w-48 mb-12">
+              <div className="absolute inset-0 animate-pulse rounded-full bg-purple-500/20 blur-3xl" />
+              <img
+                src={logo}
+                alt="Spell Coven Logo"
+                className="relative z-10 h-full w-full object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]"
+              />
+
+              {/* Decorative sparkles */}
+              <Sparkles className="animate-sparkle absolute -left-4 top-0 h-6 w-6 text-yellow-200 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
+              <Sparkles className="animate-sparkle delay-700 absolute -right-2 bottom-10 h-4 w-4 text-blue-300 drop-shadow-[0_0_8px_rgba(147,197,253,0.8)]" />
+              <Sparkles className="animate-sparkle delay-1500 absolute bottom-0 left-10 h-5 w-5 text-purple-300 drop-shadow-[0_0_8px_rgba(216,180,254,0.8)]" />
+            </div>
+
+            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-900/30 px-4 py-2 backdrop-blur-md">
               <Sparkles className="h-4 w-4 text-purple-400" />
-              <span className="text-sm text-purple-300">
+              <span className="text-sm font-medium text-purple-200">
                 No downloads. No setup. Just play.
               </span>
             </div>
@@ -267,11 +382,12 @@ export function LandingPage({
               ) : (
                 <Button
                   size="lg"
-                  className="min-w-[250px] gap-2 bg-[#5865F2] text-white hover:bg-[#4752C4]"
+                  className="group relative min-w-[250px] gap-2 overflow-hidden bg-gradient-to-r from-[#5865F2] to-purple-600 text-white shadow-[0_0_20px_rgba(88,101,242,0.3)] transition-all hover:scale-105 hover:shadow-[0_0_30px_rgba(88,101,242,0.5)] hover:from-[#4752C4] hover:to-purple-700 border border-white/10"
                   onClick={onSignIn}
                 >
+                  <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
                   <svg
-                    className="h-5 w-5"
+                    className="h-5 w-5 transition-transform group-hover:scale-110"
                     viewBox="0 0 24 24"
                     fill="currentColor"
                   >
@@ -281,13 +397,137 @@ export function LandingPage({
                 </Button>
               )}
             </div>
+
+            {/* App Preview Placeholder */}
+            <div className="relative mx-auto mt-20 max-w-6xl rounded-xl border border-slate-800 bg-slate-950/80 p-2 shadow-2xl backdrop-blur-sm">
+              <div className="absolute inset-0 -z-10 bg-gradient-to-b from-purple-500/10 to-transparent opacity-50 blur-xl" />
+
+              {/* Fake Game Interface */}
+              <div className="flex h-[400px] w-full flex-col overflow-hidden rounded-lg bg-[#0f1117] sm:h-[600px]">
+                {/* Top Bar */}
+                <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/50 px-4 py-2">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-slate-400">
+                      <LogOut className="h-4 w-4 rotate-180" />
+                      <span className="text-sm">Leave</span>
+                    </div>
+                    <div className="h-4 w-px bg-slate-800" />
+                    <span className="text-sm text-slate-500">Game ID: <span className="font-mono text-purple-400">game-97dbado10</span></span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <Users className="h-4 w-4" />
+                    <span className="text-xs">4/4 Players</span>
+                    <Settings className="ml-2 h-4 w-4" />
+                  </div>
+                </div>
+
+                <div className="flex flex-1 overflow-hidden">
+                  {/* Sidebar */}
+                  <div className="hidden w-64 flex-col gap-4 border-r border-slate-800 bg-slate-900/30 p-4 lg:flex">
+                    <div className="rounded-lg border border-slate-800 bg-slate-800/20 p-4">
+                      <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-400">
+                        <Play className="h-3 w-3" />
+                        Current Turn
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-medium text-white">Fredrik</div>
+                        <div className="text-xs text-slate-500">is playing</div>
+                        <div className="mt-3 w-full rounded bg-purple-600 py-1.5 text-sm font-medium text-white shadow-lg shadow-purple-500/20">
+                          Next Turn
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 rounded-lg border border-slate-800 bg-slate-800/20 p-4">
+                      <div className="mb-3 text-xs font-medium text-slate-400">Players (4/4)</div>
+                      <div className="space-y-2">
+                        {[
+                          { name: 'Fredrik', me: true, hp: 20 },
+                          { name: 'Alex', me: false, hp: 18 },
+                          { name: 'Jordan', me: false, hp: 20 },
+                          { name: 'Sam', me: false, hp: 14 },
+                        ].map((p) => (
+                          <div key={p.name} className={`flex items-center justify-between rounded p-2 ${p.me ? 'bg-purple-500/10 ring-1 ring-purple-500/50' : 'hover:bg-slate-800/50'}`}>
+                            <div className="flex items-center gap-2">
+                              <div className={`h-2 w-2 rounded-full ${p.me ? 'bg-green-500' : 'bg-slate-600'}`} />
+                              <span className={`text-sm ${p.me ? 'font-medium text-white' : 'text-slate-300'}`}>
+                                {p.name}
+                                {p.me && <span className="ml-2 rounded bg-purple-500/20 px-1 py-0.5 text-[10px] text-purple-300">You</span>}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 text-slate-400">
+                              <Heart className="h-3 w-3" />
+                              <span className="text-xs">{p.hp}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Game Grid */}
+                  <div className="grid flex-1 grid-cols-2 grid-rows-2 gap-2 p-2 sm:gap-4 sm:p-4">
+                    {[
+                      { name: 'Fredrik', me: true, card: null },
+                      { name: 'Alex', me: false, card: 'https://cards.scryfall.io/large/front/3/a/3aec0e25-240e-44e5-9f40-0a6c6b9dc206.jpg' }, // Example card URL for visual
+                      { name: 'Jordan', me: false, card: null },
+                      { name: 'Sam', me: false, card: null },
+                    ].map((p, i) => (
+                      <div key={i} className="relative overflow-hidden rounded-lg border border-slate-800 bg-slate-900/50 shadow-inner">
+                        {/* Player Header */}
+                        <div className="absolute left-2 top-2 z-10 flex items-center gap-2 rounded bg-slate-950/60 px-2 py-1 text-xs backdrop-blur-sm">
+                          <div className={`h-1.5 w-1.5 rounded-full ${p.me ? 'bg-green-500' : 'bg-slate-500'}`} />
+                          <span className="text-slate-200">{p.name}</span>
+                          {p.me && <span className="rounded bg-purple-500/30 px-1 py-0.5 text-[10px] font-medium text-purple-200">You</span>}
+                        </div>
+
+                        {/* Life Counter */}
+                        <div className="absolute bottom-4 left-4 z-10 rounded-lg border border-slate-800 bg-slate-950/80 p-2 text-center backdrop-blur-sm">
+                          <div className="text-xl font-bold text-white">20</div>
+                          <div className="text-[10px] uppercase tracking-wider text-slate-500">Life</div>
+                        </div>
+
+                        {/* Simulated Camera Feed */}
+                        <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800/50 to-slate-950">
+                          <div className="flex flex-col items-center gap-3 opacity-20">
+                            <Camera className="h-8 w-8 text-slate-400" />
+                            <span className="text-sm font-medium text-slate-400">Table View</span>
+                          </div>
+                        </div>
+
+                        {/* Card Recognition Overlay (Simulated) */}
+                        {p.card && (
+                          <div className="absolute right-4 top-1/2 z-20 w-24 -translate-y-1/2 rotate-3 transform transition-transform hover:scale-150 hover:rotate-0">
+                            <div className="group relative aspect-[2.5/3.5] cursor-pointer overflow-hidden rounded border border-white/20 shadow-2xl">
+                              {/* Placeholder for card image since we can't rely on external URLs reliably in preview without being sure they load, using a colored div with icon */}
+                              <div className="flex h-full w-full items-center justify-center bg-slate-800">
+                                <div className="h-full w-full bg-gradient-to-br from-amber-900/40 to-slate-900"></div>
+                                <Sparkles className="absolute text-amber-200/50" />
+                              </div>
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
+                                <div className="flex h-full items-end justify-center pb-2">
+                                  <span className="text-[10px] text-white">Click to zoom</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Card Recognition Rectangles (Simulated) */}
+                        <div className="absolute left-1/2 top-1/2 h-32 w-48 -translate-x-1/2 -translate-y-1/2 rounded border-2 border-dashed border-white/5 opacity-50" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
         {/* Features Section */}
         <section id="features" className="container mx-auto px-4 py-20">
           <div className="mx-auto max-w-6xl">
-            <h2 className="mb-16 text-center text-4xl text-white">
+            <h2 className="mb-16 text-center text-4xl font-bold text-white md:text-5xl">
               Everything You Need to Play
             </h2>
             <div className="grid gap-8 md:grid-cols-3">
@@ -337,53 +577,56 @@ export function LandingPage({
         </section>
 
         {/* How It Works */}
-        <section id="how-it-works" className="container mx-auto px-4 py-20">
-          <div className="mx-auto max-w-4xl">
-            <h2 className="mb-16 text-center text-4xl text-white">
+        <section id="how-it-works" className="container mx-auto px-4 py-24 relative overflow-hidden">
+          {/* Background decoration */}
+          <div className="absolute top-1/2 left-0 -translate-y-1/2 w-full h-96 bg-purple-900/5 blur-[120px] -z-10 pointer-events-none" />
+
+          <div className="mx-auto max-w-6xl">
+            <h2 className="mb-20 text-center text-4xl font-bold text-white md:text-5xl">
               How It Works
             </h2>
-            <div className="space-y-8">
-              <div className="flex items-start gap-6">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-600 text-white">
-                  1
+
+            <div className="relative grid gap-12 md:grid-cols-3 md:gap-8">
+              {/* Connector Line (Desktop) */}
+              <div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-slate-800 via-purple-900/50 to-slate-800" />
+
+              {/* Step 1 */}
+              <div className="relative flex flex-col items-center text-center group">
+                <div className="relative z-10 mb-6 flex h-24 w-24 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 shadow-xl transition-all duration-300 group-hover:border-purple-500/50 group-hover:shadow-[0_0_30px_-5px_rgba(168,85,247,0.3)]">
+                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+                   <Gamepad2 className="relative z-10 h-10 w-10 text-purple-400 transition-transform duration-300 group-hover:scale-110 group-hover:text-purple-300" />
+                   <div className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full border border-slate-800 bg-slate-900 text-sm font-bold text-white shadow-lg ring-4 ring-slate-950">1</div>
                 </div>
-                <div>
-                  <h3 className="mb-2 text-xl text-white">
-                    Create or Join a Game
-                  </h3>
-                  <p className="text-slate-400">
-                    Start a new game room and share the game ID with your
-                    friends, or join an existing game.
-                  </p>
-                </div>
+                <h3 className="mb-3 text-xl font-semibold text-white group-hover:text-purple-300 transition-colors">Create or Join</h3>
+                <p className="text-slate-400 leading-relaxed max-w-xs">
+                  Start a new game room and share the game ID with your friends, or join an existing game instantly.
+                </p>
               </div>
 
-              <div className="flex items-start gap-6">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-600 text-white">
-                  2
+              {/* Step 2 */}
+              <div className="relative flex flex-col items-center text-center group">
+                <div className="relative z-10 mb-6 flex h-24 w-24 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 shadow-xl transition-all duration-300 group-hover:border-blue-500/50 group-hover:shadow-[0_0_30px_-5px_rgba(59,130,246,0.3)]">
+                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+                   <Scan className="relative z-10 h-10 w-10 text-blue-400 transition-transform duration-300 group-hover:scale-110 group-hover:text-blue-300" />
+                   <div className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full border border-slate-800 bg-slate-900 text-sm font-bold text-white shadow-lg ring-4 ring-slate-950">2</div>
                 </div>
-                <div>
-                  <h3 className="mb-2 text-xl text-white">
-                    Set Up Your Cameras
-                  </h3>
-                  <p className="text-slate-400">
-                    Position one camera for your face and optionally another for
-                    your playmat and cards.
-                  </p>
-                </div>
+                <h3 className="mb-3 text-xl font-semibold text-white group-hover:text-blue-300 transition-colors">Set Up Cameras</h3>
+                <p className="text-slate-400 leading-relaxed max-w-xs">
+                  Position your main camera for your playmat and cards. Optionally add a second camera for video chat.
+                </p>
               </div>
 
-              <div className="flex items-start gap-6">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-600 text-white">
-                  3
+              {/* Step 3 */}
+              <div className="relative flex flex-col items-center text-center group">
+                 <div className="relative z-10 mb-6 flex h-24 w-24 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 shadow-xl transition-all duration-300 group-hover:border-green-500/50 group-hover:shadow-[0_0_30px_-5px_rgba(34,197,94,0.3)]">
+                   <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+                   <Swords className="relative z-10 h-10 w-10 text-green-400 transition-transform duration-300 group-hover:scale-110 group-hover:text-green-300" />
+                   <div className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full border border-slate-800 bg-slate-900 text-sm font-bold text-white shadow-lg ring-4 ring-slate-950">3</div>
                 </div>
-                <div>
-                  <h3 className="mb-2 text-xl text-white">Play Magic</h3>
-                  <p className="text-slate-400">
-                    Use your physical cards, track life totals, and enjoy an
-                    authentic MTG experience with friends anywhere in the world.
-                  </p>
-                </div>
+                <h3 className="mb-3 text-xl font-semibold text-white group-hover:text-green-300 transition-colors">Play Magic</h3>
+                <p className="text-slate-400 leading-relaxed max-w-xs">
+                  Cast spells, track life totals, and enjoy authentic paper Magic with your friends anywhere.
+                </p>
               </div>
             </div>
           </div>
