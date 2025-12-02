@@ -10,6 +10,10 @@
     "cssVariables": true
   },
   "iconLibrary": "lucide",
+  "registries": {
+    "@react-bits": "https://reactbits.dev/r/{name}.json",
+    "@acme": "https://acme.com/r/{name}.json"
+  },
   "aliases": {
     "components": "@/components",
     "hooks": "@/hooks",
