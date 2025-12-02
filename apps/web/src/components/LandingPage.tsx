@@ -288,7 +288,7 @@ export function LandingPage({
                 </span>
               </div>
 
-              <h1 className="mb-6 text-5xl font-extrabold tracking-tight text-white md:text-7xl lg:text-8xl">
+              <h1 className="mb-6 text-5xl text-white md:text-7xl lg:text-8xl">
                 Play Magic
                 <span className="mt-2 block bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
                   Anywhere.
@@ -587,7 +587,7 @@ export function LandingPage({
         {/* Features Section */}
         <section id="features" className="container mx-auto px-4 py-20">
           <div className="mx-auto max-w-6xl">
-            <h2 className="mb-16 text-center text-4xl font-bold text-white md:text-5xl">
+            <h2 className="mb-16 text-center text-4xl text-white md:text-5xl">
               Everything You Need to Play
             </h2>
             <div className="grid gap-8 md:grid-cols-3">
@@ -645,7 +645,7 @@ export function LandingPage({
           <div className="pointer-events-none absolute left-0 top-1/2 -z-10 h-96 w-full -translate-y-1/2 bg-purple-900/5 blur-[120px]" />
 
           <div className="mx-auto max-w-6xl">
-            <h2 className="mb-20 text-center text-4xl font-bold text-white md:text-5xl">
+            <h2 className="mb-20 text-center text-4xl text-white md:text-5xl">
               How It Works
             </h2>
 
@@ -717,7 +717,7 @@ export function LandingPage({
             <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-purple-500/20 blur-3xl" />
             <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl" />
 
-            <h2 className="relative z-10 mb-6 text-3xl font-bold text-white md:text-5xl">
+            <h2 className="relative z-10 mb-6 text-3xl text-white md:text-5xl">
               Ready to Enter the Coven?
             </h2>
             <p className="relative z-10 mx-auto mb-8 max-w-2xl text-lg text-slate-300">
