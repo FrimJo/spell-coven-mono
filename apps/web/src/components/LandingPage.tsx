@@ -399,10 +399,14 @@ export function LandingPage({
             </div>
 
             {/* App Preview Placeholder */}
-            <div className="relative mx-auto mt-20 max-w-6xl rounded-xl border border-slate-800 bg-slate-950/80 p-2 shadow-2xl backdrop-blur-sm">
-              <div className="absolute inset-0 -z-10 bg-gradient-to-b from-purple-500/10 to-transparent opacity-50 blur-xl" />
+            <div className="group relative mx-auto mt-20 max-w-6xl">
+              {/* Glow effects */}
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-purple-600/50 to-blue-600/50 opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-50" />
 
-              {/* Fake Game Interface */}
+              <div className="relative rounded-xl border border-slate-800 bg-slate-950/80 p-2 shadow-2xl backdrop-blur-sm ring-1 ring-white/10">
+                <div className="absolute inset-0 -z-10 bg-gradient-to-b from-purple-500/5 to-transparent opacity-50" />
+
+                {/* Fake Game Interface */}
               <div className="flex h-[400px] w-full flex-col overflow-hidden rounded-lg bg-[#0f1117] sm:h-[600px]">
                 {/* Top Bar */}
                 <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/50 px-4 py-2">
@@ -430,7 +434,7 @@ export function LandingPage({
                         Current Turn
                       </div>
                       <div className="text-center">
-                        <div className="text-lg font-medium text-white">Fredrik</div>
+                        <div className="text-lg font-medium text-white">Rowan</div>
                         <div className="text-xs text-slate-500">is playing</div>
                         <div className="mt-3 w-full rounded bg-purple-600 py-1.5 text-sm font-medium text-white shadow-lg shadow-purple-500/20">
                           Next Turn
@@ -442,10 +446,10 @@ export function LandingPage({
                       <div className="mb-3 text-xs font-medium text-slate-400">Players (4/4)</div>
                       <div className="space-y-2">
                         {[
-                          { name: 'Fredrik', me: true, hp: 20 },
-                          { name: 'Alex', me: false, hp: 18 },
-                          { name: 'Jordan', me: false, hp: 20 },
-                          { name: 'Sam', me: false, hp: 14 },
+                          { name: 'Rowan', me: true, hp: 40 },
+                          { name: 'Alex', me: false, hp: 38 },
+                          { name: 'Jordan', me: false, hp: 40 },
+                          { name: 'Sam', me: false, hp: 32 },
                         ].map((p) => (
                           <div key={p.name} className={`flex items-center justify-between rounded p-2 ${p.me ? 'bg-purple-500/10 ring-1 ring-purple-500/50' : 'hover:bg-slate-800/50'}`}>
                             <div className="flex items-center gap-2">
@@ -468,12 +472,12 @@ export function LandingPage({
                   {/* Game Grid */}
                   <div className="grid flex-1 grid-cols-2 grid-rows-2 gap-2 p-2 sm:gap-4 sm:p-4">
                     {[
-                      { name: 'Fredrik', me: true, card: null },
-                      { name: 'Alex', me: false, card: 'https://cards.scryfall.io/large/front/3/a/3aec0e25-240e-44e5-9f40-0a6c6b9dc206.jpg' }, // Example card URL for visual
-                      { name: 'Jordan', me: false, card: null },
-                      { name: 'Sam', me: false, card: null },
+                      { name: 'Rowan', me: true, card: null, isActive: true },
+                      { name: 'Alex', me: false, card: 'https://cards.scryfall.io/large/front/3/a/3aec0e25-240e-44e5-9f40-0a6c6b9dc206.jpg', isActive: false }, // Example card URL for visual
+                      { name: 'Jordan', me: false, card: null, isActive: false },
+                      { name: 'Sam', me: false, card: null, isActive: false },
                     ].map((p, i) => (
-                      <div key={i} className="relative overflow-hidden rounded-lg border border-slate-800 bg-slate-900/50 shadow-inner">
+                      <div key={i} className={`relative overflow-hidden rounded-lg border bg-slate-900/50 shadow-inner transition-all ${p.isActive ? 'border-purple-500/50 shadow-[0_0_15px_-5px_rgba(168,85,247,0.3)] ring-1 ring-purple-500/30' : 'border-slate-800'}`}>
                         {/* Player Header */}
                         <div className="absolute left-2 top-2 z-10 flex items-center gap-2 rounded bg-slate-950/60 px-2 py-1 text-xs backdrop-blur-sm">
                           <div className={`h-1.5 w-1.5 rounded-full ${p.me ? 'bg-green-500' : 'bg-slate-500'}`} />
@@ -483,7 +487,7 @@ export function LandingPage({
 
                         {/* Life Counter */}
                         <div className="absolute bottom-4 left-4 z-10 rounded-lg border border-slate-800 bg-slate-950/80 p-2 text-center backdrop-blur-sm">
-                          <div className="text-xl font-bold text-white">20</div>
+                          <div className="text-xl font-bold text-white">40</div>
                           <div className="text-[10px] uppercase tracking-wider text-slate-500">Life</div>
                         </div>
 
@@ -520,6 +524,7 @@ export function LandingPage({
                   </div>
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </section>
@@ -632,21 +637,91 @@ export function LandingPage({
           </div>
         </section>
 
+        {/* Bottom CTA */}
+        <section className="container mx-auto px-4 py-20">
+          <div className="relative overflow-hidden rounded-3xl border border-purple-500/30 bg-gradient-to-br from-purple-900/50 via-slate-900 to-slate-900 px-6 py-16 text-center shadow-2xl md:px-12">
+            {/* Background effects */}
+            <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-purple-500/20 blur-3xl" />
+            <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl" />
+
+            <h2 className="relative z-10 mb-6 text-3xl font-bold text-white md:text-5xl">
+              Ready to Enter the Coven?
+            </h2>
+            <p className="relative z-10 mx-auto mb-8 max-w-2xl text-lg text-slate-300">
+              Join thousands of planeswalkers playing paper Magic remotely.
+              It's free, runs in your browser, and brings the gathering back to Magic.
+            </p>
+
+            <div className="relative z-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Button
+                size="lg"
+                onClick={isAuthenticated ? handleCreateClick : onSignIn}
+                className="h-12 min-w-[200px] gap-2 bg-white text-purple-900 hover:bg-slate-100"
+              >
+                <Sparkles className="h-5 w-5" />
+                {isAuthenticated ? 'Start a Game Now' : 'Start Playing for Free'}
+              </Button>
+              {!isAuthenticated && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-12 min-w-[200px] border-purple-400/30 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20 hover:text-white"
+                  onClick={() => {
+                     const element = document.getElementById('how-it-works');
+                     element?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  Learn More
+                </Button>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* Footer */}
-        <footer className="mt-20 border-t border-slate-800 bg-slate-950/50 backdrop-blur-sm">
-          <div className="container mx-auto px-4 py-8">
-            <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-              <div className="flex items-center gap-2">
-                <img
-                  src={logo}
-                  alt="Spell Coven Logo"
-                  className="h-8 w-8 rounded-lg object-contain grayscale transition-all hover:grayscale-0"
-                />
-                <span className="text-slate-400">Spell Coven © 2025</span>
+        <footer className="border-t border-slate-800 bg-slate-950">
+          <div className="container mx-auto px-4 py-12">
+            <div className="grid gap-8 md:grid-cols-4">
+              <div className="col-span-2 space-y-4">
+                <div className="flex items-center gap-2">
+                  <img
+                    src={logo}
+                    alt="Spell Coven Logo"
+                    className="h-8 w-8 rounded-lg object-contain grayscale transition-all hover:grayscale-0"
+                  />
+                  <span className="text-lg font-bold text-white">Spell Coven</span>
+                </div>
+                <p className="max-w-xs text-sm text-slate-400">
+                  The best way to play paper Magic: The Gathering remotely with friends.
+                  High-quality video, card recognition, and zero setup.
+                </p>
               </div>
-              <p className="text-center text-sm text-slate-500">
-                Spell Coven is not affiliated with Wizards of the Coast or
-                Magic: The Gathering
+
+              <div>
+                <h4 className="mb-4 text-sm font-semibold text-white">Product</h4>
+                <ul className="space-y-2 text-sm text-slate-400">
+                  <li><a href="#features" className="hover:text-purple-400">Features</a></li>
+                  <li><a href="#how-it-works" className="hover:text-purple-400">How It Works</a></li>
+                  <li><a href="#" className="hover:text-purple-400">Changelog</a></li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="mb-4 text-sm font-semibold text-white">Legal</h4>
+                <ul className="space-y-2 text-sm text-slate-400">
+                  <li><a href="#" className="hover:text-purple-400">Privacy Policy</a></li>
+                  <li><a href="#" className="hover:text-purple-400">Terms of Service</a></li>
+                  <li><a href="#" className="hover:text-purple-400">Cookie Policy</a></li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-12 border-t border-slate-800 pt-8 text-center text-sm text-slate-500">
+              <p className="mb-2">Spell Coven © {new Date().getFullYear()}</p>
+              <p>
+                Spell Coven is unofficial Fan Content permitted under the Fan Content Policy.
+                Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast.
+                ©Wizards of the Coast LLC.
               </p>
             </div>
           </div>
