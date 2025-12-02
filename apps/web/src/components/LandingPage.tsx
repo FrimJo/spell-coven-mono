@@ -15,7 +15,7 @@ import logo from '../assets/logo_1024x1024.png'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/components/avatar'
 import { Button } from '@repo/ui/components/button'
-import { Card } from '@repo/ui/components/card'
+import SpotlightCard from './SpotlightCard'
 import {
   Dialog,
   DialogContent,
@@ -291,7 +291,10 @@ export function LandingPage({
               Everything You Need to Play
             </h2>
             <div className="grid gap-8 md:grid-cols-3">
-              <Card className="border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm">
+              <SpotlightCard
+                className="border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm"
+                spotlightColor="rgba(168, 85, 247, 0.15)"
+              >
                 <div className="mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-purple-500/20">
                   <Video className="h-6 w-6 text-purple-400" />
                 </div>
@@ -300,9 +303,12 @@ export function LandingPage({
                   See your opponents face-to-face with built-in video chat. No
                   third-party apps needed.
                 </p>
-              </Card>
+              </SpotlightCard>
 
-              <Card className="border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm">
+              <SpotlightCard
+                className="border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm"
+                spotlightColor="rgba(59, 130, 246, 0.15)"
+              >
                 <div className="mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-500/20">
                   <Camera className="h-6 w-6 text-blue-400" />
                 </div>
@@ -311,9 +317,12 @@ export function LandingPage({
                   Point your camera at cards and the system recognizes them for
                   your opponents to see.
                 </p>
-              </Card>
+              </SpotlightCard>
 
-              <Card className="border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm">
+              <SpotlightCard
+                className="border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm"
+                spotlightColor="rgba(34, 197, 94, 0.15)"
+              >
                 <div className="mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-green-500/20">
                   <Users className="h-6 w-6 text-green-400" />
                 </div>
@@ -322,7 +331,7 @@ export function LandingPage({
                   Life counters, turn tracking, and game state tools to keep
                   everything organized.
                 </p>
-              </Card>
+              </SpotlightCard>
             </div>
           </div>
         </section>
