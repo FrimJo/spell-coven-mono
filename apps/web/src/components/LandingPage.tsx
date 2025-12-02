@@ -9,8 +9,9 @@ import {
   Sparkles,
   Users,
   Video,
-  Wand2,
 } from 'lucide-react'
+
+import logo from '../assets/logo_1024x1024.png'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/components/avatar'
 import { Button } from '@repo/ui/components/button'
@@ -101,8 +102,12 @@ export function LandingPage({
         <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur-sm">
           <div className="container mx-auto flex items-center justify-between px-4 py-4">
             <div className="flex items-center gap-2">
-              <Wand2 className="h-8 w-8 text-purple-400" />
-              <span className="text-xl text-white">Spell Coven</span>
+              <img
+                src={logo}
+                alt="Spell Coven Logo"
+                className="h-10 w-10 rounded-xl object-contain"
+              />
+              <span className="text-xl font-bold text-white">Spell Coven</span>
             </div>
             <nav className="flex items-center gap-6">
               <a
@@ -380,7 +385,11 @@ export function LandingPage({
           <div className="container mx-auto px-4 py-8">
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
               <div className="flex items-center gap-2">
-                <Wand2 className="h-6 w-6 text-purple-400" />
+                <img
+                  src={logo}
+                  alt="Spell Coven Logo"
+                  className="h-8 w-8 rounded-lg object-contain grayscale transition-all hover:grayscale-0"
+                />
                 <span className="text-slate-400">Spell Coven © 2025</span>
               </div>
               <p className="text-center text-sm text-slate-500">
