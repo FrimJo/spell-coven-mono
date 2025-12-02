@@ -32,7 +32,7 @@ export const env = createEnv({
     VITE_SUPABASE_ANON_KEY: z
       .string()
       .min(1, 'VITE_SUPABASE_ANON_KEY is required'),
-    VITE_BASE_URL: z.url().optional().default('http://localhost:1234'),
+    VITE_BASE_URL: z.url().optional().default('https://localhost:1234'),
     VITE_EMBEDDINGS_VERSION: z.string().optional().default('v1.3'),
     VITE_EMBEDDINGS_FORMAT: z
       .enum(['float32', 'float16'])
