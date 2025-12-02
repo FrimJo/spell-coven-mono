@@ -6,10 +6,11 @@ import {
   Scripts,
 } from '@tanstack/react-router'
 
+// import globalCss from '@repo/ui/styles/globals.css?url'
+import globalCss from '@repo/ui/styles/globals.css?url'
+
 import { AuthProvider } from '../contexts/AuthContext.js'
-import globalCss from '../globals.css?url'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools.js'
-import appCss from '../styles.css?url'
 
 export interface MyRouterContext {
   queryClient: QueryClient
@@ -34,10 +35,6 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       },
     ],
     links: [
-      {
-        rel: 'stylesheet',
-        href: appCss,
-      },
       {
         rel: 'stylesheet',
         href: globalCss,
