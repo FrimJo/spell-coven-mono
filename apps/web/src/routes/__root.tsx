@@ -11,13 +11,12 @@ import globalCss from '@repo/ui/styles/globals.css?url'
 
 import { AuthProvider } from '../contexts/AuthContext.js'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools.js'
-import { env } from '../env.js'
 
 export interface MyRouterContext {
   queryClient: QueryClient
 }
 
-const siteUrl = env.VITE_BASE_URL
+const siteUrl = 'https://spellcoven.com'
 const siteName = 'Spell Coven'
 const siteDescription =
   'Play paper Magic: The Gathering remotely with video chat and card recognition. Use your physical cards, see your opponents, and enjoy the authentic experience. Free, browser-based, no downloads required.'
