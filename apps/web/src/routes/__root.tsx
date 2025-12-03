@@ -16,7 +16,7 @@ export interface MyRouterContext {
   queryClient: QueryClient
 }
 
-const siteUrl = 'https://spellcoven.com'
+const siteUrl = 'https://spell-coven.vercel.app/'
 const siteName = 'Spell Coven'
 const siteDescription =
   'Play paper Magic: The Gathering remotely with video chat and card recognition. Use your physical cards, see your opponents, and enjoy the authentic experience. Free, browser-based, no downloads required.'
