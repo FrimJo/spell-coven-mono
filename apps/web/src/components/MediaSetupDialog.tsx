@@ -14,6 +14,7 @@ import {
   Mic,
   SkipForward,
   Volume2,
+  X,
 } from 'lucide-react'
 
 import { Alert, AlertDescription } from '@repo/ui/components/alert'
@@ -163,6 +164,15 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   return (
     <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent className="border-slate-800 bg-slate-900 sm:max-w-[700px] [&>button]:hidden">
+        <div className="absolute right-4 top-4">
+          <button
+            onClick={handleSkip}
+            className="rounded-sm opacity-70 ring-offset-slate-900 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 text-slate-400 hover:text-slate-300"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
         <DialogHeader>
           <DialogTitle className="text-slate-100">
             Setup Audio & Video
@@ -362,7 +372,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
           )}
         </div>
 
-        <DialogFooter className="flex-row gap-2 sm:justify-between">
+        <DialogFooter className="flex-row gap-2 justify-between sm:justify-between">
           <Button
             variant="ghost"
             onClick={handleSkip}
@@ -375,7 +385,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
           <Button
             onClick={handleComplete}
             disabled={!canComplete}
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-purple-600 hover:bg-purple-700 text-white"
           >
             <Check className="mr-2 h-4 w-4" />
             Complete Setup
