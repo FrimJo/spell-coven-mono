@@ -4,6 +4,15 @@ import { ErrorBoundary } from 'react-error-boundary'
 
 import { ErrorFallback } from './components/ErrorFallback.js'
 
+// Lazy load mock media module only in non-production environments
+// This allows testing webcam UI in browsers that block media device access
+// Enable via: ?mockMedia=true or window.enableMockMedia() in console
+if (import.meta.env.MODE !== 'production') {
+  import('./lib/mockMedia.js').then(({ initMockMedia }) => {
+    initMockMedia()
+  })
+}
+
 hydrateRoot(
   document,
   // TODO: Re-enable StrictMode after fixing the "Maximum update depth exceeded" error
