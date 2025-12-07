@@ -16,7 +16,7 @@ import type {
   AsyncResourceSuccess,
 } from '@/types/async-resource'
 import { useEffect, useMemo, useRef } from 'react'
-import { getMediaStream, stopMediaStream } from '@/lib/media-stream-manager'
+import { getMediaStream } from '@/lib/media-stream-manager'
 import { shouldShowPermissionDialog } from '@/lib/permission-storage'
 import { useQuery } from '@tanstack/react-query'
 
@@ -214,22 +214,17 @@ export function useMediaDevice(
     enabled: externalEnabled && !!selectedDeviceId && !userDeclinedPermission,
   })
 
-  // Handle stream lifecycle: notify on change and cleanup on unmount
+  // Handle stream lifecycle: notify on change
+  // NOTE: Cleanup is handled by MediaStreamProvider at the page level.
+  // This allows multiple components (VideoStreamGrid, MediaSetupDialog) to share
+  // the same stream without one component's unmount stopping the shared stream.
   useEffect(() => {
     const stream = data?.stream
     if (!stream) return
 
     // Notify consumer about new stream
     onDeviceChangedRef.current?.(selectedDeviceId, stream)
-
-    // Cleanup: stop tracks when stream changes or component unmounts
-    return () => {
-      console.log(
-        `[useMediaDevice] Cleaning up ${kind} stream on unmount/change`,
-      )
-      stopMediaStream(stream)
-    }
-  }, [data?.stream, selectedDeviceId, kind])
+  }, [data?.stream, selectedDeviceId])
 
   useEffect(() => {
     if (enumerationError) {
