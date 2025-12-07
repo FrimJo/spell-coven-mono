@@ -6,7 +6,7 @@
  */
 
 import type { ConnectionState, TrackState } from '@/types/connection'
-import type { WebRTCSignal } from '@/types/webrtc-signal'
+import type { CandidateSignal, WebRTCSignal } from '@/types/webrtc-signal'
 
 import { createIceConfiguration } from './ice-config'
 import { handleSignal } from './signal-handlers'
@@ -29,6 +29,7 @@ export class WebRTCManager {
   private remoteStreams = new Map<string, MediaStream>()
   private localStream: MediaStream | null = null
   private trackStatePollInterval: number | null = null
+  private pendingCandidates = new Map<string, CandidateSignal[]>()
 
   constructor(
     private readonly localPeerId: string,
@@ -81,8 +82,9 @@ export class WebRTCManager {
         this.peers.set(from, peerInfo)
       } else {
         // For other signals, we need an existing connection
-        // Candidates can arrive before connection is ready - ignore them
+        // Candidates can arrive before connection is ready - queue them
         if (type === 'candidate') {
+          this.queueCandidate(from, signal)
           return
         }
         throw new Error(`No peer connection found for ${from}`)
@@ -98,6 +100,7 @@ export class WebRTCManager {
         }
 
         await handleSignal(peerInfo.pc, signal)
+        this.flushPendingCandidates(from)
         // After handling offer, create and send answer
         const answer = await peerInfo.pc.createAnswer()
         await peerInfo.pc.setLocalDescription(answer)
@@ -116,7 +119,15 @@ export class WebRTCManager {
           },
         })
       } else {
+        if (type === 'candidate' && !peerInfo.pc.remoteDescription) {
+          this.queueCandidate(from, signal)
+          return
+        }
+
         await handleSignal(peerInfo.pc, signal)
+        if (type === 'answer') {
+          this.flushPendingCandidates(from)
+        }
       }
     } catch (error) {
       const err =
@@ -363,5 +374,35 @@ export class WebRTCManager {
     this.peers.clear()
     this.remoteStreams.clear()
     this.localStream = null
+    this.pendingCandidates.clear()
+  }
+
+  private queueCandidate(peerId: string, signal: CandidateSignal): void {
+    const existing = this.pendingCandidates.get(peerId) ?? []
+    this.pendingCandidates.set(peerId, [...existing, signal])
+  }
+
+  private flushPendingCandidates(peerId: string): void {
+    const candidateSignals = this.pendingCandidates.get(peerId)
+    if (!candidateSignals?.length) {
+      return
+    }
+
+    const peerInfo = this.peers.get(peerId)
+    if (!peerInfo?.pc || !peerInfo.pc.remoteDescription) {
+      return
+    }
+
+    for (const candidateSignal of candidateSignals) {
+      handleSignal(peerInfo.pc, candidateSignal).catch((err) => {
+        console.error(`Failed to process queued candidate for ${peerId}:`, err)
+        this.callbacks.onError?.(
+          peerId,
+          err instanceof Error ? err : new Error(String(err)),
+        )
+      })
+    }
+
+    this.pendingCandidates.delete(peerId)
   }
 }
