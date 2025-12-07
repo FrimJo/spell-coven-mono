@@ -1,5 +1,5 @@
 import type { UseAudioOutputOptions } from '@/hooks/useAudioOutput'
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useAudioOutput } from '@/hooks/useAudioOutput'
 import { attachVideoStream } from '@/lib/video-stream-utils'
@@ -44,7 +44,6 @@ interface MediaSetupDialogProps {
 }
 
 export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
-  const videoRef = useRef<HTMLVideoElement>(null)
   const queryClient = useQueryClient()
 
   // Get streams from context (shared with VideoStreamGrid)
@@ -77,12 +76,16 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   const isAudioInputPending = audioResult.isPending
   const switchAudioInputDevice = audioResult.saveSelectedDevice
 
-  // Attach video stream to preview element when stream changes
-  useEffect(() => {
-    if (isSuccessState(videoResult) && videoResult.stream && videoRef.current) {
-      attachVideoStream(videoRef.current, videoResult.stream)
-    }
-  }, [videoResult])
+  // Callback ref to attach stream when video element mounts
+  // This is more reliable than useEffect because it fires exactly when the DOM element appears
+  const videoRefCallback = useCallback(
+    (videoElement: HTMLVideoElement | null) => {
+      if (videoElement && isSuccessState(videoResult) && videoResult.stream) {
+        attachVideoStream(videoElement, videoResult.stream)
+      }
+    },
+    [videoResult],
+  )
 
   const audioOutputOptions = useMemo<UseAudioOutputOptions>(
     () => ({ initialDeviceId: 'default' }),
@@ -213,7 +216,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
                 {/* Video Preview */}
                 <div className="relative aspect-video overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
                   <video
-                    ref={videoRef}
+                    ref={videoRefCallback}
                     playsInline
                     muted
                     className="h-full w-full object-cover"

@@ -16,7 +16,7 @@ import {
   shouldShowPermissionDialog,
 } from '@/lib/permission-storage'
 
-export type BrowserPermissionState = 'granted' | 'denied' | 'prompt' | 'unknown'
+export type BrowserPermissionState = PermissionState | 'unknown'
 
 export interface PermissionStatus {
   /** Browser's actual permission state */
