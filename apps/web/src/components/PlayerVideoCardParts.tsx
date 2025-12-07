@@ -2,14 +2,7 @@ import type { UseMediaDeviceOptions } from '@/hooks/useMediaDevice'
 import type { PropsWithChildren } from 'react'
 import { useMemo, useState } from 'react'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
-import {
-  Camera,
-  ChevronUp,
-  Mic,
-  MicOff,
-  Video,
-  VideoOff,
-} from 'lucide-react'
+import { Camera, ChevronUp, Mic, MicOff, Video, VideoOff } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
 import {
@@ -234,7 +227,9 @@ export function LocalMediaControls({
             sideOffset={8}
           >
             <div className="border-b border-slate-800 px-4 py-3">
-              <h3 className="text-sm font-semibold text-white">Select Camera</h3>
+              <h3 className="text-sm font-semibold text-white">
+                Select Camera
+              </h3>
               <p className="text-xs text-slate-400">
                 {videoDevices.length} camera
                 {videoDevices.length !== 1 ? 's' : ''} available
@@ -253,7 +248,8 @@ export function LocalMediaControls({
                 >
                   <Camera className="h-4 w-4" />
                   <span className="text-sm">
-                    {camera.label || `Camera ${videoDevices.indexOf(camera) + 1}`}
+                    {camera.label ||
+                      `Camera ${videoDevices.indexOf(camera) + 1}`}
                   </span>
                 </div>
               ))}
@@ -301,7 +297,9 @@ export function LocalMediaControls({
             sideOffset={8}
           >
             <div className="border-b border-slate-800 px-4 py-3">
-              <h3 className="text-sm font-semibold text-white">Select Microphone</h3>
+              <h3 className="text-sm font-semibold text-white">
+                Select Microphone
+              </h3>
               <p className="text-xs text-slate-400">
                 {audioDevices.length} microphone
                 {audioDevices.length !== 1 ? 's' : ''} available
