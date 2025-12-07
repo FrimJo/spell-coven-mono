@@ -16,7 +16,7 @@ import type {
   AsyncResourceSuccess,
 } from '@/types/async-resource'
 import { useEffect, useMemo, useRef } from 'react'
-import { getMediaStream } from '@/lib/media-stream-manager'
+import { getMediaStream, stopMediaStream } from '@/lib/media-stream-manager'
 import { shouldShowPermissionDialog } from '@/lib/permission-storage'
 import { useQuery } from '@tanstack/react-query'
 
@@ -34,6 +34,13 @@ export interface UseMediaDeviceOptions {
   onDeviceChanged?: (deviceId: string, stream: MediaStream) => void
   /** Callback when error occurs */
   onError?: (error: Error) => void
+  /**
+   * Whether to enable media stream acquisition. When false, the hook will not
+   * call getUserMedia. Use this to delay stream acquisition until permissions
+   * are granted via the custom permission dialog.
+   * @default true
+   */
+  enabled?: boolean
 }
 
 type UseMediaDeviceBase = {
@@ -110,6 +117,7 @@ export function useMediaDevice(
     audioConstraints = {},
     onDeviceChanged,
     onError,
+    enabled: externalEnabled = true,
   } = options
 
   const onDeviceChangedRef = useRef(onDeviceChanged)
@@ -200,16 +208,28 @@ export function useMediaDevice(
       return mediaStream
     },
     // Don't trigger getUserMedia if:
+    // - Externally disabled (e.g., waiting for custom permission dialog)
     // - No device selected
     // - User declined our custom permission dialog (would trigger native prompt)
-    enabled: !!selectedDeviceId && !userDeclinedPermission,
+    enabled: externalEnabled && !!selectedDeviceId && !userDeclinedPermission,
   })
 
+  // Handle stream lifecycle: notify on change and cleanup on unmount
   useEffect(() => {
-    if (data?.stream) {
-      onDeviceChangedRef.current?.(selectedDeviceId, data.stream)
+    const stream = data?.stream
+    if (!stream) return
+
+    // Notify consumer about new stream
+    onDeviceChangedRef.current?.(selectedDeviceId, stream)
+
+    // Cleanup: stop tracks when stream changes or component unmounts
+    return () => {
+      console.log(
+        `[useMediaDevice] Cleaning up ${kind} stream on unmount/change`,
+      )
+      stopMediaStream(stream)
     }
-  }, [data?.stream, selectedDeviceId])
+  }, [data?.stream, selectedDeviceId, kind])
 
   useEffect(() => {
     if (enumerationError) {

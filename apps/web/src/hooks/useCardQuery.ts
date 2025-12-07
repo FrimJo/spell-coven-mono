@@ -51,18 +51,21 @@ export function useCardQuery(): UseCardQueryReturn {
         return
       }
 
-      // Log original card image before processing
+      // Log the input canvas (after crop & perspective warp, before rotation)
       canvas.toBlob((blob) => {
         if (blob) {
           const url = URL.createObjectURL(blob)
-          console.log(
-            '[useCardQuery] 🖼️ Card after OWL-ViT detection & crop (before rotation):',
-            {
-              url,
-              dimensions: `${canvas.width}x${canvas.height}`,
-              blob,
-            },
+          console.groupCollapsed(
+            '%c[DEBUG STAGE 3] Card input to query (cropped & deskewed, before rotation)',
+            'background: #FF9800; color: white; padding: 2px 6px; border-radius: 3px;',
           )
+          console.log(
+            '%c ',
+            `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+          )
+          console.log('Blob URL (copy this):', url)
+          console.log('Dimensions:', `${canvas.width}x${canvas.height}`)
+          console.groupEnd()
         }
       }, 'image/png')
 
@@ -83,6 +86,27 @@ export function useCardQuery(): UseCardQueryReturn {
         console.log('[useCardQuery] Generating 180° rotation candidate...')
         const rotated180 = generateOrientationCandidates(canvas)[2] // Index 2 is 180°
         console.log('[useCardQuery] Generated 180° rotation candidate')
+
+        // Log the 180° rotated canvas
+        rotated180!.toBlob((blob) => {
+          if (blob) {
+            const url = URL.createObjectURL(blob)
+            console.groupCollapsed(
+              '%c[DEBUG STAGE 4] Card after 180° rotation (ready for embedding)',
+              'background: #9C27B0; color: white; padding: 2px 6px; border-radius: 3px;',
+            )
+            console.log(
+              '%c ',
+              `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+            )
+            console.log('Blob URL (copy this):', url)
+            console.log(
+              'Dimensions:',
+              `${rotated180!.width}x${rotated180!.height}`,
+            )
+            console.groupEnd()
+          }
+        }, 'image/png')
 
         // Check if aborted
         if (abortController.signal.aborted) {

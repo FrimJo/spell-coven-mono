@@ -128,7 +128,7 @@ export async function warpPerspective(
     const outputCanvas = document.createElement('canvas')
     outputCanvas.width = targetSize
     outputCanvas.height = targetSize
-    const ctx = outputCanvas.getContext('2d')!
+    const ctx = outputCanvas.getContext('2d', { willReadFrequently: true })!
 
     // Fill with black
     ctx.fillStyle = 'black'
@@ -141,12 +141,48 @@ export async function warpPerspective(
     cv.imshow(tempCanvas, warped)
 
     // Log the perspective-warped card (before padding to square)
-    // Warped card output ready
+    tempCanvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        console.groupCollapsed(
+          '%c[DEBUG STAGE 2] Card after perspective warp (deskewed, before padding)',
+          'background: #2196F3; color: white; padding: 2px 6px; border-radius: 3px;',
+        )
+        console.log(
+          '%c ',
+          `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+        )
+        console.log('Blob URL (copy this):', url)
+        console.log('Dimensions:', `${tempCanvas.width}x${tempCanvas.height}`)
+        console.groupEnd()
+      }
+    }, 'image/png')
 
     // Center the card in the square canvas
     const pasteX = Math.floor((targetSize - cardWidth) / 2)
     const pasteY = Math.floor((targetSize - cardHeight) / 2)
     ctx.drawImage(tempCanvas, pasteX, pasteY)
+
+    // Log the final padded square canvas
+    outputCanvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        console.groupCollapsed(
+          '%c[DEBUG STAGE 2b] Card after perspective warp + padding to square',
+          'background: #2196F3; color: white; padding: 2px 6px; border-radius: 3px;',
+        )
+        console.log(
+          '%c ',
+          `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+        )
+        console.log('Blob URL (copy this):', url)
+        console.log(
+          'Dimensions:',
+          `${outputCanvas.width}x${outputCanvas.height}`,
+        )
+        console.groupEnd()
+      }
+    }, 'image/png')
 
     return outputCanvas
   } finally {

@@ -61,7 +61,9 @@ export async function refineBoundingBoxToCorners(
     const regionCanvas = document.createElement('canvas')
     regionCanvas.width = regionWidth
     regionCanvas.height = regionHeight
-    const regionCtx = regionCanvas.getContext('2d')!
+    const regionCtx = regionCanvas.getContext('2d', {
+      willReadFrequently: true,
+    })!
     regionCtx.drawImage(
       sourceCanvas,
       x1,

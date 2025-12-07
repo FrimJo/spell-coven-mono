@@ -94,12 +94,15 @@ export class WebRTCManager {
     try {
       // Handle offer specially - need to add tracks and send answer back
       if (type === 'offer') {
+        console.debug(`[WebRTC] Processing offer from ${from}`)
+
         // Add local tracks if we have a stream
         if (this.localStream) {
           this.updatePeerTracks(peerInfo.pc, from)
         }
 
         await handleSignal(peerInfo.pc, signal)
+        console.debug(`[WebRTC] Offer processed, flushing pending candidates for ${from}`)
         this.flushPendingCandidates(from)
         // After handling offer, create and send answer
         const answer = await peerInfo.pc.createAnswer()
@@ -120,13 +123,20 @@ export class WebRTCManager {
         })
       } else {
         if (type === 'candidate' && !peerInfo.pc.remoteDescription) {
+          console.debug(
+            `[WebRTC] Peer ${from} exists but remote description not set yet, queuing candidate`,
+          )
           this.queueCandidate(from, signal)
           return
         }
 
         await handleSignal(peerInfo.pc, signal)
+
         if (type === 'answer') {
+          console.debug(`[WebRTC] Answer received from ${from}, flushing pending candidates`)
           this.flushPendingCandidates(from)
+        } else if (type === 'candidate') {
+          console.debug(`[WebRTC] ICE candidate from ${from} added directly`)
         }
       }
     } catch (error) {
@@ -164,6 +174,8 @@ export class WebRTCManager {
       return
     }
 
+    console.debug(`[WebRTC] Initiating call to ${remotePeerId} in room ${roomId}`)
+
     const pc = this.createPeerConnection(remotePeerId, roomId)
     this.peers.set(remotePeerId, { pc, roomId })
 
@@ -174,6 +186,7 @@ export class WebRTCManager {
     try {
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
+      console.debug(`[WebRTC] Created and sending offer to ${remotePeerId}`)
 
       if (!offer.sdp) {
         throw new Error('Created offer has no SDP')
@@ -256,13 +269,33 @@ export class WebRTCManager {
           connectionState = 'connecting'
       }
 
+      console.debug(
+        `[WebRTC] Connection state changed for ${remotePeerId}: ${state} -> ${connectionState}`,
+      )
       this.callbacks.onConnectionStateChange?.(remotePeerId, connectionState)
+    }
+
+    // Log ICE connection state for debugging
+    pc.oniceconnectionstatechange = () => {
+      console.debug(
+        `[WebRTC] ICE connection state for ${remotePeerId}: ${pc.iceConnectionState}`,
+      )
+    }
+
+    // Log ICE gathering state for debugging
+    pc.onicegatheringstatechange = () => {
+      console.debug(
+        `[WebRTC] ICE gathering state for ${remotePeerId}: ${pc.iceGatheringState}`,
+      )
     }
 
     // Handle remote stream
     pc.ontrack = (event) => {
       const stream = event.streams[0]
       if (stream) {
+        console.debug(
+          `[WebRTC] Received remote track from ${remotePeerId}: ${event.track.kind} (${event.track.id})`,
+        )
         this.remoteStreams.set(remotePeerId, stream)
         this.callbacks.onRemoteStream?.(remotePeerId, stream)
         this.updateTrackState(remotePeerId, stream)
@@ -379,7 +412,11 @@ export class WebRTCManager {
 
   private queueCandidate(peerId: string, signal: CandidateSignal): void {
     const existing = this.pendingCandidates.get(peerId) ?? []
-    this.pendingCandidates.set(peerId, [...existing, signal])
+    const newQueue = [...existing, signal]
+    this.pendingCandidates.set(peerId, newQueue)
+    console.debug(
+      `[WebRTC] Queued ICE candidate for ${peerId} (${newQueue.length} pending, no remote description yet)`,
+    )
   }
 
   private flushPendingCandidates(peerId: string): void {
@@ -390,17 +427,28 @@ export class WebRTCManager {
 
     const peerInfo = this.peers.get(peerId)
     if (!peerInfo?.pc || !peerInfo.pc.remoteDescription) {
+      console.warn(
+        `[WebRTC] Cannot flush ${candidateSignals.length} candidates for ${peerId}: peer not ready`,
+      )
       return
     }
 
+    console.debug(
+      `[WebRTC] Flushing ${candidateSignals.length} queued ICE candidates for ${peerId}`,
+    )
+
     for (const candidateSignal of candidateSignals) {
-      handleSignal(peerInfo.pc, candidateSignal).catch((err) => {
-        console.error(`Failed to process queued candidate for ${peerId}:`, err)
-        this.callbacks.onError?.(
-          peerId,
-          err instanceof Error ? err : new Error(String(err)),
-        )
-      })
+      handleSignal(peerInfo.pc, candidateSignal)
+        .then(() => {
+          console.debug(`[WebRTC] Successfully added queued ICE candidate for ${peerId}`)
+        })
+        .catch((err) => {
+          console.error(`[WebRTC] Failed to process queued candidate for ${peerId}:`, err)
+          this.callbacks.onError?.(
+            peerId,
+            err instanceof Error ? err : new Error(String(err)),
+          )
+        })
     }
 
     this.pendingCandidates.delete(peerId)

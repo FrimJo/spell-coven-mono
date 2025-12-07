@@ -78,6 +78,9 @@ export function shouldEnableMockMedia(): boolean {
   return getMockMediaConfig().enabled
 }
 
+// Test card image URL (Birds of Paradise)
+const TEST_CARD_IMAGE_URL = '/cn2-176-birds-of-paradise.jpg'
+
 // Create a synthetic video stream from a canvas
 function createSyntheticVideoStream(): MediaStream {
   const canvas = document.createElement('canvas')
@@ -86,6 +89,18 @@ function createSyntheticVideoStream(): MediaStream {
   const ctx = canvas.getContext('2d')!
 
   let frameCount = 0
+
+  // Load the test card image
+  const cardImage = new Image()
+  cardImage.src = TEST_CARD_IMAGE_URL
+  let cardImageLoaded = false
+  cardImage.onload = () => {
+    cardImageLoaded = true
+    console.log('[MockMedia] Test card image loaded:', TEST_CARD_IMAGE_URL)
+  }
+  cardImage.onerror = () => {
+    console.warn('[MockMedia] Failed to load test card image:', TEST_CARD_IMAGE_URL)
+  }
 
   // Animate the canvas
   function drawFrame() {
@@ -129,32 +144,49 @@ function createSyntheticVideoStream(): MediaStream {
     const timestamp = new Date().toLocaleTimeString()
     ctx.fillText(timestamp, canvas.width / 2, canvas.height - 40)
 
-    // Draw a "card-like" rectangle in the center (for card detection testing)
-    const cardWidth = 150
-    const cardHeight = 210
+    // Draw the test card (Birds of Paradise) in the center
+    // Standard MTG card aspect ratio is approximately 63mm x 88mm (roughly 2.5:3.5 or 5:7)
+    const cardHeight = 280
+    const cardWidth = cardHeight * (63 / 88) // Maintain proper MTG card aspect ratio
     const cardX = canvas.width / 2 - cardWidth / 2
-    const cardY = canvas.height / 2 - cardHeight / 2 + 20
+    const cardY = canvas.height / 2 - cardHeight / 2 + 10
 
-    ctx.strokeStyle = '#818cf8' // indigo-400
-    ctx.lineWidth = 3
-    ctx.strokeRect(cardX, cardY, cardWidth, cardHeight)
+    if (cardImageLoaded) {
+      // Draw the actual card image rotated 180 degrees (cards are usually upside down in streams)
+      ctx.save()
+      // Translate to card center, rotate 180°, then draw centered
+      const cardCenterX = cardX + cardWidth / 2
+      const cardCenterY = cardY + cardHeight / 2
+      ctx.translate(cardCenterX, cardCenterY)
+      ctx.rotate(Math.PI) // 180 degrees
+      ctx.drawImage(cardImage, -cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight)
+      ctx.restore()
 
-    // Card "art"
-    const artGradient = ctx.createLinearGradient(
-      cardX,
-      cardY,
-      cardX + cardWidth,
-      cardY + cardHeight
-    )
-    artGradient.addColorStop(0, '#4338ca')
-    artGradient.addColorStop(1, '#7c3aed')
-    ctx.fillStyle = artGradient
-    ctx.fillRect(cardX + 10, cardY + 10, cardWidth - 20, cardHeight - 20)
+      // Add a subtle border/glow effect
+      ctx.strokeStyle = '#818cf8' // indigo-400
+      ctx.lineWidth = 2
+      ctx.strokeRect(cardX - 1, cardY - 1, cardWidth + 2, cardHeight + 2)
+    } else {
+      // Fallback: Draw placeholder while image loads
+      ctx.strokeStyle = '#818cf8' // indigo-400
+      ctx.lineWidth = 3
+      ctx.strokeRect(cardX, cardY, cardWidth, cardHeight)
 
-    // Card text
-    ctx.font = 'bold 14px system-ui'
-    ctx.fillStyle = '#fff'
-    ctx.fillText('Test Card', canvas.width / 2, cardY + cardHeight / 2)
+      const artGradient = ctx.createLinearGradient(
+        cardX,
+        cardY,
+        cardX + cardWidth,
+        cardY + cardHeight
+      )
+      artGradient.addColorStop(0, '#4338ca')
+      artGradient.addColorStop(1, '#7c3aed')
+      ctx.fillStyle = artGradient
+      ctx.fillRect(cardX + 10, cardY + 10, cardWidth - 20, cardHeight - 20)
+
+      ctx.font = 'bold 14px system-ui'
+      ctx.fillStyle = '#fff'
+      ctx.fillText('Loading...', canvas.width / 2, cardY + cardHeight / 2)
+    }
 
     requestAnimationFrame(drawFrame)
   }

@@ -1,6 +1,6 @@
 import type { UseLocalVideoStateOptions } from '@/hooks/useLocalVideoState'
 import type { DetectorType } from '@/lib/detectors'
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useCardDetector } from '@/hooks/useCardDetector'
 import { useLocalVideoState } from '@/hooks/useLocalVideoState'
 import { attachVideoStream } from '@/lib/video-stream-utils'
@@ -61,11 +61,11 @@ export function LocalVideoCard({
     reinitializeTrigger: stream ? 1 : 0,
   })
 
-  // Track audio muted state by checking the stream tracks
-  const isAudioMuted = useMemo(() => {
+  // Track audio muted state - initialize from stream tracks
+  const [isAudioMuted, setIsAudioMuted] = useState(() => {
     const audioTracks = stream.getAudioTracks()
     return audioTracks.length > 0 && !audioTracks[0]?.enabled
-  }, [stream])
+  })
 
   // Callback ref that combines ref assignment with stream attachment
   // Called when video element is mounted/unmounted
@@ -81,14 +81,17 @@ export function LocalVideoCard({
   )
 
   const toggleLocalAudio = useCallback(() => {
+    const newMutedState = !isAudioMuted
+    setIsAudioMuted(newMutedState)
+
     if (onToggleAudio) {
       // Use centralized toggle function if provided
-      onToggleAudio(!isAudioMuted)
+      onToggleAudio(!newMutedState)
     } else {
       // Fallback to local implementation if prop not provided
       const audioTracks = stream.getAudioTracks()
       audioTracks.forEach((track) => {
-        track.enabled = !track.enabled
+        track.enabled = !newMutedState
       })
     }
   }, [onToggleAudio, isAudioMuted, stream])

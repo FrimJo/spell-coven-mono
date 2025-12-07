@@ -103,14 +103,21 @@ export function VideoStreamGrid({
     (cameraPermission.browserState === 'denied' ||
       microphonePermission.browserState === 'denied')
 
-  // Memoize hook options
+  // Check if both permissions are granted (safe to acquire media streams)
+  const permissionsGranted =
+    !isCheckingPermissions &&
+    cameraPermission.browserState === 'granted' &&
+    microphonePermission.browserState === 'granted'
+
+  // Memoize hook options - only enable media acquisition when permissions are granted
+  // This prevents triggering native browser prompts before user interacts with our custom dialog
   const videoOptions = useMemo<UseMediaDeviceOptions>(
-    () => ({ kind: 'videoinput' }),
-    [],
+    () => ({ kind: 'videoinput', enabled: permissionsGranted }),
+    [permissionsGranted],
   )
   const audioOptions = useMemo<UseMediaDeviceOptions>(
-    () => ({ kind: 'audioinput' }),
-    [],
+    () => ({ kind: 'audioinput', enabled: permissionsGranted }),
+    [permissionsGranted],
   )
 
   // Use media device hooks
