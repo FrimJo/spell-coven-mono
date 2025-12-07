@@ -1,10 +1,9 @@
 import type { UseAudioOutputOptions } from '@/hooks/useAudioOutput'
-import type { UseMediaDeviceOptions } from '@/hooks/useMediaDevice'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
+import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useAudioOutput } from '@/hooks/useAudioOutput'
-import { useMediaDevice } from '@/hooks/useMediaDevice'
-import { useMediaPermissions } from '@/hooks/useMediaPermissions'
 import { attachVideoStream } from '@/lib/video-stream-utils'
+import { isSuccessState } from '@/types/async-resource'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   AlertCircle,
@@ -48,62 +47,47 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const queryClient = useQueryClient()
 
-  // Check media permissions
+  // Get streams from context (shared with VideoStreamGrid)
   const {
-    camera: cameraPermission,
-    microphone: microphonePermission,
-    isChecking: isCheckingPermissions,
-    recheckPermissions,
-  } = useMediaPermissions()
+    video: videoResult,
+    audio: audioResult,
+    permissions: {
+      camera: cameraPermission,
+      microphone: microphonePermission,
+      isChecking: isCheckingPermissions,
+      permissionsGranted: hasPermissions,
+      recheckPermissions,
+    },
+  } = useMediaStreams()
 
-  // Determine permission state
-  const hasPermissions =
-    !isCheckingPermissions &&
-    cameraPermission.browserState === 'granted' &&
-    microphonePermission.browserState === 'granted'
+  // Extract video device info
+  const videoDevices = videoResult.devices
+  const selectedVideoId = videoResult.selectedDeviceId
+  const videoError = videoResult.error
+  const isVideoPending = videoResult.isPending
+  const switchVideoDevice = videoResult.saveSelectedDevice
 
-  // Memoize hook options to prevent infinite renders from recreated objects
-  // Only enable media acquisition when permissions are granted to avoid triggering
-  // native browser prompts before user interacts with our custom dialog
-  const videoDeviceOptions = useMemo<UseMediaDeviceOptions>(
-    () => ({
-      kind: 'videoinput',
-      enabled: hasPermissions,
-      onDeviceChanged: (_deviceId: string, stream: MediaStream) => {
-        attachVideoStream(videoRef.current, stream)
-      },
-    }),
-    [hasPermissions],
-  )
+  // Extract audio device info
+  const audioInputDevices = audioResult.devices
+  const selectedAudioInputId = audioResult.selectedDeviceId
+  const audioInputStream = isSuccessState(audioResult)
+    ? audioResult.stream
+    : undefined
+  const audioInputError = audioResult.error
+  const isAudioInputPending = audioResult.isPending
+  const switchAudioInputDevice = audioResult.saveSelectedDevice
 
-  const audioInputDeviceOptions = useMemo<UseMediaDeviceOptions>(
-    () => ({ kind: 'audioinput', enabled: hasPermissions }),
-    [hasPermissions],
-  )
+  // Attach video stream to preview element when stream changes
+  useEffect(() => {
+    if (isSuccessState(videoResult) && videoResult.stream && videoRef.current) {
+      attachVideoStream(videoRef.current, videoResult.stream)
+    }
+  }, [videoResult])
 
   const audioOutputOptions = useMemo<UseAudioOutputOptions>(
     () => ({ initialDeviceId: 'default' }),
     [],
   )
-
-  // Use our consolidated media device hook for video
-  const {
-    devices: videoDevices,
-    selectedDeviceId: selectedVideoId,
-    error: videoError,
-    isPending: isVideoPending,
-    saveSelectedDevice: switchVideoDevice,
-  } = useMediaDevice(videoDeviceOptions)
-
-  // Use our consolidated media device hook for audio input
-  const {
-    devices: audioInputDevices,
-    selectedDeviceId: selectedAudioInputId,
-    stream: audioInputStream,
-    error: audioInputError,
-    isPending: isAudioInputPending,
-    saveSelectedDevice: switchAudioInputDevice,
-  } = useMediaDevice(audioInputDeviceOptions)
 
   // Use our audio output hook for speakers/headphones
   const {
@@ -170,7 +154,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
         <div className="absolute right-4 top-4">
           <button
             onClick={handleSkip}
-            className="rounded-sm opacity-70 ring-offset-slate-900 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 text-slate-400 hover:text-slate-300"
+            className="rounded-sm text-slate-400 opacity-70 ring-offset-slate-900 transition-opacity hover:text-slate-300 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -375,7 +359,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
           )}
         </div>
 
-        <DialogFooter className="flex-row gap-2 justify-between sm:justify-between">
+        <DialogFooter className="flex-row justify-between gap-2 sm:justify-between">
           <Button
             variant="ghost"
             onClick={handleSkip}
@@ -388,7 +372,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
           <Button
             onClick={handleComplete}
             disabled={!canComplete}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            className="bg-purple-600 text-white hover:bg-purple-700"
           >
             <Check className="mr-2 h-4 w-4" />
             Complete Setup

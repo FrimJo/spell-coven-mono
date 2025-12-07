@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
 import { useAuth } from '@/contexts/AuthContext'
+import { MediaStreamProvider } from '@/contexts/MediaStreamContext'
 import { sessionStorage } from '@/lib/session-storage'
 import {
   createFileRoute,
@@ -109,22 +110,25 @@ function GameRoomRoute() {
       )}
       onReset={() => window.location.reload()}
     >
-      {/* Permission handling is done locally in VideoStreamGrid and MediaSetupDialog */}
-      <Suspense
-        fallback={
-          <div className="flex h-screen items-center justify-center">
-            Loading game room...
-          </div>
-        }
-      >
-        <GameRoom
-          roomId={gameId}
-          playerName={user?.username ?? 'Player'}
-          onLeaveGame={handleLeaveGame}
-          detectorType={detector as DetectorType | undefined}
-          usePerspectiveWarp={usePerspectiveWarp}
-        />
-      </Suspense>
+      {/* MediaStreamProvider manages video/audio streams at page level.
+          Streams are cleaned up when user navigates away from the game page. */}
+      <MediaStreamProvider>
+        <Suspense
+          fallback={
+            <div className="flex h-screen items-center justify-center">
+              Loading game room...
+            </div>
+          }
+        >
+          <GameRoom
+            roomId={gameId}
+            playerName={user?.username ?? 'Player'}
+            onLeaveGame={handleLeaveGame}
+            detectorType={detector as DetectorType | undefined}
+            usePerspectiveWarp={usePerspectiveWarp}
+          />
+        </Suspense>
+      </MediaStreamProvider>
     </ErrorBoundary>
   )
 }

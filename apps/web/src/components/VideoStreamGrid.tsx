@@ -1,12 +1,9 @@
-import type { UseMediaDeviceOptions } from '@/hooks/useMediaDevice'
 import type { DetectorType } from '@/lib/detectors'
-import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
-import { useMediaDevice } from '@/hooks/useMediaDevice'
-import { useMediaPermissions } from '@/hooks/useMediaPermissions'
+import { Suspense, useMemo, useRef, useState } from 'react'
+import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useSupabasePresence } from '@/hooks/useSupabasePresence'
 import { useSupabaseWebRTC } from '@/hooks/useSupabaseWebRTC'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
-import { isSuccessState } from '@/types/async-resource'
 import {
   AlertCircle,
   Loader2,
@@ -83,99 +80,25 @@ export function VideoStreamGrid({
     return filtered
   }, [gameRoomParticipants, userId])
 
-  // --- Local Media Management ---
-
-  // Check media permissions first - this determines if we show permission dialog
+  // --- Local Media Management (from context) ---
   const {
-    camera: cameraPermission,
-    microphone: microphonePermission,
-    isChecking: isCheckingPermissions,
-  } = useMediaPermissions()
-
-  // Determine if we need to show permission dialog in the local player card area
-  const needsPermissionDialog =
-    !isCheckingPermissions &&
-    (cameraPermission.shouldShowDialog || microphonePermission.shouldShowDialog)
-
-  // Check if permissions are blocked (user denied in browser)
-  const permissionsBlocked =
-    !isCheckingPermissions &&
-    (cameraPermission.browserState === 'denied' ||
-      microphonePermission.browserState === 'denied')
-
-  // Check if both permissions are granted (safe to acquire media streams)
-  const permissionsGranted =
-    !isCheckingPermissions &&
-    cameraPermission.browserState === 'granted' &&
-    microphonePermission.browserState === 'granted'
-
-  // Memoize hook options - only enable media acquisition when permissions are granted
-  // This prevents triggering native browser prompts before user interacts with our custom dialog
-  const videoOptions = useMemo<UseMediaDeviceOptions>(
-    () => ({ kind: 'videoinput', enabled: permissionsGranted }),
-    [permissionsGranted],
-  )
-  const audioOptions = useMemo<UseMediaDeviceOptions>(
-    () => ({ kind: 'audioinput', enabled: permissionsGranted }),
-    [permissionsGranted],
-  )
-
-  // Use media device hooks
-  const videoResult = useMediaDevice(videoOptions)
-  const audioResult = useMediaDevice(audioOptions)
-
-  // Extract individual properties for convenience
-  const {
-    stream: _videoStream,
-    error: videoError,
-    isPending: isVideoPending,
-  } = videoResult
-
-  const {
-    stream: _audioStream,
-    error: audioError,
-    isPending: isAudioPending,
-  } = audioResult
-
-  // Combine streams into a single MediaStream for PeerJS
-  // TypeScript knows localStream is defined when both streams are not pending and have no errors
-  const localStream = useMemo((): MediaStream | null => {
-    // Use type guards to check if both resources are in success state
-    if (!isSuccessState(videoResult) || !isSuccessState(audioResult)) {
-      return null
-    }
-
-    // At this point, TypeScript knows both streams are in success state
-    // Extract streams (they may be undefined if not available, but no errors)
-    const video = videoResult.stream
-    const audio = audioResult.stream
-
-    const tracks: MediaStreamTrack[] = []
-    if (video) tracks.push(...video.getVideoTracks())
-    if (audio) tracks.push(...audio.getAudioTracks())
-
-    if (tracks.length === 0) return null
-
-    return new MediaStream(tracks)
-  }, [videoResult, audioResult])
-
-  const toggleLocalVideo = useCallback(
-    async (enabled: boolean) => {
-      if (localStream) {
-        localStream.getVideoTracks().forEach((t) => (t.enabled = enabled))
-      }
+    video: videoResult,
+    audio: audioResult,
+    combinedStream: localStream,
+    toggleVideo: toggleLocalVideo,
+    toggleAudio: toggleLocalAudio,
+    permissions: {
+      isChecking: isCheckingPermissions,
+      needsPermissionDialog,
+      permissionsBlocked,
     },
-    [localStream],
-  )
+  } = useMediaStreams()
 
-  const toggleLocalAudio = useCallback(
-    (enabled: boolean) => {
-      if (localStream) {
-        localStream.getAudioTracks().forEach((t) => (t.enabled = enabled))
-      }
-    },
-    [localStream],
-  )
+  // Extract error and pending states for convenience
+  const videoError = videoResult.error
+  const audioError = audioResult.error
+  const isVideoPending = videoResult.isPending
+  const isAudioPending = audioResult.isPending
 
   // WebRTC hook for peer-to-peer video streaming
   const {
