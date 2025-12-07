@@ -28,6 +28,7 @@ export default [
       'react-compiler/react-compiler': 'error',
       '@tanstack/query/exhaustive-deps': 'off',
       'react/prop-types': 'off', // TypeScript provides type checking
+      '@typescript-eslint/no-non-null-assertion': 'warn',
     },
   },
 ]
