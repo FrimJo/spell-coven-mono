@@ -85,10 +85,13 @@ export class OWLViTDetector implements CardDetector {
     try {
       this.setStatus('loading', 'Loading OWL-ViT model...')
 
+      if (!this.config.modelId) {
+        throw new Error('OWL-ViT detector: modelId is required in config')
+      }
       // Load zero-shot object detection pipeline
       this.detector = await pipeline(
         'zero-shot-object-detection',
-        this.config.modelId!,
+        this.config.modelId,
         {
           progress_callback: (progress) => {
             if (progress.status === 'progress') {
@@ -116,11 +119,14 @@ export class OWLViTDetector implements CardDetector {
 
     const startTime = performance.now()
 
+    if (!this.config.prompts) {
+      throw new Error('OWL-ViT detector: prompts are required in config')
+    }
     // Run zero-shot detection with text prompts
     const inferenceStart = performance.now()
     const detections: OWLViTDetection[] = await this.detector(
       canvas,
-      this.config.prompts!,
+      this.config.prompts,
       {
         threshold: this.config.confidenceThreshold,
         percentage: true, // Return coordinates as percentages

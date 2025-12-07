@@ -84,11 +84,15 @@ export function useCardQuery(): UseCardQueryReturn {
 
         // Generate 180° rotation (cards are almost always upside down)
         console.log('[useCardQuery] Generating 180° rotation candidate...')
-        const rotated180 = generateOrientationCandidates(canvas)[2] // Index 2 is 180°
+        const orientationCandidates = generateOrientationCandidates(canvas)
+        const rotated180 = orientationCandidates[2] // Index 2 is 180°
+        if (!rotated180) {
+          throw new Error('useCardQuery: Failed to generate 180° rotation candidate')
+        }
         console.log('[useCardQuery] Generated 180° rotation candidate')
 
         // Log the 180° rotated canvas
-        rotated180!.toBlob((blob) => {
+        rotated180.toBlob((blob) => {
           if (blob) {
             const url = URL.createObjectURL(blob)
             console.groupCollapsed(
@@ -102,7 +106,7 @@ export function useCardQuery(): UseCardQueryReturn {
             console.log('Blob URL (copy this):', url)
             console.log(
               'Dimensions:',
-              `${rotated180!.width}x${rotated180!.height}`,
+              `${rotated180.width}x${rotated180.height}`,
             )
             console.groupEnd()
           }
@@ -116,7 +120,7 @@ export function useCardQuery(): UseCardQueryReturn {
         // Embed the 180° rotated canvas
         console.log('[useCardQuery] Starting embedding...')
         const { embedding, metrics: embeddingMetrics } = await embedFromCanvas(
-          rotated180!,
+          rotated180,
         ).catch((err) => {
           throw new Error(`Failed to embed canvas: ${err.message}`)
         })

@@ -63,7 +63,12 @@ export async function refineBoundingBoxToCorners(
     regionCanvas.height = regionHeight
     const regionCtx = regionCanvas.getContext('2d', {
       willReadFrequently: true,
-    })!
+    })
+    if (!regionCtx) {
+      throw new Error(
+        'refineBoundingBoxToCorners: Failed to get 2d context from canvas',
+      )
+    }
     regionCtx.drawImage(
       sourceCanvas,
       x1,
@@ -157,8 +162,13 @@ export async function refineBoundingBoxToCorners(
       // Perfect! We have a quadrilateral
       const points: Point[] = []
       for (let i = 0; i < 4; i++) {
-        const x = approx.data32S[i * 2]!
-        const y = approx.data32S[i * 2 + 1]!
+        const x = approx.data32S[i * 2]
+        const y = approx.data32S[i * 2 + 1]
+        if (x === undefined || y === undefined) {
+          throw new Error(
+            `refineBoundingBoxToCorners: Missing coordinate data at index ${i}`,
+          )
+        }
         points.push({ x, y })
       }
 
@@ -255,7 +265,11 @@ function orderQuadPoints(points: Point[]): CardQuad {
   let topLeftIdx = 0
   let minSum = Infinity
   for (let i = 0; i < 4; i++) {
-    const sum = sorted[i]!.x + sorted[i]!.y
+    const point = sorted[i]
+    if (!point) {
+      throw new Error(`orderQuadPoints: Missing point at index ${i}`)
+    }
+    const sum = point.x + point.y
     if (sum < minSum) {
       minSum = sum
       topLeftIdx = i
@@ -265,13 +279,28 @@ function orderQuadPoints(points: Point[]): CardQuad {
   // Reorder starting from top-left, going clockwise
   const ordered: Point[] = []
   for (let i = 0; i < 4; i++) {
-    ordered.push(sorted[(topLeftIdx + i) % 4]!)
+    const point = sorted[(topLeftIdx + i) % 4]
+    if (!point) {
+      throw new Error(
+        `orderQuadPoints: Missing point at index ${(topLeftIdx + i) % 4}`,
+      )
+    }
+    ordered.push(point)
+  }
+
+  if (ordered.length !== 4) {
+    throw new Error('orderQuadPoints: Expected exactly 4 ordered points')
+  }
+
+  const [topLeft, topRight, bottomRight, bottomLeft] = ordered
+  if (!topLeft || !topRight || !bottomRight || !bottomLeft) {
+    throw new Error('orderQuadPoints: Missing required points')
   }
 
   return {
-    topLeft: ordered[0]!,
-    topRight: ordered[1]!,
-    bottomRight: ordered[2]!,
-    bottomLeft: ordered[3]!,
+    topLeft,
+    topRight,
+    bottomRight,
+    bottomLeft,
   }
 }

@@ -312,9 +312,12 @@ export class SlimSAMDetector implements CardDetector {
         if (bestScore > 0.5) {
           const mask = masks[bestMaskIdx]
 
+          if (!mask) {
+            throw new Error('SlimSAMDetector: Mask is missing at bestMaskIdx')
+          }
           // T018-T020: Extract quad from mask using contour detection
           const quad = await this.extractQuadFromMask(
-            mask!,
+            mask,
             canvasWidth,
             canvasHeight,
           )
@@ -326,7 +329,10 @@ export class SlimSAMDetector implements CardDetector {
             debugCanvas.height = canvasHeight
             const debugCtx = debugCanvas.getContext('2d', {
               willReadFrequently: true,
-            })!
+            })
+            if (!debugCtx) {
+              throw new Error('SlimSAMDetector: Failed to get 2d context from debug canvas')
+            }
             debugCtx.drawImage(canvas, 0, 0)
 
             // Draw the quad corners and edges
@@ -504,11 +510,14 @@ export class SlimSAMDetector implements CardDetector {
         return null
       }
 
-      const maskHeight = dims[dims.length - 2]!
-      const maskWidth = dims[dims.length - 1]!
+      const maskHeight = dims[dims.length - 2]
+      const maskWidth = dims[dims.length - 1]
+      if (maskHeight === undefined || maskWidth === undefined) {
+        throw new Error('SlimSAMDetector: Missing mask dimensions')
+      }
 
       // Create binary mask (0 or 255)
-      const binaryData = new Uint8Array(maskHeight! * maskWidth!)
+      const binaryData = new Uint8Array(maskHeight * maskWidth)
       const threshold = 0.5
       for (let i = 0; i < maskData.length; i++) {
         binaryData[i] = maskData[i] > threshold ? 255 : 0
@@ -521,8 +530,8 @@ export class SlimSAMDetector implements CardDetector {
       // Scale click point to mask coordinates if available
       let clickPointInMask: Point | undefined = undefined
       if (this.clickPoint) {
-        const scaleX = maskWidth! / canvasWidth
-        const scaleY = maskHeight! / canvasHeight
+        const scaleX = maskWidth / canvasWidth
+        const scaleY = maskHeight / canvasHeight
         clickPointInMask = {
           x: this.clickPoint.x * scaleX,
           y: this.clickPoint.y * scaleY,
@@ -546,22 +555,22 @@ export class SlimSAMDetector implements CardDetector {
       }
 
       // Scale quad from mask coordinates to canvas coordinates
-      const scaleX = canvasWidth / maskWidth!
-      const scaleY = canvasHeight / maskHeight!
+      const scaleX = canvasWidth / maskWidth
+      const scaleY = canvasHeight / maskHeight
 
       return {
-        topLeft: { x: quad.topLeft.x * scaleX!, y: quad.topLeft.y * scaleY! },
+        topLeft: { x: quad.topLeft.x * scaleX, y: quad.topLeft.y * scaleY },
         topRight: {
-          x: quad.topRight.x * scaleX!,
-          y: quad.topRight.y * scaleY!,
+          x: quad.topRight.x * scaleX,
+          y: quad.topRight.y * scaleY,
         },
         bottomRight: {
-          x: quad.bottomRight.x * scaleX!,
-          y: quad.bottomRight.y * scaleY!,
+          x: quad.bottomRight.x * scaleX,
+          y: quad.bottomRight.y * scaleY,
         },
         bottomLeft: {
-          x: quad.bottomLeft.x * scaleX!,
-          y: quad.bottomLeft.y * scaleY!,
+          x: quad.bottomLeft.x * scaleX,
+          y: quad.bottomLeft.y * scaleY,
         },
       }
     } catch (error) {

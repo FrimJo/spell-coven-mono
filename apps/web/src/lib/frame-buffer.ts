@@ -132,7 +132,10 @@ export class FrameBuffer {
       return null
     }
 
-    const meta = this.metadata.get(sharpestFrame)!
+    const meta = this.metadata.get(sharpestFrame)
+    if (!meta) {
+      throw new Error(`FrameBuffer.getSharpestFrame: Metadata not found for frame ${sharpestFrame}`)
+    }
 
     console.log('[FrameBuffer] Selected sharpest frame:', {
       timestamp: meta.timestamp,

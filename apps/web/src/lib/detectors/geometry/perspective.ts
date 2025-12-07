@@ -58,7 +58,11 @@ export async function computeHomography(
     // Extract matrix data
     const matrixData = new Float32Array(9)
     for (let i = 0; i < 9; i++) {
-      matrixData[i] = M.data64F[i]!
+      const value = M.data64F[i]
+      if (value === undefined) {
+        throw new Error(`computeHomography: Matrix data missing at index ${i}`)
+      }
+      matrixData[i] = value
     }
 
     // Cleanup
@@ -128,7 +132,10 @@ export async function warpPerspective(
     const outputCanvas = document.createElement('canvas')
     outputCanvas.width = targetSize
     outputCanvas.height = targetSize
-    const ctx = outputCanvas.getContext('2d', { willReadFrequently: true })!
+    const ctx = outputCanvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx) {
+      throw new Error('warpPerspective: Failed to get 2d context from canvas')
+    }
 
     // Fill with black
     ctx.fillStyle = 'black'

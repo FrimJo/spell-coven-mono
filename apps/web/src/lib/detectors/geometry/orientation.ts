@@ -28,7 +28,10 @@ export function rotateCanvas90(
     const canvas = document.createElement('canvas')
     canvas.width = sourceCanvas.width
     canvas.height = sourceCanvas.height
-    const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx) {
+      throw new Error('rotateCanvas90: Failed to get 2d context from canvas')
+    }
     ctx.drawImage(sourceCanvas, 0, 0)
     return canvas
   }
@@ -41,7 +44,10 @@ export function rotateCanvas90(
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
-  const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) {
+    throw new Error('rotateCanvas90: Failed to get 2d context from canvas')
+  }
 
   // Move to center, rotate, move back
   ctx.translate(width / 2, height / 2)

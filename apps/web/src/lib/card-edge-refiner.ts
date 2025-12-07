@@ -135,11 +135,21 @@ function orderPoints(
   // Bottom two points
   const bottom = sorted.slice(2, 4).sort((a, b) => a.x - b.x)
 
+  if (top.length < 2 || bottom.length < 2) {
+    throw new Error('orderPoints: Expected at least 2 top and 2 bottom points')
+  }
+  const topLeft = top[0]
+  const topRight = top[1]
+  const bottomRight = bottom[1]
+  const bottomLeft = bottom[0]
+  if (!topLeft || !topRight || !bottomRight || !bottomLeft) {
+    throw new Error('orderPoints: Missing required points')
+  }
   return [
-    top[0]!, // top-left
-    top[1]!, // top-right
-    bottom[1]!, // bottom-right
-    bottom[0]!, // bottom-left
+    topLeft, // top-left
+    topRight, // top-right
+    bottomRight, // bottom-right
+    bottomLeft, // bottom-left
   ]
 }
 
@@ -162,16 +172,25 @@ function applyPerspectiveTransform(
   // Order corners
   const ordered = orderPoints(corners)
 
+  if (ordered.length !== 4) {
+    throw new Error(
+      'applyPerspectiveTransform: Expected exactly 4 corner points',
+    )
+  }
+  const [p0, p1, p2, p3] = ordered
+  if (!p0 || !p1 || !p2 || !p3) {
+    throw new Error('applyPerspectiveTransform: Missing corner points')
+  }
   // Source points (card corners in original image)
   const srcPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
-    ordered[0]!.x,
-    ordered[0]!.y,
-    ordered[1]!.x,
-    ordered[1]!.y,
-    ordered[2]!.x,
-    ordered[2]!.y,
-    ordered[3]!.x,
-    ordered[3]!.y,
+    p0.x,
+    p0.y,
+    p1.x,
+    p1.y,
+    p2.x,
+    p2.y,
+    p3.x,
+    p3.y,
   ])
 
   // Destination points (rectangle in output image)
@@ -284,22 +303,17 @@ export function refineCardEdges(
     // Calculate confidence based on how rectangular the shape is
     // (A perfect rectangle would have corners at right angles)
     const orderedCorners = orderPoints(corners)
-    const width1 = Math.hypot(
-      orderedCorners[1]!.x - orderedCorners[0]!.x,
-      orderedCorners[1]!.y - orderedCorners[0]!.y,
-    )
-    const width2 = Math.hypot(
-      orderedCorners[2]!.x - orderedCorners[3]!.x,
-      orderedCorners[2]!.y - orderedCorners[3]!.y,
-    )
-    const height1 = Math.hypot(
-      orderedCorners[3]!.x - orderedCorners[0]!.x,
-      orderedCorners[3]!.y - orderedCorners[0]!.y,
-    )
-    const height2 = Math.hypot(
-      orderedCorners[2]!.x - orderedCorners[1]!.x,
-      orderedCorners[2]!.y - orderedCorners[1]!.y,
-    )
+    if (orderedCorners.length !== 4) {
+      throw new Error('refineCardEdges: Expected exactly 4 ordered corners')
+    }
+    const [c0, c1, c2, c3] = orderedCorners
+    if (!c0 || !c1 || !c2 || !c3) {
+      throw new Error('refineCardEdges: Missing corner points')
+    }
+    const width1 = Math.hypot(c1.x - c0.x, c1.y - c0.y)
+    const width2 = Math.hypot(c2.x - c3.x, c2.y - c3.y)
+    const height1 = Math.hypot(c3.x - c0.x, c3.y - c0.y)
+    const height2 = Math.hypot(c2.x - c1.x, c2.y - c1.y)
 
     const widthDiff = Math.abs(width1 - width2) / Math.max(width1, width2)
     const heightDiff = Math.abs(height1 - height2) / Math.max(height1, height2)

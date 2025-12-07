@@ -197,7 +197,10 @@ async function detectCards(clickPoint?: { x: number; y: number }) {
     const tempCanvas = document.createElement('canvas')
     tempCanvas.width = overlayEl.width
     tempCanvas.height = overlayEl.height
-    const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })!
+    const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })
+    if (!tempCtx) {
+      throw new Error('setupCardDetector: Failed to get 2d context from temp canvas')
+    }
     tempCtx.drawImage(videoEl, 0, 0, tempCanvas.width, tempCanvas.height)
 
     // Store current frame for click handling
@@ -222,7 +225,10 @@ async function detectCards(clickPoint?: { x: number; y: number }) {
     detectedCards = result.cards
 
     // Clear overlay - no detection boxes shown
-    overlayCtx!.clearRect(0, 0, overlayEl.width, overlayEl.height)
+    if (!overlayCtx) {
+      throw new Error('setupCardDetector: overlayCtx is not initialized')
+    }
+    overlayCtx.clearRect(0, 0, overlayEl.width, overlayEl.height)
   } catch {
     // Silently handle detection errors
   } finally {
@@ -275,7 +281,10 @@ function cropCardFromBoundingBox(
     // Draw full resolution video to canvas
     fullResCanvas.width = videoEl.videoWidth
     fullResCanvas.height = videoEl.videoHeight
-    fullResCtx!.drawImage(
+    if (!fullResCtx) {
+      throw new Error('setupCardDetector: fullResCtx is not initialized')
+    }
+    fullResCtx.drawImage(
       videoEl,
       0,
       0,
@@ -292,22 +301,31 @@ function cropCardFromBoundingBox(
   const cardHeight = (box.ymax - box.ymin) * canvasToUse.height
 
   // Extract the full card region from the bounding box
-  const canvasCtx = canvasToUse.getContext('2d', { willReadFrequently: true })!
+  const canvasCtx = canvasToUse.getContext('2d', { willReadFrequently: true })
+  if (!canvasCtx) {
+    throw new Error('setupCardDetector: Failed to get 2d context from canvas')
+  }
   const cardImageData = canvasCtx.getImageData(x, y, cardWidth, cardHeight)
 
   // Create temporary canvas for the extracted card
   const tempCanvas = document.createElement('canvas')
   tempCanvas.width = cardWidth
   tempCanvas.height = cardHeight
-  const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })!
+  const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })
+  if (!tempCtx) {
+    throw new Error('setupCardDetector: Failed to get 2d context from temp canvas')
+  }
   tempCtx.putImageData(cardImageData, 0, 0)
 
   // Resize to target dimensions (336×336) with aspect ratio preservation and padding
   // The CLIP model expects square images, so we center the card and add black padding
   croppedCanvas.width = CROPPED_CARD_WIDTH
   croppedCanvas.height = CROPPED_CARD_HEIGHT
-  croppedCtx!.fillStyle = 'black'
-  croppedCtx!.fillRect(0, 0, croppedCanvas.width, croppedCanvas.height)
+  if (!croppedCtx) {
+    throw new Error('setupCardDetector: croppedCtx is not initialized')
+  }
+  croppedCtx.fillStyle = 'black'
+  croppedCtx.fillRect(0, 0, croppedCanvas.width, croppedCanvas.height)
 
   // Calculate scaling to fit card within 336×336 while preserving aspect ratio
   const scale = Math.min(
@@ -321,7 +339,10 @@ function cropCardFromBoundingBox(
   const offsetX = (CROPPED_CARD_WIDTH - scaledWidth) / 2
   const offsetY = (CROPPED_CARD_HEIGHT - scaledHeight) / 2
 
-  croppedCtx!.drawImage(
+  if (!croppedCtx) {
+    throw new Error('setupCardDetector: croppedCtx is not initialized')
+  }
+  croppedCtx.drawImage(
     tempCanvas,
     0,
     0,
@@ -404,7 +425,10 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
     return false
   }
 
-  const card = detectedCards[bestIndex]!
+  const card = detectedCards[bestIndex]
+  if (!card) {
+    throw new Error(`setupCardDetector: Card not found at index ${bestIndex}`)
+  }
 
   // Use the current frame canvas captured during detection
   if (!currentFrameCanvas) {
@@ -441,21 +465,24 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
 
   // T022: Use warped canvas if available (from SlimSAM perspective correction) and enabled
   if (enablePerspectiveWarp && card.warpedCanvas) {
-    // Copy warped canvas to cropped canvas
-    croppedCanvas.width = CROPPED_CARD_WIDTH
-    croppedCanvas.height = CROPPED_CARD_HEIGHT
-    croppedCtx!.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height)
-    croppedCtx!.drawImage(
-      card.warpedCanvas,
-      0,
-      0,
-      card.warpedCanvas.width,
-      card.warpedCanvas.height,
-      0,
-      0,
-      CROPPED_CARD_WIDTH,
-      CROPPED_CARD_HEIGHT,
-    )
+      // Copy warped canvas to cropped canvas
+      croppedCanvas.width = CROPPED_CARD_WIDTH
+      croppedCanvas.height = CROPPED_CARD_HEIGHT
+      if (!croppedCtx) {
+        throw new Error('setupCardDetector: croppedCtx is not initialized')
+      }
+      croppedCtx.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height)
+      croppedCtx.drawImage(
+        card.warpedCanvas,
+        0,
+        0,
+        card.warpedCanvas.width,
+        card.warpedCanvas.height,
+        0,
+        0,
+        CROPPED_CARD_WIDTH,
+        CROPPED_CARD_HEIGHT,
+      )
 
     return true
   }
@@ -479,8 +506,11 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
         // Copy warped canvas to cropped canvas
         croppedCanvas.width = CROPPED_CARD_WIDTH
         croppedCanvas.height = CROPPED_CARD_HEIGHT
-        croppedCtx!.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height)
-        croppedCtx!.drawImage(
+        if (!croppedCtx) {
+          throw new Error('setupCardDetector: croppedCtx is not initialized')
+        }
+        croppedCtx.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height)
+        croppedCtx.drawImage(
           warpedCanvas,
           0,
           0,
