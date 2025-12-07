@@ -7,8 +7,16 @@
  * - No stream interruption when opening/closing modals
  */
 import type { UseMediaDeviceReturn } from '@/hooks/useMediaDevice'
+import type { BrowserPermissionState } from '@/hooks/useMediaPermissions'
 import type { ReactNode } from 'react'
-import { createContext, useCallback, useContext, useEffect, useMemo } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+} from 'react'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
 import { useMediaPermissions } from '@/hooks/useMediaPermissions'
 import { stopMediaStream } from '@/lib/media-stream-manager'
@@ -27,11 +35,11 @@ interface MediaStreamContextValue {
   // Permission states
   permissions: {
     camera: {
-      browserState: PermissionState | 'checking'
+      browserState: BrowserPermissionState | 'checking'
       shouldShowDialog: boolean
     }
     microphone: {
-      browserState: PermissionState | 'checking'
+      browserState: BrowserPermissionState | 'checking'
       shouldShowDialog: boolean
     }
     isChecking: boolean
@@ -122,20 +130,18 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     [combinedStream],
   )
 
-  // Cleanup streams when provider unmounts (user navigates away)
-  useEffect(() => {
-    return () => {
-      console.log('[MediaStreamProvider] Unmounting, cleaning up all streams')
-      if (isSuccessState(videoResult) && videoResult.stream) {
-        stopMediaStream(videoResult.stream)
-      }
-      if (isSuccessState(audioResult) && audioResult.stream) {
-        stopMediaStream(audioResult.stream)
-      }
+  const onStreamUnmount = useEffectEvent(() => {
+    console.log('[MediaStreamProvider] Unmounting, cleaning up all streams')
+    if (isSuccessState(videoResult) && videoResult.stream) {
+      stopMediaStream(videoResult.stream)
     }
-    // We intentionally only run cleanup on unmount, not on every change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    if (isSuccessState(audioResult) && audioResult.stream) {
+      stopMediaStream(audioResult.stream)
+    }
+  })
+
+  // Cleanup streams when provider unmounts (user navigates away)
+  useEffect(() => onStreamUnmount, [])
 
   const value = useMemo<MediaStreamContextValue>(
     () => ({
@@ -198,4 +204,3 @@ export function useMediaStreams(): MediaStreamContextValue {
   }
   return context
 }
-
