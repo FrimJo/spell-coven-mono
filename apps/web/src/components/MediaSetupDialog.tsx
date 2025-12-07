@@ -63,19 +63,22 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     microphonePermission.browserState === 'granted'
 
   // Memoize hook options to prevent infinite renders from recreated objects
+  // Only enable media acquisition when permissions are granted to avoid triggering
+  // native browser prompts before user interacts with our custom dialog
   const videoDeviceOptions = useMemo<UseMediaDeviceOptions>(
     () => ({
       kind: 'videoinput',
+      enabled: hasPermissions,
       onDeviceChanged: (_deviceId: string, stream: MediaStream) => {
         attachVideoStream(videoRef.current, stream)
       },
     }),
-    [],
+    [hasPermissions],
   )
 
   const audioInputDeviceOptions = useMemo<UseMediaDeviceOptions>(
-    () => ({ kind: 'audioinput' }),
-    [],
+    () => ({ kind: 'audioinput', enabled: hasPermissions }),
+    [hasPermissions],
   )
 
   const audioOutputOptions = useMemo<UseAudioOutputOptions>(

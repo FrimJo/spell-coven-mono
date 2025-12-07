@@ -69,7 +69,7 @@ export class FrameBuffer {
     const copy = document.createElement('canvas')
     copy.width = canvas.width
     copy.height = canvas.height
-    const ctx = copy.getContext('2d')
+    const ctx = copy.getContext('2d', { willReadFrequently: true })
     if (!ctx) {
       console.error('[FrameBuffer] Failed to get canvas context')
       return

@@ -107,7 +107,7 @@ function enhanceCanvasContrast(
   const tempCanvas = document.createElement('canvas')
   tempCanvas.width = canvas.width
   tempCanvas.height = canvas.height
-  const ctx = tempCanvas.getContext('2d')
+  const ctx = tempCanvas.getContext('2d', { willReadFrequently: true })
   if (!ctx) return canvas
 
   // Draw original image
@@ -493,12 +493,21 @@ export async function embedFromCanvas(
     processedCanvas.toBlob((blob) => {
       if (blob) {
         const url = URL.createObjectURL(blob)
-        console.log('[embedFromCanvas] 🖼️ Card after contrast enhancement:', {
-          url,
-          dimensions: `${processedCanvas.width}x${processedCanvas.height}`,
-          factor: QUERY_CONTRAST_ENHANCEMENT,
-          blob,
-        })
+        console.groupCollapsed(
+          '%c[DEBUG STAGE 5] Final card for CLIP embedding (with contrast enhancement)',
+          'background: #E91E63; color: white; padding: 2px 6px; border-radius: 3px;',
+        )
+        console.log(
+          '%c ',
+          `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+        )
+        console.log('Blob URL (copy this):', url)
+        console.log(
+          'Dimensions:',
+          `${processedCanvas.width}x${processedCanvas.height}`,
+        )
+        console.log('Contrast factor:', QUERY_CONTRAST_ENHANCEMENT)
+        console.groupEnd()
       }
     }, 'image/png')
   } else {
@@ -506,14 +515,17 @@ export async function embedFromCanvas(
     canvas.toBlob((blob) => {
       if (blob) {
         const url = URL.createObjectURL(blob)
-        console.log(
-          '[embedFromCanvas] 🖼️ Card before CLIP embedding (no enhancement):',
-          {
-            url,
-            dimensions: `${canvas.width}x${canvas.height}`,
-            blob,
-          },
+        console.groupCollapsed(
+          '%c[DEBUG STAGE 5] Final card for CLIP embedding (no enhancement)',
+          'background: #E91E63; color: white; padding: 2px 6px; border-radius: 3px;',
         )
+        console.log(
+          '%c ',
+          `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+        )
+        console.log('Blob URL (copy this):', url)
+        console.log('Dimensions:', `${canvas.width}x${canvas.height}`)
+        console.groupEnd()
       }
     }, 'image/png')
   }

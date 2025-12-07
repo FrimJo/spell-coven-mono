@@ -324,7 +324,9 @@ export class SlimSAMDetector implements CardDetector {
             const debugCanvas = document.createElement('canvas')
             debugCanvas.width = canvasWidth
             debugCanvas.height = canvasHeight
-            const debugCtx = debugCanvas.getContext('2d')!
+            const debugCtx = debugCanvas.getContext('2d', {
+              willReadFrequently: true,
+            })!
             debugCtx.drawImage(canvas, 0, 0)
 
             // Draw the quad corners and edges
@@ -358,14 +360,17 @@ export class SlimSAMDetector implements CardDetector {
             debugCanvas.toBlob((blob) => {
               if (blob) {
                 const url = URL.createObjectURL(blob)
-                console.log(
-                  '[SlimSAM] Detected quad corners (GREEN=edges, RED=corners):',
-                  {
-                    url,
-                    quad,
-                    blob,
-                  },
+                console.groupCollapsed(
+                  '%c[DEBUG STAGE 1] Frame with detected card quad (GREEN=edges, RED=corners)',
+                  'background: #4CAF50; color: white; padding: 2px 6px; border-radius: 3px;',
                 )
+                console.log(
+                  '%c ',
+                  `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+                )
+                console.log('Blob URL (copy this):', url)
+                console.log('Quad:', quad)
+                console.groupEnd()
               }
             }, 'image/png')
 

@@ -178,7 +178,7 @@ export function extractROICanvas(
   roiCanvas.width = roi.width
   roiCanvas.height = roi.height
 
-  const ctx = roiCanvas.getContext('2d')
+  const ctx = roiCanvas.getContext('2d', { willReadFrequently: true })
   if (!ctx) {
     throw new Error('Failed to get canvas context')
   }

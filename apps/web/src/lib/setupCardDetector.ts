@@ -197,7 +197,7 @@ async function detectCards(clickPoint?: { x: number; y: number }) {
     const tempCanvas = document.createElement('canvas')
     tempCanvas.width = overlayEl.width
     tempCanvas.height = overlayEl.height
-    const tempCtx = tempCanvas.getContext('2d')!
+    const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })!
     tempCtx.drawImage(videoEl, 0, 0, tempCanvas.width, tempCanvas.height)
 
     // Store current frame for click handling
@@ -299,7 +299,7 @@ function cropCardFromBoundingBox(
   const tempCanvas = document.createElement('canvas')
   tempCanvas.width = cardWidth
   tempCanvas.height = cardHeight
-  const tempCtx = tempCanvas.getContext('2d')!
+  const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })!
   tempCtx.putImageData(cardImageData, 0, 0)
 
   // Resize to target dimensions (336×336) with aspect ratio preservation and padding
@@ -422,7 +422,9 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
   const detectionCropCanvas = document.createElement('canvas')
   detectionCropCanvas.width = cardWidthPx
   detectionCropCanvas.height = cardHeightPx
-  const detectionCropCtx = detectionCropCanvas.getContext('2d')
+  const detectionCropCtx = detectionCropCanvas.getContext('2d', {
+    willReadFrequently: true,
+  })
   if (detectionCropCtx) {
     detectionCropCtx.drawImage(
       sourceCanvas,
@@ -534,7 +536,7 @@ export async function setupCardDetector(args: {
 
   overlayCtx = overlayEl.getContext('2d', { willReadFrequently: true })
   fullResCtx = fullResCanvas.getContext('2d', { willReadFrequently: true })
-  croppedCtx = croppedCanvas.getContext('2d')
+  croppedCtx = croppedCanvas.getContext('2d', { willReadFrequently: true })
 
   // Set perspective warp flag
   enablePerspectiveWarp = args.usePerspectiveWarp !== false
