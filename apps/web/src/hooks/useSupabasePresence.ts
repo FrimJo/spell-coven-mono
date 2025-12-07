@@ -145,7 +145,12 @@ function initializeManager(
     return
   }
 
-  console.log('[PresenceStore] Initializing PresenceManager for room:', roomId, 'sessionId:', sessionId)
+  console.log(
+    '[PresenceStore] Initializing PresenceManager for room:',
+    roomId,
+    'sessionId:',
+    sessionId,
+  )
 
   const manager = new PresenceManager({
     onParticipantsUpdate: (updatedParticipants) => {
@@ -405,7 +410,15 @@ export function useSupabasePresence({
   // Memoize subscribe function to prevent re-subscriptions on every render
   const subscribe = useCallback(
     (callback: () => void) =>
-      subscribeToRoom(roomId, userId, username, avatar, sessionId, enabled, callback),
+      subscribeToRoom(
+        roomId,
+        userId,
+        username,
+        avatar,
+        sessionId,
+        enabled,
+        callback,
+      ),
     [roomId, userId, username, avatar, sessionId, enabled],
   )
 
@@ -421,7 +434,7 @@ export function useSupabasePresence({
   // Detect duplicate sessions (same userId, different sessionId)
   const duplicateSessions = useMemo(() => {
     return snapshot.participants.filter(
-      (p) => p.id === userId && p.sessionId !== sessionId
+      (p) => p.id === userId && p.sessionId !== sessionId,
     )
   }, [snapshot.participants, userId, sessionId])
 
@@ -443,7 +456,10 @@ export function useSupabasePresence({
   // Notify about duplicate session when detected
   useEffect(() => {
     if (hasDuplicateSession && onDuplicateSession && duplicateSessions[0]) {
-      console.log('[PresenceStore] Duplicate session detected:', duplicateSessions[0].sessionId)
+      console.log(
+        '[PresenceStore] Duplicate session detected:',
+        duplicateSessions[0].sessionId,
+      )
       onDuplicateSession(duplicateSessions[0].sessionId)
     }
   }, [hasDuplicateSession, duplicateSessions, onDuplicateSession])
@@ -466,21 +482,32 @@ export function useSupabasePresence({
       }
     }
 
-    const handleSessionTransfer = (payload: { payload: SessionTransferPayload }) => {
-      console.log('[PresenceStore] Received session transfer event:', payload.payload)
+    const handleSessionTransfer = (payload: {
+      payload: SessionTransferPayload
+    }) => {
+      console.log(
+        '[PresenceStore] Received session transfer event:',
+        payload.payload,
+      )
 
       // Check if this session should be closed
       if (
         payload.payload.userId === userId &&
         payload.payload.closeSessionIds.includes(sessionId)
       ) {
-        console.log('[PresenceStore] This session should be closed due to transfer')
+        console.log(
+          '[PresenceStore] This session should be closed due to transfer',
+        )
         onSessionTransferred?.()
       }
     }
 
     channel.on('broadcast', { event: 'player:kicked' }, handleKickEvent)
-    channel.on('broadcast', { event: 'session:transfer' }, handleSessionTransfer)
+    channel.on(
+      'broadcast',
+      { event: 'session:transfer' },
+      handleSessionTransfer,
+    )
 
     return () => {
       // Note: Supabase doesn't have a direct off() method for specific handlers,
@@ -528,7 +555,10 @@ export function useSupabasePresence({
       return
     }
 
-    console.log('[PresenceStore] Transferring session, closing:', sessionsToClose)
+    console.log(
+      '[PresenceStore] Transferring session, closing:',
+      sessionsToClose,
+    )
     await broadcastSessionTransfer(roomId, userId, sessionId, sessionsToClose)
   }, [roomId, userId, sessionId, duplicateSessions])
 

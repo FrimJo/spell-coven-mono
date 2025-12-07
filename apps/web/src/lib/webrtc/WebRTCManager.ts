@@ -102,7 +102,9 @@ export class WebRTCManager {
         }
 
         await handleSignal(peerInfo.pc, signal)
-        console.debug(`[WebRTC] Offer processed, flushing pending candidates for ${from}`)
+        console.debug(
+          `[WebRTC] Offer processed, flushing pending candidates for ${from}`,
+        )
         this.flushPendingCandidates(from)
         // After handling offer, create and send answer
         const answer = await peerInfo.pc.createAnswer()
@@ -133,7 +135,9 @@ export class WebRTCManager {
         await handleSignal(peerInfo.pc, signal)
 
         if (type === 'answer') {
-          console.debug(`[WebRTC] Answer received from ${from}, flushing pending candidates`)
+          console.debug(
+            `[WebRTC] Answer received from ${from}, flushing pending candidates`,
+          )
           this.flushPendingCandidates(from)
         } else if (type === 'candidate') {
           console.debug(`[WebRTC] ICE candidate from ${from} added directly`)
@@ -174,7 +178,9 @@ export class WebRTCManager {
       return
     }
 
-    console.debug(`[WebRTC] Initiating call to ${remotePeerId} in room ${roomId}`)
+    console.debug(
+      `[WebRTC] Initiating call to ${remotePeerId} in room ${roomId}`,
+    )
 
     const pc = this.createPeerConnection(remotePeerId, roomId)
     this.peers.set(remotePeerId, { pc, roomId })
@@ -440,10 +446,15 @@ export class WebRTCManager {
     for (const candidateSignal of candidateSignals) {
       handleSignal(peerInfo.pc, candidateSignal)
         .then(() => {
-          console.debug(`[WebRTC] Successfully added queued ICE candidate for ${peerId}`)
+          console.debug(
+            `[WebRTC] Successfully added queued ICE candidate for ${peerId}`,
+          )
         })
         .catch((err) => {
-          console.error(`[WebRTC] Failed to process queued candidate for ${peerId}:`, err)
+          console.error(
+            `[WebRTC] Failed to process queued candidate for ${peerId}:`,
+            err,
+          )
           this.callbacks.onError?.(
             peerId,
             err instanceof Error ? err : new Error(String(err)),
