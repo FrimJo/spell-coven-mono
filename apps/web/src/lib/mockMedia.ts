@@ -88,7 +88,13 @@ function createSyntheticVideoStream(): MediaStream {
   const canvas = document.createElement('canvas')
   canvas.width = 640
   canvas.height = 480
-  const ctx = canvas.getContext('2d')!
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    throw new Error(
+      'createSyntheticVideoStream: Failed to get 2d context from canvas',
+    )
+  }
+  const canvasCtx = ctx
 
   let frameCount = 0
 
@@ -112,12 +118,17 @@ function createSyntheticVideoStream(): MediaStream {
     frameCount++
 
     // Background gradient
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height)
+    const gradient = canvasCtx.createLinearGradient(
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    )
     gradient.addColorStop(0, '#1e1b4b') // indigo-950
     gradient.addColorStop(0.5, '#312e81') // indigo-900
     gradient.addColorStop(1, '#1e1b4b')
-    ctx.fillStyle = gradient
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    canvasCtx.fillStyle = gradient
+    canvasCtx.fillRect(0, 0, canvas.width, canvas.height)
 
     // Animated circles
     const time = Date.now() / 1000
@@ -127,26 +138,30 @@ function createSyntheticVideoStream(): MediaStream {
         canvas.height / 2 + Math.sin(time * 0.8 + i * 1.5) * (80 + i * 20)
       const radius = 20 + Math.sin(time * 2 + i) * 10
 
-      ctx.beginPath()
-      ctx.arc(x, y, radius, 0, Math.PI * 2)
-      ctx.fillStyle = `hsla(${(frameCount + i * 50) % 360}, 70%, 60%, 0.6)`
-      ctx.fill()
+      canvasCtx.beginPath()
+      canvasCtx.arc(x, y, radius, 0, Math.PI * 2)
+      canvasCtx.fillStyle = `hsla(${(frameCount + i * 50) % 360}, 70%, 60%, 0.6)`
+      canvasCtx.fill()
     }
 
     // Draw "Mock Camera" text
-    ctx.font = 'bold 24px system-ui, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.fillStyle = '#e0e7ff' // indigo-100
-    ctx.fillText('🎥 Mock Camera Active', canvas.width / 2, 40)
+    canvasCtx.font = 'bold 24px system-ui, sans-serif'
+    canvasCtx.textAlign = 'center'
+    canvasCtx.fillStyle = '#e0e7ff' // indigo-100
+    canvasCtx.fillText('🎥 Mock Camera Active', canvas.width / 2, 40)
 
     // Draw frame counter
-    ctx.font = '14px monospace'
-    ctx.fillStyle = '#a5b4fc' // indigo-300
-    ctx.fillText(`Frame: ${frameCount}`, canvas.width / 2, canvas.height - 20)
+    canvasCtx.font = '14px monospace'
+    canvasCtx.fillStyle = '#a5b4fc' // indigo-300
+    canvasCtx.fillText(
+      `Frame: ${frameCount}`,
+      canvas.width / 2,
+      canvas.height - 20,
+    )
 
     // Draw timestamp
     const timestamp = new Date().toLocaleTimeString()
-    ctx.fillText(timestamp, canvas.width / 2, canvas.height - 40)
+    canvasCtx.fillText(timestamp, canvas.width / 2, canvas.height - 40)
 
     // Draw the test card (Birds of Paradise) in the center
     // Standard MTG card aspect ratio is approximately 63mm x 88mm (roughly 2.5:3.5 or 5:7)
@@ -157,32 +172,32 @@ function createSyntheticVideoStream(): MediaStream {
 
     if (cardImageLoaded) {
       // Draw the actual card image rotated 180 degrees (cards are usually upside down in streams)
-      ctx.save()
+      canvasCtx.save()
       // Translate to card center, rotate 180°, then draw centered
       const cardCenterX = cardX + cardWidth / 2
       const cardCenterY = cardY + cardHeight / 2
-      ctx.translate(cardCenterX, cardCenterY)
-      ctx.rotate(Math.PI) // 180 degrees
-      ctx.drawImage(
+      canvasCtx.translate(cardCenterX, cardCenterY)
+      canvasCtx.rotate(Math.PI) // 180 degrees
+      canvasCtx.drawImage(
         cardImage,
         -cardWidth / 2,
         -cardHeight / 2,
         cardWidth,
         cardHeight,
       )
-      ctx.restore()
+      canvasCtx.restore()
 
       // Add a subtle border/glow effect
-      ctx.strokeStyle = '#818cf8' // indigo-400
-      ctx.lineWidth = 2
-      ctx.strokeRect(cardX - 1, cardY - 1, cardWidth + 2, cardHeight + 2)
+      canvasCtx.strokeStyle = '#818cf8' // indigo-400
+      canvasCtx.lineWidth = 2
+      canvasCtx.strokeRect(cardX - 1, cardY - 1, cardWidth + 2, cardHeight + 2)
     } else {
       // Fallback: Draw placeholder while image loads
-      ctx.strokeStyle = '#818cf8' // indigo-400
-      ctx.lineWidth = 3
-      ctx.strokeRect(cardX, cardY, cardWidth, cardHeight)
+      canvasCtx.strokeStyle = '#818cf8' // indigo-400
+      canvasCtx.lineWidth = 3
+      canvasCtx.strokeRect(cardX, cardY, cardWidth, cardHeight)
 
-      const artGradient = ctx.createLinearGradient(
+      const artGradient = canvasCtx.createLinearGradient(
         cardX,
         cardY,
         cardX + cardWidth,
@@ -190,12 +205,17 @@ function createSyntheticVideoStream(): MediaStream {
       )
       artGradient.addColorStop(0, '#4338ca')
       artGradient.addColorStop(1, '#7c3aed')
-      ctx.fillStyle = artGradient
-      ctx.fillRect(cardX + 10, cardY + 10, cardWidth - 20, cardHeight - 20)
+      canvasCtx.fillStyle = artGradient
+      canvasCtx.fillRect(
+        cardX + 10,
+        cardY + 10,
+        cardWidth - 20,
+        cardHeight - 20,
+      )
 
-      ctx.font = 'bold 14px system-ui'
-      ctx.fillStyle = '#fff'
-      ctx.fillText('Loading...', canvas.width / 2, cardY + cardHeight / 2)
+      canvasCtx.font = 'bold 14px system-ui'
+      canvasCtx.fillStyle = '#fff'
+      canvasCtx.fillText('Loading...', canvas.width / 2, cardY + cardHeight / 2)
     }
 
     requestAnimationFrame(drawFrame)

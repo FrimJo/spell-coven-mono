@@ -276,12 +276,13 @@ export class OpenCVDetector implements CardDetector {
 
       // If click point provided, prioritize detections near it
       if (this.clickPoint && cards.length > 0) {
+        const clickPoint = this.clickPoint
         // Calculate distance from click point to each detection's center
         const cardsWithDistance = cards.map((card) => {
           const centerX = ((card.box.xmin + card.box.xmax) / 2) * canvas.width
           const centerY = ((card.box.ymin + card.box.ymax) / 2) * canvas.height
-          const dx = centerX - this.clickPoint!.x
-          const dy = centerY - this.clickPoint!.y
+          const dx = centerX - clickPoint.x
+          const dy = centerY - clickPoint.y
           const distance = Math.sqrt(dx * dx + dy * dy)
           return { card, distance }
         })

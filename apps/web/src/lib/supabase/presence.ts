@@ -88,8 +88,14 @@ export class PresenceManager {
    * Subscribe to the channel
    */
   private async subscribeToChannel(roomId: string): Promise<void> {
+    if (!this.channel) {
+      throw new Error(
+        'PresenceManager.subscribeToChannel: channel is not initialized',
+      )
+    }
+    const channel = this.channel
     return new Promise<void>((resolve, reject) => {
-      this.channel!.subscribe((status, err) => {
+      channel.subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           channelManager.markSubscribed(roomId)
           resolve()
@@ -112,29 +118,51 @@ export class PresenceManager {
    * Wait for channel to be in 'joined' state
    */
   private async waitForChannelReady(): Promise<void> {
-    if (this.channel!.state === 'joined') return
+    if (!this.channel) {
+      throw new Error(
+        'PresenceManager.waitForChannelReady: channel is not initialized',
+      )
+    }
+    if (this.channel.state === 'joined') return
 
     return new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
+        if (!this.channel) {
+          reject(
+            new Error(
+              'PresenceManager.waitForChannelReady: channel is not initialized',
+            ),
+          )
+          return
+        }
         reject(
           new Error(
-            `Channel subscription timeout - state: ${this.channel!.state}`,
+            `Channel subscription timeout - state: ${this.channel.state}`,
           ),
         )
       }, 5000)
 
       const checkState = () => {
-        if (this.channel!.state === 'joined') {
+        if (!this.channel) {
+          clearTimeout(timeout)
+          reject(
+            new Error(
+              'PresenceManager.waitForChannelReady: channel is not initialized',
+            ),
+          )
+          return
+        }
+        if (this.channel.state === 'joined') {
           clearTimeout(timeout)
           resolve()
         } else if (
-          this.channel!.state === 'errored' ||
-          this.channel!.state === 'closed'
+          this.channel.state === 'errored' ||
+          this.channel.state === 'closed'
         ) {
           clearTimeout(timeout)
           reject(
             new Error(
-              `Channel subscription failed - state: ${this.channel!.state}`,
+              `Channel subscription failed - state: ${this.channel.state}`,
             ),
           )
         } else {
@@ -150,7 +178,12 @@ export class PresenceManager {
    * Track presence state with timeout
    */
   private async trackPresence(state: SupabasePresenceState): Promise<void> {
-    const trackPromise = this.channel!.track(state)
+    if (!this.channel) {
+      throw new Error(
+        'PresenceManager.trackPresence: channel is not initialized',
+      )
+    }
+    const trackPromise = this.channel.track(state)
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(
         () => reject(new Error('Presence track timeout after 10s')),

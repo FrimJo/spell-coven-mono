@@ -62,9 +62,15 @@ export class SignalingManager {
     )
 
     if (subscriptionCount === 0) {
+      if (!this.channel) {
+        throw new Error(
+          'SignalingManager.initialize: channel is not initialized',
+        )
+      }
+      const channel = this.channel
       console.log('[WebRTC:Signaling] Subscribing to channel...')
       await new Promise<void>((resolve, reject) => {
-        this.channel!.subscribe((subscribeStatus, err) => {
+        channel.subscribe((subscribeStatus, err) => {
           console.log(
             `[WebRTC:Signaling] Subscription status: ${subscribeStatus}`,
             err ? `error: ${err.message}` : '',
@@ -111,9 +117,12 @@ export class SignalingManager {
     }
 
     // Ensure signal has correct roomId
+    if (!this.roomId) {
+      throw new Error('SignalingManager.send: roomId is not set')
+    }
     const signalWithRoomId: WebRTCSignal = {
       ...validation.data,
-      roomId: this.roomId!,
+      roomId: this.roomId,
     }
 
     console.log('[WebRTC:Signaling] Sending signal:', signalWithRoomId)

@@ -57,8 +57,11 @@ export class YOLOv8Detector implements CardDetector {
     try {
       this.status = 'loading'
 
+      if (!this.config.modelPath) {
+        throw new Error('YOLOv8 detector: modelPath is required in config')
+      }
       // Load ONNX model
-      this.session = await ort.InferenceSession.create(this.config.modelPath!, {
+      this.session = await ort.InferenceSession.create(this.config.modelPath, {
         executionProviders: ['wasm'],
       })
 
@@ -110,13 +113,19 @@ export class YOLOv8Detector implements CardDetector {
    * Resizes to 640x640 and converts to RGB float32 array
    */
   private prepareInput(sourceCanvas: HTMLCanvasElement): ort.Tensor {
-    const inputSize = this.config.inputSize!
+    if (!this.config.inputSize) {
+      throw new Error('YOLOv8 detector: inputSize is required in config')
+    }
+    const inputSize = this.config.inputSize
 
     // Create temporary canvas for resizing
     const canvas = document.createElement('canvas')
     canvas.width = inputSize
     canvas.height = inputSize
-    const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx) {
+      throw new Error('YOLOv8 detector: Failed to get 2d context from canvas')
+    }
 
     // Draw and resize image
     ctx.drawImage(sourceCanvas, 0, 0, inputSize, inputSize)
@@ -157,8 +166,14 @@ export class YOLOv8Detector implements CardDetector {
     canvasWidth: number,
     canvasHeight: number,
   ): DetectedCard[] {
-    const inputSize = this.config.inputSize!
-    const scoreThreshold = this.config.scoreThreshold!
+    if (!this.config.inputSize) {
+      throw new Error('YOLOv8 detector: inputSize is required in config')
+    }
+    if (!this.config.scoreThreshold) {
+      throw new Error('YOLOv8 detector: scoreThreshold is required in config')
+    }
+    const inputSize = this.config.inputSize
+    const scoreThreshold = this.config.scoreThreshold
 
     // YOLOv8 output shape: [1, 84, 8400]
     // 84 = [x, y, w, h, ...80 class scores]
@@ -252,7 +267,10 @@ export class YOLOv8Detector implements CardDetector {
     score: number
     classId: number
   }> {
-    const iouThreshold = this.config.iouThreshold!
+    if (!this.config.iouThreshold) {
+      throw new Error('YOLOv8 detector: iouThreshold is required in config')
+    }
+    const iouThreshold = this.config.iouThreshold
 
     // Sort by score descending
     detections.sort((a, b) => b.score - a.score)
@@ -260,7 +278,10 @@ export class YOLOv8Detector implements CardDetector {
     const keep: typeof detections = []
 
     while (detections.length > 0) {
-      const current = detections.shift()!
+      const current = detections.shift()
+      if (!current) {
+        throw new Error('YOLOv8 detector: Unexpected empty detections array')
+      }
       keep.push(current)
 
       // Remove detections with high IoU

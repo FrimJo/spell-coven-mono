@@ -124,7 +124,10 @@ function enhanceCanvasContrast(
   for (let i = 0; i < data.length; i += 4) {
     // Skip alpha channel (i+3)
     for (let j = 0; j < 3; j++) {
-      const value = data[i + j]!
+      const value = data[i + j]
+      if (value === undefined) {
+        throw new Error(`enhanceContrast: Missing data at index ${i + j}`)
+      }
       const enhanced = Math.round((value - midpoint) * factor + midpoint)
       // Clamp to [0, 255]
       data[i + j] = Math.max(0, Math.min(255, enhanced))
@@ -257,14 +260,21 @@ export async function loadEmbeddingsAndMetaFromPackage() {
           // Calculate norm for this embedding
           let norm = 0
           for (let j = 0; j < D_local; j++) {
-            const val = dequantized[offset + j]!
+            const val = dequantized[offset + j]
+            if (val === undefined) {
+              throw new Error(`loadEmbeddingsAndMetaFromPackage: Missing dequantized value at offset ${offset + j}`)
+            }
             norm += val * val
           }
           norm = Math.sqrt(norm)
 
           // Normalize and store
           for (let j = 0; j < D_local; j++) {
-            db[offset + j] = dequantized[offset + j]! / norm
+            const val = dequantized[offset + j]
+            if (val === undefined) {
+              throw new Error(`loadEmbeddingsAndMetaFromPackage: Missing dequantized value at offset ${offset + j}`)
+            }
+            db[offset + j] = val / norm
           }
         }
       } else {
@@ -577,11 +587,22 @@ export function top1(q: Float32Array): (CardMeta & { score: number }) | null {
   const n = meta.length
   let best = -Infinity
   let idx = -1
+  if (!db) {
+    throw new Error('top1: Database not loaded')
+  }
   for (let i = 0; i < n; i++) {
     let dot = 0
     for (let d = 0; d < D; d++) {
       if (d >= q.length) break
-      dot += q[d]! * db![i * D + d]!
+      const qVal = q[d]
+      const dbVal = db[i * D + d]
+      if (qVal === undefined) {
+        throw new Error(`top1: Missing query value at index ${d}`)
+      }
+      if (dbVal === undefined) {
+        throw new Error(`top1: Missing database value at index ${i * D + d}`)
+      }
+      dot += qVal * dbVal
     }
     if (dot > best) {
       best = dot
@@ -609,7 +630,14 @@ export function top1(q: Float32Array): (CardMeta & { score: number }) | null {
   } else {
     console.log('[top1] No match found')
   }
-  return idx >= 0 ? { ...meta[idx]!, score: best } : null
+  if (idx < 0) {
+    return null
+  }
+  const matchedMeta = meta[idx]
+  if (!matchedMeta) {
+    throw new Error(`top1: Metadata not found at index ${idx}`)
+  }
+  return { ...matchedMeta, score: best }
 }
 
 /**
@@ -634,12 +662,21 @@ export function getDatabaseEmbedding(cardName: string): {
   const embedding = new Float32Array(D)
   const offset = index * D
   for (let i = 0; i < D; i++) {
-    embedding[i] = db[offset + i]!
+    const dbVal = db[offset + i]
+    if (dbVal === undefined) {
+      throw new Error(`getDatabaseEmbedding: Missing database value at index ${offset + i}`)
+    }
+    embedding[i] = dbVal
+  }
+
+  const matchedMeta = meta[index]
+  if (!matchedMeta) {
+    throw new Error(`getDatabaseEmbedding: Metadata not found at index ${index}`)
   }
 
   return {
     embedding,
-    metadata: meta[index]!,
+    metadata: matchedMeta,
     index,
   }
 }
@@ -660,13 +697,23 @@ export function compareEmbeddings(
   // Cosine similarity (dot product of normalized vectors)
   let dotProduct = 0
   for (let i = 0; i < embedding1.length; i++) {
-    dotProduct += embedding1[i]! * embedding2[i]!
+    const val1 = embedding1[i]
+    const val2 = embedding2[i]
+    if (val1 === undefined || val2 === undefined) {
+      throw new Error(`compareEmbeddings: Missing value at index ${i}`)
+    }
+    dotProduct += val1 * val2
   }
 
   // L2 distance
   let l2Distance = 0
   for (let i = 0; i < embedding1.length; i++) {
-    const diff = embedding1[i]! - embedding2[i]!
+    const val1 = embedding1[i]
+    const val2 = embedding2[i]
+    if (val1 === undefined || val2 === undefined) {
+      throw new Error(`compareEmbeddings: Missing value at index ${i}`)
+    }
+    const diff = val1 - val2
     l2Distance += diff * diff
   }
   l2Distance = Math.sqrt(l2Distance)
@@ -674,7 +721,12 @@ export function compareEmbeddings(
   // Element-wise statistics
   const diffs = new Float32Array(embedding1.length)
   for (let i = 0; i < embedding1.length; i++) {
-    diffs[i] = Math.abs(embedding1[i]! - embedding2[i]!)
+    const val1 = embedding1[i]
+    const val2 = embedding2[i]
+    if (val1 === undefined || val2 === undefined) {
+      throw new Error(`compareEmbeddings: Missing value at index ${i}`)
+    }
+    diffs[i] = Math.abs(val1 - val2)
   }
 
   const maxDiff = Math.max(...diffs)
@@ -698,12 +750,37 @@ export function topK(query: Float32Array, K = 5) {
   for (let i = 0; i < N; i++) {
     let s = 0
     const off = i * D
-    for (let j = 0; j < D; j++) s += query[j]! * db[off + j]!
+    for (let j = 0; j < D; j++) {
+      const qVal = query[j]
+      const dbVal = db[off + j]
+      if (qVal === undefined) {
+        throw new Error(`topK: Missing query value at index ${j}`)
+      }
+      if (dbVal === undefined) {
+        throw new Error(`topK: Missing database value at index ${off + j}`)
+      }
+      s += qVal * dbVal
+    }
     scores[i] = s
   }
   const idx = Array.from(scores.keys())
-  idx.sort((a, b) => scores[b]! - scores[a]!)
-  return idx
-    .slice(0, K)
-    .map((i) => ({ score: scores[i]!, ...(meta as CardMeta[])[i]! }))
+  idx.sort((a, b) => {
+    const scoreB = scores[b]
+    const scoreA = scores[a]
+    if (scoreB === undefined || scoreA === undefined) {
+      throw new Error(`topK: Missing score at index ${a} or ${b}`)
+    }
+    return scoreB - scoreA
+  })
+  return idx.slice(0, K).map((i) => {
+    const score = scores[i]
+    const metaItem = (meta as CardMeta[])[i]
+    if (score === undefined) {
+      throw new Error(`topK: Missing score at index ${i}`)
+    }
+    if (!metaItem) {
+      throw new Error(`topK: Missing metadata at index ${i}`)
+    }
+    return { score, ...metaItem }
+  })
 }
