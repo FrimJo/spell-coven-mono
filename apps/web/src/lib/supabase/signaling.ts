@@ -37,69 +37,148 @@ export class SignalingManager {
       throw new Error('SignalingManager.initialize: localPeerId is required')
     }
 
-    // Clean up previous channel
-    await this.cleanup()
+    // Only clean up if switching to a different room
+    if (this.roomId && this.roomId !== roomId) {
+      await this.cleanup()
+    }
 
     this.roomId = roomId
     this.localPeerId = localPeerId
 
-    console.log('[WebRTC:Signaling] Getting shared channel for room:', roomId)
+    console.log('[WebRTC:Signaling] Initializing for room:', roomId)
+
+    // Get the channel (may be shared with presence)
+    // We don't pass presence config here - let presence handle that
     this.channel = channelManager.getChannel(roomId)
 
-    // Subscribe to broadcast events
-    this.channel.on('broadcast', { event: 'webrtc:signal' }, (payload) => {
-      console.log(
-        '[WebRTC:Signaling] Received broadcast signal:',
-        payload.payload,
-      )
-      this.handleSignal(payload.payload)
-    })
-
-    // Subscribe to channel (only if not already subscribed by another manager)
-    const subscriptionCount = channelManager.getSubscriptionCount(roomId)
-    console.log(
-      `[WebRTC:Signaling] Current subscriptions for room ${roomId}: ${subscriptionCount}`,
+    // Register broadcast listener using channel manager
+    // This ensures the listener survives if the channel is recreated by presence
+    channelManager.addBroadcastListener(
+      roomId,
+      'webrtc:signal',
+      (payload: { payload: unknown }) => {
+        console.log(
+          '[WebRTC:Signaling] Received broadcast signal:',
+          payload.payload,
+        )
+        this.handleSignal(payload.payload)
+      },
     )
 
-    if (subscriptionCount === 0) {
-      if (!this.channel) {
-        throw new Error(
-          'SignalingManager.initialize: channel is not initialized',
-        )
-      }
-      const channel = this.channel
-      console.log('[WebRTC:Signaling] Subscribing to channel...')
-      await new Promise<void>((resolve, reject) => {
-        channel.subscribe((subscribeStatus, err) => {
-          console.log(
-            `[WebRTC:Signaling] Subscription status: ${subscribeStatus}`,
-            err ? `error: ${err.message}` : '',
-          )
-          if (subscribeStatus === 'SUBSCRIBED') {
-            console.log('[WebRTC:Signaling] Channel subscribed successfully')
-            channelManager.markSubscribed(roomId)
-            resolve()
-          } else if (
-            subscribeStatus === 'CHANNEL_ERROR' ||
-            subscribeStatus === 'TIMED_OUT' ||
-            subscribeStatus === 'CLOSED'
-          ) {
-            reject(
-              new Error(
-                `Failed to subscribe to signaling channel: ${subscribeStatus}${err ? ` - ${err.message}` : ''}`,
-              ),
-            )
-          }
-        })
-      })
-    } else {
-      console.log(
-        '[WebRTC:Signaling] Channel already subscribed, marking subscription',
-      )
-      channelManager.markSubscribed(roomId)
-    }
+    // Subscribe if not already subscribed
+    await this.ensureSubscribed(roomId)
 
     console.log('[WebRTC:Signaling] Initialization complete')
+  }
+
+  /**
+   * Ensure channel is subscribed
+   */
+  private async ensureSubscribed(roomId: string): Promise<void> {
+    if (!this.channel) {
+      throw new Error('Channel not initialized')
+    }
+
+    const channelState = this.channel.state
+
+    // Already subscribed
+    if (channelState === 'joined') {
+      console.log('[WebRTC:Signaling] Channel already joined')
+      channelManager.markSubscribed(roomId)
+      return
+    }
+
+    // Another manager already subscribing
+    if (channelManager.getSubscriptionCount(roomId) > 0) {
+      console.log('[WebRTC:Signaling] Waiting for existing subscription...')
+      await this.waitForChannelReady()
+      channelManager.markSubscribed(roomId)
+      return
+    }
+
+    // We need to subscribe
+    console.log('[WebRTC:Signaling] Subscribing to channel...')
+    return new Promise<void>((resolve, reject) => {
+      if (!this.channel) {
+        reject(new Error('Channel became null'))
+        return
+      }
+
+      const timeoutId = setTimeout(() => {
+        reject(new Error('Signaling channel subscription timeout (10s)'))
+      }, 10000)
+
+      this.channel.subscribe((status, err) => {
+        console.log(
+          `[WebRTC:Signaling] Subscription status: ${status}`,
+          err ? `error: ${err.message}` : '',
+        )
+
+        if (status === 'SUBSCRIBED') {
+          clearTimeout(timeoutId)
+          console.log('[WebRTC:Signaling] Channel subscribed successfully')
+          channelManager.markSubscribed(roomId)
+          resolve()
+        } else if (
+          status === 'CHANNEL_ERROR' ||
+          status === 'TIMED_OUT' ||
+          status === 'CLOSED'
+        ) {
+          clearTimeout(timeoutId)
+          reject(
+            new Error(
+              `Signaling subscription failed: ${status}${err ? ` - ${err.message}` : ''}`,
+            ),
+          )
+        }
+      })
+    })
+  }
+
+  /**
+   * Wait for channel to be ready
+   */
+  private async waitForChannelReady(): Promise<void> {
+    if (!this.channel) {
+      throw new Error('Channel not initialized')
+    }
+
+    if (this.channel.state === 'joined') {
+      return
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(
+          new Error(
+            `Signaling channel timeout - state: ${this.channel?.state ?? 'null'}`,
+          ),
+        )
+      }, 5000)
+
+      const checkState = () => {
+        if (!this.channel) {
+          clearTimeout(timeout)
+          reject(new Error('Channel became null'))
+          return
+        }
+
+        if (this.channel.state === 'joined') {
+          clearTimeout(timeout)
+          resolve()
+        } else if (
+          this.channel.state === 'errored' ||
+          this.channel.state === 'closed'
+        ) {
+          clearTimeout(timeout)
+          reject(new Error(`Channel failed - state: ${this.channel.state}`))
+        } else {
+          setTimeout(checkState, 100)
+        }
+      }
+
+      checkState()
+    })
   }
 
   /**
@@ -110,22 +189,32 @@ export class SignalingManager {
       throw new Error('SignalingManager.send: not initialized')
     }
 
+    if (!this.roomId) {
+      throw new Error('SignalingManager.send: roomId is not set')
+    }
+
     // Validate signal
     const validation = validateWebRTCSignal(signal)
     if (!validation.success) {
       throw validation.error
     }
 
-    // Ensure signal has correct roomId
-    if (!this.roomId) {
-      throw new Error('SignalingManager.send: roomId is not set')
-    }
     const signalWithRoomId: WebRTCSignal = {
       ...validation.data,
       roomId: this.roomId,
     }
 
     console.log('[WebRTC:Signaling] Sending signal:', signalWithRoomId)
+
+    // Get the current channel from manager in case it was recreated
+    const currentChannel = channelManager.peekChannel(this.roomId)
+    if (currentChannel && currentChannel !== this.channel) {
+      console.log(
+        '[WebRTC:Signaling] Channel was recreated, updating reference',
+      )
+      this.channel = currentChannel
+    }
+
     const response = await this.channel.send({
       type: 'broadcast',
       event: 'webrtc:signal',
@@ -134,7 +223,7 @@ export class SignalingManager {
 
     console.log('[WebRTC:Signaling] Send response:', response)
     if (response === 'error') {
-      throw new Error('Failed to send signal: channel send returned error')
+      throw new Error('Failed to send signal: channel returned error')
     }
   }
 
@@ -142,9 +231,6 @@ export class SignalingManager {
    * Handle incoming signal
    */
   private handleSignal(data: unknown): void {
-    console.log(
-      `[WebRTC:Signaling] Handling signal, localPeerId: ${this.localPeerId}, roomId: ${this.roomId}`,
-    )
     const validation = validateWebRTCSignal(data)
     if (!validation.success) {
       console.error(
@@ -156,31 +242,23 @@ export class SignalingManager {
     }
 
     const signal = validation.data
-    console.log('[WebRTC:Signaling] Validated signal:', signal)
 
-    // Filter signals: only process signals intended for this peer
+    // Filter: only process signals intended for this peer
     if (signal.to !== this.localPeerId) {
-      console.log(
-        `[WebRTC:Signaling] Ignoring signal - not for this peer. Expected: ${this.localPeerId}, Got: ${signal.to}`,
-      )
       return
     }
 
-    // Filter by roomId
+    // Filter: correct room
     if (signal.roomId !== this.roomId) {
-      console.log(
-        `[WebRTC:Signaling] Ignoring signal - wrong room. Expected: ${this.roomId}, Got: ${signal.roomId}`,
-      )
       return
     }
 
-    // Ignore signals from self
+    // Filter: not from self
     if (signal.from === this.localPeerId) {
-      console.log('[WebRTC:Signaling] Ignoring signal - from self')
       return
     }
 
-    console.log('[WebRTC:Signaling] Passing signal to callback:', signal)
+    console.log('[WebRTC:Signaling] Processing signal from:', signal.from)
     this.callbacks.onSignal?.(signal)
   }
 
@@ -189,26 +267,27 @@ export class SignalingManager {
    */
   async cleanup(): Promise<void> {
     if (this.channel && this.roomId) {
-      console.log(
-        '[WebRTC:Signaling] Cleaning up channel for room:',
-        this.roomId,
-      )
+      console.log('[WebRTC:Signaling] Cleaning up for room:', this.roomId)
       channelManager.markUnsubscribed(this.roomId)
 
-      // Only unsubscribe if this was the last subscription
       const subscriptionCount = channelManager.getSubscriptionCount(this.roomId)
       if (subscriptionCount === 0) {
         console.log('[WebRTC:Signaling] Last subscription - unsubscribing')
-        await this.channel.unsubscribe()
+        try {
+          await this.channel.unsubscribe()
+        } catch (err) {
+          console.warn('[WebRTC:Signaling] Error unsubscribing:', err)
+        }
         channelManager.removeChannel(this.roomId)
       } else {
         console.log(
-          `[WebRTC:Signaling] Not unsubscribing - ${subscriptionCount} subscription(s) remaining`,
+          `[WebRTC:Signaling] ${subscriptionCount} subscription(s) remaining`,
         )
       }
 
       this.channel = null
     }
+
     this.localPeerId = null
     this.roomId = null
   }

@@ -23,6 +23,7 @@ export interface PresenceManagerCallbacks {
 export class PresenceManager {
   private channel: RealtimeChannel | null = null
   private roomId: string | null = null
+  private presenceKey: string | null = null
   private callbacks: PresenceManagerCallbacks = {}
 
   constructor(callbacks: PresenceManagerCallbacks = {}) {
@@ -43,13 +44,46 @@ export class PresenceManager {
 
     this.roomId = roomId
     // Use sessionId as presence key to allow multiple tabs per user
-    // This ensures each tab gets its own presence entry
     const presenceKey = sessionId ?? userId
+    this.presenceKey = presenceKey
+
+    console.log(
+      `[PresenceManager] Joining room: ${roomId} with key: ${presenceKey}`,
+    )
+
+    // Get channel with our presence key - this ensures the channel is created
+    // with the correct key, or upgraded if signaling created it first
     this.channel = channelManager.getChannel(roomId, {
       presence: { key: presenceKey },
     })
 
-    // Subscribe to presence changes
+    // Set up presence listeners BEFORE subscribing
+    this.setupPresenceListeners()
+
+    // Subscribe to the channel
+    await this.subscribeToChannel(roomId)
+
+    // Track our presence state
+    const effectiveSessionId = sessionId ?? crypto.randomUUID()
+    await this.trackPresence({
+      userId,
+      username,
+      avatar,
+      joinedAt: Date.now(),
+      sessionId: effectiveSessionId,
+    })
+
+    // Allow time for presence sync, then manually trigger sync
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    this.handlePresenceSync()
+  }
+
+  /**
+   * Set up presence event listeners
+   */
+  private setupPresenceListeners(): void {
+    if (!this.channel) return
+
     this.channel.on('presence', { event: 'sync' }, () => {
       this.handlePresenceSync()
     })
@@ -61,27 +95,6 @@ export class PresenceManager {
     this.channel.on('presence', { event: 'leave' }, () => {
       this.handlePresenceSync()
     })
-
-    // Subscribe to channel (required before tracking presence)
-    const subscriptionCount = channelManager.getSubscriptionCount(roomId)
-
-    if (subscriptionCount === 0) {
-      await this.subscribeToChannel(roomId)
-    } else {
-      channelManager.markSubscribed(roomId)
-      await this.waitForChannelReady()
-    }
-
-    // Track presence state with session ID
-    const effectiveSessionId = sessionId ?? crypto.randomUUID()
-    await this.trackPresence({
-      userId,
-      username,
-      avatar,
-      joinedAt: Date.now(),
-      sessionId: effectiveSessionId,
-    })
-    this.handlePresenceSync()
   }
 
   /**
@@ -93,10 +106,46 @@ export class PresenceManager {
         'PresenceManager.subscribeToChannel: channel is not initialized',
       )
     }
-    const channel = this.channel
+
+    const channelState = this.channel.state
+
+    // If already joined, just mark as subscribed
+    if (channelState === 'joined') {
+      console.log('[PresenceManager] Channel already joined')
+      channelManager.markSubscribed(roomId)
+      return
+    }
+
+    // If another manager is already subscribing, wait for it
+    if (channelManager.getSubscriptionCount(roomId) > 0) {
+      console.log(
+        '[PresenceManager] Channel subscription in progress, waiting...',
+      )
+      await this.waitForChannelReady()
+      channelManager.markSubscribed(roomId)
+      return
+    }
+
+    // Subscribe to channel
+    console.log('[PresenceManager] Subscribing to channel...')
     return new Promise<void>((resolve, reject) => {
-      channel.subscribe((status, err) => {
+      if (!this.channel) {
+        reject(new Error('Channel became null during subscription'))
+        return
+      }
+
+      const timeoutId = setTimeout(() => {
+        reject(new Error('Channel subscription timeout (10s)'))
+      }, 10000)
+
+      this.channel.subscribe((status, err) => {
+        console.log(
+          `[PresenceManager] Subscription status: ${status}`,
+          err ? `error: ${err.message}` : '',
+        )
+
         if (status === 'SUBSCRIBED') {
+          clearTimeout(timeoutId)
           channelManager.markSubscribed(roomId)
           resolve()
         } else if (
@@ -104,9 +153,10 @@ export class PresenceManager {
           status === 'TIMED_OUT' ||
           status === 'CLOSED'
         ) {
+          clearTimeout(timeoutId)
           reject(
             new Error(
-              `Failed to subscribe to presence channel: ${status}${err ? ` - ${err.message}` : ''}`,
+              `Channel subscription failed: ${status}${err ? ` - ${err.message}` : ''}`,
             ),
           )
         }
@@ -123,21 +173,16 @@ export class PresenceManager {
         'PresenceManager.waitForChannelReady: channel is not initialized',
       )
     }
-    if (this.channel.state === 'joined') return
+
+    if (this.channel.state === 'joined') {
+      return
+    }
 
     return new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        if (!this.channel) {
-          reject(
-            new Error(
-              'PresenceManager.waitForChannelReady: channel is not initialized',
-            ),
-          )
-          return
-        }
         reject(
           new Error(
-            `Channel subscription timeout - state: ${this.channel.state}`,
+            `Channel ready timeout - state: ${this.channel?.state ?? 'null'}`,
           ),
         )
       }, 5000)
@@ -145,13 +190,10 @@ export class PresenceManager {
       const checkState = () => {
         if (!this.channel) {
           clearTimeout(timeout)
-          reject(
-            new Error(
-              'PresenceManager.waitForChannelReady: channel is not initialized',
-            ),
-          )
+          reject(new Error('Channel became null while waiting'))
           return
         }
+
         if (this.channel.state === 'joined') {
           clearTimeout(timeout)
           resolve()
@@ -160,11 +202,7 @@ export class PresenceManager {
           this.channel.state === 'closed'
         ) {
           clearTimeout(timeout)
-          reject(
-            new Error(
-              `Channel subscription failed - state: ${this.channel.state}`,
-            ),
-          )
+          reject(new Error(`Channel failed - state: ${this.channel.state}`))
         } else {
           setTimeout(checkState, 100)
         }
@@ -175,7 +213,7 @@ export class PresenceManager {
   }
 
   /**
-   * Track presence state with timeout
+   * Track presence state
    */
   private async trackPresence(state: SupabasePresenceState): Promise<void> {
     if (!this.channel) {
@@ -183,15 +221,17 @@ export class PresenceManager {
         'PresenceManager.trackPresence: channel is not initialized',
       )
     }
-    const trackPromise = this.channel.track(state)
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(
-        () => reject(new Error('Presence track timeout after 10s')),
-        10000,
-      )
-    })
 
-    const result = await Promise.race([trackPromise, timeoutPromise])
+    const result = await Promise.race([
+      this.channel.track(state),
+      new Promise<'timeout'>((resolve) =>
+        setTimeout(() => resolve('timeout'), 10000),
+      ),
+    ])
+
+    if (result === 'timeout') {
+      throw new Error('Presence track timeout (10s)')
+    }
 
     if (result === 'error') {
       throw new Error('Failed to track presence: channel returned error')
@@ -203,19 +243,29 @@ export class PresenceManager {
    */
   async leave(): Promise<void> {
     if (this.channel && this.roomId) {
-      await this.channel.untrack()
+      try {
+        await this.channel.untrack()
+      } catch (err) {
+        console.warn('[PresenceManager] Error untracking:', err)
+      }
 
       channelManager.markUnsubscribed(this.roomId)
 
       const subscriptionCount = channelManager.getSubscriptionCount(this.roomId)
       if (subscriptionCount === 0) {
-        await this.channel.unsubscribe()
+        try {
+          await this.channel.unsubscribe()
+        } catch (err) {
+          console.warn('[PresenceManager] Error unsubscribing:', err)
+        }
         channelManager.removeChannel(this.roomId)
       }
 
       this.channel = null
     }
+
     this.roomId = null
+    this.presenceKey = null
   }
 
   /**
@@ -228,7 +278,6 @@ export class PresenceManager {
 
     for (const [_presenceKey, presences] of Object.entries(presence)) {
       const rawState = presences[0]
-
       if (!rawState) continue
 
       const validation = validatePresenceState(rawState)

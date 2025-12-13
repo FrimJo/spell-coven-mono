@@ -176,8 +176,21 @@ function initializeManager(
   store.manager = manager
   store.roomConfig = { roomId, userId, username, avatar, sessionId }
 
-  manager
-    .join(roomId, userId, username, avatar, sessionId)
+  // Join room with timeout to prevent infinite hanging
+  const joinPromise = manager.join(roomId, userId, username, avatar, sessionId)
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(
+      () =>
+        reject(
+          new Error(
+            'Presence join timeout - channel subscription may have failed',
+          ),
+        ),
+      15000, // 15 second timeout
+    ),
+  )
+
+  Promise.race([joinPromise, timeoutPromise])
     .then(() => {
       console.log('[PresenceStore] Successfully joined room:', roomId)
       const currentParticipants = manager.getParticipants()
