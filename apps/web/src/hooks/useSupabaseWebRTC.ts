@@ -15,6 +15,12 @@ interface UseSupabaseWebRTCProps {
   remotePlayerIds: string[]
   roomId: string
   localStream: MediaStream | null
+  /**
+   * When true, signaling will be initialized.
+   * Set to true after presence has joined the room to ensure
+   * the channel is created with the correct presence key.
+   */
+  presenceReady?: boolean
   onError?: (error: Error) => void
 }
 
@@ -35,6 +41,7 @@ export function useSupabaseWebRTC({
   remotePlayerIds,
   roomId,
   localStream,
+  presenceReady = true, // Default to true for backwards compatibility
   onError,
 }: UseSupabaseWebRTCProps): UseSupabaseWebRTCReturn {
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(
@@ -59,9 +66,18 @@ export function useSupabaseWebRTC({
     onErrorRef.current = onError
   }, [onError])
 
-  // Initialize managers
+  // Initialize managers - wait for presence to be ready
   useEffect(() => {
     if (!localPlayerId || !roomId) {
+      return
+    }
+
+    // Wait for presence to be ready before initializing signaling
+    // This ensures the channel is created with the correct presence key
+    if (!presenceReady) {
+      console.log(
+        '[WebRTC:Hook] Waiting for presence to be ready before initializing signaling...',
+      )
       return
     }
 
@@ -129,8 +145,10 @@ export function useSupabaseWebRTC({
 
     webrtcManagerRef.current = webrtcManager
 
-    // Initialize signaling
-    console.log('[WebRTC:Hook] Starting signaling initialization...')
+    // Initialize signaling (presence is ready, so channel should exist with correct key)
+    console.log(
+      '[WebRTC:Hook] Presence ready, starting signaling initialization...',
+    )
     signalingManager
       .initialize(roomId, localPlayerId)
       .then(() => {
@@ -165,7 +183,7 @@ export function useSupabaseWebRTC({
       signalingManagerRef.current = null
       webrtcManagerRef.current = null
     }
-  }, [localPlayerId, roomId])
+  }, [localPlayerId, roomId, presenceReady])
 
   // Update local stream
   useEffect(() => {

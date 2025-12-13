@@ -56,12 +56,19 @@ export function VideoStreamGrid({
   onCardCrop,
 }: VideoStreamGridProps) {
   // Fetch remote players (exclude local player, use uniqueParticipants to avoid duplicates)
-  const { uniqueParticipants: gameRoomParticipants } = useSupabasePresence({
+  // Also get isLoading to know when presence is ready
+  const {
+    uniqueParticipants: gameRoomParticipants,
+    isLoading: isPresenceLoading,
+  } = useSupabasePresence({
     roomId,
     userId,
     username: localPlayerName,
     enabled: true,
   })
+
+  // Presence is ready when not loading (channel has been set up with correct key)
+  const presenceReady = !isPresenceLoading
 
   // Compute remote player IDs for WebRTC
   const remotePlayerIds = useMemo(() => {
@@ -101,6 +108,8 @@ export function VideoStreamGrid({
   const isAudioPending = audioResult.isPending
 
   // WebRTC hook for peer-to-peer video streaming
+  // Wait for presence to be ready before initializing signaling
+  // This ensures the channel is created with the correct presence key
   const {
     remoteStreams,
     connectionStates,
@@ -112,6 +121,7 @@ export function VideoStreamGrid({
     remotePlayerIds: remotePlayerIds,
     roomId: roomId,
     localStream, // Pass the managed local stream
+    presenceReady, // Wait for presence before initializing signaling
     onError: (error) => {
       console.error('[VideoStreamGrid] WebRTC error:', error)
       toast.error(error.message)
