@@ -18,8 +18,7 @@ import { z } from 'zod'
  * ```typescript
  * import { env } from '@/env'
  *
- * const guildId = env.VITE_DISCORD_GUILD_ID
- * const botToken = env.DISCORD_BOT_TOKEN
+ * const supabaseUrl = env.VITE_SUPABASE_URL
  * ```
  */
 export const env = createEnv({

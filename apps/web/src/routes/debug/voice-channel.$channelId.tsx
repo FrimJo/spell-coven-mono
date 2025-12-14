@@ -12,19 +12,6 @@ function DebugVoiceChannel() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // TODO: Implement getVoiceChannelMembers server function
-  // const getVoiceChannelMembersFn = useServerFn(async () => {
-  //   const { getVoiceChannelMembers } = await import(
-  //     '@/server/handlers/discord-rooms.server'
-  //   )
-  //   return getVoiceChannelMembers({
-  //     data: {
-  //       guildId: process.env.VITE_DISCORD_GUILD_ID || '',
-  //       channelId,
-  //     },
-  //   })
-  // })
-
   const handleFetch = useCallback(async () => {
     setLoading(true)
     setError(null)

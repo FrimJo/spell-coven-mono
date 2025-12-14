@@ -9,10 +9,6 @@ services:
       context: .
       dockerfile: apps/discord-gateway/Dockerfile
     environment:
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
-      - VITE_DISCORD_GUILD_ID=${VITE_DISCORD_GUILD_ID}
-      - LINK_TOKEN=${LINK_TOKEN}
-      - GATEWAY_WS_PORT=8080
       - NODE_ENV=production
     ports:
       - "8080:8080"
@@ -49,11 +45,7 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
     environment:
-      - GATEWAY_WS_URL=ws://discord-gateway:8080
-      - LINK_TOKEN=${LINK_TOKEN}
       - SESSION_SECRET=${SESSION_SECRET}
-      - VITE_DISCORD_GUILD_ID=${VITE_DISCORD_GUILD_ID}
-      - VITE_BASE_URL=${VITE_BASE_URL:-http://localhost:3000}
       - NODE_ENV=production
     ports:
       - "3000:3000"

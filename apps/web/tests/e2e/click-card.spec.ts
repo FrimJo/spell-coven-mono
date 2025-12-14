@@ -57,7 +57,6 @@ async function mockGetUserMedia(page: Page, videoUrl: string) {
   )
 }
 
-// Main E2E test
 test.describe('Webcam click-and-search (mocked getUserMedia)', () => {
   test.use({ permissions: ['camera'] })
 
@@ -70,7 +69,7 @@ test.describe('Webcam click-and-search (mocked getUserMedia)', () => {
 
     await mockGetUserMedia(page, videoUrl)
 
-    await page.goto(`${baseURL}/game/game-123`)
+    await page.goto(`${baseURL}/game/game-TEST01`)
 
     // Wait for page to load
     await page.waitForTimeout(1000)

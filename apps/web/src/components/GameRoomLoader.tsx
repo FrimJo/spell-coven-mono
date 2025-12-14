@@ -38,7 +38,12 @@ export function GameRoomLoader({ onLoadingComplete }: GameRoomLoaderProps) {
   }, [onLoadingComplete])
 
   return (
-    <div className="absolute inset-0 top-[57px] z-50 flex items-center justify-center bg-slate-950">
+    <div
+      className="absolute inset-0 top-[57px] z-50 flex items-center justify-center bg-slate-950"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Loading"
+    >
       <div className="w-full max-w-md px-8">
         <div className="flex flex-col items-center space-y-6">
           {/* Animated Loader Icon */}

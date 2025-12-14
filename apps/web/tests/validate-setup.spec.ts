@@ -20,7 +20,7 @@ test.describe('Model Setup Validation', () => {
     page,
     baseURL,
   }) => {
-    await page.goto(`${baseURL}/game/validation-test`)
+    await page.goto(`${baseURL}/game/game-VALID1`)
 
     // Log cache status for debugging
     await logModelCacheStatus(page)
@@ -51,7 +51,7 @@ test.describe('Model Setup Validation', () => {
     page,
     baseURL,
   }) => {
-    await page.goto(`${baseURL}/game/validation-test-2`)
+    await page.goto(`${baseURL}/game/game-VALID2`)
 
     // Check if model is cached
     const canUseCache = await canUseCachedModel(page)
@@ -83,14 +83,14 @@ test.describe('Model Setup Validation', () => {
     baseURL,
   }) => {
     // First page load
-    await page.goto(`${baseURL}/game/cache-test-1`)
+    await page.goto(`${baseURL}/game/game-CACHE1`)
     await logModelCacheStatus(page)
 
     const firstSetupComplete = await isModelSetupComplete(page)
     expect(firstSetupComplete).toBe(true)
 
     // Second page load
-    await page.goto(`${baseURL}/game/cache-test-2`)
+    await page.goto(`${baseURL}/game/game-CACHE2`)
     await logModelCacheStatus(page)
 
     const secondSetupComplete = await isModelSetupComplete(page)

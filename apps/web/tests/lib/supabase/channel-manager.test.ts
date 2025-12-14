@@ -41,11 +41,7 @@ function createMockChannel(): MockChannel {
 // Shared mock state that persists across tests
 let currentMockChannel: MockChannel = createMockChannel()
 const mockRemoveChannel = vi.fn()
-const mockChannelFactory = vi
-  .fn()
-  .mockImplementation(
-    (_name: string, _config: unknown): MockChannel => currentMockChannel,
-  )
+const mockChannelFactory = vi.fn().mockImplementation(() => currentMockChannel)
 
 // Mock the supabase client module
 vi.mock('@/lib/supabase/client', () => ({
@@ -82,7 +78,7 @@ describe('ChannelManager', () => {
           config: { presence: { key: expect.any(String) } },
         }),
       )
-      expect(channel).toBe(currentMockChannel)
+      expect(channel as unknown).toBe(currentMockChannel)
     })
 
     it('should throw error when roomId is empty', () => {
@@ -283,7 +279,9 @@ describe('ChannelManager', () => {
       channelManager.getChannel(roomId)
 
       // Now peek should return the channel
-      expect(channelManager.peekChannel(roomId)).toBe(currentMockChannel)
+      expect(channelManager.peekChannel(roomId) as unknown).toBe(
+        currentMockChannel,
+      )
     })
   })
 })

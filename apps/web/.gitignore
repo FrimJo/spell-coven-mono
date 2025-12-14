@@ -25,3 +25,5 @@ test-results/
 .playwright-storage/*.demo.ts
 
 certificates/
+
+.playwright-storage/
