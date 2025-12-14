@@ -9,6 +9,7 @@ const __dirname = dirname(__filename)
 // Requires Python to be available (python3 -m http.server 8000).
 export default defineConfig({
   testDir: 'tests',
+  testMatch: '**/*.spec.ts',
   timeout: 60_000,
   retries: 0,
   // Global setup to initialize model once for all tests
@@ -18,6 +19,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     permissions: ['camera'],
     video: 'retain-on-failure',
+    ignoreHTTPSErrors: true,
     // Load the storage state from global setup to reuse cached model
     storageState: resolve(__dirname, './.playwright-storage/state.json'),
   },
@@ -28,12 +30,13 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // Use Vite preview to serve the SPA on port 3000
-    command: 'bunx serve',
+    // Use Vite dev server for e2e tests
+    command: 'bun run dev',
     url: 'https://localhost:1234',
     timeout: 60_000,
     reuseExistingServer: true,
     stdout: 'ignore',
     stderr: 'pipe',
+    ignoreHTTPSErrors: true,
   },
 })

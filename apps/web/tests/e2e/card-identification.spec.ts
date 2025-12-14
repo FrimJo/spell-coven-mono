@@ -137,7 +137,7 @@ test.describe('Card Identification Feature', () => {
     })
 
     // Navigate to game page
-    await page.goto(`${baseURL}/game/test-game-123`)
+    await page.goto(`${baseURL}/game/game-TEST01`)
 
     // Log model cache status for debugging
     await logModelCacheStatus(page)

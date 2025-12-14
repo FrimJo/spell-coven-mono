@@ -132,7 +132,7 @@ test.describe.skip('Card Identification - Debug Mode', () => {
 
     // Navigate to game page
     console.log('🚀 Navigating to game page...')
-    await page.goto(`${baseURL}/game/debug-test-123`)
+    await page.goto(`${baseURL}/game/game-DEBUG1`)
     await page.waitForLoadState('networkidle')
     console.log('✅ Page loaded')
 
@@ -322,7 +322,7 @@ test.describe.skip('Card Identification - Debug Mode', () => {
     const videoUrl = `data:video/webm;base64,${base64}`
 
     await mockGetUserMedia(page, videoUrl)
-    await page.goto(`${baseURL}/game/debug-rapid-clicks`)
+    await page.goto(`${baseURL}/game/game-DEBUG2`)
     await waitForClipModel(page)
     await waitForOpenCv(page)
 

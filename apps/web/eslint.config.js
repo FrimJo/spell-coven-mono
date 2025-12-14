@@ -33,12 +33,12 @@ export default [
       '@typescript-eslint/no-non-null-assertion': 'warn',
     },
   },
-  // Test files - use separate tsconfig
+  // Test files - use main tsconfig (which includes tests)
   {
     files: ['tests/**/*.ts', 'tests/**/*.tsx'],
     languageOptions: {
       parserOptions: {
-        project: './tsconfig.test.json',
+        project: './tsconfig.json',
         tsconfigRootDir: import.meta.dirname,
       },
     },

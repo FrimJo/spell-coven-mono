@@ -124,7 +124,7 @@ test.describe('VideoStreamGrid Card Detection', () => {
     await mockGetUserMedia(page, videoUrl)
 
     // Navigate to game page
-    await page.goto(`${baseURL}/game/game-123`)
+    await page.goto(`${baseURL}/game/game-TEST01`)
 
     // Wait for page to load
     await page.waitForTimeout(1000)
@@ -193,7 +193,7 @@ test.describe('VideoStreamGrid Card Detection', () => {
     await mockGetUserMedia(page, videoUrl)
 
     // Navigate to game page
-    await page.goto(`${baseURL}/game/game-123`)
+    await page.goto(`${baseURL}/game/game-TEST01`)
 
     // Wait for page to load
     await page.waitForTimeout(1000)
