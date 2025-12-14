@@ -262,7 +262,9 @@ export async function loadEmbeddingsAndMetaFromPackage() {
           for (let j = 0; j < D_local; j++) {
             const val = dequantized[offset + j]
             if (val === undefined) {
-              throw new Error(`loadEmbeddingsAndMetaFromPackage: Missing dequantized value at offset ${offset + j}`)
+              throw new Error(
+                `loadEmbeddingsAndMetaFromPackage: Missing dequantized value at offset ${offset + j}`,
+              )
             }
             norm += val * val
           }
@@ -272,7 +274,9 @@ export async function loadEmbeddingsAndMetaFromPackage() {
           for (let j = 0; j < D_local; j++) {
             const val = dequantized[offset + j]
             if (val === undefined) {
-              throw new Error(`loadEmbeddingsAndMetaFromPackage: Missing dequantized value at offset ${offset + j}`)
+              throw new Error(
+                `loadEmbeddingsAndMetaFromPackage: Missing dequantized value at offset ${offset + j}`,
+              )
             }
             db[offset + j] = val / norm
           }
@@ -664,14 +668,18 @@ export function getDatabaseEmbedding(cardName: string): {
   for (let i = 0; i < D; i++) {
     const dbVal = db[offset + i]
     if (dbVal === undefined) {
-      throw new Error(`getDatabaseEmbedding: Missing database value at index ${offset + i}`)
+      throw new Error(
+        `getDatabaseEmbedding: Missing database value at index ${offset + i}`,
+      )
     }
     embedding[i] = dbVal
   }
 
   const matchedMeta = meta[index]
   if (!matchedMeta) {
-    throw new Error(`getDatabaseEmbedding: Metadata not found at index ${index}`)
+    throw new Error(
+      `getDatabaseEmbedding: Metadata not found at index ${index}`,
+    )
   }
 
   return {

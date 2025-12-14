@@ -199,7 +199,9 @@ async function detectCards(clickPoint?: { x: number; y: number }) {
     tempCanvas.height = overlayEl.height
     const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })
     if (!tempCtx) {
-      throw new Error('setupCardDetector: Failed to get 2d context from temp canvas')
+      throw new Error(
+        'setupCardDetector: Failed to get 2d context from temp canvas',
+      )
     }
     tempCtx.drawImage(videoEl, 0, 0, tempCanvas.width, tempCanvas.height)
 
@@ -313,7 +315,9 @@ function cropCardFromBoundingBox(
   tempCanvas.height = cardHeight
   const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })
   if (!tempCtx) {
-    throw new Error('setupCardDetector: Failed to get 2d context from temp canvas')
+    throw new Error(
+      'setupCardDetector: Failed to get 2d context from temp canvas',
+    )
   }
   tempCtx.putImageData(cardImageData, 0, 0)
 
@@ -465,24 +469,24 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
 
   // T022: Use warped canvas if available (from SlimSAM perspective correction) and enabled
   if (enablePerspectiveWarp && card.warpedCanvas) {
-      // Copy warped canvas to cropped canvas
-      croppedCanvas.width = CROPPED_CARD_WIDTH
-      croppedCanvas.height = CROPPED_CARD_HEIGHT
-      if (!croppedCtx) {
-        throw new Error('setupCardDetector: croppedCtx is not initialized')
-      }
-      croppedCtx.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height)
-      croppedCtx.drawImage(
-        card.warpedCanvas,
-        0,
-        0,
-        card.warpedCanvas.width,
-        card.warpedCanvas.height,
-        0,
-        0,
-        CROPPED_CARD_WIDTH,
-        CROPPED_CARD_HEIGHT,
-      )
+    // Copy warped canvas to cropped canvas
+    croppedCanvas.width = CROPPED_CARD_WIDTH
+    croppedCanvas.height = CROPPED_CARD_HEIGHT
+    if (!croppedCtx) {
+      throw new Error('setupCardDetector: croppedCtx is not initialized')
+    }
+    croppedCtx.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height)
+    croppedCtx.drawImage(
+      card.warpedCanvas,
+      0,
+      0,
+      card.warpedCanvas.width,
+      card.warpedCanvas.height,
+      0,
+      0,
+      CROPPED_CARD_WIDTH,
+      CROPPED_CARD_HEIGHT,
+    )
 
     return true
   }

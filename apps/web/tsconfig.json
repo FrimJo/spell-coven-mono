@@ -1,24 +1,12 @@
 {
   "extends": "@repo/typescript-config/react.json",
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "src/routeTree.gen.ts",
-    "src/server/**/*"
-  ],
-  "exclude": [
-    "**/*.demo.ts",
-    "tests/**/*"
-  ],
+  "include": ["**/*.ts", "**/*.tsx", "src/routeTree.gen.ts", "src/server/**/*"],
+  "exclude": ["**/*.demo.ts", "tests/**/*"],
   "compilerOptions": {
-    "types": [
-      "vite/client"
-    ],
+    "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     }
   }
 }

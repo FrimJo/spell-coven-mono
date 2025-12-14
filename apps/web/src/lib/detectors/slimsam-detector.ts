@@ -331,7 +331,9 @@ export class SlimSAMDetector implements CardDetector {
               willReadFrequently: true,
             })
             if (!debugCtx) {
-              throw new Error('SlimSAMDetector: Failed to get 2d context from debug canvas')
+              throw new Error(
+                'SlimSAMDetector: Failed to get 2d context from debug canvas',
+              )
             }
             debugCtx.drawImage(canvas, 0, 0)
 
