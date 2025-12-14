@@ -1,3 +1,4 @@
+import { existsSync, mkdirSync } from 'fs'
 import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import type { FullConfig } from '@playwright/test'
@@ -7,10 +8,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 // Path to store the browser state with cached model
-const STORAGE_STATE_PATH = resolve(
-  __dirname,
-  '../.playwright-storage/state.json',
-)
+const STORAGE_DIR = resolve(__dirname, '../.playwright-storage')
+const STORAGE_STATE_PATH = resolve(STORAGE_DIR, 'state.json')
 
 /**
  * Global setup for Playwright tests.
@@ -23,6 +22,7 @@ async function globalSetup(config: FullConfig) {
   const browser = await chromium.launch()
   const context = await browser.newContext({
     permissions: ['camera'],
+    ignoreHTTPSErrors: true,
   })
   const page = await context.newPage()
 
@@ -90,6 +90,12 @@ async function globalSetup(config: FullConfig) {
     })
 
     console.log('💾 Setup completion flag stored in localStorage')
+
+    // Ensure storage directory exists before saving state
+    if (!existsSync(STORAGE_DIR)) {
+      mkdirSync(STORAGE_DIR, { recursive: true })
+      console.log(`📁 Created storage directory: ${STORAGE_DIR}`)
+    }
 
     // Save the browser storage state (including IndexedDB and localStorage)
     // This will be loaded by all tests to reuse the cached model

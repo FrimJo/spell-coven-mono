@@ -5,7 +5,7 @@ import { config as reactConfig } from '@repo/eslint-config/react-internal'
 /** @type {import('typescript-eslint').Config} */
 export default [
   ...reactConfig,
-  { ignores: ['public/**', 'public/mockServiceWorker.js', '**/*.demo.ts'] },
+  { ignores: ['public/**', 'public/mockServiceWorker.js'] },
   // Main source files
   {
     files: ['**/*.ts', '**/*.tsx'],
@@ -14,7 +14,6 @@ export default [
       'src/routeTree.gen.ts',
       'eslint.config.js',
       'playwright.config.ts',
-      '**/*.demo.ts',
       'tests/**/*',
     ],
     languageOptions: {
