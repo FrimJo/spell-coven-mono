@@ -5,15 +5,30 @@
  * broadcast listener management, and cleanup.
  */
 
-// Import after mocking
 import { channelManager } from '@/lib/supabase/channel-manager'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+// Define mock channel interface (no explicit type imports needed)
+interface MockChannel {
+  state: string
+  on: ReturnType<typeof vi.fn>
+  subscribe: ReturnType<typeof vi.fn>
+  unsubscribe: ReturnType<typeof vi.fn>
+  track: ReturnType<typeof vi.fn>
+  untrack: ReturnType<typeof vi.fn>
+  send: ReturnType<typeof vi.fn>
+  presenceState: ReturnType<typeof vi.fn>
+}
+
 // Create mock channel factory - returns fresh mock for each call
-function createMockChannel() {
+function createMockChannel(): MockChannel {
+  const mockOn = vi.fn()
+  // Make on() return this for chaining
+  mockOn.mockImplementation(() => mockOn)
+
   return {
-    state: 'closed' as string,
-    on: vi.fn().mockReturnThis(),
+    state: 'closed',
+    on: mockOn,
     subscribe: vi.fn(),
     unsubscribe: vi.fn(),
     track: vi.fn(),
@@ -24,15 +39,23 @@ function createMockChannel() {
 }
 
 // Shared mock state that persists across tests
-let currentMockChannel = createMockChannel()
+let currentMockChannel: MockChannel = createMockChannel()
 const mockRemoveChannel = vi.fn()
-const mockChannelFactory = vi.fn(() => currentMockChannel)
+const mockChannelFactory = vi
+  .fn()
+  .mockImplementation(
+    (_name: string, _config: unknown): MockChannel => currentMockChannel,
+  )
 
-// Mock the supabase client module - factory must not reference external variables
+// Mock the supabase client module
 vi.mock('@/lib/supabase/client', () => ({
   supabase: {
-    channel: (...args: unknown[]) => mockChannelFactory(...args),
-    removeChannel: (...args: unknown[]) => mockRemoveChannel(...args),
+    channel: (name: string, config: unknown) => {
+      return mockChannelFactory(name, config)
+    },
+    removeChannel: (channel: unknown) => {
+      mockRemoveChannel(channel)
+    },
   },
 }))
 
