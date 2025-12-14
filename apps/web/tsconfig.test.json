@@ -7,13 +7,9 @@
     "tests/**/*.tsx",
     "types/**/*.d.ts"
   ],
-  "exclude": [
-    "**/*.demo.ts"
-  ],
+  "exclude": ["**/*.demo.ts"],
   "compilerOptions": {
-    "types": [
-      "vite/client"
-    ],
+    "types": ["vite/client"],
     "noEmit": true
   }
 }

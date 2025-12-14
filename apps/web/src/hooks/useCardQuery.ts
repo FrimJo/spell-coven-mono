@@ -87,7 +87,9 @@ export function useCardQuery(): UseCardQueryReturn {
         const orientationCandidates = generateOrientationCandidates(canvas)
         const rotated180 = orientationCandidates[2] // Index 2 is 180°
         if (!rotated180) {
-          throw new Error('useCardQuery: Failed to generate 180° rotation candidate')
+          throw new Error(
+            'useCardQuery: Failed to generate 180° rotation candidate',
+          )
         }
         console.log('[useCardQuery] Generated 180° rotation candidate')
 
