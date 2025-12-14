@@ -6,6 +6,7 @@ import { config as reactConfig } from '@repo/eslint-config/react-internal'
 export default [
   ...reactConfig,
   { ignores: ['public/**', 'public/mockServiceWorker.js', '**/*.demo.ts'] },
+  // Main source files
   {
     files: ['**/*.ts', '**/*.tsx'],
     ignores: [
@@ -14,6 +15,7 @@ export default [
       'eslint.config.js',
       'playwright.config.ts',
       '**/*.demo.ts',
+      'tests/**/*',
     ],
     languageOptions: {
       parserOptions: {
@@ -29,6 +31,21 @@ export default [
       '@tanstack/query/exhaustive-deps': 'off',
       'react/prop-types': 'off', // TypeScript provides type checking
       '@typescript-eslint/no-non-null-assertion': 'warn',
+    },
+  },
+  // Test files - use separate tsconfig
+  {
+    files: ['tests/**/*.ts', 'tests/**/*.tsx'],
+    languageOptions: {
+      parserOptions: {
+        project: './tsconfig.test.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      // Relax some rules for tests
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
 ]

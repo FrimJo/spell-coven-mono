@@ -5,8 +5,13 @@ declare interface MockInstance<
   Returns = unknown,
 > {
   (...args: Args): Returns
+  mock: {
+    calls: Args[]
+    results: { type: 'return' | 'throw'; value: Returns }[]
+  }
   mockResolvedValue(value: Returns): MockInstance<Args, Returns>
   mockReturnValue(value: Returns): MockInstance<Args, Returns>
+  mockReturnThis(): MockInstance<Args, Returns>
   mockImplementation(
     impl: (...args: Args) => Returns,
   ): MockInstance<Args, Returns>
@@ -49,6 +54,19 @@ declare module 'vitest' {
   export const vi: ViMocker
 
   export interface Assertion<T = unknown> {
+    toBe(expected: T): void
+    toEqual(expected: T): void
+    toBeNull(): void
+    toBeDefined(): void
+    toBeUndefined(): void
+    toBeTruthy(): void
+    toBeFalsy(): void
+    toContain(item: unknown): void
+    toHaveLength(length: number): void
+    toHaveBeenCalled(): void
+    toHaveBeenCalledWith(...args: unknown[]): void
+    toHaveBeenCalledTimes(times: number): void
+    toThrow(message?: string | RegExp): void
     [matcher: string]: unknown
     not: Assertion<T>
     resolves: Assertion<T>
@@ -57,7 +75,16 @@ declare module 'vitest' {
 
   export interface ExpectStatic {
     <T>(value: T): Assertion<T>
+    any(constructor: unknown): unknown
+    anything(): unknown
+    arrayContaining(array: unknown[]): unknown
+    objectContaining(object: Record<string, unknown>): unknown
+    stringContaining(string: string): unknown
+    stringMatching(regexp: RegExp | string): unknown
   }
 
   export const expect: ExpectStatic
+
+  // Re-export MockInstance type
+  export type { MockInstance }
 }
