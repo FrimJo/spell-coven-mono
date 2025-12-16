@@ -1,6 +1,5 @@
 import { Suspense } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
-import { useSupabasePresence } from '@/hooks/useSupabasePresence'
+import { usePresence } from '@/contexts/PresenceContext'
 
 import { Card } from '@repo/ui/components/card'
 import { Skeleton } from '@repo/ui/components/skeleton'
@@ -19,26 +18,14 @@ interface GameRoomSidebarProps {
 }
 
 function SidebarContent({
-  roomId,
-  userId,
   playerName,
   isLobbyOwner,
   ownerId,
   onKickPlayer,
   onBanPlayer,
 }: GameRoomSidebarProps) {
-  // Get current user info from auth context
-  const { user } = useAuth()
-  const username = user?.username ?? playerName
-
-  // Get game room participants (use uniqueParticipants to avoid showing same user twice)
-  const { uniqueParticipants } = useSupabasePresence({
-    roomId,
-    userId,
-    username,
-    avatar: user?.avatar,
-    enabled: true,
-  })
+  // Get game room participants from context (already deduplicated)
+  const { uniqueParticipants } = usePresence()
 
   return (
     <div className="w-64 flex-shrink-0 space-y-4 overflow-y-auto">
@@ -59,25 +46,7 @@ function SidebarContent({
   )
 }
 
-function SidebarLoading({ roomId, userId }: GameRoomSidebarProps) {
-  // Get current user info from auth context
-  const { user } = useAuth()
-  const username = user?.username ?? 'Unknown'
-
-  // Get game room participants (use uniqueParticipants to avoid showing same user twice)
-  const { uniqueParticipants } = useSupabasePresence({
-    roomId,
-    userId,
-    username,
-    avatar: user?.avatar,
-    enabled: true,
-  })
-
-  // Create a user object for the skeleton
-  const currentUser = user
-    ? { id: user.id, username: user.username }
-    : { id: 'loading', username: 'Loading...' }
-
+function SidebarLoading() {
   return (
     <div className="w-64 flex-shrink-0 space-y-4">
       {/* Player List Skeleton */}
@@ -91,9 +60,9 @@ function SidebarLoading({ roomId, userId }: GameRoomSidebarProps) {
 
           {/* Player items - show generic loading state */}
           <div className="space-y-2">
-            {[currentUser, ...uniqueParticipants].map((p) => (
+            {[1, 2].map((i) => (
               <div
-                key={p.id}
+                key={i}
                 className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-800/50 p-2"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -111,7 +80,7 @@ function SidebarLoading({ roomId, userId }: GameRoomSidebarProps) {
 
 export function GameRoomSidebar(props: GameRoomSidebarProps) {
   return (
-    <Suspense fallback={<SidebarLoading {...props} />}>
+    <Suspense fallback={<SidebarLoading />}>
       <SidebarContent {...props} />
     </Suspense>
   )

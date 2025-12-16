@@ -6,7 +6,7 @@ import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
-import { useSupabasePresence } from '@/hooks/useSupabasePresence'
+import { PresenceProvider, usePresence } from '@/contexts/PresenceContext'
 import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
 import { loadingEvents } from '@/lib/loading-events'
 import { loadOpenCV } from '@/lib/opencv-loader'
@@ -21,6 +21,7 @@ import { DuplicateSessionDialog } from './DuplicateSessionDialog.js'
 import { GameRoomLoader } from './GameRoomLoader.js'
 import { GameRoomPlayerCount } from './GameRoomPlayerCount.js'
 import { GameRoomSidebar } from './GameRoomSidebar.js'
+import { LeaveGameDialog } from './LeaveGameDialog.js'
 import { MediaSetupDialog } from './MediaSetupDialog.js'
 import { RejoinGameDialog } from './RejoinGameDialog.js'
 import { VideoStreamGridWithSuspense } from './VideoStreamGrid.js'
@@ -35,11 +36,10 @@ interface GameRoomProps {
 
 function GameRoomContent({
   roomId,
-  playerName: _playerName,
   onLeaveGame,
   detectorType,
   usePerspectiveWarp = true,
-}: GameRoomProps) {
+}: Omit<GameRoomProps, 'playerName'>) {
   // Get authenticated user from Supabase Auth (Discord OAuth)
   const { user } = useAuth()
 
@@ -49,65 +49,30 @@ function GameRoomContent({
   const username = user?.username ?? 'Unknown'
 
   const { query } = useCardQueryContext()
-  const [copied, setCopied] = useState(false)
-  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false)
-  const [isPresenceEnabled, setIsPresenceEnabled] = useState(true)
-  const [rejoinDialog, setRejoinDialog] = useState<{
-    open: boolean
-    reason: RejoinReason
-  }>({
-    open: false,
-    reason: 'left',
-  })
 
-  // Handle being kicked from the room
-  const handleKicked = useCallback(() => {
-    // Disable presence since we're kicked
-    setIsPresenceEnabled(false)
-    setRejoinDialog({ open: true, reason: 'kicked' })
-  }, [])
-
-  // Handle duplicate session detection
-  const handleDuplicateSession = useCallback(() => {
-    console.log('[GameRoom] Duplicate session detected, showing dialog')
-    setShowDuplicateDialog(true)
-  }, [])
-
-  // Handle session being transferred to another tab
-  const handleSessionTransferred = useCallback(() => {
-    console.log(
-      '[GameRoom] Session transferred to another tab, closing this one',
-    )
-    toast.info('Session transferred to another tab')
-    // Give user a moment to see the toast, then leave
-    setTimeout(() => {
-      onLeaveGame()
-    }, 1500)
-  }, [onLeaveGame])
-
-  // Track room presence (shares store with GameRoomSidebar and GameRoomPlayerCount)
+  // Get presence data and actions from context
   const {
     isLoading: isPresenceLoading,
     ownerId,
     isOwner,
+    isConnected,
+    disconnectReason,
+    connect,
+    disconnect,
     kickPlayer,
     banPlayer,
     transferSession,
-  } = useSupabasePresence({
-    roomId,
-    userId,
-    username,
-    avatar: user?.avatar,
-    enabled: isPresenceEnabled,
-    onKicked: handleKicked,
-    onDuplicateSession: handleDuplicateSession,
-    onSessionTransferred: handleSessionTransferred,
-    onError: (error) => {
-      console.error('[GameRoom] Presence error:', error)
-      setIsPresenceEnabled(false)
-      setRejoinDialog({ open: true, reason: 'disconnected' })
-    },
-  })
+  } = usePresence()
+
+  const [copied, setCopied] = useState(false)
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false)
+  const [showLeaveConfirmDialog, setShowLeaveConfirmDialog] = useState(false)
+
+  // Show rejoin dialog when disconnected (for any reason)
+  const showRejoinDialog = !isConnected && disconnectReason !== null
+
+  // Map disconnect reason to RejoinReason type
+  const rejoinReason: RejoinReason = disconnectReason ?? 'left'
 
   // Compute shareable link (only on client)
   const shareLink = useMemo(() => {
@@ -356,21 +321,21 @@ function GameRoomContent({
     onLeaveGame()
   }
 
-  // Handle manual leave request
+  // Handle manual leave request - show confirmation first
   const handleManualLeave = () => {
-    setIsPresenceEnabled(false)
-    setRejoinDialog({ open: true, reason: 'left' })
+    setShowLeaveConfirmDialog(true)
   }
 
-  // Handle rejoin attempt
-  const handleRejoin = () => {
-    setRejoinDialog({ ...rejoinDialog, open: false })
-    setIsPresenceEnabled(true)
+  // Handle confirmed leave - use disconnect callback
+  const handleConfirmLeave = () => {
+    setShowLeaveConfirmDialog(false)
+    disconnect('left')
+  }
 
-    // If we were kicked or disconnected, we might need to force a reload
-    // to ensure clean state, but toggling isPresenceEnabled should
-    // trigger re-subscription in useSupabasePresence
-    if (rejoinDialog.reason === 'kicked') {
+  // Handle rejoin attempt - use connect callback
+  const handleRejoin = () => {
+    connect()
+    if (rejoinReason === 'kicked') {
       toast.success('Rejoining game...')
     }
   }
@@ -384,10 +349,17 @@ function GameRoomContent({
         onClose={handleCloseDuplicateTab}
       />
 
+      {/* Leave Confirmation Dialog */}
+      <LeaveGameDialog
+        open={showLeaveConfirmDialog}
+        onConfirm={handleConfirmLeave}
+        onCancel={() => setShowLeaveConfirmDialog(false)}
+      />
+
       {/* Rejoin/Leave Dialog */}
       <RejoinGameDialog
-        open={rejoinDialog.open}
-        reason={rejoinDialog.reason}
+        open={showRejoinDialog}
+        reason={rejoinReason}
         onRejoin={handleRejoin}
         onLeave={onLeaveGame}
       />
@@ -494,10 +466,49 @@ function GameRoomContent({
   )
 }
 
+// Inner component that has access to PresenceProvider
+function GameRoomWithPresence({
+  roomId,
+  onLeaveGame,
+  detectorType,
+  usePerspectiveWarp,
+}: Omit<GameRoomProps, 'playerName'>) {
+  const handleDuplicateSession = useCallback(() => {
+    console.log('[GameRoom] Duplicate session detected, showing dialog')
+    // This will be handled by the content component
+  }, [])
+
+  const handleSessionTransferred = useCallback(() => {
+    console.log(
+      '[GameRoom] Session transferred to another tab, closing this one',
+    )
+    toast.info('Session transferred to another tab')
+    // Give user a moment to see the toast, then leave
+    setTimeout(() => {
+      onLeaveGame()
+    }, 1500)
+  }, [onLeaveGame])
+
+  return (
+    <PresenceProvider
+      roomId={roomId}
+      onDuplicateSession={handleDuplicateSession}
+      onSessionTransferred={handleSessionTransferred}
+    >
+      <GameRoomContent
+        roomId={roomId}
+        onLeaveGame={onLeaveGame}
+        detectorType={detectorType}
+        usePerspectiveWarp={usePerspectiveWarp}
+      />
+    </PresenceProvider>
+  )
+}
+
 export function GameRoom(props: GameRoomProps) {
   return (
     <CardQueryProvider>
-      <GameRoomContent {...props} />
+      <GameRoomWithPresence {...props} />
     </CardQueryProvider>
   )
 }
