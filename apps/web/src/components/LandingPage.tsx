@@ -735,7 +735,10 @@ export function LandingPage({
 
         {/* Bottom CTA */}
         <section className="container mx-auto px-4 py-20">
-          <div className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/50 px-6 py-16 text-center backdrop-blur-sm md:px-12">
+          <SpotlightCard
+            className="border-slate-800 bg-slate-900/50 px-6 py-16 text-center backdrop-blur-sm md:px-12"
+            spotlightColor="rgba(168, 85, 247, 0.15)"
+          >
             {/* Background effects */}
             <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-purple-500/10 blur-3xl" />
             <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
@@ -774,7 +777,7 @@ export function LandingPage({
                 </Button>
               )}
             </div>
-          </div>
+          </SpotlightCard>
         </section>
 
         {/* Footer */}
