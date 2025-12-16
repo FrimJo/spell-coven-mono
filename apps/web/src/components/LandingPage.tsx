@@ -735,10 +735,10 @@ export function LandingPage({
 
         {/* Bottom CTA */}
         <section className="container mx-auto px-4 py-20">
-          <div className="relative overflow-hidden rounded-3xl border border-purple-500/30 bg-gradient-to-br from-purple-900/50 via-slate-900 to-slate-900 px-6 py-16 text-center shadow-2xl md:px-12">
+          <div className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/50 px-6 py-16 text-center backdrop-blur-sm md:px-12">
             {/* Background effects */}
-            <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-purple-500/20 blur-3xl" />
-            <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl" />
+            <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-purple-500/10 blur-3xl" />
+            <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
 
             <h2 className="relative z-10 mb-6 text-3xl text-white md:text-5xl">
               Ready to Enter the Coven?
@@ -753,7 +753,7 @@ export function LandingPage({
               <Button
                 size="lg"
                 onClick={isAuthenticated ? handleCreateClick : onSignIn}
-                className="h-12 min-w-[200px] gap-2 bg-white text-purple-900 hover:bg-slate-100"
+                className="h-14 min-w-[200px] gap-2 bg-purple-600 text-lg font-semibold text-white shadow-lg shadow-purple-500/25 hover:bg-purple-700"
               >
                 <Sparkles className="h-5 w-5" />
                 {isAuthenticated
@@ -764,7 +764,7 @@ export function LandingPage({
                 <Button
                   variant="outline"
                   size="lg"
-                  className="h-12 min-w-[200px] border-purple-400/30 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20 hover:text-white"
+                  className="h-14 min-w-[200px] border-slate-700 bg-slate-900/50 text-lg font-semibold text-slate-300 hover:bg-slate-800 hover:text-white"
                   onClick={() => {
                     const element = document.getElementById('how-it-works')
                     element?.scrollIntoView({ behavior: 'smooth' })
