@@ -1,7 +1,7 @@
 import type { DetectorType } from '@/lib/detectors'
 import { Suspense, useMemo, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
-import { useSupabasePresence } from '@/hooks/useSupabasePresence'
+import { usePresence } from '@/contexts/PresenceContext'
 import { useSupabaseWebRTC } from '@/hooks/useSupabaseWebRTC'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
 import {
@@ -55,17 +55,11 @@ export function VideoStreamGrid({
   usePerspectiveWarp = true,
   onCardCrop,
 }: VideoStreamGridProps) {
-  // Fetch remote players (exclude local player, use uniqueParticipants to avoid duplicates)
-  // Also get isLoading to know when presence is ready
+  // Get participants from context (already deduplicated)
   const {
     uniqueParticipants: gameRoomParticipants,
     isLoading: isPresenceLoading,
-  } = useSupabasePresence({
-    roomId,
-    userId,
-    username: localPlayerName,
-    enabled: true,
-  })
+  } = usePresence()
 
   // Presence is ready when not loading (channel has been set up with correct key)
   const presenceReady = !isPresenceLoading
