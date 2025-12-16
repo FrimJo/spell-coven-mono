@@ -313,8 +313,9 @@ interface SessionTransferPayload {
 }
 
 /**
- * Broadcast a kick/ban event to remove a player from the room
- * This tells the player's client to leave immediately
+ * Send a targeted leave request to a player (via broadcast).
+ * Only the targeted player acts on this message by removing their own presence.
+ * All other players will react to the presence sync change naturally.
  */
 async function broadcastRemovalEvent(
   roomId: string,
@@ -330,7 +331,7 @@ async function broadcastRemovalEvent(
     isBan,
   }
 
-  console.log('[PresenceStore] Broadcasting removal event:', payload)
+  console.log('[PresenceStore] Sending leave request to player:', payload)
   const response = await channel.send({
     type: 'broadcast',
     event: 'player:kicked',
@@ -478,55 +479,110 @@ export function useSupabasePresence({
   }, [hasDuplicateSession, duplicateSessions, onDuplicateSession])
 
   // Listen for kick/ban events and session transfer events
+  // Use channelManager.addBroadcastListener to ensure listeners persist across channel recreations
+  // Register listeners after the store is initialized (channel exists)
   useEffect(() => {
     if (!enabled || !roomId || !userId) return
 
-    const channel = channelManager.getChannel(roomId)
+    const store = getOrCreateRoomStore(roomId)
 
-    const handleKickEvent = (payload: { payload: KickEventPayload }) => {
-      console.log('[PresenceStore] Received removal event:', payload.payload)
+    // Wait for manager to be initialized (which creates the channel)
+    if (!store.manager) {
+      // Manager not initialized yet, listeners will be registered when manager is created
+      // This effect will re-run when snapshot.isLoading changes (manager initializes)
+      return
+    }
 
-      if (payload.payload.kickedUserId === userId && onKicked) {
-        const action = payload.payload.isBan ? 'banned' : 'kicked'
-        console.log(
-          `[PresenceStore] Current user was ${action}, calling onKicked`,
-        )
-        onKicked()
+    const handleKickEvent = (payload: { payload: unknown }) => {
+      // Type guard: ensure payload is KickEventPayload
+      const kickPayload = payload.payload as KickEventPayload
+      if (
+        kickPayload &&
+        typeof kickPayload === 'object' &&
+        'kickedUserId' in kickPayload &&
+        'kickedBy' in kickPayload &&
+        'isBan' in kickPayload
+      ) {
+        // Only the targeted player acts on this message
+        if (kickPayload.kickedUserId === userId && store.manager) {
+          const action = kickPayload.isBan ? 'banned' : 'kicked'
+          console.log(
+            `[PresenceStore] Current user was ${action}, removing own presence from Supabase`,
+          )
+
+          // Remove this player's presence from Supabase first.
+          // This triggers a presence sync for all players, showing one fewer participant.
+          // After presence is removed, notify the player they were kicked.
+          store.manager
+            .leave()
+            .catch((err) => {
+              console.error('[PresenceStore] Error removing presence:', err)
+            })
+            .finally(() => {
+              // Notify the player they were kicked (after presence removal)
+              onKicked?.()
+            })
+        }
       }
     }
 
-    const handleSessionTransfer = (payload: {
-      payload: SessionTransferPayload
-    }) => {
-      console.log(
-        '[PresenceStore] Received session transfer event:',
-        payload.payload,
-      )
-
-      // Check if this session should be closed
+    const handleSessionTransfer = (payload: { payload: unknown }) => {
+      // Type guard: ensure payload is SessionTransferPayload
+      const transferPayload = payload.payload as SessionTransferPayload
       if (
-        payload.payload.userId === userId &&
-        payload.payload.closeSessionIds.includes(sessionId)
+        transferPayload &&
+        typeof transferPayload === 'object' &&
+        'userId' in transferPayload &&
+        'newSessionId' in transferPayload &&
+        'closeSessionIds' in transferPayload
       ) {
         console.log(
-          '[PresenceStore] This session should be closed due to transfer',
+          '[PresenceStore] Received session transfer event:',
+          transferPayload,
         )
-        onSessionTransferred?.()
+
+        // Check if this session should be closed
+        if (
+          transferPayload.userId === userId &&
+          Array.isArray(transferPayload.closeSessionIds) &&
+          transferPayload.closeSessionIds.includes(sessionId)
+        ) {
+          console.log(
+            '[PresenceStore] This session should be closed due to transfer',
+          )
+          onSessionTransferred?.()
+        }
       }
     }
 
-    channel.on('broadcast', { event: 'player:kicked' }, handleKickEvent)
-    channel.on(
-      'broadcast',
-      { event: 'session:transfer' },
+    // Use channelManager.addBroadcastListener to ensure listeners are registered
+    // and persist across channel recreations
+    // The channel should exist now since manager is initialized
+    channelManager.addBroadcastListener(
+      roomId,
+      'player:kicked',
+      handleKickEvent,
+    )
+
+    channelManager.addBroadcastListener(
+      roomId,
+      'session:transfer',
       handleSessionTransfer,
     )
 
     return () => {
-      // Note: Supabase doesn't have a direct off() method for specific handlers,
-      // but the channel cleanup happens when the presence subscription ends
+      // Note: channelManager.addBroadcastListener tracks listeners internally
+      // and they persist across channel recreations, so we don't need to manually remove them
     }
-  }, [roomId, userId, sessionId, enabled, onKicked, onSessionTransferred])
+  }, [
+    roomId,
+    userId,
+    sessionId,
+    enabled,
+    onKicked,
+    onSessionTransferred,
+    snapshot.isLoading,
+  ])
 
   // Kick a player (temporary - they can rejoin)
   const kickPlayer = useCallback(
