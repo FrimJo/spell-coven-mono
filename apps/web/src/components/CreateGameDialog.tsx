@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { Check, CheckCircle2, Copy, Loader2, Play } from 'lucide-react'
+import Confetti from 'react-confetti'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
@@ -9,6 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@repo/ui/components/dialog'
+
+import { useWindowSize } from '../hooks/useWindowSize'
 
 interface CreateGameDialogProps {
   open: boolean
@@ -26,6 +30,7 @@ export function CreateGameDialog({
   onNavigateToRoom,
 }: CreateGameDialogProps) {
   const [copied, setCopied] = useState(false)
+  const { width, height } = useWindowSize()
 
   const handleCopy = async () => {
     if (!createdGameId) return
@@ -38,7 +43,23 @@ export function CreateGameDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-slate-800 bg-slate-900">
+      <DialogContent className="overflow-hidden border-slate-800 bg-slate-900 sm:max-w-md">
+        {createdGameId && (
+          <Confetti
+            width={width}
+            height={height}
+            recycle={false}
+            numberOfPieces={800}
+            gravity={0.15}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              zIndex: 60,
+              pointerEvents: 'none',
+            }}
+          />
+        )}
         <DialogHeader>
           <DialogTitle className="text-white">
             {createdGameId
@@ -67,15 +88,33 @@ export function CreateGameDialog({
             </div>
           ) : createdGameId ? (
             /* Success State */
-            <div className="flex flex-col items-center space-y-6 py-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', duration: 0.6, bounce: 0.4 }}
+              className="flex flex-col items-center space-y-6 py-4"
+            >
+              <motion.div
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{
+                  type: 'spring',
+                  duration: 0.8,
+                  bounce: 0.5,
+                  delay: 0.1,
+                }}
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20"
+              >
                 <CheckCircle2 className="h-8 w-8 text-green-400" />
-              </div>
+              </motion.div>
               <div className="w-full space-y-2 text-center">
                 <p className="text-lg font-medium text-slate-200">
                   Game room created successfully!
                 </p>
-                <div
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.3 }}
                   className="group flex cursor-pointer items-center justify-between rounded-lg border border-slate-700 bg-slate-950 p-3 transition-colors hover:border-purple-500/50"
                   onClick={handleCopy}
                 >
@@ -96,20 +135,32 @@ export function CreateGameDialog({
                       <Copy className="h-4 w-4" />
                     )}
                   </Button>
-                </div>
-                <p className="text-sm text-slate-400">
+                </motion.div>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-sm text-slate-400"
+                >
                   Share this link with your friends to let them join
-                </p>
+                </motion.p>
               </div>
-              <Button
-                onClick={onNavigateToRoom}
-                className="w-full bg-purple-600 text-white hover:bg-purple-700"
-                size="lg"
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="w-full"
               >
-                <Play className="mr-2 h-5 w-5" />
-                Enter Game Room
-              </Button>
-            </div>
+                <Button
+                  onClick={onNavigateToRoom}
+                  className="w-full bg-purple-600 text-white transition-all hover:scale-[1.02] hover:bg-purple-700"
+                  size="lg"
+                >
+                  <Play className="mr-2 h-5 w-5" />
+                  Enter Game Room
+                </Button>
+              </motion.div>
+            </motion.div>
           ) : null}
         </div>
       </DialogContent>
