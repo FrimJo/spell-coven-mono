@@ -41,6 +41,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@repo/ui/components/sheet'
+import { Toaster } from '@repo/ui/components/sonner'
 
 import type { CreatorInviteState } from '../lib/session-storage.js'
 import logo from '../assets/logo_1024x1024.png'
@@ -858,6 +859,7 @@ export function LandingPage({
           </div>
         </footer>
       </div>
+      <Toaster />
     </div>
   )
 }
