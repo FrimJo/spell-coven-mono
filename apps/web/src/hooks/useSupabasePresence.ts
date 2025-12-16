@@ -22,6 +22,8 @@ interface UseSupabasePresenceProps {
   onDuplicateSession?: (existingSessionId: string) => void
   /** Called when this session should be closed (transfer happened in another tab) */
   onSessionTransferred?: () => void
+  /** Called when an error occurs in the presence system */
+  onError?: (error: Error) => void
 }
 
 interface UseSupabasePresenceReturn {
@@ -417,6 +419,7 @@ export function useSupabasePresence({
   onKicked,
   onDuplicateSession,
   onSessionTransferred,
+  onError,
 }: UseSupabasePresenceProps): UseSupabasePresenceReturn {
   // Get stable session ID for this tab
   const sessionId = useMemo(() => getOrCreateSessionId(), [])
@@ -477,6 +480,13 @@ export function useSupabasePresence({
       onDuplicateSession(duplicateSessions[0].sessionId)
     }
   }, [hasDuplicateSession, duplicateSessions, onDuplicateSession])
+
+  // Handle presence errors
+  useEffect(() => {
+    if (snapshot.error && onError) {
+      onError(snapshot.error)
+    }
+  }, [snapshot.error, onError])
 
   // Listen for kick/ban events and session transfer events
   // Use channelManager.addBroadcastListener to ensure listeners persist across channel recreations
