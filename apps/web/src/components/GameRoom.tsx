@@ -58,7 +58,6 @@ function GameRoomContent({
     isConnected,
     disconnectReason,
     connect,
-    disconnect,
     kickPlayer,
     banPlayer,
     transferSession,
@@ -326,10 +325,12 @@ function GameRoomContent({
     setShowLeaveConfirmDialog(true)
   }
 
-  // Handle confirmed leave - use disconnect callback
+  // Handle confirmed leave - navigate away directly
+  // The presence cleanup happens automatically when the component unmounts
+  // We don't call disconnect('left') because that would show the RejoinGameDialog
   const handleConfirmLeave = () => {
     setShowLeaveConfirmDialog(false)
-    disconnect('left')
+    onLeaveGame()
   }
 
   // Handle rejoin attempt - use connect callback
