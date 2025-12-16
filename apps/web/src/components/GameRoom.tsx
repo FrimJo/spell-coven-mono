@@ -16,11 +16,13 @@ import { toast } from 'sonner'
 import { Button } from '@repo/ui/components/button'
 import { Toaster } from '@repo/ui/components/sonner'
 
+import type { RejoinReason } from './RejoinGameDialog.js'
 import { DuplicateSessionDialog } from './DuplicateSessionDialog.js'
 import { GameRoomLoader } from './GameRoomLoader.js'
 import { GameRoomPlayerCount } from './GameRoomPlayerCount.js'
 import { GameRoomSidebar } from './GameRoomSidebar.js'
 import { MediaSetupDialog } from './MediaSetupDialog.js'
+import { RejoinGameDialog } from './RejoinGameDialog.js'
 import { VideoStreamGridWithSuspense } from './VideoStreamGrid.js'
 
 interface GameRoomProps {
@@ -49,12 +51,21 @@ function GameRoomContent({
   const { query } = useCardQueryContext()
   const [copied, setCopied] = useState(false)
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false)
+  const [isPresenceEnabled, setIsPresenceEnabled] = useState(true)
+  const [rejoinDialog, setRejoinDialog] = useState<{
+    open: boolean
+    reason: RejoinReason
+  }>({
+    open: false,
+    reason: 'left',
+  })
 
   // Handle being kicked from the room
   const handleKicked = useCallback(() => {
-    toast.error('You have been removed from the game')
-    onLeaveGame()
-  }, [onLeaveGame])
+    // Disable presence since we're kicked
+    setIsPresenceEnabled(false)
+    setRejoinDialog({ open: true, reason: 'kicked' })
+  }, [])
 
   // Handle duplicate session detection
   const handleDuplicateSession = useCallback(() => {
@@ -76,7 +87,6 @@ function GameRoomContent({
 
   // Track room presence (shares store with GameRoomSidebar and GameRoomPlayerCount)
   const {
-    error: presenceError,
     isLoading: isPresenceLoading,
     ownerId,
     isOwner,
@@ -88,16 +98,16 @@ function GameRoomContent({
     userId,
     username,
     avatar: user?.avatar,
+    enabled: isPresenceEnabled,
     onKicked: handleKicked,
     onDuplicateSession: handleDuplicateSession,
     onSessionTransferred: handleSessionTransferred,
+    onError: (error) => {
+      console.error('[GameRoom] Presence error:', error)
+      setIsPresenceEnabled(false)
+      setRejoinDialog({ open: true, reason: 'disconnected' })
+    },
   })
-
-  useEffect(() => {
-    if (presenceError) {
-      toast.error(`Room error: ${presenceError.message}`)
-    }
-  }, [presenceError])
 
   // Compute shareable link (only on client)
   const shareLink = useMemo(() => {
@@ -346,6 +356,25 @@ function GameRoomContent({
     onLeaveGame()
   }
 
+  // Handle manual leave request
+  const handleManualLeave = () => {
+    setIsPresenceEnabled(false)
+    setRejoinDialog({ open: true, reason: 'left' })
+  }
+
+  // Handle rejoin attempt
+  const handleRejoin = () => {
+    setRejoinDialog({ ...rejoinDialog, open: false })
+    setIsPresenceEnabled(true)
+
+    // If we were kicked or disconnected, we might need to force a reload
+    // to ensure clean state, but toggling isPresenceEnabled should
+    // trigger re-subscription in useSupabasePresence
+    if (rejoinDialog.reason === 'kicked') {
+      toast.success('Rejoining game...')
+    }
+  }
+
   return (
     <div className="flex h-screen flex-col bg-slate-950">
       {/* Duplicate Session Dialog - shown when user is already connected from another tab */}
@@ -353,6 +382,14 @@ function GameRoomContent({
         open={showDuplicateDialog}
         onTransfer={handleTransferSession}
         onClose={handleCloseDuplicateTab}
+      />
+
+      {/* Rejoin/Leave Dialog */}
+      <RejoinGameDialog
+        open={rejoinDialog.open}
+        reason={rejoinDialog.reason}
+        onRejoin={handleRejoin}
+        onLeave={onLeaveGame}
       />
 
       {/* Media Setup Dialog - modal - only render when open to avoid Select component issues */}
@@ -373,7 +410,7 @@ function GameRoomContent({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onLeaveGame}
+              onClick={handleManualLeave}
               className="text-slate-400 hover:text-white"
               title="Leave game room"
             >
