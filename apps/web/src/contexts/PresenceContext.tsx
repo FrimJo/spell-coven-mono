@@ -1,7 +1,7 @@
 /**
  * PresenceContext - Provides room presence state to all child components
  *
- * This context wraps useSupabasePresence and provides a single source of truth
+ * This context wraps the presence hook and provides a single source of truth
  * for presence data. Child components consume via usePresence() hook.
  *
  * Benefits:
@@ -9,6 +9,9 @@
  * - Centralized connect/disconnect control
  * - No prop drilling for enabled state
  * - Computed values (uniqueParticipants, etc.) calculated once
+ *
+ * NOTE: Migrated from Supabase to Convex in Phase 3.
+ * Set USE_CONVEX_PRESENCE to false to revert to Supabase presence.
  */
 
 import type { Participant } from '@/types/participant'
@@ -21,7 +24,14 @@ import {
   useState,
 } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useConvexPresence } from '@/hooks/useConvexPresence'
 import { useSupabasePresence } from '@/hooks/useSupabasePresence'
+
+/**
+ * Feature flag to toggle between Convex and Supabase presence.
+ * Set to false to revert to Supabase if issues arise.
+ */
+const USE_CONVEX_PRESENCE = true
 
 export type DisconnectReason = 'kicked' | 'disconnected' | 'left'
 
@@ -106,17 +116,33 @@ export function PresenceProvider({
   }, [])
 
   // Single source of truth for presence
-  const presence = useSupabasePresence({
+  // Use Convex or Supabase based on feature flag
+  const convexPresence = useConvexPresence({
     roomId,
     userId,
     username,
     avatar,
-    enabled: isConnected,
+    enabled: USE_CONVEX_PRESENCE && isConnected,
     onKicked: handleKicked,
     onDuplicateSession,
     onSessionTransferred,
     onError: handleError,
   })
+
+  const supabasePresence = useSupabasePresence({
+    roomId,
+    userId,
+    username,
+    avatar,
+    enabled: !USE_CONVEX_PRESENCE && isConnected,
+    onKicked: handleKicked,
+    onDuplicateSession,
+    onSessionTransferred,
+    onError: handleError,
+  })
+
+  // Use the active presence hook based on feature flag
+  const presence = USE_CONVEX_PRESENCE ? convexPresence : supabasePresence
 
   // Connect callback - reconnects to presence
   const connect = useCallback(() => {

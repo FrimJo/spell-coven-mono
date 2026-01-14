@@ -27,10 +27,16 @@ export const env = createEnv({
    */
   clientPrefix: 'VITE_',
   client: {
+    // Convex
+    VITE_CONVEX_URL: z.url().min(1, 'VITE_CONVEX_URL is required'),
+
+    // Supabase (to be removed after migration)
     VITE_SUPABASE_URL: z.url().min(1, 'VITE_SUPABASE_URL is required'),
     VITE_SUPABASE_ANON_KEY: z
       .string()
       .min(1, 'VITE_SUPABASE_ANON_KEY is required'),
+
+    // App config
     VITE_BASE_URL: z.url().optional().default('https://localhost:1234'),
     VITE_EMBEDDINGS_VERSION: z.string().optional().default('v1.3'),
     VITE_EMBEDDINGS_FORMAT: z
@@ -47,6 +53,7 @@ export const env = createEnv({
    * Client variables come from import.meta.env (Vite exposes VITE_* vars)
    */
   runtimeEnv: {
+    VITE_CONVEX_URL: import.meta.env.VITE_CONVEX_URL,
     VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
     VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
     VITE_BASE_URL: import.meta.env.VITE_BASE_URL,
@@ -95,6 +102,7 @@ export const isClient = typeof window !== 'undefined'
  */
 export function getClientEnv() {
   return {
+    VITE_CONVEX_URL: env.VITE_CONVEX_URL,
     VITE_SUPABASE_URL: env.VITE_SUPABASE_URL,
     VITE_SUPABASE_ANON_KEY: env.VITE_SUPABASE_ANON_KEY,
     VITE_BASE_URL: env.VITE_BASE_URL,

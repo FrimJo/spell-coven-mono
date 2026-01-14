@@ -5,7 +5,6 @@
     "MODE",
     "PROD",
     "DEV",
-    "HUB_SECRET",
     "PORT",
     "ADMIN_CLEANUP_SECRET",
     "NODE_ENV",
@@ -15,7 +14,9 @@
     "VITE_EMBEDDINGS_FORMAT",
     "VITE_EMBEDDINGS_VERSION",
     "SUPABASE_SERVICE_ROLE_KEY",
-    "DISCORD_TEST_USER"
+    "DISCORD_TEST_USER",
+    "CONVEX_DEPLOYMENT",
+    "VITE_CONVEX_URL"
   ],
   "tasks": {
     "build": {

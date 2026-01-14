@@ -10,6 +10,7 @@ import {
 import globalCss from '@repo/ui/styles/globals.css?url'
 
 import { AuthProvider } from '../contexts/AuthContext.js'
+import { ConvexProvider } from '../integrations/convex/provider.js'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools.js'
 
 export interface MyRouterContext {
@@ -175,25 +176,27 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="dark min-h-screen bg-slate-950">
-        <AuthProvider>
-          {children}
-          <Suspense fallback={null}>
-            {showDevtools && (
-              <TanStackDevtoolsProduction
-                config={{
-                  position: 'bottom-right',
-                }}
-                plugins={[
-                  {
-                    name: 'Tanstack Router',
-                    render: <TanStackRouterDevtoolsPanelProduction />,
-                  },
-                  TanStackQueryDevtools,
-                ]}
-              />
-            )}
-          </Suspense>
-        </AuthProvider>
+        <ConvexProvider>
+          <AuthProvider>
+            {children}
+            <Suspense fallback={null}>
+              {showDevtools && (
+                <TanStackDevtoolsProduction
+                  config={{
+                    position: 'bottom-right',
+                  }}
+                  plugins={[
+                    {
+                      name: 'Tanstack Router',
+                      render: <TanStackRouterDevtoolsPanelProduction />,
+                    },
+                    TanStackQueryDevtools,
+                  ]}
+                />
+              )}
+            </Suspense>
+          </AuthProvider>
+        </ConvexProvider>
         <Scripts />
         {import.meta.env.MODE === 'production' && <SpeedInsightsProduction />}
       </body>

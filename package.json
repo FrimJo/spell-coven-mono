@@ -9,19 +9,28 @@
   "scripts": {
     "build": "bunx turbo run build",
     "dev": "bunx turbo run dev",
+    "dev:convex": "bunx convex dev",
     "test": "bunx turbo run test",
-    "lint": "bunx turbo run lint",
-    "format": "bunx turbo run format --continue -- --cache --cache-location .cache/.prettiercache",
-    "lint:fix": "bunx turbo run lint -- --fix",
-    "format:fix": "bunx turbo run format -- --write",
-    "typecheck": "bunx turbo run typecheck"
+    "lint": "bunx turbo run lint && bun run lint:convex",
+    "lint:convex": "bunx eslint --config convex/eslint.config.mjs convex/ --max-warnings 0",
+    "lint:fix": "bunx turbo run lint -- --fix && bunx eslint --config convex/eslint.config.mjs convex/ --max-warnings 0 --fix",
+    "format": "bunx turbo run format --continue -- --cache --cache-location .cache/.prettiercache && bun run format:convex",
+    "format:convex": "bunx prettier --check convex/",
+    "format:fix": "bunx turbo run format -- --write && bun run format:convex --write",
+    "typecheck": "bunx turbo run typecheck && bun run typecheck:convex",
+    "typecheck:convex": "bunx tsc --noEmit -p convex/tsconfig.json"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "bun-types": "^1.3.1",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-unused-imports": "^4.3.0",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
-    "turbo": "^2.5.8"
+    "turbo": "^2.5.8",
+    "typescript-eslint": "^8.53.0"
   },
   "workspaces": {
     "packages": [
@@ -44,5 +53,9 @@
       "dotenv-cli": "^7.4.2",
       "tailwindcss": "^4.1.11"
     }
+  },
+  "dependencies": {
+    "@convex-dev/auth": "^0.0.90",
+    "convex": "^1.31.4"
   }
 }
