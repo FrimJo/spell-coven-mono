@@ -1,0 +1,381 @@
+/**
+ * useConvexPresence - React hook for Convex-based presence
+ *
+ * Drop-in replacement for useSupabasePresence using Convex reactive queries
+ * and mutations. Uses roomPlayers table with lastSeenAt for presence tracking.
+ */
+
+import type { Participant } from '@/types/participant'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
+import { api } from '../../../../convex/_generated/api'
+import type { Doc } from '../../../../convex/_generated/dataModel'
+
+type RoomPlayer = Doc<'roomPlayers'>
+
+interface UseConvexPresenceProps {
+  roomId: string
+  userId: string
+  username: string
+  avatar?: string | null
+  enabled?: boolean
+  onKicked?: () => void
+  /** Called when a duplicate session is detected (same user in another tab) */
+  onDuplicateSession?: (existingSessionId: string) => void
+  /** Called when this session should be closed (transfer happened in another tab) */
+  onSessionTransferred?: () => void
+  /** Called when an error occurs in the presence system */
+  onError?: (error: Error) => void
+}
+
+interface UseConvexPresenceReturn {
+  /** All participants including duplicate sessions */
+  participants: Participant[]
+  /** Participants deduplicated by userId (for display - shows oldest session per user) */
+  uniqueParticipants: Participant[]
+  isLoading: boolean
+  error: Error | null
+  /** The ID of the room owner */
+  ownerId: string | null
+  /** Whether the current user is the room owner */
+  isOwner: boolean
+  /** Kick a player (temporary - they can rejoin) */
+  kickPlayer: (playerId: string) => Promise<void>
+  /** Ban a player (persistent - they cannot rejoin until unbanned) */
+  banPlayer: (playerId: string) => Promise<void>
+  /** Current session ID for this tab */
+  sessionId: string
+  /** Whether there's a duplicate session for this user */
+  hasDuplicateSession: boolean
+  /** Transfer session to this tab (kicks other tabs) */
+  transferSession: () => Promise<void>
+}
+
+/**
+ * Heartbeat interval in milliseconds (10 seconds)
+ */
+const HEARTBEAT_INTERVAL_MS = 10_000
+
+/**
+ * Generate or retrieve a stable session ID for this browser tab.
+ * Uses sessionStorage to persist across page reloads within the same tab,
+ * but generates a new ID for each new tab.
+ */
+function getOrCreateSessionId(): string {
+  if (typeof window === 'undefined') return ''
+
+  const storageKey = 'spell-coven-session-id'
+  let sessionId = sessionStorage.getItem(storageKey)
+
+  if (!sessionId) {
+    sessionId = crypto.randomUUID()
+    sessionStorage.setItem(storageKey, sessionId)
+    console.log('[ConvexPresence] Generated new session ID:', sessionId)
+  }
+
+  return sessionId
+}
+
+/**
+ * Hook to track game room participants using Convex
+ */
+export function useConvexPresence({
+  roomId,
+  userId,
+  username,
+  avatar,
+  enabled = true,
+  onKicked,
+  onDuplicateSession,
+  onSessionTransferred,
+  onError,
+}: UseConvexPresenceProps): UseConvexPresenceReturn {
+  // Get stable session ID for this tab
+  const sessionId = useMemo(() => getOrCreateSessionId(), [])
+
+  // Error state
+  const [error, setError] = useState<Error | null>(null)
+
+  // Track if we've joined the room
+  const hasJoinedRef = useRef(false)
+  const prevStatusRef = useRef<string | null>(null)
+
+  // Strip the "game-" prefix from roomId for Convex (Convex uses short codes)
+  const convexRoomId = roomId.replace(/^game-/, '')
+
+  // Convex mutations - store in refs to avoid lint warnings about unstable deps
+  // (Convex mutation functions are actually stable, but ESLint doesn't know that)
+  const joinRoomMutation = useMutation(api.players.joinRoom)
+  const leaveRoomMutation = useMutation(api.players.leaveRoom)
+  const heartbeatMutation = useMutation(api.players.heartbeat)
+  const kickMutation = useMutation(api.bans.kickPlayer)
+  const banMutation = useMutation(api.bans.banPlayer)
+
+  // Use refs to store mutation functions for stable references
+  const joinRoomRef = useRef(joinRoomMutation)
+  const leaveRoomRef = useRef(leaveRoomMutation)
+  const heartbeatRef = useRef(heartbeatMutation)
+  const kickMutationRef = useRef(kickMutation)
+  const banMutationRef = useRef(banMutation)
+
+  // Keep refs up to date
+  useEffect(() => {
+    joinRoomRef.current = joinRoomMutation
+    leaveRoomRef.current = leaveRoomMutation
+    heartbeatRef.current = heartbeatMutation
+    kickMutationRef.current = kickMutation
+    banMutationRef.current = banMutation
+  })
+
+  // Convex queries - reactive subscriptions
+  const roomQuery = useQuery(
+    api.rooms.getRoom,
+    enabled ? { roomId: convexRoomId } : 'skip',
+  )
+
+  const allSessionsQuery = useQuery(
+    api.players.listAllPlayerSessions,
+    enabled ? { roomId: convexRoomId } : 'skip',
+  )
+
+  const activePlayersQuery = useQuery(
+    api.players.listActivePlayers,
+    enabled ? { roomId: convexRoomId } : 'skip',
+  )
+
+  // Extract stable values from queries
+  const roomOwnerId = roomQuery?.ownerId
+  const allSessionsData = allSessionsQuery
+  const activePlayersData = activePlayersQuery
+
+  // Find current player's session to detect kick/status changes
+  const mySession = useMemo((): RoomPlayer | null => {
+    if (!allSessionsData) return null
+    return (
+      allSessionsData.find(
+        (p: RoomPlayer) => p.userId === userId && p.sessionId === sessionId,
+      ) ?? null
+    )
+  }, [allSessionsData, userId, sessionId])
+
+  // Detect if we were kicked (status changed to 'left' by someone else)
+  useEffect(() => {
+    if (!mySession) return
+
+    const currentStatus = mySession.status
+    const prevStatus = prevStatusRef.current
+
+    // If status changed from 'active' to 'left', we were kicked
+    if (prevStatus === 'active' && currentStatus === 'left') {
+      console.log('[ConvexPresence] Detected kick - status changed to left')
+      onKicked?.()
+    }
+
+    prevStatusRef.current = currentStatus
+  }, [mySession, onKicked])
+
+  // Join room on mount (when enabled)
+  useEffect(() => {
+    if (!enabled || !userId || !username || !sessionId || hasJoinedRef.current) {
+      return
+    }
+
+    console.log('[ConvexPresence] Joining room:', convexRoomId)
+
+    joinRoomRef
+      .current({
+        roomId: convexRoomId,
+        sessionId,
+        username,
+        avatar: avatar ?? undefined,
+        userId, // Pass userId for Phase 3 (before Convex Auth migration)
+      })
+      .then(() => {
+        console.log('[ConvexPresence] Successfully joined room')
+        hasJoinedRef.current = true
+        prevStatusRef.current = 'active'
+        setError(null)
+      })
+      .catch((err) => {
+        console.error('[ConvexPresence] Failed to join room:', err)
+        const error = err instanceof Error ? err : new Error(String(err))
+        setError(error)
+        onError?.(error)
+      })
+  }, [enabled, convexRoomId, userId, username, avatar, sessionId, onError])
+
+  // Leave room on unmount or when disabled
+  useEffect(() => {
+    if (!enabled) {
+      // If becoming disabled and we had joined, leave
+      if (hasJoinedRef.current) {
+        console.log('[ConvexPresence] Leaving room (disabled)')
+        leaveRoomRef.current({ roomId: convexRoomId, sessionId }).catch((err) => {
+          console.error('[ConvexPresence] Failed to leave room:', err)
+        })
+        hasJoinedRef.current = false
+      }
+      return
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (hasJoinedRef.current) {
+        console.log('[ConvexPresence] Leaving room (unmount)')
+        leaveRoomRef.current({ roomId: convexRoomId, sessionId }).catch((err) => {
+          console.error('[ConvexPresence] Failed to leave room:', err)
+        })
+        hasJoinedRef.current = false
+      }
+    }
+  }, [enabled, convexRoomId, sessionId])
+
+  // Heartbeat interval to maintain presence
+  useEffect(() => {
+    if (!enabled || !hasJoinedRef.current) return
+
+    const sendHeartbeat = () => {
+      heartbeatRef.current({ roomId: convexRoomId, sessionId }).catch((err) => {
+        console.error('[ConvexPresence] Heartbeat failed:', err)
+      })
+    }
+
+    // Send initial heartbeat
+    sendHeartbeat()
+
+    // Set up interval
+    const intervalId = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS)
+
+    return () => {
+      clearInterval(intervalId)
+    }
+  }, [enabled, convexRoomId, sessionId])
+
+  // Convert Convex players to Participant format
+  const participants: Participant[] = useMemo(() => {
+    if (!allSessionsData) return []
+
+    return allSessionsData
+      .filter((p: RoomPlayer) => p.status !== 'left')
+      .map((player: RoomPlayer) => ({
+        id: player.userId,
+        username: player.username,
+        avatar: player.avatar,
+        joinedAt: player.joinedAt,
+        sessionId: player.sessionId,
+      }))
+      .sort((a: Participant, b: Participant) => a.joinedAt - b.joinedAt)
+  }, [allSessionsData])
+
+  // Deduplicate participants by userId (keep oldest session per user)
+  const uniqueParticipants: Participant[] = useMemo(() => {
+    const seen = new Map<string, Participant>()
+    for (const p of participants) {
+      if (!seen.has(p.id)) {
+        seen.set(p.id, p)
+      }
+    }
+    return Array.from(seen.values())
+  }, [participants])
+
+  // Detect duplicate sessions (same userId, different sessionId)
+  const duplicateSessions = useMemo(() => {
+    return participants.filter(
+      (p) => p.id === userId && p.sessionId !== sessionId,
+    )
+  }, [participants, userId, sessionId])
+
+  const hasDuplicateSession = duplicateSessions.length > 0
+
+  // Notify about duplicate session when detected
+  useEffect(() => {
+    if (hasDuplicateSession && onDuplicateSession && duplicateSessions[0]) {
+      console.log(
+        '[ConvexPresence] Duplicate session detected:',
+        duplicateSessions[0].sessionId,
+      )
+      onDuplicateSession(duplicateSessions[0].sessionId)
+    }
+  }, [hasDuplicateSession, duplicateSessions, onDuplicateSession])
+
+  // Get owner from room record (not first participant)
+  const ownerId = roomOwnerId ?? null
+  const isOwner = ownerId !== null && ownerId === userId
+
+  // Kick a player (temporary - they can rejoin)
+  const kickPlayer = useCallback(
+    async (playerId: string): Promise<void> => {
+      if (!convexRoomId || !userId) {
+        throw new Error('Cannot kick player: not connected to room')
+      }
+
+      await kickMutationRef.current({
+        roomId: convexRoomId,
+        userId: playerId,
+        callerId: userId, // Pass caller for Phase 3 authorization
+      })
+    },
+    [convexRoomId, userId],
+  )
+
+  // Ban a player (persistent - they cannot rejoin)
+  const banPlayer = useCallback(
+    async (playerId: string): Promise<void> => {
+      if (!convexRoomId || !userId) {
+        throw new Error('Cannot ban player: not connected to room')
+      }
+
+      await banMutationRef.current({
+        roomId: convexRoomId,
+        userId: playerId,
+        callerId: userId, // Pass caller for Phase 3 authorization
+      })
+    },
+    [convexRoomId, userId],
+  )
+
+  // Transfer session to this tab (kick other tabs with same user)
+  // For Convex, we mark other sessions as 'left'
+  const transferSession = useCallback(async (): Promise<void> => {
+    if (!convexRoomId || !userId) {
+      throw new Error('Cannot transfer session: not connected to room')
+    }
+
+    const sessionsToClose = duplicateSessions.map((p) => p.sessionId)
+    if (sessionsToClose.length === 0) {
+      console.log('[ConvexPresence] No duplicate sessions to close')
+      return
+    }
+
+    console.log('[ConvexPresence] Transferring session, closing:', sessionsToClose)
+
+    // Leave each duplicate session
+    for (const otherSessionId of sessionsToClose) {
+      await leaveRoomRef.current({
+        roomId: convexRoomId,
+        sessionId: otherSessionId,
+      })
+    }
+
+    // The other tabs will detect their session was closed via the query
+    onSessionTransferred?.()
+  }, [convexRoomId, userId, duplicateSessions, onSessionTransferred])
+
+  // Determine loading state
+  const isLoading = activePlayersData === undefined || roomQuery === undefined
+
+  return {
+    participants,
+    uniqueParticipants,
+    isLoading,
+    error,
+    ownerId,
+    isOwner,
+    kickPlayer,
+    banPlayer,
+    sessionId,
+    hasDuplicateSession,
+    transferSession,
+  }
+}
+
