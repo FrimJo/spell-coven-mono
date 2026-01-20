@@ -1,7 +1,8 @@
 /**
  * Auth Context - Provides authentication state throughout the app
  *
- * Uses Supabase Auth with Discord OAuth provider.
+ * Supports both Supabase Auth and Convex Auth with Discord OAuth provider.
+ * Set USE_CONVEX_AUTH to switch between implementations.
  */
 
 import type { AuthUser } from '@/lib/supabase/auth'
@@ -15,11 +16,30 @@ import {
   signInWithDiscord,
   signOut,
 } from '@/lib/supabase/auth'
+import { useConvexAuthHook } from '@/hooks/useConvexAuth'
+
+// ============================================================================
+// Feature Flag - Toggle between Supabase and Convex Auth
+// ============================================================================
+
+/**
+ * Feature flag to control auth implementation
+ *
+ * When true: Uses Convex Auth with Discord OAuth
+ * When false: Uses Supabase Auth with Discord OAuth (legacy)
+ *
+ * Set to false to revert to Supabase auth if issues arise.
+ */
+const USE_CONVEX_AUTH = true
+
+// ============================================================================
+// Types
+// ============================================================================
 
 interface AuthContextValue {
   /** Current authenticated user, null if not logged in */
   user: AuthUser | null
-  /** Current Supabase session */
+  /** Current Supabase session (null when using Convex Auth) */
   session: Session | null
   /** Whether auth state is still loading */
   isLoading: boolean
@@ -37,7 +57,11 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
+// ============================================================================
+// Supabase Auth Provider (Legacy)
+// ============================================================================
+
+function SupabaseAuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -47,7 +71,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setSession(initialSession)
       setIsLoading(false)
       console.log(
-        '[Auth] Initial session:',
+        '[Auth/Supabase] Initial session:',
         initialSession ? 'authenticated' : 'not authenticated',
       )
     })
@@ -55,7 +79,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Subscribe to auth changes
     const unsubscribe = onAuthStateChange((newSession) => {
       console.log(
-        '[Auth] Auth state changed:',
+        '[Auth/Supabase] Auth state changed:',
         newSession ? 'authenticated' : 'not authenticated',
       )
       setSession(newSession)
@@ -71,7 +95,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await signInWithDiscord()
     } catch (error) {
-      console.error('[Auth] Sign in failed:', error)
+      console.error('[Auth/Supabase] Sign in failed:', error)
       throw error
     }
   }
@@ -81,7 +105,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await signOut()
       setSession(null)
     } catch (error) {
-      console.error('[Auth] Sign out failed:', error)
+      console.error('[Auth/Supabase] Sign out failed:', error)
       throw error
     }
   }
@@ -97,6 +121,62 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
+
+// ============================================================================
+// Convex Auth Provider
+// ============================================================================
+
+function ConvexAuthProviderInner({ children }: AuthProviderProps) {
+  const { user, isLoading, isAuthenticated, signIn, signOut } =
+    useConvexAuthHook()
+
+  useEffect(() => {
+    console.log(
+      '[Auth/Convex] Auth state:',
+      isAuthenticated ? 'authenticated' : 'not authenticated',
+      isLoading ? '(loading)' : '',
+    )
+  }, [isAuthenticated, isLoading])
+
+  // Map Convex user to AuthUser type for compatibility
+  const mappedUser: AuthUser | null = user
+    ? {
+        id: user.id,
+        username: user.username,
+        avatar: user.avatar,
+        email: user.email,
+      }
+    : null
+
+  const value: AuthContextValue = {
+    user: mappedUser,
+    session: null, // Convex doesn't have a session object like Supabase
+    isLoading,
+    isAuthenticated,
+    signIn,
+    signOut,
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+// ============================================================================
+// Main Auth Provider
+// ============================================================================
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  if (USE_CONVEX_AUTH) {
+    console.log('[Auth] Using Convex Auth')
+    return <ConvexAuthProviderInner>{children}</ConvexAuthProviderInner>
+  }
+
+  console.log('[Auth] Using Supabase Auth (legacy)')
+  return <SupabaseAuthProvider>{children}</SupabaseAuthProvider>
+}
+
+// ============================================================================
+// Hook
+// ============================================================================
 
 /**
  * Hook to access auth context
