@@ -2,8 +2,18 @@ import type { DetectorType } from '@/lib/detectors'
 import { Suspense, useMemo, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { usePresence } from '@/contexts/PresenceContext'
+import { useConvexWebRTC } from '@/hooks/useConvexWebRTC'
 import { useSupabaseWebRTC } from '@/hooks/useSupabaseWebRTC'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
+
+/**
+ * Feature flag for Convex signaling migration.
+ * Set to true to use Convex for WebRTC signaling, false for Supabase.
+ *
+ * Phase 4 of the Supabase → Convex migration.
+ * @see SUPABASE_TO_CONVEX_PLAN.md
+ */
+const USE_CONVEX_SIGNALING = true
 import {
   AlertCircle,
   Loader2,
@@ -104,23 +114,36 @@ export function VideoStreamGrid({
   // WebRTC hook for peer-to-peer video streaming
   // Wait for presence to be ready before initializing signaling
   // This ensures the channel is created with the correct presence key
+
+  // Common props for both WebRTC hooks
+  const webrtcProps = {
+    localPlayerId: userId,
+    remotePlayerIds: remotePlayerIds,
+    roomId: roomId,
+    localStream, // Pass the managed local stream
+    presenceReady, // Wait for presence before initializing signaling
+    onError: (error: Error) => {
+      console.error('[VideoStreamGrid] WebRTC error:', error)
+      toast.error(error.message)
+    },
+  }
+
+  // Use Convex or Supabase signaling based on feature flag
+  const convexWebRTC = useConvexWebRTC(
+    USE_CONVEX_SIGNALING ? webrtcProps : { ...webrtcProps, presenceReady: false },
+  )
+  const supabaseWebRTC = useSupabaseWebRTC(
+    USE_CONVEX_SIGNALING ? { ...webrtcProps, presenceReady: false } : webrtcProps,
+  )
+
+  // Select the active WebRTC hook based on feature flag
   const {
     remoteStreams,
     connectionStates,
     trackStates,
     error: _webrtcError,
     isInitialized: _isInitialized,
-  } = useSupabaseWebRTC({
-    localPlayerId: userId,
-    remotePlayerIds: remotePlayerIds,
-    roomId: roomId,
-    localStream, // Pass the managed local stream
-    presenceReady, // Wait for presence before initializing signaling
-    onError: (error) => {
-      console.error('[VideoStreamGrid] WebRTC error:', error)
-      toast.error(error.message)
-    },
-  })
+  } = USE_CONVEX_SIGNALING ? convexWebRTC : supabaseWebRTC
 
   // Debug: Log remote streams state
   // useEffect(() => {
