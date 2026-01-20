@@ -9,9 +9,6 @@
  * - Centralized connect/disconnect control
  * - No prop drilling for enabled state
  * - Computed values (uniqueParticipants, etc.) calculated once
- *
- * NOTE: Migrated from Supabase to Convex in Phase 3.
- * Set USE_CONVEX_PRESENCE to false to revert to Supabase presence.
  */
 
 import type { Participant } from '@/types/participant'
@@ -25,13 +22,6 @@ import {
 } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useConvexPresence } from '@/hooks/useConvexPresence'
-import { useSupabasePresence } from '@/hooks/useSupabasePresence'
-
-/**
- * Feature flag to toggle between Convex and Supabase presence.
- * Set to false to revert to Supabase if issues arise.
- */
-const USE_CONVEX_PRESENCE = true
 
 export type DisconnectReason = 'kicked' | 'banned' | 'disconnected' | 'left'
 
@@ -131,35 +121,19 @@ export function PresenceProvider({
     onSessionTransferred?.()
   }, [onSessionTransferred])
 
-  // Single source of truth for presence
-  // Use Convex or Supabase based on feature flag
-  const convexPresence = useConvexPresence({
+  // Single source of truth for presence using Convex
+  const presence = useConvexPresence({
     roomId,
     userId,
     username,
     avatar,
-    enabled: USE_CONVEX_PRESENCE && isConnected,
+    enabled: isConnected,
     onKicked: handleKicked,
     onBanned: handleBanned,
     onDuplicateSession,
     onSessionTransferred: handleSessionTransferred,
     onError: handleError,
   })
-
-  const supabasePresence = useSupabasePresence({
-    roomId,
-    userId,
-    username,
-    avatar,
-    enabled: !USE_CONVEX_PRESENCE && isConnected,
-    onKicked: handleKicked,
-    onDuplicateSession,
-    onSessionTransferred: handleSessionTransferred,
-    onError: handleError,
-  })
-
-  // Use the active presence hook based on feature flag
-  const presence = USE_CONVEX_PRESENCE ? convexPresence : supabasePresence
 
   // Connect callback - reconnects to presence
   const connect = useCallback(() => {

@@ -1,8 +1,8 @@
 /**
  * useConvexPresence - React hook for Convex-based presence
  *
- * Drop-in replacement for useSupabasePresence using Convex reactive queries
- * and mutations. Uses roomPlayers table with lastSeenAt for presence tracking.
+ * Uses Convex reactive queries and mutations for real-time presence tracking.
+ * Tracks participants via the roomPlayers table with lastSeenAt heartbeat.
  */
 
 import type { Participant } from '@/types/participant'

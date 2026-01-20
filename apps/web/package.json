@@ -19,7 +19,6 @@
   "dependencies": {
     "@huggingface/transformers": "^3.7.5",
     "@repo/ui": "workspace:*",
-    "@supabase/supabase-js": "^2.47.10",
     "@t3-oss/env-core": "^0.13.8",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/react-devtools": "^0.7.0",

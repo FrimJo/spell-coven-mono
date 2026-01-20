@@ -216,10 +216,25 @@
 
 **Important**: After making changes to convex files, run `bunx convex dev` to regenerate types.
 
-### Phase 6 — Remove Supabase
-- Delete Supabase client + env vars.
-- Remove `lib/supabase/*` and tests that mock it.
-- Remove `@supabase/supabase-js` dependency.
+### Phase 6 — Remove Supabase ✅
+- ~~Delete Supabase client + env vars.~~ → Removed from `env.ts`.
+- ~~Remove `lib/supabase/*` and tests that mock it.~~ → Deleted all files.
+- ~~Remove `@supabase/supabase-js` dependency.~~ → Removed from `package.json`.
+
+**Files removed**:
+- `apps/web/src/lib/supabase/` (entire directory)
+- `apps/web/src/hooks/useSupabaseWebRTC.ts`
+- `apps/web/src/hooks/useSupabasePresence.ts`
+- `apps/web/src/lib/temp-user.ts`
+- `apps/web/tests/lib/supabase/channel-manager.test.ts`
+
+**Files updated**:
+- `apps/web/src/contexts/AuthContext.tsx` — Removed Supabase auth, kept only Convex
+- `apps/web/src/contexts/PresenceContext.tsx` — Removed Supabase presence hook
+- `apps/web/src/components/VideoStreamGrid.tsx` — Removed Supabase WebRTC hook
+- `apps/web/src/components/LandingPage.tsx` — Updated AuthUser import
+- `apps/web/src/env.ts` — Removed Supabase env vars
+- `apps/web/package.json` — Removed `@supabase/supabase-js`
 
 ## 4. Risks & Mitigations
 
@@ -241,14 +256,23 @@
 2. ~~Presence migration.~~ ✅
 3. ~~Signaling migration.~~ ✅
 4. ~~Auth migration.~~ ✅
-5. **Next**: Supabase removal + cleanup (Phase 6).
+5. ~~Supabase removal + cleanup (Phase 6).~~ ✅
+
+**Migration complete!** All Supabase dependencies have been removed.
 
 ## 6. LLM Continuation Notes
 
-- **Phases 1-5 are complete.** All feature flags default to Convex.
-- Supabase is still running in parallel and can be reverted via feature flags:
-  - `USE_CONVEX_AUTH` in `AuthContext.tsx`
-  - `USE_CONVEX_PRESENCE` in `PresenceContext.tsx`
-  - `USE_CONVEX_SIGNALING` in `VideoStreamGrid.tsx`
-- **Next step**: Phase 6 — Remove Supabase entirely once Convex auth is validated in production.
+- **All phases (1-6) are complete.** The migration from Supabase to Convex is finished.
+- Supabase has been fully removed:
+  - No more `@supabase/supabase-js` dependency
+  - No more `VITE_SUPABASE_*` environment variables
+  - All feature flags and fallback code have been removed
+- All authentication, presence, and signaling now use Convex exclusively.
 - All mutations enforce authorization (owner-only bans, turn control, etc.).
+
+**Required Convex environment variables** (set in Convex Dashboard):
+- `AUTH_DISCORD_ID` — Discord OAuth Client ID
+- `AUTH_DISCORD_SECRET` — Discord OAuth Client Secret
+- `SITE_URL` — Redirect URL after auth (e.g., `https://localhost:1234`)
+- `JWT_PRIVATE_KEY` — RSA private key for signing JWTs
+- `JWKS` — JSON Web Key Set for token verification

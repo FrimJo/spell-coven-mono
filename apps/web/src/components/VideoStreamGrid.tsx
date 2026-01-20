@@ -3,17 +3,7 @@ import { Suspense, useMemo, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { usePresence } from '@/contexts/PresenceContext'
 import { useConvexWebRTC } from '@/hooks/useConvexWebRTC'
-import { useSupabaseWebRTC } from '@/hooks/useSupabaseWebRTC'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
-
-/**
- * Feature flag for Convex signaling migration.
- * Set to true to use Convex for WebRTC signaling, false for Supabase.
- *
- * Phase 4 of the Supabase → Convex migration.
- * @see SUPABASE_TO_CONVEX_PLAN.md
- */
-const USE_CONVEX_SIGNALING = true
 import {
   AlertCircle,
   Loader2,
@@ -115,8 +105,14 @@ export function VideoStreamGrid({
   // Wait for presence to be ready before initializing signaling
   // This ensures the channel is created with the correct presence key
 
-  // Common props for both WebRTC hooks
-  const webrtcProps = {
+  // WebRTC hook for peer connections using Convex signaling
+  const {
+    remoteStreams,
+    connectionStates,
+    trackStates,
+    error: _webrtcError,
+    isInitialized: _isInitialized,
+  } = useConvexWebRTC({
     localPlayerId: userId,
     remotePlayerIds: remotePlayerIds,
     roomId: roomId,
@@ -126,24 +122,7 @@ export function VideoStreamGrid({
       console.error('[VideoStreamGrid] WebRTC error:', error)
       toast.error(error.message)
     },
-  }
-
-  // Use Convex or Supabase signaling based on feature flag
-  const convexWebRTC = useConvexWebRTC(
-    USE_CONVEX_SIGNALING ? webrtcProps : { ...webrtcProps, presenceReady: false },
-  )
-  const supabaseWebRTC = useSupabaseWebRTC(
-    USE_CONVEX_SIGNALING ? { ...webrtcProps, presenceReady: false } : webrtcProps,
-  )
-
-  // Select the active WebRTC hook based on feature flag
-  const {
-    remoteStreams,
-    connectionStates,
-    trackStates,
-    error: _webrtcError,
-    isInitialized: _isInitialized,
-  } = USE_CONVEX_SIGNALING ? convexWebRTC : supabaseWebRTC
+  })
 
   // Debug: Log remote streams state
   // useEffect(() => {
