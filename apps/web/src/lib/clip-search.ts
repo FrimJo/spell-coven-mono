@@ -508,8 +508,8 @@ export async function embedFromCanvas(
       if (blob) {
         const url = URL.createObjectURL(blob)
         console.groupCollapsed(
-          '%c[DEBUG STAGE 5] Final card for CLIP embedding (with contrast enhancement)',
-          'background: #E91E63; color: white; padding: 2px 6px; border-radius: 3px;',
+          '%c[DEBUG STAGE 6] Final card for CLIP embedding (with contrast enhancement)',
+          'background: #673AB7; color: white; padding: 2px 6px; border-radius: 3px;',
         )
         console.log(
           '%c ',
@@ -530,8 +530,8 @@ export async function embedFromCanvas(
       if (blob) {
         const url = URL.createObjectURL(blob)
         console.groupCollapsed(
-          '%c[DEBUG STAGE 5] Final card for CLIP embedding (no enhancement)',
-          'background: #E91E63; color: white; padding: 2px 6px; border-radius: 3px;',
+          '%c[DEBUG STAGE 6] Final card for CLIP embedding (no enhancement)',
+          'background: #673AB7; color: white; padding: 2px 6px; border-radius: 3px;',
         )
         console.log(
           '%c ',

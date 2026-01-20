@@ -152,8 +152,8 @@ export async function warpPerspective(
       if (blob) {
         const url = URL.createObjectURL(blob)
         console.groupCollapsed(
-          '%c[DEBUG STAGE 2] Card after perspective warp (deskewed, before padding)',
-          'background: #2196F3; color: white; padding: 2px 6px; border-radius: 3px;',
+          '%c[DEBUG STAGE 3a] Perspective warp (deskewed, before padding)',
+          'background: #00BCD4; color: white; padding: 2px 6px; border-radius: 3px;',
         )
         console.log(
           '%c ',
@@ -175,8 +175,8 @@ export async function warpPerspective(
       if (blob) {
         const url = URL.createObjectURL(blob)
         console.groupCollapsed(
-          '%c[DEBUG STAGE 2b] Card after perspective warp + padding to square',
-          'background: #2196F3; color: white; padding: 2px 6px; border-radius: 3px;',
+          '%c[DEBUG STAGE 3b] Perspective warp + padding to square',
+          'background: #00BCD4; color: white; padding: 2px 6px; border-radius: 3px;',
         )
         console.log(
           '%c ',

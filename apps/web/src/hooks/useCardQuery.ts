@@ -56,8 +56,8 @@ export function useCardQuery(): UseCardQueryReturn {
         if (blob) {
           const url = URL.createObjectURL(blob)
           console.groupCollapsed(
-            '%c[DEBUG STAGE 3] Card input to query (cropped & deskewed, before rotation)',
-            'background: #FF9800; color: white; padding: 2px 6px; border-radius: 3px;',
+            '%c[DEBUG STAGE 4] Final cropped card (resized to 336x336, before rotation)',
+            'background: #9C27B0; color: white; padding: 2px 6px; border-radius: 3px;',
           )
           console.log(
             '%c ',
@@ -98,8 +98,8 @@ export function useCardQuery(): UseCardQueryReturn {
           if (blob) {
             const url = URL.createObjectURL(blob)
             console.groupCollapsed(
-              '%c[DEBUG STAGE 4] Card after 180° rotation (ready for embedding)',
-              'background: #9C27B0; color: white; padding: 2px 6px; border-radius: 3px;',
+              '%c[DEBUG STAGE 5] Card after 180° rotation (ready for embedding)',
+              'background: #E91E63; color: white; padding: 2px 6px; border-radius: 3px;',
             )
             console.log(
               '%c ',

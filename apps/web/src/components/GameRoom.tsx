@@ -89,13 +89,24 @@ function GameRoomContent({
   // Consider loaded once we have participants (even if 0 initially triggers sync)
   const isLoading = isEventLoading || isPresenceLoading
 
-  // HOOK: Dialog open state - only show on first visit to this room
+  // HOOK: Dialog open state - only show if user hasn't configured media devices yet
   // Note: Permissions are handled locally in VideoStreamGrid and MediaSetupDialog
   const [mediaDialogOpen, setMediaDialogOpen] = useState<boolean>(() => {
-    // Check if user has already completed setup for this room
+    // Check if user has already saved media device settings (globally, not per-room)
     if (typeof window === 'undefined') return false
-    const setupCompleted = localStorage.getItem(`media-setup-${roomId}`)
-    return !setupCompleted
+    try {
+      const stored = localStorage.getItem('mtg-selected-media-devices')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        // If user has at least video and audio input configured, skip the dialog
+        if (parsed.videoinput && parsed.audioinput) {
+          return false
+        }
+      }
+    } catch {
+      // If parsing fails, show the dialog to let user configure
+    }
+    return true // Show dialog if no settings found
   })
 
   const handleLoadingComplete = () => {
@@ -268,10 +279,8 @@ function GameRoomContent({
   // Show dialog until user completes media setup
   const handleDialogComplete = async () => {
     console.log('[GameRoom] Media dialog completed')
-
-    // Save to localStorage that setup has been completed for this room and the selected device
-    localStorage.setItem(`media-setup-${roomId}`, 'true')
-
+    // Device selections are saved by MediaSetupDialog via useSelectedMediaDevice
+    // No need to save a per-room flag - we check for device settings globally
     setMediaDialogOpen(false)
     console.log('[GameRoom] Media setup complete')
   }
