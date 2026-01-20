@@ -61,11 +61,16 @@ function GameRoomContent({
     kickPlayer,
     banPlayer,
     transferSession,
+    hasDuplicateSession,
   } = usePresence()
 
   const [copied, setCopied] = useState(false)
-  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false)
+  const [duplicateDialogDismissed, setDuplicateDialogDismissed] = useState(false)
   const [showLeaveConfirmDialog, setShowLeaveConfirmDialog] = useState(false)
+
+  // Show duplicate session dialog when detected, unless user has dismissed it
+  // Reset dismissed state when duplicate session is resolved (so dialog can show again if new duplicate appears)
+  const showDuplicateDialog = hasDuplicateSession && !duplicateDialogDismissed
 
   // Show rejoin dialog when disconnected (for any reason)
   const showRejoinDialog = !isConnected && disconnectReason !== null
@@ -306,7 +311,7 @@ function GameRoomContent({
   const handleTransferSession = async () => {
     try {
       await transferSession()
-      setShowDuplicateDialog(false)
+      setDuplicateDialogDismissed(true)
       toast.success('Session transferred to this tab')
     } catch (error) {
       console.error('[GameRoom] Failed to transfer session:', error)
@@ -316,7 +321,7 @@ function GameRoomContent({
 
   // Handle closing this tab (user wants to keep other session)
   const handleCloseDuplicateTab = () => {
-    setShowDuplicateDialog(false)
+    setDuplicateDialogDismissed(true)
     onLeaveGame()
   }
 
@@ -481,9 +486,9 @@ function GameRoomWithPresence({
 
   const handleSessionTransferred = useCallback(() => {
     console.log(
-      '[GameRoom] Session transferred to another tab, closing this one',
+      '[GameRoom] Session transferred to another tab, navigating away',
     )
-    toast.info('Session transferred to another tab')
+    toast.info('Session moved to another tab. Returning to home...')
     // Give user a moment to see the toast, then leave
     setTimeout(() => {
       onLeaveGame()

@@ -48,14 +48,27 @@ export const joinRoom = mutation({
       throw new Error("userId is required");
     }
 
-    // Check if room exists
-    const room = await ctx.db
+    // Check if room exists, auto-create if not (migration-friendly)
+    // During Phase 3, rooms may be created in Supabase but not yet in Convex
+    let room = await ctx.db
       .query("rooms")
       .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
       .first();
 
     if (!room) {
-      throw new Error("Room not found");
+      // Auto-create room with joining user as owner
+      // This supports migration where rooms exist in Supabase but not Convex
+      console.log(`[joinRoom] Auto-creating room: ${roomId} with owner: ${userId}`);
+      await ctx.db.insert("rooms", {
+        roomId,
+        ownerId: userId,
+        status: "waiting",
+        createdAt: Date.now(),
+      });
+      room = await ctx.db
+        .query("rooms")
+        .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
+        .first();
     }
 
     // Check if user is banned
@@ -149,6 +162,7 @@ export const leaveRoom = mutation({
  * Heartbeat - Update presence for a player session
  *
  * Call this periodically (e.g., every 10s) to maintain presence.
+ * Does NOT resurrect 'left' sessions (kicked/banned players stay gone).
  */
 export const heartbeat = mutation({
   args: {
@@ -163,7 +177,8 @@ export const heartbeat = mutation({
       )
       .first();
 
-    if (player) {
+    // Don't resurrect 'left' sessions - they were kicked/banned
+    if (player && player.status !== "left") {
       await ctx.db.patch(player._id, {
         lastSeenAt: Date.now(),
         status: "active",
@@ -181,7 +196,8 @@ export const heartbeat = mutation({
 export const listActivePlayers = query({
   args: { roomId: v.string() },
   handler: async (ctx, { roomId }) => {
-    const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS;
+    const now = Date.now();
+    const presenceThreshold = now - PRESENCE_THRESHOLD_MS;
 
     const players = await ctx.db
       .query("roomPlayers")
@@ -210,9 +226,11 @@ export const listActivePlayers = query({
 });
 
 /**
- * Get all player sessions in a room (including duplicates)
+ * Get all active player sessions in a room (including duplicates per user)
  *
  * Useful for detecting multi-tab scenarios.
+ * Returns only 'active' sessions - Convex is the source of truth.
+ * Kick detection: if your session disappears, you were kicked.
  */
 export const listAllPlayerSessions = query({
   args: { roomId: v.string() },
@@ -224,7 +242,7 @@ export const listAllPlayerSessions = query({
       .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
       .filter((q) =>
         q.and(
-          q.neq(q.field("status"), "left"),
+          q.eq(q.field("status"), "active"),
           q.gt(q.field("lastSeenAt"), presenceThreshold),
         ),
       )
