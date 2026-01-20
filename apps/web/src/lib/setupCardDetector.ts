@@ -4,6 +4,41 @@
 import type { DetectedCard } from '@/types/card-query'
 
 import type { CardDetector, DetectorType } from './detectors/index.js'
+
+// ============================================================================
+// Debug Blob URL Helpers
+// ============================================================================
+
+/**
+ * Generate a blob URL from a canvas and log it to the console for debugging
+ * @param canvas The canvas to capture
+ * @param stageName The name of the pipeline stage
+ * @param stageNumber The stage number (1-based)
+ * @param color CSS color for the console badge
+ */
+function logDebugBlobUrl(
+  canvas: HTMLCanvasElement,
+  stageName: string,
+  stageNumber: number,
+  color: string,
+): void {
+  canvas.toBlob((blob) => {
+    if (blob) {
+      const url = URL.createObjectURL(blob)
+      console.groupCollapsed(
+        `%c[DEBUG STAGE ${stageNumber}] ${stageName}`,
+        `background: ${color}; color: white; padding: 2px 6px; border-radius: 3px;`,
+      )
+      console.log(
+        '%c ',
+        `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+      )
+      console.log('Blob URL (copy this):', url)
+      console.log('Dimensions:', `${canvas.width}x${canvas.height}`)
+      console.groupEnd()
+    }
+  }, 'image/png')
+}
 import { warmModel } from './clip-search.js'
 import {
   CROPPED_CARD_HEIGHT,
@@ -49,9 +84,27 @@ let croppedCanvas: HTMLCanvasElement
 // ============================================================================
 
 let clickHandler: ((evt: MouseEvent) => void) | null = null
-let isProcessingClick = false // Prevent overlapping click processing
-let lastClickTime = 0 // Track last click timestamp for debouncing
 const CLICK_DEBOUNCE_MS = 2000 // Minimum time between clicks (2 seconds)
+
+// Use global state to prevent multiple HMR instances from processing clicks concurrently
+declare global {
+  interface Window {
+    __cardDetectorClickState?: {
+      isProcessing: boolean
+      lastClickTime: number
+    }
+  }
+}
+
+function getGlobalClickState() {
+  if (!window.__cardDetectorClickState) {
+    window.__cardDetectorClickState = {
+      isProcessing: false,
+      lastClickTime: 0,
+    }
+  }
+  return window.__cardDetectorClickState
+}
 
 // ============================================================================
 // Detector Initialization
@@ -371,6 +424,10 @@ function cropCardFromBoundingBox(
 async function cropCardAt(x: number, y: number): Promise<boolean> {
   // Need detected cards to crop
   if (!detectedCards.length) {
+    console.log(
+      '%c[DEBUG cropCardAt] No detected cards available',
+      'color: #999;',
+    )
     return false
   }
 
@@ -378,6 +435,12 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
   // Priority: 1) Click inside box, 2) Smallest box, 3) Highest confidence
   let bestIndex = -1
   let bestScore = -Infinity
+
+  // Log click position relative to detected boxes
+  console.log(
+    '%c[DEBUG cropCardAt] Checking click position against detected boxes',
+    'color: #999;',
+  )
 
   // Second pass: find best detection at click
   for (let i = 0; i < detectedCards.length; i++) {
@@ -426,6 +489,10 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
   }
 
   if (bestIndex === -1) {
+    console.log(
+      '%c[DEBUG cropCardAt] Click was not inside any detected bounding box',
+      'color: #ff9800;',
+    )
     return false
   }
 
@@ -434,8 +501,17 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
     throw new Error(`setupCardDetector: Card not found at index ${bestIndex}`)
   }
 
+  console.log(
+    `%c[DEBUG cropCardAt] Selected card ${bestIndex + 1} (score: ${card.score.toFixed(3)})`,
+    'color: #4CAF50;',
+  )
+
   // Use the current frame canvas captured during detection
   if (!currentFrameCanvas) {
+    console.log(
+      '%c[DEBUG cropCardAt] No current frame canvas available',
+      'color: #f44336;',
+    )
     return false
   }
 
@@ -465,10 +541,26 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
       cardWidthPx,
       cardHeightPx,
     )
+
+    // DEBUG STAGE 2: Log the raw bounding box crop (before perspective correction)
+    logDebugBlobUrl(
+      detectionCropCanvas,
+      'Bounding box crop (raw detection)',
+      2,
+      '#4CAF50', // Green
+    )
   }
 
   // T022: Use warped canvas if available (from SlimSAM perspective correction) and enabled
   if (enablePerspectiveWarp && card.warpedCanvas) {
+    // DEBUG STAGE 3: Log SlimSAM warped canvas before resize
+    logDebugBlobUrl(
+      card.warpedCanvas,
+      'After perspective correction (SlimSAM warp)',
+      3,
+      '#FF9800', // Orange
+    )
+
     // Copy warped canvas to cropped canvas
     croppedCanvas.width = CROPPED_CARD_WIDTH
     croppedCanvas.height = CROPPED_CARD_HEIGHT
@@ -506,6 +598,14 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
       if (quad) {
         // Step 2: Apply perspective correction to get canonical 336×336 image
         const warpedCanvas = await warpCardToCanonical(sourceCanvas, quad)
+
+        // DEBUG STAGE 3: Log OpenCV warped canvas
+        logDebugBlobUrl(
+          warpedCanvas,
+          'After perspective correction (OpenCV warp)',
+          3,
+          '#FF9800', // Orange
+        )
 
         // Copy warped canvas to cropped canvas
         croppedCanvas.width = CROPPED_CARD_WIDTH
@@ -590,14 +690,17 @@ export async function setupCardDetector(args: {
   // Create new click handler
   clickHandler = (evt: MouseEvent) => {
     const now = performance.now()
+    const globalState = getGlobalClickState()
 
     // Debounce clicks (prevent double-clicks)
-    if (now - lastClickTime < CLICK_DEBOUNCE_MS) {
+    if (now - globalState.lastClickTime < CLICK_DEBOUNCE_MS) {
+      console.log('%c[DEBUG] Click debounced (too soon after last click)', 'color: #999;')
       return
     }
 
-    // Prevent overlapping click processing
-    if (isProcessingClick) {
+    // Prevent overlapping click processing (global across all HMR instances)
+    if (globalState.isProcessing) {
+      console.log('%c[DEBUG] Click ignored (already processing)', 'color: #999;')
       return
     }
 
@@ -609,8 +712,14 @@ export async function setupCardDetector(args: {
     const x = Math.floor(clickX * (overlayEl.width / rect.width))
     const y = Math.floor(clickY * (overlayEl.height / rect.height))
 
-    lastClickTime = now
-    isProcessingClick = true
+    globalState.lastClickTime = now
+    globalState.isProcessing = true
+    
+    console.log(
+      '%c[DEBUG] Processing click',
+      'background: #2196F3; color: white; padding: 2px 6px; border-radius: 3px;',
+      { x, y },
+    )
 
     // Performance tracking: Click to database response pipeline
     const metrics = {
@@ -630,10 +739,59 @@ export async function setupCardDetector(args: {
         await detectCards({ x, y })
         metrics.detection = performance.now() - detectionStart
 
+        // DEBUG STAGE 1: Log the video frame at the time of click
+        if (currentFrameCanvas) {
+          logDebugBlobUrl(
+            currentFrameCanvas,
+            'Video frame at click time',
+            1,
+            '#2196F3', // Blue
+          )
+        }
+
+        // Log detection results
+        if (detectedCards.length === 0) {
+          console.log(
+            '%c[DEBUG] No cards detected in frame',
+            'background: #f44336; color: white; padding: 2px 6px; border-radius: 3px;',
+          )
+          console.log('Click position:', { x, y })
+          console.log(
+            'Tip: Make sure a card is visible in the video and the detector is initialized',
+          )
+        } else {
+          console.log(
+            `%c[DEBUG] Found ${detectedCards.length} card(s) in frame`,
+            'background: #4CAF50; color: white; padding: 2px 6px; border-radius: 3px;',
+          )
+          detectedCards.forEach((card, i) => {
+            const boxPx = {
+              xmin: Math.round(card.box.xmin * (currentFrameCanvas?.width ?? 0)),
+              ymin: Math.round(card.box.ymin * (currentFrameCanvas?.height ?? 0)),
+              xmax: Math.round(card.box.xmax * (currentFrameCanvas?.width ?? 0)),
+              ymax: Math.round(card.box.ymax * (currentFrameCanvas?.height ?? 0)),
+            }
+            console.log(`  Card ${i + 1}: score=${card.score.toFixed(3)}, box=`, boxPx)
+          })
+        }
+
         // 2. Crop the detected card
         const cropStart = performance.now()
         const ok = await cropCardAt(x, y)
         metrics.crop = performance.now() - cropStart
+
+        if (!ok) {
+          console.log(
+            '%c[DEBUG] Failed to crop card at click position',
+            'background: #ff9800; color: white; padding: 2px 6px; border-radius: 3px;',
+          )
+          console.log('Click position:', { x, y })
+          if (detectedCards.length > 0) {
+            console.log(
+              'Cards were detected but click was not inside any bounding box',
+            )
+          }
+        }
 
         if (ok && typeof args.onCrop === 'function') {
           // 3. Embedding and search happen in onCrop callback
@@ -647,8 +805,9 @@ export async function setupCardDetector(args: {
           args.onCrop(croppedCanvas)
         }
       } finally {
-        // Always reset the flag, even if there was an error
-        isProcessingClick = false
+        // Always reset the global flag, even if there was an error
+        getGlobalClickState().isProcessing = false
+        console.log('%c[DEBUG] Click processing complete', 'color: #999;')
       }
     })
   }

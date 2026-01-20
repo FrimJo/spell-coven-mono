@@ -369,8 +369,8 @@ export class SlimSAMDetector implements CardDetector {
               if (blob) {
                 const url = URL.createObjectURL(blob)
                 console.groupCollapsed(
-                  '%c[DEBUG STAGE 1] Frame with detected card quad (GREEN=edges, RED=corners)',
-                  'background: #4CAF50; color: white; padding: 2px 6px; border-radius: 3px;',
+                  '%c[DEBUG DETECTION] SlimSAM detected quad (GREEN=edges, RED=corners)',
+                  'background: #795548; color: white; padding: 2px 6px; border-radius: 3px;',
                 )
                 console.log(
                   '%c ',
