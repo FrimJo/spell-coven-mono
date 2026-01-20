@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "cd ../.. && bun install",
-  "buildCommand": "cd ../.. && bunx turbo run build --filter=@repo/web",
+  "buildCommand": "cd ../.. && npx convex deploy --cmd-url-env-var-name VITE_CONVEX_URL --cmd && bunx turbo run build --filter=@repo/web",
   "outputDirectory": "dist/client",
   "rewrites": [{ "source": "/(.*)", "destination": "/_shell.html" }]
 }
