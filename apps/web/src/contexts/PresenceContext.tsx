@@ -33,7 +33,7 @@ import { useSupabasePresence } from '@/hooks/useSupabasePresence'
  */
 const USE_CONVEX_PRESENCE = true
 
-export type DisconnectReason = 'kicked' | 'disconnected' | 'left'
+export type DisconnectReason = 'kicked' | 'banned' | 'disconnected' | 'left'
 
 interface PresenceContextValue {
   /** All participants including duplicate sessions */
@@ -108,12 +108,28 @@ export function PresenceProvider({
     setIsConnected(false)
   }, [])
 
+  const handleBanned = useCallback(() => {
+    console.log('[PresenceProvider] User was banned')
+    disconnectReasonRef.current = 'banned'
+    setDisconnectReason('banned')
+    setIsConnected(false)
+  }, [])
+
   const handleError = useCallback((error: Error) => {
     console.error('[PresenceProvider] Presence error:', error)
     disconnectReasonRef.current = 'disconnected'
     setDisconnectReason('disconnected')
     setIsConnected(false)
   }, [])
+
+  // Wrap onSessionTransferred to immediately disconnect (prevent rejoining)
+  const handleSessionTransferred = useCallback(() => {
+    console.log('[PresenceProvider] Session transferred to another tab')
+    // Immediately disconnect to prevent the hook from rejoining
+    setIsConnected(false)
+    // Then call the parent callback
+    onSessionTransferred?.()
+  }, [onSessionTransferred])
 
   // Single source of truth for presence
   // Use Convex or Supabase based on feature flag
@@ -124,8 +140,9 @@ export function PresenceProvider({
     avatar,
     enabled: USE_CONVEX_PRESENCE && isConnected,
     onKicked: handleKicked,
+    onBanned: handleBanned,
     onDuplicateSession,
-    onSessionTransferred,
+    onSessionTransferred: handleSessionTransferred,
     onError: handleError,
   })
 
@@ -137,7 +154,7 @@ export function PresenceProvider({
     enabled: !USE_CONVEX_PRESENCE && isConnected,
     onKicked: handleKicked,
     onDuplicateSession,
-    onSessionTransferred,
+    onSessionTransferred: handleSessionTransferred,
     onError: handleError,
   })
 
