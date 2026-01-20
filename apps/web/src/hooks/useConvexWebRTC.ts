@@ -1,8 +1,8 @@
 /**
  * useConvexWebRTC - React hook for WebRTC connections via Convex
  *
- * Drop-in replacement for useSupabaseWebRTC using Convex signaling.
- * Wires together useConvexSignaling and WebRTCManager.
+ * Wires together useConvexSignaling and WebRTCManager for peer-to-peer
+ * video streaming using Convex as the signaling server.
  */
 
 import type { ConnectionState, TrackState } from '@/types/connection'

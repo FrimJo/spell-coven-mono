@@ -2,7 +2,6 @@
  * Convex Auth Hook
  *
  * Provides authentication using Convex Auth with Discord OAuth.
- * Designed to be a drop-in replacement for the Supabase auth hook.
  *
  * @see https://labs.convex.dev/auth
  */
@@ -45,9 +44,6 @@ export interface UseConvexAuthReturn {
 
 /**
  * Hook to use Convex Auth with Discord OAuth
- *
- * Provides the same interface as the Supabase-based useAuth hook
- * to allow for gradual migration.
  *
  * @example
  * ```tsx

@@ -40,7 +40,7 @@ function GameRoomContent({
   detectorType,
   usePerspectiveWarp = true,
 }: Omit<GameRoomProps, 'playerName'>) {
-  // Get authenticated user from Supabase Auth (Discord OAuth)
+  // Get authenticated user from Convex Auth (Discord OAuth)
   const { user } = useAuth()
 
   // User should always be authenticated at this point (protected route)

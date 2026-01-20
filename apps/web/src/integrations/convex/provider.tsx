@@ -2,7 +2,6 @@
  * Convex Provider
  *
  * Provides Convex client and auth context to the app.
- * Runs in parallel with Supabase during migration.
  */
 
 import type { ReactNode } from 'react'

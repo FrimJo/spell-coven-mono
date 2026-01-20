@@ -1,4 +1,4 @@
-import type { AuthUser } from '@/lib/supabase/auth'
+import type { AuthUser } from '@/contexts/AuthContext'
 import { useState } from 'react'
 import {
   Camera,
