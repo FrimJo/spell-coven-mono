@@ -188,10 +188,33 @@
 
 **Feature flag**: Set `USE_CONVEX_SIGNALING = false` in `VideoStreamGrid.tsx` to revert to Supabase.
 
-### Phase 5 — Auth Migration
-- Swap Supabase auth flow for Convex Auth (Discord OAuth or provider).
-- Update `AuthContext` to use Convex identity hooks.
-- Move authorization logic to Convex functions (owner-only bans, turn control).
+### Phase 5 — Auth Migration ✅
+- ~~Swap Supabase auth flow for Convex Auth (Discord OAuth).~~ → Implemented.
+- ~~Update `AuthContext` to use Convex identity hooks.~~ → Uses `useConvexAuthHook` with feature flag.
+- Authorization logic already in Convex functions (from Phase 2/3).
+
+**Files created/modified**:
+- `convex/auth.config.ts` — **Required** auth provider configuration for token validation
+- `convex/users.ts` — New file with `getCurrentUser` query
+- `apps/web/src/hooks/useConvexAuth.ts` — New Convex-based auth hook
+- `apps/web/src/contexts/AuthContext.tsx` — Added feature flag `USE_CONVEX_AUTH`
+
+**Feature flag**: Set `USE_CONVEX_AUTH = false` in `AuthContext.tsx` to revert to Supabase.
+
+**Implementation details**:
+- `useConvexAuthHook` provides the same interface as Supabase auth (`user`, `isLoading`, `isAuthenticated`, `signIn`, `signOut`)
+- `ConvexAuthUser` type matches the existing `AuthUser` type (id, username, avatar, email)
+- User profile data comes from Convex Auth's users table via `getCurrentUser` query
+- Discord OAuth sign-in uses `signIn('discord')` from `@convex-dev/auth/react`
+
+**Required Convex environment variables** (set in Convex Dashboard):
+- `AUTH_DISCORD_ID` — Discord OAuth Client ID
+- `AUTH_DISCORD_SECRET` — Discord OAuth Client Secret
+- `SITE_URL` — Redirect URL after auth (e.g., `https://localhost:1234`)
+- `JWT_PRIVATE_KEY` — RSA private key for signing JWTs
+- `JWKS` — JSON Web Key Set for token verification
+
+**Important**: After making changes to convex files, run `bunx convex dev` to regenerate types.
 
 ### Phase 6 — Remove Supabase
 - Delete Supabase client + env vars.
@@ -214,15 +237,18 @@
 
 ## 5. Suggested Milestones
 
-1. Convex setup + room state migration (owner/health/turn).
-2. Presence migration.
-3. Signaling migration.
-4. Auth migration.
-5. Supabase removal + cleanup.
+1. ~~Convex setup + room state migration (owner/health/turn).~~ ✅
+2. ~~Presence migration.~~ ✅
+3. ~~Signaling migration.~~ ✅
+4. ~~Auth migration.~~ ✅
+5. **Next**: Supabase removal + cleanup (Phase 6).
 
 ## 6. LLM Continuation Notes
 
-- Start with Phase 1 (Convex integration) and Phase 2 (room state).
-- Keep Supabase running in parallel to reduce disruption.
-- Ensure all new mutations enforce authorization (owner-only actions, etc.).
-- Prefer incremental changes and keep UI working at every step.
+- **Phases 1-5 are complete.** All feature flags default to Convex.
+- Supabase is still running in parallel and can be reverted via feature flags:
+  - `USE_CONVEX_AUTH` in `AuthContext.tsx`
+  - `USE_CONVEX_PRESENCE` in `PresenceContext.tsx`
+  - `USE_CONVEX_SIGNALING` in `VideoStreamGrid.tsx`
+- **Next step**: Phase 6 — Remove Supabase entirely once Convex auth is validated in production.
+- All mutations enforce authorization (owner-only bans, turn control, etc.).

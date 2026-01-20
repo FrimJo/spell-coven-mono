@@ -15,6 +15,7 @@ import type * as http from "../http.js";
 import type * as players from "../players.js";
 import type * as rooms from "../rooms.js";
 import type * as signals from "../signals.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   players: typeof players;
   rooms: typeof rooms;
   signals: typeof signals;
+  users: typeof users;
 }>;
 
 /**
