@@ -7,7 +7,7 @@
  * Phase 5 will use getAuthUserId for proper authorization.
  */
 
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -80,7 +80,7 @@ export const listSignals = query({
 });
 
 /**
- * Clean up old signals
+ * Clean up old signals for a specific room
  *
  * Removes signals older than SIGNAL_TTL_MS.
  * Should be called periodically (e.g., via scheduled function).
@@ -102,5 +102,36 @@ export const cleanupSignals = mutation({
     }
 
     return { deleted: oldSignals.length };
+  },
+});
+
+/**
+ * Clean up old signals across all rooms
+ *
+ * Internal mutation called by the cron job to remove expired signals.
+ * Removes signals older than SIGNAL_TTL_MS from all rooms.
+ */
+export const cleanupAllSignals = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const threshold = Date.now() - SIGNAL_TTL_MS;
+
+    // Query all signals and filter by createdAt
+    // Note: Without a global createdAt index, we scan all signals
+    const allSignals = await ctx.db.query("roomSignals").collect();
+
+    const oldSignals = allSignals.filter((s) => s.createdAt < threshold);
+
+    let deleted = 0;
+    for (const signal of oldSignals) {
+      await ctx.db.delete(signal._id);
+      deleted++;
+    }
+
+    if (deleted > 0) {
+      console.log(`[SignalCleanup] Deleted ${deleted} expired signals`);
+    }
+
+    return { deleted };
   },
 });

@@ -172,11 +172,21 @@
 
 **Feature flag**: Set `USE_CONVEX_PRESENCE = false` in `PresenceContext.tsx` to revert to Supabase.
 
-### Phase 4 — WebRTC Signaling Migration
-- Replace Supabase broadcast with Convex “signals” collection.
-- Use realtime queries to receive new signals.
-- Consider cleanup / TTL to avoid growth.
-- Evaluate latency; if insufficient, consider hybrid with a dedicated signaling channel.
+
+### Phase 4 — WebRTC Signaling Migration ✅
+- ~~Replace Supabase broadcast with Convex "signals" collection.~~ → Implemented.
+- ~~Use realtime queries to receive new signals.~~ → `useConvexSignaling` hook with reactive queries.
+- ~~Consider cleanup / TTL to avoid growth.~~ → 60s TTL with cron cleanup every minute.
+- Latency evaluation: Pending testing; hybrid approach available if needed.
+
+**Files created/modified**:
+- `apps/web/src/hooks/useConvexSignaling.ts` — New Convex-based signaling hook
+- `apps/web/src/hooks/useConvexWebRTC.ts` — New Convex-based WebRTC hook
+- `apps/web/src/components/VideoStreamGrid.tsx` — Added feature flag `USE_CONVEX_SIGNALING`
+- `convex/signals.ts` — Added `cleanupAllSignals` internal mutation
+- `convex/crons.ts` — Scheduled cleanup job (every minute)
+
+**Feature flag**: Set `USE_CONVEX_SIGNALING = false` in `VideoStreamGrid.tsx` to revert to Supabase.
 
 ### Phase 5 — Auth Migration
 - Swap Supabase auth flow for Convex Auth (Discord OAuth or provider).
