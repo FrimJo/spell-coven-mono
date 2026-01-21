@@ -66,6 +66,7 @@ let enablePerspectiveWarp = true
 
 // Current frame canvas for click handling
 let currentFrameCanvas: HTMLCanvasElement | null = null
+let currentFullResCanvas: HTMLCanvasElement | null = null
 
 // ============================================================================
 // Canvas and Video Elements
@@ -258,8 +259,27 @@ async function detectCards(clickPoint?: { x: number; y: number }) {
     }
     tempCtx.drawImage(videoEl, 0, 0, tempCanvas.width, tempCanvas.height)
 
-    // Store current frame for click handling
-    currentFrameCanvas = tempCanvas
+    // Store current frame for click handling (full resolution for accuracy)
+    const fullResSnapshot = document.createElement('canvas')
+    fullResSnapshot.width = videoEl.videoWidth
+    fullResSnapshot.height = videoEl.videoHeight
+    const fullResSnapshotCtx = fullResSnapshot.getContext('2d', {
+      willReadFrequently: true,
+    })
+    if (fullResSnapshotCtx) {
+      fullResSnapshotCtx.drawImage(
+        videoEl,
+        0,
+        0,
+        fullResSnapshot.width,
+        fullResSnapshot.height,
+      )
+      currentFullResCanvas = fullResSnapshot
+      currentFrameCanvas = fullResSnapshot
+    } else {
+      currentFrameCanvas = tempCanvas
+      currentFullResCanvas = null
+    }
 
     // Set click point for SlimSAM detector if provided
     if (
@@ -306,14 +326,15 @@ function stopDetection() {
   }
   detectedCards = []
   currentFrameCanvas = null
+  currentFullResCanvas = null
   isDetecting = false
 }
 
 /**
  * Crop card from bounding box
  * CRITICAL: Must match Python embedding pipeline preprocessing for accuracy
- * Python pipeline: center-crop to square (min dimension) → resize to 336×336
- * See: packages/mtg-image-db/build_mtg_faiss.py lines 122-135
+ * Python pipeline: pad to square with black borders → resize to target size (default 224)
+ * See: packages/mtg-image-db/build_mtg_faiss.py
  * @param box Bounding box from DETR detection (normalized coordinates)
  * @param sourceCanvas Optional source canvas to crop from (if not provided, uses videoEl)
  * @returns True if crop succeeded, false otherwise
@@ -432,7 +453,7 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
   }
 
   // Find best card at click position
-  // Priority: 1) Click inside box, 2) Smallest box, 3) Highest confidence
+  // Priority: 1) Click inside box, 2) Nearest center, 3) Highest confidence, 4) Smaller box
   let bestIndex = -1
   let bestScore = -Infinity
 
@@ -466,21 +487,26 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
     const area = boxWidth * boxHeight
     const canvasArea = overlayEl.width * overlayEl.height
 
-    // Score: balance between small size and high confidence
+    // Distance from click to box center (closer is better)
+    const centerX = boxXMin + boxWidth / 2
+    const centerY = boxYMin + boxHeight / 2
+    const dx = x - centerX
+    const dy = y - centerY
+    const distance = Math.hypot(dx, dy)
+    const maxDistance = Math.hypot(overlayEl.width, overlayEl.height)
+    const distanceScore = (1 - distance / maxDistance) * 200000
+
+    // Score: balance between proximity, confidence, and size
     // Use percentage of canvas area - smaller boxes get exponentially higher scores
     const areaPercentage = area / canvasArea
 
-    // Exponential penalty for large boxes, but weight confidence heavily
-    // Small box (2% area) = sizeScore ~94,000
-    // Large box (90% area) = sizeScore ~1,000
+    // Exponential penalty for large boxes
     const sizeScore = Math.pow(1 - areaPercentage, 3) * 100000
 
-    // Weight confidence very heavily to prefer high-confidence detections
-    // 0.222 confidence = 222,000 score
-    // 0.015 confidence = 15,000 score
+    // Weight confidence heavily to prefer high-confidence detections
     const confidenceScore = card.score * 1000000
 
-    const totalScore = sizeScore + confidenceScore
+    const totalScore = distanceScore + sizeScore + confidenceScore
 
     if (totalScore > bestScore) {
       bestScore = totalScore
@@ -506,16 +532,15 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
     'color: #4CAF50;',
   )
 
-  // Use the current frame canvas captured during detection
-  if (!currentFrameCanvas) {
+  // Use the current full-res frame canvas captured during detection
+  const sourceCanvas = currentFullResCanvas ?? currentFrameCanvas
+  if (!sourceCanvas) {
     console.log(
       '%c[DEBUG cropCardAt] No current frame canvas available',
       'color: #f44336;',
     )
     return false
   }
-
-  const sourceCanvas = currentFrameCanvas
 
   const boxXMin = card.box.xmin * sourceCanvas.width
   const boxYMin = card.box.ymin * sourceCanvas.height
@@ -714,7 +739,7 @@ export async function setupCardDetector(args: {
 
     globalState.lastClickTime = now
     globalState.isProcessing = true
-    
+
     console.log(
       '%c[DEBUG] Processing click',
       'background: #2196F3; color: white; padding: 2px 6px; border-radius: 3px;',

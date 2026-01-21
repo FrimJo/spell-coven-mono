@@ -43,9 +43,9 @@ def load_bulk(kind: str) -> List[dict]:
 def face_image_urls(card: dict):
     out = []
     def pick_card_image(uris):
-        # Small (488×680 JPG) is optimal for ViT-B/32 - saves ~40GB vs PNG
-        # Falls back to larger sizes if small unavailable
-        return uris.get("small") or uris.get("normal") or uris.get("large") or uris.get("png") or uris.get("border_crop")
+        # Prefer higher-res sources for better embedding accuracy.
+        # "normal" is a good balance; fall back to larger sizes if needed.
+        return uris.get("png") or uris.get("large") or uris.get("normal") or uris.get("small") or uris.get("border_crop")
 
     if "image_uris" in card:
         card_url = pick_card_image(card["image_uris"])
@@ -72,38 +72,38 @@ def safe_filename(url: str) -> str:
 def download_image(url: str, cache_dir: Path, retries: int = 3, timeout: int = 20, session: Optional['DownloadSession'] = None) -> Optional[Path]:
     """
     Download image with retry logic and atomic writes.
-    
+
     Args:
         url: Image URL to download
         cache_dir: Directory to cache the image
         retries: Number of retry attempts (deprecated, use session)
         timeout: Timeout in seconds (deprecated, use session)
         session: Optional DownloadSession with configured retry logic
-    
+
     Returns:
         Path to cached file if successful, None otherwise
     """
     cache_dir.mkdir(parents=True, exist_ok=True)
     fp = cache_dir / safe_filename(url)
-    
+
     # Skip if already cached
     if fp.exists() and fp.stat().st_size > 0:
         return fp
-    
+
     # Use session if provided (new robust path)
     if session is not None:
         try:
             from helpers import atomic_write_stream
             response = session.get(url, stream=True)
             response.raise_for_status()
-            
+
             if atomic_write_stream(fp, response.iter_content(16384)):
                 return fp
             else:
                 return None
         except Exception:
             return None
-    
+
     # Legacy fallback path (for compatibility)
     for attempt in range(1, retries + 1):
         try:
@@ -123,24 +123,24 @@ def download_image(url: str, cache_dir: Path, retries: int = 3, timeout: int = 2
 def load_image_rgb(path: Path, target_size: int = 224, enhance_contrast: float = 1.0) -> Optional[Image.Image]:
     try:
         img = Image.open(path).convert("RGB")
-        
+
         # Enhance contrast if requested (helps with blurry cards)
         if enhance_contrast > 1.0:
             from PIL import ImageEnhance
             enhancer = ImageEnhance.Contrast(img)
             img = enhancer.enhance(enhance_contrast)
-        
+
         # Pad to square with black borders to preserve all card information
         # (card name, mana cost, text box, P/T are important for detection)
         w, h = img.size
         s = max(w, h)
-        
+
         # Create black canvas and center the card
         padded = Image.new("RGB", (s, s), (0, 0, 0))
         paste_x = (s - w) // 2
         paste_y = (s - h) // 2
         padded.paste(img, (paste_x, paste_y))
-        
+
         # Resize to target size
         if s != target_size:
             padded = padded.resize((target_size, target_size), Image.BICUBIC)
@@ -205,7 +205,7 @@ def build_index(
 ):
     out_dir.mkdir(parents=True, exist_ok=True)
     cache_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Track build start time
     build_start_time = time.time()
 
@@ -235,7 +235,7 @@ def build_index(
         records = records[:limit]
 
     print(f"Total faces to index: {len(records):,}")
-    
+
     # Guard against empty dataset
     if len(records) == 0:
         raise SystemExit("ERROR: No records to index. Cannot create FAISS index from zero vectors.")
@@ -244,11 +244,11 @@ def build_index(
     paths: List[Optional[Path]] = []
     validation_failed = 0
     validation_failures = []
-    
+
     print(f"Downloading and validating images (validate={validate_cache})...")
     for rec in tqdm(records, desc="Downloading images"):
         p = download_image(rec["image_url"], cache_dir)
-        
+
         # Validate if enabled and file was downloaded
         if p is not None and validate_cache:
             is_valid, error = validate_image(p)
@@ -261,9 +261,9 @@ def build_index(
                 })
                 paths.append(None)
                 continue
-        
+
         paths.append(p)
-    
+
     if validation_failed > 0:
         print(f"\n⚠️  Warning: {validation_failed} images failed validation")
         print(f"   These corrupted/invalid files will be excluded from the index:")
@@ -271,7 +271,7 @@ def build_index(
             print(f"     - {failure['file']}: {failure['reason']} ({failure['name']})")
         if len(validation_failures) > 10:
             print(f"     ... and {len(validation_failures) - 10} more")
-    
+
     valid_count = len([p for p in paths if p is not None])
     if valid_count == 0:
         raise SystemExit("ERROR: No valid images to embed. Cannot create FAISS index from zero vectors.")
@@ -341,7 +341,7 @@ def build_index(
         for m in meta:
             f.write(json.dumps(m, ensure_ascii=False) + "\n")
     print(f"Saved metadata for {len(meta)} vectors to {meta_path}")
-    
+
     # Generate build manifest
     build_duration = time.time() - build_start_time
     manifest = {
@@ -369,7 +369,7 @@ def build_index(
             "metadata": "mtg_meta.jsonl"
         }
     }
-    
+
     manifest_path = out_dir / "build_manifest.json"
     with open(manifest_path, "w") as f:
         json.dump(manifest, f, indent=2)
@@ -384,7 +384,12 @@ def main():
     ap.add_argument("--cache", default="image_cache", help="Directory to cache downloaded images.")
     ap.add_argument("--limit", type=int, default=None, help="Limit number of faces (for testing).")
     ap.add_argument("--batch", type=int, default=64, help="Embedding batch size.")
-    ap.add_argument("--size", type=int, default=384, help="Square resize for images before CLIP preprocess.")
+    ap.add_argument(
+        "--size",
+        type=int,
+        default=224,
+        help="Square resize for images before CLIP preprocess (must match browser query preprocessing).",
+    )
     ap.add_argument("--validate-cache", dest="validate_cache", action="store_true", default=True,
                     help="Validate cached images before embedding (default: enabled).")
     ap.add_argument("--no-validate-cache", dest="validate_cache", action="store_false",
@@ -394,7 +399,7 @@ def main():
     ap.add_argument("--hnsw-ef-construction", type=int, default=200,
                     help="HNSW efConstruction parameter (build accuracy, default: 200). Higher = better quality, slower build.")
     args = ap.parse_args()
-    
+
     # Validate CLI arguments
     validate_args(args)
 
