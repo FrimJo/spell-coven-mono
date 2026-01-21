@@ -1,0 +1,131 @@
+name: MTG Embeddings Rebuild
+
+on:
+  # schedule disabled: image cache too large for hosted runners
+  # schedule:
+  #   - cron: '0 5 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force rebuild even if Scryfall has no update'
+        type: boolean
+        default: false
+      major:
+        description: 'Embeddings major version (v{major}.{minor})'
+        type: string
+        default: '1'
+      minor:
+        description: 'Embeddings minor version (default: YYYYMMDD)'
+        type: string
+        default: ''
+
+concurrency:
+  group: mtg-embeddings
+  cancel-in-progress: true
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/mtg-image-db
+    env:
+      VITE_BLOB_STORAGE_URL: ${{ secrets.VITE_BLOB_STORAGE_URL }}
+      BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+      VITE_QUERY_CONTRAST: '1.5'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up micromamba (CPU)
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: packages/mtg-image-db/environment-cpu.yml
+          cache-environment: true
+          init-shell: bash
+
+      - name: Fetch Scryfall bulk updated_at
+        id: scryfall
+        run: |
+          python - <<'PY'
+          import json, urllib.request
+          data = json.loads(urllib.request.urlopen("https://api.scryfall.com/bulk-data").read())
+          item = next(i for i in data["data"] if i["type"] == "unique_artwork")
+          print(f"updated_at={item['updated_at']}")
+          PY >> "$GITHUB_OUTPUT"
+
+      - name: Restore last updated_at cache
+        id: restore-updated-at
+        uses: actions/cache/restore@v4
+        with:
+          path: packages/mtg-image-db/.cache
+          key: scryfall-updated-at-${{ steps.scryfall.outputs.updated_at }}
+          restore-keys: |
+            scryfall-updated-at-
+
+      - name: Decide whether to rebuild
+        run: |
+          mkdir -p .cache
+          if [ -f .cache/scryfall_updated_at.txt ]; then
+            LAST="$(cat .cache/scryfall_updated_at.txt)"
+          else
+            LAST=""
+          fi
+          CURRENT="${{ steps.scryfall.outputs.updated_at }}"
+          FORCE="${{ inputs.force || 'false' }}"
+          if [ "$LAST" = "$CURRENT" ] && [ "$FORCE" != "true" ]; then
+            echo "SHOULD_BUILD=false" >> "$GITHUB_ENV"
+            echo "No changes detected (updated_at=$CURRENT)."
+          else
+            echo "SHOULD_BUILD=true" >> "$GITHUB_ENV"
+            echo "Rebuild required (last=$LAST, current=$CURRENT)."
+          fi
+
+      - name: Download missing images
+        if: env.SHOULD_BUILD == 'true'
+        run: |
+          micromamba run -n mtg-faiss-cpu python download_images.py --kind unique_artwork --cache image_cache
+
+      - name: Build embeddings
+        if: env.SHOULD_BUILD == 'true'
+        run: |
+          micromamba run -n mtg-faiss-cpu python build_embeddings.py \
+            --kind unique_artwork \
+            --out index_out \
+            --cache image_cache \
+            --contrast "${VITE_QUERY_CONTRAST}" \
+            --size 224
+
+      - name: Export for browser
+        if: env.SHOULD_BUILD == 'true'
+        run: |
+          micromamba run -n mtg-faiss-cpu python export_for_browser.py \
+            --input-dir index_out \
+            --output-dir index_out
+
+      - name: Deploy to Vercel Blob
+        if: env.SHOULD_BUILD == 'true'
+        run: |
+          MAJOR="${{ inputs.major }}"
+          if [ -n "${{ inputs.minor }}" ]; then
+            MINOR="${{ inputs.minor }}"
+          else
+            MINOR="$(date +%Y%m%d)"
+          fi
+          echo "Deploying v${MAJOR}.${MINOR}"
+          micromamba run -n mtg-faiss-cpu python deploy_to_blob.py \
+            --major "$MAJOR" \
+            --minor "$MINOR" \
+            --input-dir index_out
+
+      - name: Save updated_at cache
+        if: env.SHOULD_BUILD == 'true'
+        run: |
+          echo "${{ steps.scryfall.outputs.updated_at }}" > .cache/scryfall_updated_at.txt
+
+      - name: Cache updated_at value
+        if: env.SHOULD_BUILD == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: packages/mtg-image-db/.cache
+          key: scryfall-updated-at-${{ steps.scryfall.outputs.updated_at }}
