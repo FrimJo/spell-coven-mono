@@ -10,14 +10,17 @@ on:
         description: 'Force rebuild even if Scryfall has no update'
         type: boolean
         default: false
-      major:
-        description: 'Embeddings major version (v{major}.{minor})'
-        type: string
-        default: '1'
-      minor:
-        description: 'Embeddings minor version (default: YYYYMMDD)'
-        type: string
-        default: ''
+      channel:
+        description: 'Upload to channel (latest-dev or latest-prod)'
+        type: choice
+        options:
+          - latest-dev
+          - latest-prod
+        default: latest-dev
+      snapshot:
+        description: 'Also upload immutable snapshot'
+        type: boolean
+        default: true
 
 concurrency:
   group: mtg-embeddings
@@ -36,6 +39,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.1.30"
+
+      - name: Install root dependencies
+        run: |
+          bun install --frozen-lockfile
 
       - name: Set up micromamba (CPU)
         uses: mamba-org/setup-micromamba@v1
@@ -103,19 +115,18 @@ jobs:
             --input-dir index_out \
             --output-dir index_out
 
-      - name: Deploy to Vercel Blob
+      - name: Deploy to Vercel Blob (snapshot + channel)
         if: env.SHOULD_BUILD == 'true'
         run: |
-          MAJOR="${{ inputs.major }}"
-          if [ -n "${{ inputs.minor }}" ]; then
-            MINOR="${{ inputs.minor }}"
-          else
-            MINOR="$(date +%Y%m%d)"
+          CHANNEL="${{ inputs.channel || 'latest-dev' }}"
+          SNAPSHOT="${{ inputs.snapshot || 'true' }}"
+          SNAPSHOT_FLAG=""
+          if [ "$SNAPSHOT" = "true" ]; then
+            SNAPSHOT_FLAG="--snapshot"
           fi
-          echo "Deploying v${MAJOR}.${MINOR}"
-          micromamba run -n mtg-faiss-cpu python deploy_to_blob.py \
-            --major "$MAJOR" \
-            --minor "$MINOR" \
+          node scripts/deploy_to_blob.mjs \
+            --channel "$CHANNEL" \
+            $SNAPSHOT_FLAG \
             --input-dir index_out
 
       - name: Save updated_at cache

@@ -4,7 +4,9 @@ Deploy exported embeddings to Vercel Blob Storage.
 
 Usage:
     python deploy_to_blob.py --major 1 --minor 3
-    python deploy_to_blob.py --major 1 --minor 3 --input-dir index_out
+    python deploy_to_blob.py --version v2026-01-20-ab12cd3
+    python deploy_to_blob.py --channel latest-dev --snapshot
+    python deploy_to_blob.py --channel latest-prod --snapshot --version v2026-01-20-ab12cd3
 
 Environment variables required:
     VITE_BLOB_STORAGE_URL: Base URL for Vercel Blob Storage
@@ -13,6 +15,8 @@ Environment variables required:
 import argparse
 import json
 import os
+import subprocess
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 import sys
@@ -26,11 +30,12 @@ except ImportError:
 from config import get_config
 
 
-def get_blob_credentials() -> tuple[str, str]:
+def get_blob_credentials() -> tuple[str, str, str]:
     """Get Vercel Blob credentials from environment."""
     config = get_config()
 
     blob_url = config.get('VITE_BLOB_STORAGE_URL')
+    upload_url = config.get('BLOB_UPLOAD_URL')
     blob_token = config.get('BLOB_READ_WRITE_TOKEN')
 
     if not blob_url:
@@ -42,12 +47,17 @@ def get_blob_credentials() -> tuple[str, str]:
             "BLOB_READ_WRITE_TOKEN not found in environment variables"
         )
 
-    return blob_url, blob_token
+    if not upload_url:
+        # Public read URL is typically https://<store>.public.blob.vercel-storage.com
+        # Uploads must go to the API host: https://blob.vercel-storage.com/upload
+        upload_url = "https://blob.vercel-storage.com"
+
+    return blob_url, upload_url, blob_token
 
 
 def upload_file_to_blob(
     file_path: Path,
-    blob_url: str,
+    upload_url: str,
     blob_token: str,
     remote_path: str
 ) -> bool:
@@ -77,7 +87,7 @@ def upload_file_to_blob(
 
             # Vercel Blob API endpoint
             response = requests.post(
-                f"{blob_url.rstrip('/')}/upload",
+                f"{upload_url.rstrip('/')}/upload",
                 files=files,
                 headers=headers,
                 timeout=300  # 5 minute timeout for large files
@@ -99,9 +109,23 @@ def upload_file_to_blob(
         return False
 
 
+def compute_default_version() -> str:
+    date_str = datetime.utcnow().strftime("%Y%m%d")
+    try:
+        sha = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except Exception:
+        sha = "nogit"
+    return f"v{date_str}-{sha}"
+
+
 def deploy_embeddings(
-    major: int,
-    minor: int,
+    version: str,
+    channel: Optional[str],
+    snapshot: bool,
     input_dir: Path = Path("index_out"),
     dry_run: bool = False
 ) -> bool:
@@ -124,25 +148,41 @@ def deploy_embeddings(
 
     # Get credentials
     try:
-        blob_url, blob_token = get_blob_credentials()
+        blob_url, upload_url, blob_token = get_blob_credentials()
     except ValueError as e:
         print(f"❌ Configuration error: {e}")
         return False
 
-    # Version folder
-    version_folder = f"v{major}.{minor}"
+    targets: list[str] = []
+    if snapshot:
+        targets.append(version)
+    if channel:
+        targets.append(channel)
+    if not targets:
+        print("❌ No destination specified. Use --snapshot and/or --channel.")
+        return False
+
     print(f"\n🚀 Deploying embeddings to Vercel Blob Storage")
-    print(f"   Version: {version_folder}")
+    print(f"   Version: {version}")
+    if channel:
+        print(f"   Channel: {channel}")
     print(f"   Source: {input_dir}")
-    print(f"   Destination: {blob_url.rstrip('/')}/{version_folder}/")
+    print(f"   Destination: {blob_url.rstrip('/')}/")
+    print(f"   Upload API: {upload_url.rstrip('/')}/upload")
 
     # Files to upload
-    files_to_upload = [
-        (input_dir / "embeddings.f32bin", f"{version_folder}/embeddings.f32bin"),
-        (input_dir / "embeddings.i8bin", f"{version_folder}/embeddings.i8bin"),
-        (input_dir / "meta.json", f"{version_folder}/meta.json"),
-        (input_dir / "build_manifest.json", f"{version_folder}/build_manifest.json"),
+    base_files = [
+        "embeddings.f32bin",
+        "embeddings.i8bin",
+        "meta.json",
+        "build_manifest.json",
     ]
+    files_to_upload: list[tuple[Path, str]] = []
+    for target in targets:
+        for filename in base_files:
+            src = input_dir / filename
+            dst = f"{target}/{filename}"
+            files_to_upload.append((src, dst))
 
     # Filter to only existing files
     existing_files = [(src, dst) for src, dst in files_to_upload if src.exists()]
@@ -164,7 +204,7 @@ def deploy_embeddings(
     print(f"\n⏳ Uploading {len(existing_files)} file(s)...")
     results = []
     for src, dst in existing_files:
-        success = upload_file_to_blob(src, blob_url, blob_token, dst)
+        success = upload_file_to_blob(src, upload_url, blob_token, dst)
         results.append(success)
 
     # Summary
@@ -175,8 +215,9 @@ def deploy_embeddings(
 
     if successful == total:
         print(f"\n🎉 Deployment successful!")
-        print(f"   Access your embeddings at:")
-        print(f"   {blob_url.rstrip('/')}/{version_folder}/")
+        print("   Access your embeddings at:")
+        for target in targets:
+            print(f"   {blob_url.rstrip('/')}/{target}/")
         return True
     else:
         print(f"\n⚠️  {total - successful} file(s) failed to upload")
@@ -188,16 +229,28 @@ def main():
         description="Deploy embeddings to Vercel Blob Storage"
     )
     ap.add_argument(
+        "--version",
+        help="Snapshot version folder (e.g., v2026-01-20-ab12cd3). Defaults to date+git sha."
+    )
+    ap.add_argument(
         "--major",
         type=int,
-        required=True,
-        help="Major version number (e.g., 1 for v1.3)"
+        help="Major version number (legacy, e.g., 1 for v1.3)"
     )
     ap.add_argument(
         "--minor",
         type=int,
-        required=True,
-        help="Minor version number (e.g., 3 for v1.3)"
+        help="Minor version number (legacy, e.g., 3 for v1.3)"
+    )
+    ap.add_argument(
+        "--channel",
+        choices=["latest-dev", "latest-prod"],
+        help="Channel destination to overwrite (latest-dev or latest-prod)."
+    )
+    ap.add_argument(
+        "--snapshot",
+        action="store_true",
+        help="Also upload to the immutable snapshot version folder."
     )
     ap.add_argument(
         "--input-dir",
@@ -212,9 +265,19 @@ def main():
 
     args = ap.parse_args()
 
+    if args.version:
+        version = args.version
+    elif args.major is not None and args.minor is not None:
+        version = f"v{args.major}.{args.minor}"
+    else:
+        version = compute_default_version()
+
+    snapshot = args.snapshot or (args.channel is None)
+
     success = deploy_embeddings(
-        major=args.major,
-        minor=args.minor,
+        version=version,
+        channel=args.channel,
+        snapshot=snapshot,
         input_dir=Path(args.input_dir),
         dry_run=args.dry_run
     )
