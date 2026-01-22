@@ -6,14 +6,14 @@
 
 ## Changelog
 - v0.3.0
-  - **BREAKING**: Upgraded CLIP model from ViT-B/32 (512-dim) to ViT-L/14@336px (768-dim)
-  - Changed image source from PNG (745×1040) to Scryfall 'small' JPG (488×680) for ~97% storage reduction
+  - **BREAKING**: Standardized CLIP model on ViT-B/32@224px (512-dim) for browser alignment
+  - Set image source to PNG (745×1040) for consistent card art fidelity
   - Changed preprocessing from center-crop to black padding to preserve full card information
-  - Updated default image size from 384px to 336px to match model's native input
-  - Updated all data contracts: embeddings shape [N, 512] → [N, 768]
-  - Updated HNSW defaults: M=64, efConstruction=400 → M=32, efConstruction=200 (balanced for larger model)
-  - Browser artifacts now use 768-dim embeddings (~8MB for 100K cards)
-  - **Migration required**: Old 512-dim indexes incompatible, must rebuild from scratch
+  - Updated default image size from 384px to 224px to match model's native input
+  - Updated all data contracts: embeddings shape [N, 768] → [N, 512]
+  - Updated HNSW defaults: M=64, efConstruction=400 → M=32, efConstruction=200 (balanced defaults)
+  - Browser artifacts now use 512-dim embeddings (~5MB for 100K cards)
+  - **Migration required**: Old 768-dim indexes incompatible, must rebuild from scratch
 - v0.2.1
   - Strengthened data contract specification with formal JSON schema for `meta.json`.
   - Added version field (`"version": "1.0"`) to `meta.json` for compatibility tracking.
@@ -33,9 +33,9 @@
   - Added Spec Version and Changelog sections. No functional behavior changes.
 
 ## 1. Summary
-Build a Magic: The Gathering (MTG) visual search platform designed for online gameplay, where each player streams their board state via webcam (or similar). Users can click a card visible in any player's stream to identify it and retrieve detailed card information. To enable this, the system fetches MTG card images (from Scryfall bulk data using 'small' 488×680 JPG format), embeds full card images using CLIP (ViT-L/14@336px, 768-dim), and builds a searchable index that supports querying with a cropped image of the selected card. The index/database artifacts are shipped to the client so the entire search can run locally in the browser using Transformers.js; the match result is then used to fetch or display the full card details.
+Build a Magic: The Gathering (MTG) visual search platform designed for online gameplay, where each player streams their board state via webcam (or similar). Users can click a card visible in any player's stream to identify it and retrieve detailed card information. To enable this, the system fetches MTG card images (PNG 745×1040), embeds full card images using CLIP (ViT-B/32@224px, 512-dim), and builds a searchable index that supports querying with a cropped image of the selected card. The index/database artifacts are shipped to the client so the entire search can run locally in the browser using Transformers.js; the match result is then used to fetch or display the full card details.
 
-Technically, the system downloads and processes Scryfall bulk data, caches card images with black padding preprocessing, produces CLIP embeddings (768-dim, L2-normalized), and builds a FAISS index for fast similarity search. It supports two query paths: (1) local Python via FAISS, and (2) fully in-browser via Transformers.js using pre-exported embeddings.
+Technically, the system downloads and processes Scryfall bulk data, caches card images with black padding preprocessing, produces CLIP embeddings (512-dim, L2-normalized), and builds a FAISS index for fast similarity search. It supports two query paths: (1) local Python via FAISS, and (2) fully in-browser via Transformers.js using pre-exported embeddings.
 
 ## 2. Goals and Non-Goals
 - Goals
@@ -54,9 +54,9 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
   - Extract per-face image URLs (art and display URLs) robustly. [SPEC-FR-DA-02]
   - Cache images locally in `image_cache/`. [SPEC-FR-DA-03]
 - Embedding & Indexing [SPEC-FR-EI]
-  - Embed all available images using CLIP ViT-L/14@336px to 768-dim L2-normalized vectors. [SPEC-FR-EI-01]
+  - Embed all available images using CLIP ViT-B/32@224px to 512-dim L2-normalized vectors. [SPEC-FR-EI-01]
   - Persist artifacts to `index_out/`: [SPEC-FR-EI-02]
-    - `mtg_embeddings.npy` (float32, shape [N, 768]) [SPEC-FR-EI-02a]
+    - `mtg_embeddings.npy` (float32, shape [N, 512]) [SPEC-FR-EI-02a]
     - `mtg_cards.faiss` (FAISS HNSW index with METRIC_INNER_PRODUCT over normalized vectors) [SPEC-FR-EI-02b]
     - `mtg_meta.jsonl` (per-vector JSON metadata lines) [SPEC-FR-EI-02c]
 - Python Query [SPEC-FR-PY]
@@ -108,8 +108,8 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
 ### 6.1 Python Artifacts (for FAISS querying)
 - **`index_out/mtg_meta.jsonl`**: One JSON object per line with keys including:
   - `name`, `scryfall_id`, `face_id`, `set`, `collector_number`, `frame`, `layout`, `lang`, `colors`, `image_url`, `card_url`, `scryfall_uri`.
-- **`index_out/mtg_embeddings.npy`**: NumPy array, float32, shape `[N, 768]`, L2-normalized (from ViT-L/14@336px).
-- **`index_out/mtg_cards.faiss`**: FAISS HNSW index (default M=32, efConstruction=200) over `[N, 768]` vectors using METRIC_INNER_PRODUCT (cosine similarity for normalized vectors).
+- **`index_out/mtg_embeddings.npy`**: NumPy array, float32, shape `[N, 512]`, L2-normalized (from ViT-B/32@224px).
+- **`index_out/mtg_cards.faiss`**: FAISS HNSW index (default M=32, efConstruction=200) over `[N, 512]` vectors using METRIC_INNER_PRODUCT (cosine similarity for normalized vectors).
 
 ### 6.2 Browser Artifacts (exported by `export_for_browser.py`)
 
@@ -117,10 +117,10 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
 **Binary Format**:
 - **Encoding**: Signed int8 (range: -127 to 127)
 - **Byte order**: Native (little-endian on x86/ARM)
-- **Layout**: Row-major, shape `[N, 768]` (768-dim from ViT-L/14@336px)
+- **Layout**: Row-major, shape `[N, 512]` (512-dim from ViT-B/32@224px)
 - **Quantization**: Maps float32 range `[-1.0, 1.0]` to int8 range `[-127, 127]`
   - Formula: `int8_value = clip(float32_value * 127, -127, 127)`
-- **Total size**: Exactly `N * 768` bytes
+- **Total size**: Exactly `N * 512` bytes
 - **Validation**: File size MUST equal `shape[0] * shape[1]` bytes
 
 **Invariants**:
@@ -156,7 +156,7 @@ Technically, the system downloads and processes Scryfall bulk data, caches card 
       "items": {"type": "integer"},
       "minItems": 2,
       "maxItems": 2,
-      "description": "[N, D] where N=number of cards, D=768 (ViT-L/14@336px)"
+      "description": "[N, D] where N=number of cards, D=512 (ViT-B/32@224px)"
     },
     "records": {
       "type": "array",

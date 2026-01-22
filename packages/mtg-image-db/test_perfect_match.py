@@ -12,7 +12,7 @@ Usage:
 
 Example:
     python test_perfect_match.py
-    python test_perfect_match.py --image-path image_cache/7f7b910a9ab37c62aea118e2052f8054d53c04fa.jpg
+    python test_perfect_match.py --image-path image_cache/7f7b910a9ab37c62aea118e2052f8054d53c04fa.png
 """
 
 import argparse
@@ -271,7 +271,9 @@ def main():
             return 1
 
         # Get random image from cache
-        images = list(cache_dir.glob("*.jpg"))
+        images = []
+        for ext in ("*.png", "*.jpg", "*.jpeg"):
+            images.extend(cache_dir.glob(ext))
         if not images:
             print(f"❌ No images found in cache: {cache_dir}")
             return 1
