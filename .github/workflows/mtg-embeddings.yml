@@ -40,15 +40,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.1.30"
-
-      - name: Install root dependencies
-        run: |
-          bun install --frozen-lockfile
-
       - name: Set up micromamba (CPU)
         uses: mamba-org/setup-micromamba@v1
         with:
@@ -124,7 +115,7 @@ jobs:
           if [ "$SNAPSHOT" = "true" ]; then
             SNAPSHOT_FLAG="--snapshot"
           fi
-          node scripts/deploy_to_blob.mjs \
+          micromamba run -n mtg-faiss-cpu python deploy_to_blob.py \
             --channel "$CHANNEL" \
             $SNAPSHOT_FLAG \
             --input-dir index_out

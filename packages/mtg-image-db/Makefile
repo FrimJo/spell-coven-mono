@@ -22,10 +22,10 @@ export:
 	$(PYTHON) export_for_browser.py --input-dir index_out --output-dir index_out
 
 deploy-dev:
-	node scripts/deploy_to_blob.mjs --channel latest-dev --snapshot --input-dir index_out
+	$(PYTHON) deploy_to_blob.py --channel latest-dev --snapshot --input-dir index_out
 
 deploy-prod:
-	node scripts/deploy_to_blob.mjs --channel latest-prod --snapshot --input-dir index_out
+	$(PYTHON) deploy_to_blob.py --channel latest-prod --snapshot --input-dir index_out
 
 test:
 	conda run -n mtg-faiss-mps $(PYTHON) test_perfect_match.py

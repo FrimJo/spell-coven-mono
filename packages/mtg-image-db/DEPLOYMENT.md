@@ -36,22 +36,31 @@ make export
 ### 2. Deploy to Vercel Blob
 
 ```bash
-# Deploy to v1.3 folder
-make deploy MAJOR=1 MINOR=3
+# Deploy to latest-dev + snapshot
+make deploy-dev
+
+# Deploy to latest-prod + snapshot
+make deploy-prod
 
 # Or use the Python script directly
-python deploy_to_blob.py --major 1 --minor 3
+python deploy_to_blob.py --channel latest-dev --snapshot
 ```
 
 ### 3. Verify Deployment
 
 Files will be uploaded to:
 ```
-https://na5tsrppklbhqyyg.public.blob.vercel-storage.com/v1.3/
+https://na5tsrppklbhqyyg.public.blob.vercel-storage.com/latest-dev/
 ├── embeddings.f32bin
 ├── embeddings.i8bin (if generated)
 ├── meta.json
 └── build_manifest.json
+```
+
+If you pass `--snapshot`, the same files are also uploaded to an immutable
+snapshot folder such as:
+```
+https://na5tsrppklbhqyyg.public.blob.vercel-storage.com/v20260120-ab12cd3/
 ```
 
 ## Usage
@@ -60,23 +69,29 @@ https://na5tsrppklbhqyyg.public.blob.vercel-storage.com/v1.3/
 
 ```bash
 # Basic deployment
-make deploy MAJOR=1 MINOR=3
+make deploy-dev
+
+# Deploy to production channel
+make deploy-prod
 
 # Dry run (show what would be uploaded)
-python deploy_to_blob.py --major 1 --minor 3 --dry-run
+python deploy_to_blob.py --channel latest-dev --snapshot --dry-run
 ```
 
 ### Using Python Script Directly
 
 ```bash
-# Deploy to v1.3
-python deploy_to_blob.py --major 1 --minor 3
+# Deploy to latest-dev and snapshot
+python deploy_to_blob.py --channel latest-dev --snapshot
 
 # Deploy with custom input directory
-python deploy_to_blob.py --major 1 --minor 3 --input-dir /path/to/exports
+python deploy_to_blob.py --channel latest-dev --snapshot --input-dir /path/to/exports
+
+# Use a custom snapshot version
+python deploy_to_blob.py --version v20260120-ab12cd3 --snapshot
 
 # Dry run
-python deploy_to_blob.py --major 1 --minor 3 --dry-run
+python deploy_to_blob.py --major 1 --minor 3 --snapshot --dry-run
 ```
 
 ## Configuration
@@ -95,11 +110,11 @@ BLOB_READ_WRITE_TOKEN=vercel_blob_rw_na5TSRpPkLbHqYyG_Mc2AZI5UxUJaTazG5kxylJ4Dyb
 
 ### Version Naming
 
-Versions are named as `v{MAJOR}.{MINOR}`:
-- `v1.0` - First release
-- `v1.1` - Minor update
-- `v1.3` - Current version
-- `v2.0` - Major version bump
+Snapshot versions are named as `v{YYYYMMDD}-{gitsha}` by default:
+- `v20260120-ab12cd3` - Example snapshot
+
+You can also use legacy semantic versions with `--major` and `--minor`
+(e.g. `v1.3`).
 
 ## Files Uploaded
 
@@ -162,12 +177,12 @@ make embed
 # 3. Export for browser
 make export
 
-# 4. Deploy to v1.4
-make deploy MAJOR=1 MINOR=4
+# 4. Deploy to latest-dev + snapshot
+make deploy-dev
 
 # 5. Update web app to use new version
 # Edit root .env.development:
-# VITE_EMBEDDINGS_VERSION=v1.4
+# VITE_EMBEDDINGS_VERSION=latest-dev
 
 # 6. Restart web app
 cd ../../apps/web

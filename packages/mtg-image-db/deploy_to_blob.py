@@ -3,7 +3,7 @@
 Deploy exported embeddings to Vercel Blob Storage.
 
 Usage:
-    python deploy_to_blob.py --major 1 --minor 3
+    python deploy_to_blob.py --major 1 --minor 3 --snapshot
     python deploy_to_blob.py --version v2026-01-20-ab12cd3
     python deploy_to_blob.py --channel latest-dev --snapshot
     python deploy_to_blob.py --channel latest-prod --snapshot --version v2026-01-20-ab12cd3
@@ -55,6 +55,12 @@ def get_blob_credentials() -> tuple[str, str, str]:
     return blob_url, upload_url, blob_token
 
 
+def content_type_for(file_path: Path) -> str:
+    if file_path.suffix == ".json":
+        return "application/json"
+    return "application/octet-stream"
+
+
 def upload_file_to_blob(
     file_path: Path,
     upload_url: str,
@@ -66,7 +72,7 @@ def upload_file_to_blob(
 
     Args:
         file_path: Local file to upload
-        blob_url: Base Vercel Blob URL
+        upload_url: Base Vercel Blob upload URL
         blob_token: Authentication token
         remote_path: Remote path in blob storage (e.g., "v1.3/embeddings.f32bin")
 
@@ -82,13 +88,22 @@ def upload_file_to_blob(
 
     try:
         with open(file_path, 'rb') as f:
-            files = {'file': (remote_path, f)}
+            content_type = content_type_for(file_path)
+            files = {
+                'file': (file_path.name, f, content_type)
+            }
+            data = {
+                'pathname': remote_path,
+                'access': 'public',
+                'addRandomSuffix': 'false',
+                'contentType': content_type,
+            }
             headers = {'Authorization': f'Bearer {blob_token}'}
 
-            # Vercel Blob API endpoint
             response = requests.post(
                 f"{upload_url.rstrip('/')}/upload",
                 files=files,
+                data=data,
                 headers=headers,
                 timeout=300  # 5 minute timeout for large files
             )
@@ -272,7 +287,7 @@ def main():
     else:
         version = compute_default_version()
 
-    snapshot = args.snapshot or (args.channel is None)
+    snapshot = args.snapshot
 
     success = deploy_embeddings(
         version=version,
