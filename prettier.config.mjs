@@ -1,0 +1,1 @@
+export default (await import('./packages/prettier/index.js')).default
