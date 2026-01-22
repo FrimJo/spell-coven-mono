@@ -160,7 +160,7 @@ class Embedder:
           self.device = "cpu"
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)  # 512-dim, 32px patch size - faster inference
         self.lock = threading.Lock()  # CLIP is thread-safe with a lock for transform
-        # Get embedding dimension from model (ViT-B/32 = 512, ViT-L/14 = 768)
+        # Get embedding dimension from model (ViT-B/32 = 512)
         self.embedding_dim = self.model.visual.output_dim
 
     def encode_images(self, pil_images: List[Image.Image]) -> np.ndarray:

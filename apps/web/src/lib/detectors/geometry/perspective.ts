@@ -81,11 +81,11 @@ export async function computeHomography(
  * Matches Python preprocessing:
  * 1. Warp card to maintain MTG aspect ratio (63:88)
  * 2. Pad to square with black borders
- * 3. Resize to target size (336×336)
+ * 3. Resize to target size (224×224)
  *
  * @param sourceCanvas - Source canvas containing the card
  * @param quad - Detected card corners
- * @param targetSize - Final square output size (default: 336)
+ * @param targetSize - Final square output size (default: 224)
  * @returns Canvas with warped and padded card image
  */
 export async function warpPerspective(
@@ -207,7 +207,7 @@ export async function warpPerspective(
  *
  * @param sourceCanvas - Source canvas containing the card
  * @param quad - Detected card corners
- * @returns Canvas with warped card (aspect ratio preserved) padded to 336×336 square
+ * @returns Canvas with warped card (aspect ratio preserved) padded to 224×224 square
  */
 export async function warpCardToCanonical(
   sourceCanvas: HTMLCanvasElement,
