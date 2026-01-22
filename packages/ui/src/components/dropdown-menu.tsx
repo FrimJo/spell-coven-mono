@@ -31,11 +31,37 @@ function DropdownMenuTrigger({
   )
 }
 
+function DropdownMenuEmpty({
+  className,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      data-slot="dropdown-menu-empty"
+      className={cn(
+        'text-muted-foreground flex items-center justify-center py-6 text-sm',
+        className,
+      )}
+      {...props}
+    >
+      {children ?? 'No options available'}
+    </div>
+  )
+}
+
 function DropdownMenuContent({
   className,
   sideOffset = 4,
+  children,
+  emptyMessage,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Content> & {
+  emptyMessage?: React.ReactNode
+}) {
+  // Count valid children (excluding null, undefined, false, and empty arrays)
+  const hasChildren = React.Children.toArray(children).length > 0
+
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
@@ -46,7 +72,9 @@ function DropdownMenuContent({
           className,
         )}
         {...props}
-      />
+      >
+        {hasChildren ? children : <DropdownMenuEmpty>{emptyMessage}</DropdownMenuEmpty>}
+      </DropdownMenuPrimitive.Content>
     </DropdownMenuPrimitive.Portal>
   )
 }
@@ -243,6 +271,7 @@ export {
   DropdownMenuPortal,
   DropdownMenuTrigger,
   DropdownMenuContent,
+  DropdownMenuEmpty,
   DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuItem,
