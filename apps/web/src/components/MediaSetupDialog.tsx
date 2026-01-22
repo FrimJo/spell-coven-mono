@@ -57,14 +57,14 @@ interface MediaSetupDialogProps {
   onComplete: () => void
 }
 
-  // Focus control state
-  interface FocusCapabilities {
-    supportsFocus: boolean
-    focusModes: string[]
-    focusDistance?: { min: number; max: number; step: number }
-    initialFocusMode?: string
-    initialFocusDistance?: number
-  }
+// Focus control state
+interface FocusCapabilities {
+  supportsFocus: boolean
+  focusModes: string[]
+  focusDistance?: { min: number; max: number; step: number }
+  initialFocusMode?: string
+  initialFocusDistance?: number
+}
 
 export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   const queryClient = useQueryClient()
@@ -131,10 +131,11 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     }
 
     try {
-      const capabilities = videoTrack.getCapabilities() as MediaTrackCapabilities & {
-        focusMode?: string[]
-        focusDistance?: { min: number; max: number; step: number }
-      }
+      const capabilities =
+        videoTrack.getCapabilities() as MediaTrackCapabilities & {
+          focusMode?: string[]
+          focusDistance?: { min: number; max: number; step: number }
+        }
       const settings = videoTrack.getSettings() as MediaTrackSettings & {
         focusMode?: string
         focusDistance?: number
@@ -187,7 +188,10 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     const videoTrack = videoResult.stream.getVideoTracks()[0]
     const currentTrackId = videoTrack?.id ?? null
 
-    if (currentTrackId && currentTrackId !== lastInitializedTrackIdRef.current) {
+    if (
+      currentTrackId &&
+      currentTrackId !== lastInitializedTrackIdRef.current
+    ) {
       lastInitializedTrackIdRef.current = currentTrackId
       // Call Effect Event to sync initial focus settings from camera
       onFocusTrackChanged(focusCapabilities)

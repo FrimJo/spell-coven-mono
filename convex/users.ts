@@ -4,8 +4,9 @@
  * Provides queries for user profile data from Convex Auth.
  */
 
-import { getAuthUserId } from "@convex-dev/auth/server";
-import { query } from "./_generated/server";
+import { getAuthUserId } from '@convex-dev/auth/server'
+
+import { query } from './_generated/server'
 
 /**
  * Get the current authenticated user's profile
@@ -16,15 +17,15 @@ import { query } from "./_generated/server";
 export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = await getAuthUserId(ctx)
 
     if (!userId) {
-      return null;
+      return null
     }
 
     // Fetch the user document from the auth users table
-    const user = await ctx.db.get(userId);
+    const user = await ctx.db.get(userId)
 
-    return user;
+    return user
   },
-});
+})

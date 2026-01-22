@@ -1,11 +1,7 @@
+import type { EmbeddingMetrics } from '@/lib/clip-search'
 import type { CardQueryState, UseCardQueryReturn } from '@/types/card-query'
 import { useCallback, useRef, useState } from 'react'
-import {
-  embedFromCanvas,
-  top1,
-  topK,
-  type EmbeddingMetrics,
-} from '@/lib/clip-search'
+import { embedFromCanvas, top1, topK } from '@/lib/clip-search'
 import { generateOrientationCandidates } from '@/lib/detectors/geometry/orientation'
 import { validateCanvas } from '@/types/card-query'
 
@@ -91,9 +87,14 @@ export function useCardQuery(): UseCardQueryReturn {
         console.log('[useCardQuery] Generating orientation candidates...')
         const orientationCandidates = generateOrientationCandidates(canvas)
         if (!orientationCandidates.length) {
-          throw new Error('useCardQuery: Failed to generate orientation candidates')
+          throw new Error(
+            'useCardQuery: Failed to generate orientation candidates',
+          )
         }
-        console.log('[useCardQuery] Generated orientation candidates:', orientationCandidates.length)
+        console.log(
+          '[useCardQuery] Generated orientation candidates:',
+          orientationCandidates.length,
+        )
 
         let bestResult: ReturnType<typeof top1> | null = null
         let bestScore = -Infinity
@@ -126,18 +127,22 @@ export function useCardQuery(): UseCardQueryReturn {
                 `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
               )
               console.log('Blob URL (copy this):', url)
-              console.log('Dimensions:', `${candidate.width}x${candidate.height}`)
+              console.log(
+                'Dimensions:',
+                `${candidate.width}x${candidate.height}`,
+              )
               console.groupEnd()
             }
           }, 'image/png')
 
           // Embed the candidate
-          console.log(`[useCardQuery] Starting embedding for orientation ${i}...`)
-          const { embedding, metrics: embeddingMetrics } = await embedFromCanvas(
-            candidate,
-          ).catch((err) => {
-            throw new Error(`Failed to embed canvas: ${err.message}`)
-          })
+          console.log(
+            `[useCardQuery] Starting embedding for orientation ${i}...`,
+          )
+          const { embedding, metrics: embeddingMetrics } =
+            await embedFromCanvas(candidate).catch((err) => {
+              throw new Error(`Failed to embed canvas: ${err.message}`)
+            })
           totalEmbeddingMs += embeddingMetrics.total
           console.log(`[useCardQuery] Embedding completed for orientation ${i}`)
 

@@ -6,9 +6,9 @@
  * @see https://labs.convex.dev/auth
  */
 
+import { useCallback } from 'react'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useConvexAuth, useQuery } from 'convex/react'
-import { useCallback } from 'react'
 
 import { api } from '../../../../convex/_generated/api'
 
@@ -67,7 +67,8 @@ export function useConvexAuthHook(): UseConvexAuthReturn {
 
   // Determine overall loading state
   // We're loading if auth is loading OR if we're authenticated but user data hasn't loaded yet
-  const isLoading = isAuthLoading || (isAuthenticated && currentUser === undefined)
+  const isLoading =
+    isAuthLoading || (isAuthenticated && currentUser === undefined)
 
   // Build user object from Convex user data
   const user: ConvexAuthUser | null =

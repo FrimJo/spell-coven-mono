@@ -7,13 +7,14 @@
  * Phase 5 will use getAuthUserId for proper authorization.
  */
 
-import { internalMutation, mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v } from 'convex/values'
+
+import { internalMutation, mutation, query } from './_generated/server'
 
 /**
  * Signal TTL in milliseconds (60 seconds)
  */
-const SIGNAL_TTL_MS = 60_000;
+const SIGNAL_TTL_MS = 60_000
 
 /**
  * Send a signaling message
@@ -31,15 +32,15 @@ export const sendSignal = mutation({
     payload: v.any(),
   },
   handler: async (ctx, { roomId, fromUserId, toUserId, payload }) => {
-    await ctx.db.insert("roomSignals", {
+    await ctx.db.insert('roomSignals', {
       roomId,
       fromUserId,
       toUserId,
       payload,
       createdAt: Date.now(),
-    });
+    })
   },
-});
+})
 
 /**
  * List signals for a user since a given timestamp
@@ -60,24 +61,24 @@ export const listSignals = query({
   },
   handler: async (ctx, { roomId, userId, since = 0 }) => {
     if (!userId) {
-      return [];
+      return []
     }
 
     const signals = await ctx.db
-      .query("roomSignals")
-      .withIndex("by_roomId_createdAt", (q) =>
-        q.eq("roomId", roomId).gt("createdAt", since),
+      .query('roomSignals')
+      .withIndex('by_roomId_createdAt', (q) =>
+        q.eq('roomId', roomId).gt('createdAt', since),
       )
-      .collect();
+      .collect()
 
     // Filter to signals intended for this user or broadcast
     return signals.filter(
       (s) =>
         s.fromUserId !== userId &&
         (s.toUserId === null || s.toUserId === userId),
-    );
+    )
   },
-});
+})
 
 /**
  * Clean up old signals for a specific room
@@ -88,22 +89,22 @@ export const listSignals = query({
 export const cleanupSignals = mutation({
   args: { roomId: v.string() },
   handler: async (ctx, { roomId }) => {
-    const threshold = Date.now() - SIGNAL_TTL_MS;
+    const threshold = Date.now() - SIGNAL_TTL_MS
 
     const oldSignals = await ctx.db
-      .query("roomSignals")
-      .withIndex("by_roomId_createdAt", (q) =>
-        q.eq("roomId", roomId).lt("createdAt", threshold),
+      .query('roomSignals')
+      .withIndex('by_roomId_createdAt', (q) =>
+        q.eq('roomId', roomId).lt('createdAt', threshold),
       )
-      .collect();
+      .collect()
 
     for (const signal of oldSignals) {
-      await ctx.db.delete(signal._id);
+      await ctx.db.delete(signal._id)
     }
 
-    return { deleted: oldSignals.length };
+    return { deleted: oldSignals.length }
   },
-});
+})
 
 /**
  * Clean up old signals across all rooms
@@ -114,24 +115,24 @@ export const cleanupSignals = mutation({
 export const cleanupAllSignals = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const threshold = Date.now() - SIGNAL_TTL_MS;
+    const threshold = Date.now() - SIGNAL_TTL_MS
 
     // Query all signals and filter by createdAt
     // Note: Without a global createdAt index, we scan all signals
-    const allSignals = await ctx.db.query("roomSignals").collect();
+    const allSignals = await ctx.db.query('roomSignals').collect()
 
-    const oldSignals = allSignals.filter((s) => s.createdAt < threshold);
+    const oldSignals = allSignals.filter((s) => s.createdAt < threshold)
 
-    let deleted = 0;
+    let deleted = 0
     for (const signal of oldSignals) {
-      await ctx.db.delete(signal._id);
-      deleted++;
+      await ctx.db.delete(signal._id)
+      deleted++
     }
 
     if (deleted > 0) {
-      console.log(`[SignalCleanup] Deleted ${deleted} expired signals`);
+      console.log(`[SignalCleanup] Deleted ${deleted} expired signals`)
     }
 
-    return { deleted };
+    return { deleted }
   },
-});
+})

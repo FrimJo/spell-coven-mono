@@ -4,10 +4,11 @@
  * Handles periodic cleanup tasks for the database.
  */
 
-import { cronJobs } from "convex/server";
-import { internal } from "./_generated/api";
+import { cronJobs } from 'convex/server'
 
-const crons = cronJobs();
+import { internal } from './_generated/api'
+
+const crons = cronJobs()
 
 /**
  * Clean up old WebRTC signals every minute.
@@ -16,9 +17,9 @@ const crons = cronJobs();
  * This runs at the start of every minute.
  */
 crons.interval(
-  "cleanup old signals",
+  'cleanup old signals',
   { minutes: 1 },
   internal.signals.cleanupAllSignals,
-);
+)
 
-export default crons;
+export default crons

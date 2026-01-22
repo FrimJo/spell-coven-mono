@@ -7,8 +7,9 @@
  * In Phase 5 (auth migration), we'll use getAuthUserId for proper authorization.
  */
 
-import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v } from 'convex/values'
+
+import { mutation, query } from './_generated/server'
 
 /**
  * Ban a player from a room
@@ -28,65 +29,65 @@ export const banPlayer = mutation({
   handler: async (ctx, { roomId, userId, reason, callerId }) => {
     // Check room ownership
     const room = await ctx.db
-      .query("rooms")
-      .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
-      .first();
+      .query('rooms')
+      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+      .first()
 
     if (!room) {
-      throw new Error("Room not found");
+      throw new Error('Room not found')
     }
 
     // Phase 3: Check if caller is owner (when callerId is provided)
     // Phase 5: Use getAuthUserId for proper authorization
     if (callerId && room.ownerId !== callerId) {
-      throw new Error("Only the room owner can ban players");
+      throw new Error('Only the room owner can ban players')
     }
 
     if (callerId && userId === callerId) {
-      throw new Error("Cannot ban yourself");
+      throw new Error('Cannot ban yourself')
     }
 
     // Check if already banned
     const existingBan = await ctx.db
-      .query("roomBans")
-      .withIndex("by_roomId_userId", (q) =>
-        q.eq("roomId", roomId).eq("userId", userId),
+      .query('roomBans')
+      .withIndex('by_roomId_userId', (q) =>
+        q.eq('roomId', roomId).eq('userId', userId),
       )
-      .first();
+      .first()
 
-    const bannedBy = callerId ?? room.ownerId;
+    const bannedBy = callerId ?? room.ownerId
 
     if (existingBan) {
       // Already banned, just update
       await ctx.db.patch(existingBan._id, {
-        reason: reason ?? "Banned by room owner",
+        reason: reason ?? 'Banned by room owner',
         bannedBy,
         createdAt: Date.now(),
-      });
+      })
     } else {
       // Create ban record
-      await ctx.db.insert("roomBans", {
+      await ctx.db.insert('roomBans', {
         roomId,
         userId,
         bannedBy,
-        reason: reason ?? "Banned by room owner",
+        reason: reason ?? 'Banned by room owner',
         createdAt: Date.now(),
-      });
+      })
     }
 
     // Mark all player sessions as 'left'
     const playerSessions = await ctx.db
-      .query("roomPlayers")
-      .withIndex("by_roomId_userId", (q) =>
-        q.eq("roomId", roomId).eq("userId", userId),
+      .query('roomPlayers')
+      .withIndex('by_roomId_userId', (q) =>
+        q.eq('roomId', roomId).eq('userId', userId),
       )
-      .collect();
+      .collect()
 
     for (const session of playerSessions) {
-      await ctx.db.patch(session._id, { status: "left" });
+      await ctx.db.patch(session._id, { status: 'left' })
     }
   },
-});
+})
 
 /**
  * Kick a player from a room (temporary, they can rejoin)
@@ -105,37 +106,37 @@ export const kickPlayer = mutation({
   handler: async (ctx, { roomId, userId, callerId }) => {
     // Check room ownership
     const room = await ctx.db
-      .query("rooms")
-      .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
-      .first();
+      .query('rooms')
+      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+      .first()
 
     if (!room) {
-      throw new Error("Room not found");
+      throw new Error('Room not found')
     }
 
     // Phase 3: Check if caller is owner (when callerId is provided)
     // Phase 5: Use getAuthUserId for proper authorization
     if (callerId && room.ownerId !== callerId) {
-      throw new Error("Only the room owner can kick players");
+      throw new Error('Only the room owner can kick players')
     }
 
     if (callerId && userId === callerId) {
-      throw new Error("Cannot kick yourself");
+      throw new Error('Cannot kick yourself')
     }
 
     // Mark all player sessions as 'left'
     const playerSessions = await ctx.db
-      .query("roomPlayers")
-      .withIndex("by_roomId_userId", (q) =>
-        q.eq("roomId", roomId).eq("userId", userId),
+      .query('roomPlayers')
+      .withIndex('by_roomId_userId', (q) =>
+        q.eq('roomId', roomId).eq('userId', userId),
       )
-      .collect();
+      .collect()
 
     for (const session of playerSessions) {
-      await ctx.db.patch(session._id, { status: "left" });
+      await ctx.db.patch(session._id, { status: 'left' })
     }
   },
-});
+})
 
 /**
  * Unban a player
@@ -153,31 +154,31 @@ export const unbanPlayer = mutation({
   handler: async (ctx, { roomId, userId, callerId }) => {
     // Check room ownership
     const room = await ctx.db
-      .query("rooms")
-      .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
-      .first();
+      .query('rooms')
+      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+      .first()
 
     if (!room) {
-      throw new Error("Room not found");
+      throw new Error('Room not found')
     }
 
     // Phase 3: Check if caller is owner (when callerId is provided)
     if (callerId && room.ownerId !== callerId) {
-      throw new Error("Only the room owner can unban players");
+      throw new Error('Only the room owner can unban players')
     }
 
     const ban = await ctx.db
-      .query("roomBans")
-      .withIndex("by_roomId_userId", (q) =>
-        q.eq("roomId", roomId).eq("userId", userId),
+      .query('roomBans')
+      .withIndex('by_roomId_userId', (q) =>
+        q.eq('roomId', roomId).eq('userId', userId),
       )
-      .first();
+      .first()
 
     if (ban) {
-      await ctx.db.delete(ban._id);
+      await ctx.db.delete(ban._id)
     }
   },
-});
+})
 
 /**
  * Check if a user is banned from a room
@@ -189,15 +190,15 @@ export const isBanned = query({
   },
   handler: async (ctx, { roomId, userId }) => {
     const ban = await ctx.db
-      .query("roomBans")
-      .withIndex("by_roomId_userId", (q) =>
-        q.eq("roomId", roomId).eq("userId", userId),
+      .query('roomBans')
+      .withIndex('by_roomId_userId', (q) =>
+        q.eq('roomId', roomId).eq('userId', userId),
       )
-      .first();
+      .first()
 
-    return !!ban;
+    return !!ban
   },
-});
+})
 
 /**
  * List all bans for a room
@@ -206,10 +207,10 @@ export const listBans = query({
   args: { roomId: v.string() },
   handler: async (ctx, { roomId }) => {
     const bans = await ctx.db
-      .query("roomBans")
-      .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
-      .collect();
+      .query('roomBans')
+      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+      .collect()
 
-    return bans;
+    return bans
   },
-});
+})

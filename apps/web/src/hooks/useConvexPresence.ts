@@ -8,8 +8,9 @@
 import type { Participant } from '@/types/participant'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
-import { api } from '../../../../convex/_generated/api'
+
 import type { Doc } from '../../../../convex/_generated/dataModel'
+import { api } from '../../../../convex/_generated/api'
 
 type RoomPlayer = Doc<'roomPlayers'>
 
@@ -210,17 +211,33 @@ export function useConvexPresence({
       // 2. If user is banned → they were banned
       // 3. Otherwise → they were kicked
       if (userHasOtherActiveSession) {
-        console.log('[ConvexPresence] Session transferred - user has another active session')
+        console.log(
+          '[ConvexPresence] Session transferred - user has another active session',
+        )
         onSessionTransferred?.()
       } else if (isBanned) {
-        console.log('[ConvexPresence] Detected ban - session removed and user is banned')
+        console.log(
+          '[ConvexPresence] Detected ban - session removed and user is banned',
+        )
         onBanned?.()
       } else {
-        console.log('[ConvexPresence] Detected kick - session removed but not banned')
+        console.log(
+          '[ConvexPresence] Detected kick - session removed but not banned',
+        )
         onKicked?.()
       }
     }
-  }, [allSessionsData, hasJoined, mySession, isBanned, isBannedQueryLoaded, userHasOtherActiveSession, onKicked, onBanned, onSessionTransferred])
+  }, [
+    allSessionsData,
+    hasJoined,
+    mySession,
+    isBanned,
+    isBannedQueryLoaded,
+    userHasOtherActiveSession,
+    onKicked,
+    onBanned,
+    onSessionTransferred,
+  ])
 
   // Join room on mount (when enabled)
   useEffect(() => {
@@ -249,7 +266,16 @@ export function useConvexPresence({
         setError(error)
         onError?.(error)
       })
-  }, [enabled, convexRoomId, userId, username, avatar, sessionId, onError, hasJoined])
+  }, [
+    enabled,
+    convexRoomId,
+    userId,
+    username,
+    avatar,
+    sessionId,
+    onError,
+    hasJoined,
+  ])
 
   // Leave room on unmount or when disabled
   useEffect(() => {
@@ -257,9 +283,11 @@ export function useConvexPresence({
       // If becoming disabled and we had joined, leave
       if (hasJoined) {
         console.log('[ConvexPresence] Leaving room (disabled)')
-        leaveRoomRef.current({ roomId: convexRoomId, sessionId }).catch((err) => {
-          console.error('[ConvexPresence] Failed to leave room:', err)
-        })
+        leaveRoomRef
+          .current({ roomId: convexRoomId, sessionId })
+          .catch((err) => {
+            console.error('[ConvexPresence] Failed to leave room:', err)
+          })
         setHasJoined(false)
       }
       return
@@ -271,9 +299,11 @@ export function useConvexPresence({
       // The mutation will still fire to notify server
       if (hasJoined) {
         console.log('[ConvexPresence] Leaving room (unmount)')
-        leaveRoomRef.current({ roomId: convexRoomId, sessionId }).catch((err) => {
-          console.error('[ConvexPresence] Failed to leave room:', err)
-        })
+        leaveRoomRef
+          .current({ roomId: convexRoomId, sessionId })
+          .catch((err) => {
+            console.error('[ConvexPresence] Failed to leave room:', err)
+          })
       }
     }
   }, [enabled, convexRoomId, sessionId, hasJoined])
@@ -284,7 +314,8 @@ export function useConvexPresence({
 
     const sendHeartbeat = () => {
       console.log('[ConvexPresence] Sending heartbeat...')
-      heartbeatRef.current({ roomId: convexRoomId, sessionId })
+      heartbeatRef
+        .current({ roomId: convexRoomId, sessionId })
         .then(() => {
           console.log('[ConvexPresence] Heartbeat sent successfully')
         })
@@ -401,7 +432,10 @@ export function useConvexPresence({
       return
     }
 
-    console.log('[ConvexPresence] Transferring session, closing:', sessionsToClose)
+    console.log(
+      '[ConvexPresence] Transferring session, closing:',
+      sessionsToClose,
+    )
 
     // Leave each duplicate session - they will detect via reactive query
     // and call onSessionTransferred on their end
@@ -430,4 +464,3 @@ export function useConvexPresence({
     transferSession,
   }
 }
-
