@@ -124,12 +124,12 @@ async function main() {
       total += 1
       const pathname = `${target}/${fileName}`
       try {
-        const result = await uploadFile({ 
-          token, 
-          pathname, 
-          filePath, 
-          dryRun, 
-          allowOverwrite: true 
+        const result = await uploadFile({
+          token,
+          pathname,
+          filePath,
+          dryRun,
+          allowOverwrite: true
         })
         if (result.ok) success += 1
       } catch (err) {
