@@ -395,7 +395,7 @@ function cropCardFromBoundingBox(
   }
   tempCtx.putImageData(cardImageData, 0, 0)
 
-  // Resize to target dimensions (336×336) with aspect ratio preservation and padding
+  // Resize to target dimensions (224×224) with aspect ratio preservation and padding
   // The CLIP model expects square images, so we center the card and add black padding
   croppedCanvas.width = CROPPED_CARD_WIDTH
   croppedCanvas.height = CROPPED_CARD_HEIGHT
@@ -405,7 +405,7 @@ function cropCardFromBoundingBox(
   croppedCtx.fillStyle = 'black'
   croppedCtx.fillRect(0, 0, croppedCanvas.width, croppedCanvas.height)
 
-  // Calculate scaling to fit card within 336×336 while preserving aspect ratio
+  // Calculate scaling to fit card within 224×224 while preserving aspect ratio
   const scale = Math.min(
     CROPPED_CARD_WIDTH / cardWidth,
     CROPPED_CARD_HEIGHT / cardHeight,
@@ -621,7 +621,7 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
       )
 
       if (quad) {
-        // Step 2: Apply perspective correction to get canonical 336×336 image
+        // Step 2: Apply perspective correction to get canonical 224×224 image
         const warpedCanvas = await warpCardToCanonical(sourceCanvas, quad)
 
         // DEBUG STAGE 3: Log OpenCV warped canvas

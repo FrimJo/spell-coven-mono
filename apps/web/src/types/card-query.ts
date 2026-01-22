@@ -71,7 +71,7 @@ export interface ModelLoadingState {
  * Created when user clicks a detected card in the video stream.
  */
 export interface CroppedCardData {
-  /** Canvas containing cropped card (336×336px) */
+  /** Canvas containing cropped card (224×224px) */
   canvas: HTMLCanvasElement
 
   /** When the crop was created (for cancellation tracking) */
