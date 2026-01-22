@@ -1,4 +1,6 @@
 import type { AuthUser } from '@/contexts/AuthContext'
+import { sessionStorage } from '@/lib/session-storage'
+import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
   Camera,
@@ -6,6 +8,7 @@ import {
   Heart,
   LogIn,
   LogOut,
+  Loader2,
   Menu,
   Play,
   Plus,
@@ -49,11 +52,8 @@ import { CreateGameDialog } from './CreateGameDialog.js'
 import SpotlightCard from './SpotlightCard'
 
 interface LandingPageProps {
-  onCreateGame: () => void | Promise<void>
-  onJoinGame: (playerName: string, gameId: string) => void
-  isCreatingGame?: boolean
-  createdGameId?: string | null
-  onNavigateToRoom?: () => void
+  /** Initial error from URL search params */
+  initialError?: string | null
   inviteState?: CreatorInviteState | null
   onRefreshInvite?: () => void | Promise<void>
   isRefreshingInvite?: boolean
@@ -65,11 +65,7 @@ interface LandingPageProps {
 }
 
 export function LandingPage({
-  onCreateGame,
-  onJoinGame,
-  isCreatingGame,
-  createdGameId,
-  onNavigateToRoom,
+  initialError,
   inviteState: _inviteState,
   onRefreshInvite: _onRefreshInvite,
   isRefreshingInvite: _isRefreshingInvite,
@@ -78,29 +74,112 @@ export function LandingPage({
   onSignIn,
   onSignOut,
 }: LandingPageProps) {
+  const navigate = useNavigate()
   const [joinGameId, setJoinGameId] = useState('')
-  const [joinDialogOpen, setJoinDialogOpen] = useState(false)
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [dialogs, setDialogs] = useState({
+    join: false,
+    create: false,
+  })
+  const [error, setError] = useState<string | null>(initialError || null)
+  const [gameCreation, setGameCreation] = useState<{
+    isCreating: boolean
+    gameId: string | null
+  }>({
+    isCreating: false,
+    gameId: null,
+  })
   const isAuthenticated = !!user
 
+  const handleCreateGame = async () => {
+    if (!user) {
+      setError('Please sign in to create a game')
+      return
+    }
+
+    setError(null)
+    setGameCreation({ isCreating: true, gameId: null })
+
+    try {
+      // Generate short unique ID for the game
+      const shortId = Math.random().toString(36).substring(2, 8).toUpperCase()
+      const gameId = `game-${shortId}`
+
+      console.log('[LandingPage] Creating new game room:', gameId)
+
+      // Save to session storage
+      sessionStorage.saveGameState({
+        gameId,
+        playerName: user.username,
+        timestamp: Date.now(),
+      })
+
+      // Simulate brief creation delay for UX
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      console.log('[LandingPage] Game room ID generated successfully')
+
+      // Show success state
+      setGameCreation({ isCreating: false, gameId })
+      setDialogs((prev) => ({ ...prev, create: true }))
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to create game room'
+      setError(message)
+      console.error('Failed to create game room:', err)
+      setGameCreation({ isCreating: false, gameId: null })
+    }
+  }
+
+  const handleNavigateToRoom = () => {
+    if (gameCreation.gameId) {
+      navigate({ to: '/game/$gameId', params: { gameId: gameCreation.gameId } })
+    }
+  }
+
+  const handleJoinGame = (playerName: string, gameId: string) => {
+    sessionStorage.saveGameState({
+      gameId,
+      playerName,
+      timestamp: Date.now(),
+    })
+    navigate({ to: '/game/$gameId', params: { gameId } })
+  }
+
   const handleCreateClick = () => {
-    setCreateDialogOpen(true)
-    onCreateGame()
+    handleCreateGame()
+  }
+
+  const handleCreateDialogOpenChange = (open: boolean) => {
+    setDialogs((prev) => ({ ...prev, create: open }))
   }
 
   const handleJoinClick = () => {
-    setJoinDialogOpen(true)
+    setDialogs((prev) => ({ ...prev, join: true }))
   }
 
   const handleJoin = () => {
     if (joinGameId.trim() && user) {
       // Use Discord username from auth
-      onJoinGame(user.username, joinGameId.trim())
+      handleJoinGame(user.username, joinGameId.trim())
+    }
+  }
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
+    e.preventDefault()
+    const element = document.getElementById(targetId)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }
 
   return (
     <div className="relative min-h-screen overflow-hidden">
+      {error && (
+        <div className="fixed right-4 top-4 z-50 max-w-md rounded-lg bg-red-500/90 p-4 text-white shadow-lg">
+          <p className="font-semibold">Error</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
       <style>{`
         @keyframes float {
           0% { transform: translateY(0px); }
@@ -146,12 +225,14 @@ export function LandingPage({
             <nav className="hidden items-center gap-6 md:flex">
               <a
                 href="#features"
+                onClick={(e) => handleNavClick(e, 'features')}
                 className="text-slate-300 transition-colors hover:text-white"
               >
                 Features
               </a>
               <a
                 href="#how-it-works"
+                onClick={(e) => handleNavClick(e, 'how-it-works')}
                 className="text-slate-300 transition-colors hover:text-white"
               >
                 How It Works
@@ -234,12 +315,14 @@ export function LandingPage({
                   <div className="flex flex-1 flex-col gap-1 px-4 py-6">
                     <a
                       href="#features"
+                      onClick={(e) => handleNavClick(e, 'features')}
                       className="flex items-center rounded-lg px-4 py-3 text-lg font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
                     >
                       Features
                     </a>
                     <a
                       href="#how-it-works"
+                      onClick={(e) => handleNavClick(e, 'how-it-works')}
                       className="flex items-center rounded-lg px-4 py-3 text-lg font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
                     >
                       How It Works
@@ -330,17 +413,28 @@ export function LandingPage({
                   <>
                     <Button
                       size="lg"
-                      className="h-14 min-w-[200px] gap-2 bg-purple-600 text-lg font-semibold text-white shadow-lg shadow-purple-500/25 hover:bg-purple-700 disabled:opacity-50"
+                      className="h-14 min-w-[200px] gap-2 bg-purple-600 text-lg font-semibold text-white shadow-lg shadow-purple-500/25 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                       onClick={handleCreateClick}
-                      disabled={isCreatingGame}
+                      disabled={gameCreation.isCreating}
                     >
-                      <Plus className="h-5 w-5" />
-                      {isCreatingGame ? 'Creating Game...' : 'Create Game'}
+                      {gameCreation.isCreating ? (
+                        <>
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <span>Creating Game...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-5 w-5" />
+                          <span>Create Game</span>
+                        </>
+                      )}
                     </Button>
 
                     <Dialog
-                      open={joinDialogOpen}
-                      onOpenChange={setJoinDialogOpen}
+                      open={dialogs.join}
+                      onOpenChange={(open) =>
+                        setDialogs((prev) => ({ ...prev, join: open }))
+                      }
                     >
                       <DialogTrigger asChild>
                         <Button
@@ -388,11 +482,11 @@ export function LandingPage({
 
                     {/* Create Game Dialog */}
                     <CreateGameDialog
-                      open={createDialogOpen}
-                      onOpenChange={setCreateDialogOpen}
-                      isCreating={isCreatingGame ?? false}
-                      createdGameId={createdGameId ?? null}
-                      onNavigateToRoom={onNavigateToRoom ?? (() => {})}
+                      open={dialogs.create}
+                      onOpenChange={handleCreateDialogOpenChange}
+                      isCreating={gameCreation.isCreating}
+                      createdGameId={gameCreation.gameId}
+                      onNavigateToRoom={handleNavigateToRoom}
                     />
                   </>
                 ) : (
@@ -808,12 +902,20 @@ export function LandingPage({
                 </h4>
                 <ul className="space-y-2 text-sm text-slate-400">
                   <li>
-                    <a href="#features" className="hover:text-purple-400">
+                    <a
+                      href="#features"
+                      onClick={(e) => handleNavClick(e, 'features')}
+                      className="hover:text-purple-400"
+                    >
                       Features
                     </a>
                   </li>
                   <li>
-                    <a href="#how-it-works" className="hover:text-purple-400">
+                    <a
+                      href="#how-it-works"
+                      onClick={(e) => handleNavClick(e, 'how-it-works')}
+                      className="hover:text-purple-400"
+                    >
                       How It Works
                     </a>
                   </li>

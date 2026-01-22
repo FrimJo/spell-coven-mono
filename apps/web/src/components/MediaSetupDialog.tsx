@@ -1,5 +1,12 @@
 import type { UseAudioOutputOptions } from '@/hooks/useAudioOutput'
-import { useCallback, useMemo } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useAudioOutput } from '@/hooks/useAudioOutput'
 import { attachVideoStream } from '@/lib/video-stream-utils'
@@ -9,6 +16,7 @@ import {
   AlertCircle,
   Camera,
   Check,
+  Focus,
   Loader2,
   Mic,
   SkipForward,
@@ -34,6 +42,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@repo/ui/components/select'
+import { Slider } from '@repo/ui/components/slider'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@repo/ui/components/tooltip'
 
 import { AudioLevelIndicator } from './AudioLevelIndicator'
 import { MediaPermissionInline } from './MediaPermissionInline'
@@ -42,6 +56,15 @@ interface MediaSetupDialogProps {
   open: boolean
   onComplete: () => void
 }
+
+  // Focus control state
+  interface FocusCapabilities {
+    supportsFocus: boolean
+    focusModes: string[]
+    focusDistance?: { min: number; max: number; step: number }
+    initialFocusMode?: string
+    initialFocusDistance?: number
+  }
 
 export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   const queryClient = useQueryClient()
@@ -90,6 +113,135 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   const audioOutputOptions = useMemo<UseAudioOutputOptions>(
     () => ({ initialDeviceId: 'default' }),
     [],
+  )
+
+  const [focusMode, setFocusMode] = useState<string>('continuous')
+  const [focusDistance, setFocusDistance] = useState<number>(0.5)
+  const lastInitializedTrackIdRef = useRef<string | null>(null)
+
+  // Derive focus capabilities from video track (computed, not effect-based)
+  const focusCapabilities = useMemo((): FocusCapabilities | null => {
+    if (!isSuccessState(videoResult) || !videoResult.stream) {
+      return null
+    }
+
+    const videoTrack = videoResult.stream.getVideoTracks()[0]
+    if (!videoTrack) {
+      return null
+    }
+
+    try {
+      const capabilities = videoTrack.getCapabilities() as MediaTrackCapabilities & {
+        focusMode?: string[]
+        focusDistance?: { min: number; max: number; step: number }
+      }
+      const settings = videoTrack.getSettings() as MediaTrackSettings & {
+        focusMode?: string
+        focusDistance?: number
+      }
+
+      if (capabilities.focusMode && capabilities.focusMode.length > 0) {
+        return {
+          supportsFocus: true,
+          focusModes: capabilities.focusMode,
+          focusDistance: capabilities.focusDistance,
+          initialFocusMode: settings.focusMode,
+          initialFocusDistance:
+            settings.focusDistance ??
+            (capabilities.focusDistance
+              ? (capabilities.focusDistance.min +
+                  capabilities.focusDistance.max) /
+                2
+              : undefined),
+        }
+      } else {
+        return { supportsFocus: false, focusModes: [] }
+      }
+    } catch {
+      return { supportsFocus: false, focusModes: [] }
+    }
+  }, [videoResult])
+
+  // Effect Event for initializing focus settings - reads latest focusCapabilities
+  // without making it a reactive dependency of the effect
+  const onFocusTrackChanged = useEffectEvent(
+    (capabilities: FocusCapabilities | null) => {
+      if (capabilities?.supportsFocus) {
+        if (capabilities.initialFocusMode) {
+          setFocusMode(capabilities.initialFocusMode)
+        }
+        if (capabilities.initialFocusDistance !== undefined) {
+          setFocusDistance(capabilities.initialFocusDistance)
+        }
+      }
+    },
+  )
+
+  // Initialize focus mode/distance from camera settings when track changes
+  useEffect(() => {
+    if (!isSuccessState(videoResult) || !videoResult.stream) {
+      lastInitializedTrackIdRef.current = null
+      return
+    }
+
+    const videoTrack = videoResult.stream.getVideoTracks()[0]
+    const currentTrackId = videoTrack?.id ?? null
+
+    if (currentTrackId && currentTrackId !== lastInitializedTrackIdRef.current) {
+      lastInitializedTrackIdRef.current = currentTrackId
+      // Call Effect Event to sync initial focus settings from camera
+      onFocusTrackChanged(focusCapabilities)
+    }
+  }, [videoResult, focusCapabilities])
+
+  // Apply focus constraints to the video track
+  const applyFocusConstraints = useCallback(
+    async (mode: string, distance?: number) => {
+      if (!isSuccessState(videoResult) || !videoResult.stream) return
+
+      const videoTrack = videoResult.stream.getVideoTracks()[0]
+      if (!videoTrack) return
+
+      try {
+        const constraints: MediaTrackConstraints & {
+          advanced?: Array<{ focusMode?: string; focusDistance?: number }>
+        } = {
+          advanced: [{ focusMode: mode }],
+        }
+
+        if (mode === 'manual' && distance !== undefined) {
+          constraints.advanced = [{ focusMode: mode, focusDistance: distance }]
+        }
+
+        await videoTrack.applyConstraints(constraints)
+      } catch (error) {
+        console.warn('Failed to apply focus constraints:', error)
+      }
+    },
+    [videoResult],
+  )
+
+  // Handle focus mode change
+  const handleFocusModeChange = useCallback(
+    (mode: string) => {
+      setFocusMode(mode)
+      void applyFocusConstraints(
+        mode,
+        mode === 'manual' ? focusDistance : undefined,
+      )
+    },
+    [applyFocusConstraints, focusDistance],
+  )
+
+  // Handle focus distance change
+  const handleFocusDistanceChange = useCallback(
+    (value: number[]) => {
+      const distance = value[0]
+      if (distance === undefined) return
+      setFocusDistance(distance)
+      void applyFocusConstraints('manual', distance)
+    },
+    [applyFocusConstraints],
   )
 
   // Use our audio output hook for speakers/headphones
@@ -176,9 +328,11 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
 
         <div className="space-y-6 py-4">
           {permissionError && hasPermissions && (
-            <Alert variant="destructive" className="border-red-900 bg-red-950">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{permissionError}</AlertDescription>
+            <Alert className="border-red-500/30 bg-red-950/50 text-red-200">
+              <AlertCircle className="h-4 w-4 text-red-400" />
+              <AlertDescription className="text-red-200/90">
+                {permissionError}
+              </AlertDescription>
             </Alert>
           )}
 
@@ -253,6 +407,143 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
                     compact={false}
                   />
                 )}
+              </div>
+            )}
+
+            {/* Focus Control - always show when permissions granted */}
+            {hasPermissions && (
+              <div
+                className={`mt-3 space-y-3 rounded-lg border border-slate-700 bg-slate-800/50 p-3 ${
+                  !focusCapabilities?.supportsFocus ? 'opacity-50' : ''
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Focus className="h-4 w-4 text-purple-400" />
+                  <Label className="text-sm text-slate-200">Camera Focus</Label>
+                  {!focusCapabilities?.supportsFocus && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help rounded bg-slate-700 px-1.5 py-0.5 text-xs text-slate-400">
+                          Not supported
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        className="max-w-[200px] border border-slate-600 bg-slate-800 text-slate-200"
+                      >
+                        This camera doesn&apos;t support focus control. Try
+                        using an external webcam like Logitech C920/C922.
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Select
+                          value={focusMode}
+                          onValueChange={handleFocusModeChange}
+                          disabled={!focusCapabilities?.supportsFocus}
+                        >
+                          <SelectTrigger
+                            className={`w-[140px] border-slate-600 bg-slate-700 text-sm text-slate-200 ${
+                              !focusCapabilities?.supportsFocus
+                                ? 'cursor-not-allowed'
+                                : ''
+                            }`}
+                          >
+                            <SelectValue placeholder="Focus mode" />
+                          </SelectTrigger>
+                          <SelectContent className="border-slate-700 bg-slate-800">
+                            {focusCapabilities?.focusModes.includes(
+                              'continuous',
+                            ) && (
+                              <SelectItem
+                                value="continuous"
+                                className="text-slate-200 focus:bg-slate-700"
+                              >
+                                Auto (Continuous)
+                              </SelectItem>
+                            )}
+                            {focusCapabilities?.focusModes.includes(
+                              'single-shot',
+                            ) && (
+                              <SelectItem
+                                value="single-shot"
+                                className="text-slate-200 focus:bg-slate-700"
+                              >
+                                Auto (Single)
+                              </SelectItem>
+                            )}
+                            {focusCapabilities?.focusModes.includes(
+                              'manual',
+                            ) && (
+                              <SelectItem
+                                value="manual"
+                                className="text-slate-200 focus:bg-slate-700"
+                              >
+                                Manual
+                              </SelectItem>
+                            )}
+                            {/* Show placeholder options when not supported */}
+                            {!focusCapabilities?.supportsFocus && (
+                              <>
+                                <SelectItem
+                                  value="continuous"
+                                  className="text-slate-200 focus:bg-slate-700"
+                                >
+                                  Auto (Continuous)
+                                </SelectItem>
+                                <SelectItem
+                                  value="manual"
+                                  className="text-slate-200 focus:bg-slate-700"
+                                >
+                                  Manual
+                                </SelectItem>
+                              </>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </TooltipTrigger>
+                    {!focusCapabilities?.supportsFocus && (
+                      <TooltipContent
+                        side="bottom"
+                        className="border border-slate-600 bg-slate-800 text-slate-200"
+                      >
+                        Focus control not supported by this camera
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+
+                  {/* Focus Distance Slider - only show in manual mode when supported */}
+                  {focusCapabilities?.supportsFocus &&
+                    focusMode === 'manual' &&
+                    focusCapabilities.focusDistance && (
+                      <div className="flex flex-1 items-center gap-3">
+                        <span className="text-xs text-slate-400">Near</span>
+                        <Slider
+                          value={[focusDistance]}
+                          onValueChange={handleFocusDistanceChange}
+                          min={focusCapabilities.focusDistance.min}
+                          max={focusCapabilities.focusDistance.max}
+                          step={focusCapabilities.focusDistance.step}
+                          className="flex-1 [&_[data-slot=slider-range]]:bg-purple-500 [&_[data-slot=slider-thumb]]:border-purple-500 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-slate-600"
+                        />
+                        <span className="text-xs text-slate-400">Far</span>
+                      </div>
+                    )}
+                </div>
+
+                <p className="text-xs text-slate-500">
+                  {!focusCapabilities?.supportsFocus
+                    ? 'Focus control is not available for this camera'
+                    : focusMode === 'manual'
+                      ? 'Adjust the slider to focus on your cards'
+                      : 'Camera will automatically adjust focus'}
+                </p>
               </div>
             )}
           </div>
