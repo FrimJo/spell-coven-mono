@@ -7,8 +7,9 @@
 
 import type { WebRTCSignal } from '@/types/webrtc-signal'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useMutation, useQuery } from 'convex/react'
 import { validateWebRTCSignal } from '@/types/webrtc-signal'
+import { useMutation, useQuery } from 'convex/react'
+
 import { api } from '../../../../convex/_generated/api'
 
 interface UseConvexSignalingProps {
@@ -182,7 +183,10 @@ export function useConvexSignaling({
           toUserId: validatedSignal.to,
           payload: {
             type: validatedSignal.type,
-            payload: 'payload' in validatedSignal ? validatedSignal.payload : undefined,
+            payload:
+              'payload' in validatedSignal
+                ? validatedSignal.payload
+                : undefined,
           },
         })
       } catch (err) {

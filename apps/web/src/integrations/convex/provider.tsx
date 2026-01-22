@@ -5,9 +5,9 @@
  */
 
 import type { ReactNode } from 'react'
+import { env } from '@/env'
 import { ConvexAuthProvider } from '@convex-dev/auth/react'
 import { ConvexReactClient } from 'convex/react'
-import { env } from '@/env'
 
 /**
  * Convex client instance
@@ -35,4 +35,3 @@ export function ConvexProvider({ children }: ConvexProviderProps) {
  * Export the client for direct access if needed
  */
 export { convex }
-

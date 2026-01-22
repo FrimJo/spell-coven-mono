@@ -1,14 +1,14 @@
 import type { AuthUser } from '@/contexts/AuthContext'
+import { useState } from 'react'
 import { sessionStorage } from '@/lib/session-storage'
 import { useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
 import {
   Camera,
   Gamepad2,
   Heart,
+  Loader2,
   LogIn,
   LogOut,
-  Loader2,
   Menu,
   Play,
   Plus,
@@ -164,7 +164,10 @@ export function LandingPage({
     }
   }
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
+  const handleNavClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    targetId: string,
+  ) => {
     e.preventDefault()
     const element = document.getElementById(targetId)
     if (element) {
@@ -413,7 +416,7 @@ export function LandingPage({
                   <>
                     <Button
                       size="lg"
-                      className="h-14 min-w-[200px] gap-2 bg-purple-600 text-lg font-semibold text-white shadow-lg shadow-purple-500/25 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                      className="h-14 min-w-[200px] gap-2 bg-purple-600 text-lg font-semibold text-white shadow-lg shadow-purple-500/25 transition-all duration-200 hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
                       onClick={handleCreateClick}
                       disabled={gameCreation.isCreating}
                     >

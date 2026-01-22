@@ -65,7 +65,8 @@ function GameRoomContent({
   } = usePresence()
 
   const [copied, setCopied] = useState(false)
-  const [duplicateDialogDismissed, setDuplicateDialogDismissed] = useState(false)
+  const [duplicateDialogDismissed, setDuplicateDialogDismissed] =
+    useState(false)
   const [showLeaveConfirmDialog, setShowLeaveConfirmDialog] = useState(false)
 
   // Show duplicate session dialog when detected, unless user has dismissed it

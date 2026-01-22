@@ -126,13 +126,9 @@ env.allowRemoteModels = true // Download from Hugging Face
 env.allowLocalModels = false // Don't serve from web server
 
 // Model downloads to browser cache on first use
-await pipeline(
-  'image-feature-extraction',
-  'Xenova/clip-vit-base-patch32',
-  {
-    dtype: 'fp32', // Keep full precision for consistency
-  },
-)
+await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch32', {
+  dtype: 'fp32', // Keep full precision for consistency
+})
 ```
 
 **Benefits:**

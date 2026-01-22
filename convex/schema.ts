@@ -5,27 +5,27 @@
  * @see SUPABASE_TO_CONVEX_PLAN.md Section 2.3 for constraints and indexes.
  */
 
-import { authTables } from "@convex-dev/auth/server";
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
+import { authTables } from '@convex-dev/auth/server'
+import { defineSchema, defineTable } from 'convex/server'
+import { v } from 'convex/values'
 
 /**
  * Room status enum values
  */
 export const roomStatusValues = v.union(
-  v.literal("waiting"),
-  v.literal("playing"),
-  v.literal("finished"),
-);
+  v.literal('waiting'),
+  v.literal('playing'),
+  v.literal('finished'),
+)
 
 /**
  * Player status enum values
  */
 export const playerStatusValues = v.union(
-  v.literal("active"),
-  v.literal("inactive"),
-  v.literal("left"),
-);
+  v.literal('active'),
+  v.literal('inactive'),
+  v.literal('left'),
+)
 
 export default defineSchema({
   // Include Convex Auth tables (users, sessions, etc.)
@@ -46,8 +46,8 @@ export default defineSchema({
     /** When the room was created */
     createdAt: v.number(),
   })
-    .index("by_roomId", ["roomId"])
-    .index("by_ownerId", ["ownerId"]),
+    .index('by_roomId', ['roomId'])
+    .index('by_ownerId', ['ownerId']),
 
   /**
    * roomState - Game state for a room
@@ -63,7 +63,7 @@ export default defineSchema({
     turnNumber: v.number(),
     /** Last update timestamp */
     lastUpdatedAt: v.number(),
-  }).index("by_roomId", ["roomId"]),
+  }).index('by_roomId', ['roomId']),
 
   /**
    * roomPlayers - Players in a room (also used for presence)
@@ -91,10 +91,10 @@ export default defineSchema({
     /** Last heartbeat timestamp (for presence) */
     lastSeenAt: v.number(),
   })
-    .index("by_roomId", ["roomId"])
-    .index("by_roomId_sessionId", ["roomId", "sessionId"])
-    .index("by_roomId_userId", ["roomId", "userId"])
-    .index("by_roomId_lastSeenAt", ["roomId", "lastSeenAt"]),
+    .index('by_roomId', ['roomId'])
+    .index('by_roomId_sessionId', ['roomId', 'sessionId'])
+    .index('by_roomId_userId', ['roomId', 'userId'])
+    .index('by_roomId_lastSeenAt', ['roomId', 'lastSeenAt']),
 
   /**
    * roomSignals - WebRTC signaling messages
@@ -114,9 +114,9 @@ export default defineSchema({
     /** When signal was created */
     createdAt: v.number(),
   })
-    .index("by_roomId", ["roomId"])
-    .index("by_roomId_createdAt", ["roomId", "createdAt"])
-    .index("by_roomId_toUserId", ["roomId", "toUserId"]),
+    .index('by_roomId', ['roomId'])
+    .index('by_roomId_createdAt', ['roomId', 'createdAt'])
+    .index('by_roomId_toUserId', ['roomId', 'toUserId']),
 
   /**
    * roomBans - Persistent ban records
@@ -135,6 +135,6 @@ export default defineSchema({
     /** When the ban was created */
     createdAt: v.number(),
   })
-    .index("by_roomId", ["roomId"])
-    .index("by_roomId_userId", ["roomId", "userId"]),
-});
+    .index('by_roomId', ['roomId'])
+    .index('by_roomId_userId', ['roomId', 'userId']),
+})

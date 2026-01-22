@@ -8,13 +8,13 @@
  */
 
 // process.env is available at runtime in Convex
-declare const process: { env: Record<string, string | undefined> };
+declare const process: { env: Record<string, string | undefined> }
 
 export default {
   providers: [
     {
       domain: process.env.CONVEX_SITE_URL,
-      applicationID: "convex",
+      applicationID: 'convex',
     },
   ],
-};
+}

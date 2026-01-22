@@ -9,6 +9,7 @@ import type { ConnectionState, TrackState } from '@/types/connection'
 import type { WebRTCSignal } from '@/types/webrtc-signal'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { WebRTCManager } from '@/lib/webrtc/WebRTCManager'
+
 import { useConvexSignaling } from './useConvexSignaling'
 
 interface UseConvexWebRTCProps {
@@ -111,7 +112,12 @@ export function useConvexWebRTC({
 
   // Initialize WebRTC manager when signaling is ready
   useEffect(() => {
-    if (!localPlayerId || !roomId || !presenceReady || !isSignalingInitialized) {
+    if (
+      !localPlayerId ||
+      !roomId ||
+      !presenceReady ||
+      !isSignalingInitialized
+    ) {
       return
     }
 
@@ -188,7 +194,9 @@ export function useConvexWebRTC({
 
       // Replay any queued signals now that we have both manager AND local stream
       if (localStream && pendingSignalsRef.current.length > 0) {
-        console.log(`[ConvexWebRTC:Hook] Replaying ${pendingSignalsRef.current.length} queued signals after local stream set`)
+        console.log(
+          `[ConvexWebRTC:Hook] Replaying ${pendingSignalsRef.current.length} queued signals after local stream set`,
+        )
         const signalsToReplay = [...pendingSignalsRef.current]
         pendingSignalsRef.current = []
 
@@ -216,7 +224,9 @@ export function useConvexWebRTC({
     })
 
     if (!isSignalingInitialized || !webrtcManagerRef.current) {
-      console.log('[ConvexWebRTC:Hook] Skipping - not initialized or manager missing')
+      console.log(
+        '[ConvexWebRTC:Hook] Skipping - not initialized or manager missing',
+      )
       return
     }
 
@@ -290,7 +300,13 @@ export function useConvexWebRTC({
     console.log('[ConvexWebRTC:Hook] Updated previous remote player IDs ref:', [
       ...previousRemotePlayerIdsRef.current,
     ])
-  }, [remotePlayerIds, isSignalingInitialized, roomId, localPlayerId, localStream])
+  }, [
+    remotePlayerIds,
+    isSignalingInitialized,
+    roomId,
+    localPlayerId,
+    localStream,
+  ])
 
   return {
     localStream,

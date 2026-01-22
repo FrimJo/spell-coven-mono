@@ -1,7 +1,7 @@
 import js from '@eslint/js'
 import eslintConfigPrettier from 'eslint-config-prettier'
-import tseslint from 'typescript-eslint'
 import unusedImports from 'eslint-plugin-unused-imports'
+import tseslint from 'typescript-eslint'
 
 /**
  * ESLint configuration for the Convex backend
@@ -35,4 +35,3 @@ export default [
     },
   },
 ]
-

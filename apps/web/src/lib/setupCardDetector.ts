@@ -4,6 +4,15 @@
 import type { DetectedCard } from '@/types/card-query'
 
 import type { CardDetector, DetectorType } from './detectors/index.js'
+import { warmModel } from './clip-search.js'
+import {
+  CROPPED_CARD_HEIGHT,
+  CROPPED_CARD_WIDTH,
+} from './detection-constants.js'
+import { refineBoundingBoxToCorners } from './detectors/geometry/bbox-refinement.js'
+import { warpCardToCanonical } from './detectors/geometry/perspective.js'
+import { createDetector } from './detectors/index.js'
+import { loadingEvents } from './loading-events.js'
 
 // ============================================================================
 // Debug Blob URL Helpers
@@ -39,15 +48,6 @@ function logDebugBlobUrl(
     }
   }, 'image/png')
 }
-import { warmModel } from './clip-search.js'
-import {
-  CROPPED_CARD_HEIGHT,
-  CROPPED_CARD_WIDTH,
-} from './detection-constants.js'
-import { refineBoundingBoxToCorners } from './detectors/geometry/bbox-refinement.js'
-import { warpCardToCanonical } from './detectors/geometry/perspective.js'
-import { createDetector } from './detectors/index.js'
-import { loadingEvents } from './loading-events.js'
 
 // OpenCV removed - using DETR bounding boxes for cropping
 
@@ -719,13 +719,19 @@ export async function setupCardDetector(args: {
 
     // Debounce clicks (prevent double-clicks)
     if (now - globalState.lastClickTime < CLICK_DEBOUNCE_MS) {
-      console.log('%c[DEBUG] Click debounced (too soon after last click)', 'color: #999;')
+      console.log(
+        '%c[DEBUG] Click debounced (too soon after last click)',
+        'color: #999;',
+      )
       return
     }
 
     // Prevent overlapping click processing (global across all HMR instances)
     if (globalState.isProcessing) {
-      console.log('%c[DEBUG] Click ignored (already processing)', 'color: #999;')
+      console.log(
+        '%c[DEBUG] Click ignored (already processing)',
+        'color: #999;',
+      )
       return
     }
 
@@ -791,12 +797,23 @@ export async function setupCardDetector(args: {
           )
           detectedCards.forEach((card, i) => {
             const boxPx = {
-              xmin: Math.round(card.box.xmin * (currentFrameCanvas?.width ?? 0)),
-              ymin: Math.round(card.box.ymin * (currentFrameCanvas?.height ?? 0)),
-              xmax: Math.round(card.box.xmax * (currentFrameCanvas?.width ?? 0)),
-              ymax: Math.round(card.box.ymax * (currentFrameCanvas?.height ?? 0)),
+              xmin: Math.round(
+                card.box.xmin * (currentFrameCanvas?.width ?? 0),
+              ),
+              ymin: Math.round(
+                card.box.ymin * (currentFrameCanvas?.height ?? 0),
+              ),
+              xmax: Math.round(
+                card.box.xmax * (currentFrameCanvas?.width ?? 0),
+              ),
+              ymax: Math.round(
+                card.box.ymax * (currentFrameCanvas?.height ?? 0),
+              ),
             }
-            console.log(`  Card ${i + 1}: score=${card.score.toFixed(3)}, box=`, boxPx)
+            console.log(
+              `  Card ${i + 1}: score=${card.score.toFixed(3)}, box=`,
+              boxPx,
+            )
           })
         }
 

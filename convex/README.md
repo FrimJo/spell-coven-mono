@@ -107,7 +107,7 @@ authorization.
 To revert presence to Supabase, edit `apps/web/src/contexts/PresenceContext.tsx`:
 
 ```typescript
-const USE_CONVEX_PRESENCE = false; // Set to false to use Supabase
+const USE_CONVEX_PRESENCE = false // Set to false to use Supabase
 ```
 
 ## Deployment
