@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import argparse
+import hashlib
 from pathlib import Path
 
 def main():
@@ -97,6 +98,31 @@ def main():
             "shape": list(X.shape),
             "records": meta
         }
+    
+    # --- Compute file hash for cache-busting ---
+    # Hash is useful for channel deployments (latest-dev, latest-prod) where
+    # the same URL can point to different content over time.
+    # Snapshot versions (v2026-01-20-ab12cd3) don't need hashes since URLs are immutable.
+    # Store hash in build_manifest.json (build metadata) rather than meta.json (card data)
+    print(f"\nComputing file hash for cache-busting...")
+    sha256 = hashlib.sha256()
+    with open(OUT_BIN, 'rb') as f:
+        # Read in chunks to handle large files efficiently
+        while chunk := f.read(8192):
+            sha256.update(chunk)
+    file_hash = sha256.hexdigest()[:16]  # Use first 16 chars (64 bits) for shorter URLs
+    print(f"  File hash: {file_hash} (use ?v={file_hash} for embeddings cache-busting)")
+    
+    # Add hash to build_manifest.json (build metadata)
+    BUILD_MANIFEST = output_dir / "build_manifest.json"
+    if BUILD_MANIFEST.exists():
+        with open(BUILD_MANIFEST, 'r', encoding='utf-8') as f:
+            build_manifest = json.load(f)
+        build_manifest["file_hash"] = file_hash
+        BUILD_MANIFEST.write_text(json.dumps(build_manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"  Added file_hash to {BUILD_MANIFEST.name}")
+    else:
+        print(f"  ⚠️  Warning: {BUILD_MANIFEST} not found, hash not added to build manifest")
     
     OUT_META.write_text(json.dumps(meta_with_header, ensure_ascii=False), encoding="utf-8")
     print(f"Wrote {OUT_META} ({len(meta)} records with quantization metadata)")

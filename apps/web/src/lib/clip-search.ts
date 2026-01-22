@@ -17,6 +17,7 @@ const EMBEDDINGS_FORMAT = env.VITE_EMBEDDINGS_FORMAT
 const EMB_EXT = EMBEDDINGS_FORMAT === 'float32' ? 'f32bin' : 'i8bin'
 const EMB_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/embeddings.${EMB_EXT}`
 const META_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/meta.json`
+const BUILD_MANIFEST_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/build_manifest.json`
 
 // Contrast enhancement for query images to match database preprocessing
 // Set to 1.0 for no enhancement (default)
@@ -148,12 +149,43 @@ export async function loadEmbeddingsAndMetaFromPackage() {
     return loadTask
   }
   loadTask = (async () => {
-    const metaUrl = META_URL as string
+    const isChannel = EMBEDDINGS_VERSION.startsWith('latest-')
+    
+    // For channels, fetch build_manifest.json first to get the hash for cache-busting
+    // build_manifest.json is small (~1KB) and contains build metadata including file_hash
+    let fileHash: string | undefined
+    if (isChannel) {
+      const manifestUrl = BUILD_MANIFEST_URL as string
+      console.log('[loadEmbeddingsAndMetaFromPackage] Fetching build manifest for hash...')
+      const manifestRes = await fetch(manifestUrl, { cache: 'no-store' })
+      if (manifestRes.ok) {
+        try {
+          const manifest = await manifestRes.json() as { file_hash?: string }
+          fileHash = manifest.file_hash
+          if (fileHash) {
+            console.log(`[loadEmbeddingsAndMetaFromPackage] Got file_hash from build manifest: ${fileHash}`)
+          }
+        } catch (e) {
+          console.warn('[loadEmbeddingsAndMetaFromPackage] Failed to parse build manifest:', e)
+        }
+      } else {
+        console.warn(`[loadEmbeddingsAndMetaFromPackage] Failed to fetch build manifest: ${manifestRes.status}`)
+      }
+    }
+    
+    // Fetch metadata (with cache-busting hash for channels)
+    let metaUrl = META_URL as string
+    if (isChannel && fileHash) {
+      metaUrl = `${metaUrl}?v=${fileHash}`
+    }
+    
     console.log('[loadEmbeddingsAndMetaFromPackage] Loading from:', {
       BLOB_STORAGE_URL,
       EMBEDDINGS_VERSION,
       metaUrl,
       embUrl: EMB_URL,
+      isChannel,
+      fileHash,
     })
 
     const metaRes = await fetch(metaUrl)
@@ -178,7 +210,16 @@ export async function loadEmbeddingsAndMetaFromPackage() {
         `Failed to parse META_URL at ${metaUrl}: ${(e as Error).message}. First bytes: ${metaText.slice(0, 200)}`,
       )
     }
-    const embUrl = EMB_URL as string
+    
+    // Construct embeddings URL with cache-busting hash for channel deployments
+    // Channels (latest-dev, latest-prod) need hash since URL stays the same
+    // Snapshots (v2026-01-20-ab12cd3) don't need hash since URL changes with version
+    let embUrl = EMB_URL as string
+    if (isChannel && fileHash) {
+      // Append hash to embeddings URL for cache-busting
+      embUrl = `${embUrl}?v=${fileHash}`
+      console.log(`[loadEmbeddingsAndMetaFromPackage] Using cache-busting hash for embeddings: ?v=${fileHash}`)
+    }
 
     const embRes = await fetch(embUrl)
     if (!embRes.ok) {

@@ -3,7 +3,6 @@
 Deploy exported embeddings to Vercel Blob Storage.
 
 Usage:
-    python deploy_to_blob.py --major 1 --minor 3
     python deploy_to_blob.py --version v2026-01-20-ab12cd3
     python deploy_to_blob.py --channel latest-dev --snapshot
     python deploy_to_blob.py --channel latest-prod --snapshot --version v2026-01-20-ab12cd3
@@ -68,7 +67,7 @@ def upload_file_to_blob(
         file_path: Local file to upload
         blob_url: Base Vercel Blob URL
         blob_token: Authentication token
-        remote_path: Remote path in blob storage (e.g., "v1.3/embeddings.f32bin")
+        remote_path: Remote path in blob storage (e.g., "v2026-01-20-ab12cd3/embeddings.f32bin")
 
     Returns:
         True if successful, False otherwise
@@ -133,8 +132,9 @@ def deploy_embeddings(
     Deploy embeddings to Vercel Blob Storage.
 
     Args:
-        major: Major version number
-        minor: Minor version number
+        version: Version string (e.g., v2026-01-20-ab12cd3)
+        channel: Optional channel name (latest-dev or latest-prod)
+        snapshot: Whether to also deploy to snapshot version folder
         input_dir: Directory containing exported files
         dry_run: If True, only show what would be uploaded
 
@@ -233,16 +233,6 @@ def main():
         help="Snapshot version folder (e.g., v2026-01-20-ab12cd3). Defaults to date+git sha."
     )
     ap.add_argument(
-        "--major",
-        type=int,
-        help="Major version number (legacy, e.g., 1 for v1.3)"
-    )
-    ap.add_argument(
-        "--minor",
-        type=int,
-        help="Minor version number (legacy, e.g., 3 for v1.3)"
-    )
-    ap.add_argument(
         "--channel",
         choices=["latest-dev", "latest-prod"],
         help="Channel destination to overwrite (latest-dev or latest-prod)."
@@ -267,8 +257,6 @@ def main():
 
     if args.version:
         version = args.version
-    elif args.major is not None and args.minor is not None:
-        version = f"v{args.major}.{args.minor}"
     else:
         version = compute_default_version()
 
