@@ -16,14 +16,14 @@ def main():
     # --- Paths ---
     input_dir = Path(args.input_dir)
     output_dir = Path(args.output_dir)
-    
+
     EMB_NPY  = input_dir / "mtg_embeddings.npy"
     META_LJL = input_dir / "mtg_meta.jsonl"
 
     # --- Validate ---
     if not EMB_NPY.exists():
         raise SystemExit(f"Missing {EMB_NPY}. Re-run the builder after adding the np.save() line.")
-    
+
     output_dir.mkdir(parents=True, exist_ok=True)
     if not output_dir.is_dir():
         raise SystemExit(f"Output directory {output_dir} is not accessible")
@@ -31,7 +31,7 @@ def main():
     # --- Load embeddings ---
     X = np.load(EMB_NPY)  # float32 [N, D]
     print(f"Loaded embeddings: shape={X.shape}, dtype={X.dtype}")
-    
+
     # --- Verify normalization ---
     norms = np.linalg.norm(X, axis=1)
     if not np.allclose(norms, 1.0, atol=1e-5):
@@ -54,12 +54,12 @@ def main():
         # Export as float32 (no quantization)
         OUT_BIN = output_dir / "embeddings.f32bin"
         OUT_META = output_dir / "meta.json"
-        
+
         X.tofile(OUT_BIN)
         print(f"\nWrote {OUT_BIN} (float32, no quantization)")
         print(f"  Size: {X.nbytes/1e6:.1f} MB")
         print(f"  Shape: {X.shape}")
-        
+
         meta_with_header = {
             "version": "1.0",
             "quantization": {
@@ -71,22 +71,22 @@ def main():
             "shape": list(X.shape),
             "records": meta
         }
-        
+
     else:  # int8
         # Export as int8 (quantized)
         OUT_BIN = output_dir / "embeddings.i8bin"
         OUT_META = output_dir / "meta.json"
-        
+
         # IMPORTANT: Quantize NORMALIZED embeddings
         # Browser must re-normalize after dequantization to restore unit length
         X_int8 = np.clip(X * 127, -127, 127).astype(np.int8)
         X_int8.tofile(OUT_BIN)
-        
+
         print(f"\nWrote {OUT_BIN} (int8 quantized)")
         print(f"  Size reduction: {X.nbytes/1e6:.1f} MB (float32) → {X_int8.nbytes/1e6:.1f} MB (int8) = {100*(1-X_int8.nbytes/X.nbytes):.1f}% smaller")
         print(f"  Shape: {X.shape}")
         print(f"  ⚠️  NOTE: Browser must re-normalize after dequantization!")
-        
+
         meta_with_header = {
             "version": "1.0",
             "quantization": {
@@ -98,7 +98,7 @@ def main():
             "shape": list(X.shape),
             "records": meta
         }
-    
+
     # --- Compute file hash for cache-busting ---
     # Hash is useful for channel deployments (latest-dev, latest-prod) where
     # the same URL can point to different content over time.
@@ -112,7 +112,7 @@ def main():
             sha256.update(chunk)
     file_hash = sha256.hexdigest()[:16]  # Use first 16 chars (64 bits) for shorter URLs
     print(f"  File hash: {file_hash} (use ?v={file_hash} for embeddings cache-busting)")
-    
+
     # Add hash to build_manifest.json (build metadata)
     BUILD_MANIFEST = output_dir / "build_manifest.json"
     if BUILD_MANIFEST.exists():
@@ -123,7 +123,7 @@ def main():
         print(f"  Added file_hash to {BUILD_MANIFEST.name}")
     else:
         print(f"  ⚠️  Warning: {BUILD_MANIFEST} not found, hash not added to build manifest")
-    
+
     OUT_META.write_text(json.dumps(meta_with_header, ensure_ascii=False), encoding="utf-8")
     print(f"Wrote {OUT_META} ({len(meta)} records with quantization metadata)")
     print(f"\n✓ Export complete! Format: {args.format}")
