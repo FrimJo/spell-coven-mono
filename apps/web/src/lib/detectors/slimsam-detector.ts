@@ -386,7 +386,7 @@ export class SlimSAMDetector implements CardDetector {
             const validation = validateQuad(quad, canvasWidth, canvasHeight)
 
             if (validation.valid) {
-              // T020: Apply perspective warp to get canonical 336×336 image
+              // T020: Apply perspective warp to get canonical 224×224 image
               const warpedCanvas = await warpCardToCanonical(canvas, quad)
 
               // Convert quad to normalized polygon for DetectedCard

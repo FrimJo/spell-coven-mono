@@ -92,7 +92,7 @@ const results = topK(q, 5)
 
 Notes:
 
-- Embedding dimension is 768 and cosine similarity is used via dot product on L2-normalized vectors.
+- Embedding dimension is 512 and cosine similarity is used via dot product on L2-normalized vectors.
 - Embeddings are versioned in `public/data/mtg-embeddings/` - see that directory's README for update instructions.
 
 ## Testing & Linting
@@ -128,9 +128,9 @@ env.allowLocalModels = false // Don't serve from web server
 // Model downloads to browser cache on first use
 await pipeline(
   'image-feature-extraction',
-  'Xenova/clip-vit-large-patch14-336',
+  'Xenova/clip-vit-base-patch32',
   {
-    dtype: 'fp32', // ViT-L/14 requires full precision for accuracy
+    dtype: 'fp32', // Keep full precision for consistency
   },
 )
 ```
@@ -146,13 +146,13 @@ await pipeline(
 
 1. **OpenCV.js** detects card boundaries in real-time
 2. User clicks on detected card to crop it
-3. **CLIP** generates 768-dimensional embedding from cropped image
+3. **CLIP** generates 512-dimensional embedding from cropped image
 4. **Cosine similarity** search against pre-computed card embeddings
 5. Best match displayed with card details
 
 ### Performance
 
-- **First load**: ~30-60 seconds (downloads ~500MB ViT-L/14@336px model + 8MB OpenCV from CDN)
+- **First load**: ~15-30 seconds (downloads ~150MB ViT-B/32 model + 8MB OpenCV from CDN)
 - **Subsequent loads**: ~2-3 seconds (uses cached files)
 - **Card detection**: 30+ FPS (OpenCV.js)
 - **Embedding generation**: ~100-200ms per card (CLIP)

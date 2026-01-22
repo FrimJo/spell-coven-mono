@@ -143,10 +143,10 @@ export const MTG_CARD_ASPECT_RATIO = 63 / 88 // ≈ 0.716
 
 /**
  * Canonical output size for extracted cards (matches embedding model input)
- * CRITICAL: Must match CLIP model input size (336×336) used in Python preprocessing
+ * CRITICAL: Must match CLIP model input size (224×224) used in Python preprocessing
  * See: packages/mtg-image-db/build_mtg_faiss.py
  */
-export const CANONICAL_CARD_SIZE: Size = { width: 336, height: 336 }
+export const CANONICAL_CARD_SIZE: Size = { width: 224, height: 224 }
 
 /**
  * Metadata associated with a buffered video frame
