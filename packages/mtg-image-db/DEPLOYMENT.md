@@ -36,18 +36,29 @@ make export
 ### 2. Deploy to Vercel Blob
 
 ```bash
-# Deploy to v1.3 folder
-make deploy MAJOR=1 MINOR=3
+# Deploy to latest-dev channel with automatic snapshot version
+make deploy-dev
+
+# Deploy to latest-prod channel with automatic snapshot version
+make deploy-prod
 
 # Or use the Python script directly
-python deploy_to_blob.py --major 1 --minor 3
+python deploy_to_blob.py --channel latest-dev --snapshot
+python deploy_to_blob.py --channel latest-prod --snapshot --version v2026-01-20-ab12cd3
 ```
 
 ### 3. Verify Deployment
 
 Files will be uploaded to:
 ```
-https://na5tsrppklbhqyyg.public.blob.vercel-storage.com/v1.3/
+https://na5tsrppklbhqyyg.public.blob.vercel-storage.com/latest-dev/
+├── embeddings.f32bin
+├── embeddings.i8bin (if generated)
+├── meta.json
+└── build_manifest.json
+
+# And also to snapshot version folder:
+https://na5tsrppklbhqyyg.public.blob.vercel-storage.com/v2026-01-20-ab12cd3/
 ├── embeddings.f32bin
 ├── embeddings.i8bin (if generated)
 ├── meta.json
@@ -59,24 +70,27 @@ https://na5tsrppklbhqyyg.public.blob.vercel-storage.com/v1.3/
 ### Using Make
 
 ```bash
-# Basic deployment
-make deploy MAJOR=1 MINOR=3
+# Deploy to latest-dev channel
+make deploy-dev
 
-# Dry run (show what would be uploaded)
-python deploy_to_blob.py --major 1 --minor 3 --dry-run
+# Deploy to latest-prod channel
+make deploy-prod
 ```
 
 ### Using Python Script Directly
 
 ```bash
-# Deploy to v1.3
-python deploy_to_blob.py --major 1 --minor 3
+# Deploy to latest-dev channel with auto-generated snapshot version
+python deploy_to_blob.py --channel latest-dev --snapshot
+
+# Deploy to latest-prod channel with specific snapshot version
+python deploy_to_blob.py --channel latest-prod --snapshot --version v2026-01-20-ab12cd3
 
 # Deploy with custom input directory
-python deploy_to_blob.py --major 1 --minor 3 --input-dir /path/to/exports
+python deploy_to_blob.py --channel latest-dev --snapshot --input-dir /path/to/exports
 
 # Dry run
-python deploy_to_blob.py --major 1 --minor 3 --dry-run
+python deploy_to_blob.py --channel latest-dev --snapshot --dry-run
 ```
 
 ## Configuration
@@ -95,11 +109,13 @@ BLOB_READ_WRITE_TOKEN=vercel_blob_rw_na5TSRpPkLbHqYyG_Mc2AZI5UxUJaTazG5kxylJ4Dyb
 
 ### Version Naming
 
-Versions are named as `v{MAJOR}.{MINOR}`:
-- `v1.0` - First release
-- `v1.1` - Minor update
-- `v1.3` - Current version
-- `v2.0` - Major version bump
+Versions use date-based snapshot format: `v{YYYYMMDD}-{git-sha}`
+- `v2026-01-20-ab12cd3` - Snapshot version (immutable)
+- `latest-dev` - Development channel (mutable, points to latest dev snapshot)
+- `latest-prod` - Production channel (mutable, points to latest production snapshot)
+
+Snapshot versions are automatically generated from the current date and git commit SHA.
+Channels are mutable pointers that can be updated to point to different snapshots.
 
 ## Files Uploaded
 
@@ -141,12 +157,13 @@ The web app loads embeddings from the deployed version:
 
 ```typescript
 // apps/web/src/lib/clip-search.ts
-const EMBEDDINGS_VERSION = import.meta.env.VITE_EMBEDDINGS_VERSION // "v1.3"
+const EMBEDDINGS_VERSION = import.meta.env.VITE_EMBEDDINGS_VERSION // "latest-dev" or "v2026-01-20-ab12cd3"
 const BLOB_URL = import.meta.env.VITE_BLOB_STORAGE_URL
 const embeddingsUrl = `${BLOB_URL}${EMBEDDINGS_VERSION}/embeddings.f32bin`
 ```
 
-Update `VITE_EMBEDDINGS_VERSION` in `.env.development` to point to the newly deployed version.
+Update `VITE_EMBEDDINGS_VERSION` in `.env.development` to point to the channel or snapshot version.
+For channels (latest-dev, latest-prod), cache-busting hash is automatically appended to URLs.
 
 ## Full Workflow Example
 
@@ -162,12 +179,14 @@ make embed
 # 3. Export for browser
 make export
 
-# 4. Deploy to v1.4
-make deploy MAJOR=1 MINOR=4
+# 4. Deploy to latest-dev channel (with auto-generated snapshot)
+make deploy-dev
 
-# 5. Update web app to use new version
+# 5. Update web app to use new version (if needed)
 # Edit root .env.development:
-# VITE_EMBEDDINGS_VERSION=v1.4
+# VITE_EMBEDDINGS_VERSION=latest-dev
+# Or use a specific snapshot:
+# VITE_EMBEDDINGS_VERSION=v2026-01-20-ab12cd3
 
 # 6. Restart web app
 cd ../../apps/web

@@ -32,7 +32,7 @@ export const env = createEnv({
 
     // App config
     VITE_BASE_URL: z.url().optional().default('https://localhost:1234'),
-    VITE_EMBEDDINGS_VERSION: z.string().optional().default('v1.3'),
+    VITE_EMBEDDINGS_VERSION: z.string().optional().default('latest-dev'),
     VITE_EMBEDDINGS_FORMAT: z
       .enum(['float32', 'float16'])
       .optional()

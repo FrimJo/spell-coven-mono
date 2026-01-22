@@ -52,7 +52,7 @@ function contentTypeFor(fileName) {
   return 'application/octet-stream'
 }
 
-async function uploadFile({ token, pathname, filePath, dryRun }) {
+async function uploadFile({ token, pathname, filePath, dryRun, allowOverwrite }) {
   if (!existsSync(filePath)) {
     return { ok: false, message: `Missing file: ${filePath}` }
   }
@@ -66,6 +66,7 @@ async function uploadFile({ token, pathname, filePath, dryRun }) {
   const result = await put(pathname, stream, {
     access: 'public',
     addRandomSuffix: false,
+    allowOverwrite: allowOverwrite || false,
     token,
     contentType: contentTypeFor(filePath),
   })
@@ -113,13 +114,23 @@ async function main() {
   let success = 0
   let total = 0
   for (const target of targets) {
+    // Allow overwrite for all targets:
+    // - Channels (latest-dev, latest-prod) are mutable and should be overwritable
+    // - Snapshots (v20260122-aa6bbcd) should also allow overwrite since version names
+    //   are deterministic (date+sha), so redeploying the same version should update it
     for (const fileName of files) {
       const filePath = resolve(inputDir, fileName)
       if (!existsSync(filePath)) continue
       total += 1
       const pathname = `${target}/${fileName}`
       try {
-        const result = await uploadFile({ token, pathname, filePath, dryRun })
+        const result = await uploadFile({ 
+          token, 
+          pathname, 
+          filePath, 
+          dryRun, 
+          allowOverwrite: true 
+        })
         if (result.ok) success += 1
       } catch (err) {
         console.error(`❌ Upload error for ${pathname}:`, err?.message || err)
