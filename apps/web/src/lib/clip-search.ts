@@ -24,7 +24,7 @@ const BUILD_MANIFEST_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/build_manif
 // Set to 1.2 for 20% boost (recommended for blurry webcam cards)
 // Set to 1.5 for 50% boost (aggressive, for very blurry conditions)
 // Must match the --contrast value used when building the embeddings database
-const QUERY_CONTRAST_ENHANCEMENT = parseFloat(env.VITE_QUERY_CONTRAST)
+let queryContrastEnhancement = parseFloat(env.VITE_QUERY_CONTRAST)
 
 // Embedding dimension will be read from metadata at runtime
 // Default to 512 (ViT-B/32) but will be overridden by actual metadata
@@ -162,11 +162,23 @@ export async function loadEmbeddingsAndMetaFromPackage() {
       const manifestRes = await fetch(manifestUrl, { cache: 'no-store' })
       if (manifestRes.ok) {
         try {
-          const manifest = (await manifestRes.json()) as { file_hash?: string }
+          const manifest = (await manifestRes.json()) as {
+            file_hash?: string
+            parameters?: { enhance_contrast?: number }
+          }
           fileHash = manifest.file_hash
           if (fileHash) {
             console.log(
               `[loadEmbeddingsAndMetaFromPackage] Got file_hash from build manifest: ${fileHash}`,
+            )
+          }
+          if (
+            typeof manifest.parameters?.enhance_contrast === 'number' &&
+            manifest.parameters.enhance_contrast > 0
+          ) {
+            queryContrastEnhancement = manifest.parameters.enhance_contrast
+            console.log(
+              `[loadEmbeddingsAndMetaFromPackage] Using contrast from build manifest: ${queryContrastEnhancement}`,
             )
           }
         } catch (e) {
@@ -545,12 +557,12 @@ export async function embedFromCanvas(
   // Apply contrast enhancement if configured (must match database preprocessing)
   let processedCanvas = canvas
   let contrastDuration = 0
-  if (QUERY_CONTRAST_ENHANCEMENT > 1.0) {
+  if (queryContrastEnhancement > 1.0) {
     console.log(
-      `[embedFromCanvas] Applying contrast enhancement (factor: ${QUERY_CONTRAST_ENHANCEMENT})`,
+      `[embedFromCanvas] Applying contrast enhancement (factor: ${queryContrastEnhancement})`,
     )
     const enhanceStart = performance.now()
-    processedCanvas = enhanceCanvasContrast(canvas, QUERY_CONTRAST_ENHANCEMENT)
+    processedCanvas = enhanceCanvasContrast(canvas, queryContrastEnhancement)
     contrastDuration = performance.now() - enhanceStart
     console.log(
       `[embedFromCanvas] Contrast enhancement took ${contrastDuration.toFixed(0)}ms`,
@@ -572,7 +584,7 @@ export async function embedFromCanvas(
           'Dimensions:',
           `${processedCanvas.width}x${processedCanvas.height}`,
         )
-        console.log('Contrast factor:', QUERY_CONTRAST_ENHANCEMENT)
+        console.log('Contrast factor:', queryContrastEnhancement)
         console.groupEnd()
       }
     }, 'image/png')
