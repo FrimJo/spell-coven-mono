@@ -52,6 +52,24 @@ export interface OpenCVConfig extends DetectorConfig {
 
   /** Contour approximation epsilon factor */
   approxEpsilon?: number
+
+  /** Starting ROI size in pixels (square) */
+  roiStartSize?: number
+
+  /** ROI expansion multiplier per pass */
+  roiGrowFactor?: number
+
+  /** Maximum ROI expansion passes */
+  roiMaxPasses?: number
+
+  /** Expected aspect ratio for MTG cards (height / width) */
+  aspectRatio?: number
+
+  /** Allowed aspect ratio tolerance */
+  aspectRatioTolerance?: number
+
+  /** Minimum edge support ratio required */
+  edgeSupportThreshold?: number
 }
 
 /**
@@ -77,6 +95,12 @@ export class OpenCVDetector implements CardDetector {
       cannyHighThreshold: 50,
       blurKernelSize: 3, // Less blur to preserve edges
       approxEpsilon: 0.03, // Slightly more lenient polygon approximation
+      roiStartSize: 300,
+      roiGrowFactor: 1.45,
+      roiMaxPasses: 6,
+      aspectRatio: 1.397,
+      aspectRatioTolerance: 0.35,
+      edgeSupportThreshold: 0.4,
       ...config,
     }
   }
@@ -126,137 +150,7 @@ export class OpenCVDetector implements CardDetector {
 
       const cv = window.cv
 
-      // Convert canvas to OpenCV Mat
-      this.src = cv.imread(canvas)
-      if (!this.src) {
-        return {
-          cards: [],
-          inferenceTimeMs: performance.now() - startTime,
-          rawDetectionCount: 0,
-        }
-      }
-
-      // Convert to grayscale
-      this.gray = new cv.Mat()
-      cv.cvtColor(this.src, this.gray, cv.COLOR_RGBA2GRAY)
-
-      // Apply Gaussian blur to reduce noise
-      this.blurred = new cv.Mat()
-      const blurSize = new cv.Size(
-        this.config.blurKernelSize || 3,
-        this.config.blurKernelSize || 3,
-      )
-      cv.GaussianBlur(this.gray, this.blurred, blurSize, 0)
-
-      // Apply Canny edge detection
-      this.edges = new cv.Mat()
-      cv.Canny(
-        this.blurred,
-        this.edges,
-        this.config.cannyLowThreshold || 10,
-        this.config.cannyHighThreshold || 50,
-      )
-
-      // Enhance edges with morphological operations
-      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3))
-      cv.dilate(this.edges, this.edges, kernel, new cv.Point(-1, -1), 2)
-      cv.erode(this.edges, this.edges, kernel, new cv.Point(-1, -1), 1)
-      kernel.delete()
-
-      console.log('[OpenCV] Edge detection complete')
-
-      // Find contours
-      this.contours = new cv.MatVector()
-      this.hierarchy = new cv.Mat()
-      cv.findContours(
-        this.edges,
-        this.contours,
-        this.hierarchy,
-        cv.RETR_TREE,
-        cv.CHAIN_APPROX_SIMPLE,
-      )
-
-      console.log('[OpenCV] Contours found:', this.contours.size())
-      if (this.contours.size() === 0) {
-        console.log(
-          '[OpenCV] No contours found - edge detection may have failed',
-        )
-      }
-
-      // Process contours to find card-like rectangles
-      const rawDetections: Array<{
-        box: { xmin: number; ymin: number; xmax: number; ymax: number }
-        score: number
-        polygon: Array<{ x: number; y: number }>
-      }> = []
-
-      for (let i = 0; i < this.contours.size(); i++) {
-        const contour = this.contours.get(i)
-        if (!contour) continue
-
-        const area = cv.contourArea(contour)
-
-        // Filter by minimum area
-        if (area < (this.config.minCardArea || 500)) {
-          console.log(
-            `[OpenCV] Contour ${i}: area=${area.toFixed(0)} < min=${this.config.minCardArea || 500}`,
-          )
-          continue
-        }
-
-        // Approximate contour to polygon
-        const epsilon =
-          (this.config.approxEpsilon || 0.02) * cv.arcLength(contour, true)
-        const approx = new cv.Mat()
-        cv.approxPolyDP(contour, approx, epsilon, true)
-
-        // Check if it's a quadrilateral (4 points)
-        if (approx.rows === 4) {
-          // Extract corner points
-          const points: Array<{ x: number; y: number }> = []
-          for (let j = 0; j < 4; j++) {
-            const x = approx.data32S[j * 2]
-            const y = approx.data32S[j * 2 + 1]
-            if (x !== undefined && y !== undefined) {
-              points.push({ x, y })
-            }
-          }
-
-          // Calculate bounding box
-          const xs = points.map((p) => p.x)
-          const ys = points.map((p) => p.y)
-          const xmin = Math.min(...xs)
-          const xmax = Math.max(...xs)
-          const ymin = Math.min(...ys)
-          const ymax = Math.max(...ys)
-
-          // Normalize coordinates to [0, 1]
-          const normalizedBox = {
-            xmin: xmin / canvas.width,
-            ymin: ymin / canvas.height,
-            xmax: xmax / canvas.width,
-            ymax: ymax / canvas.height,
-          }
-
-          // Accept all quadrilaterals - aspect ratio is unreliable for rotated/angled cards
-          // Score based on percentage of canvas area
-          const canvasArea = canvas.width * canvas.height
-          const percentageOfCanvas = (area / canvasArea) * 100
-          // Any quadrilateral > 0.1% of canvas gets score 1.0
-          const score = Math.min(percentageOfCanvas / 0.1, 1.0)
-          console.log(
-            `[OpenCV] Contour ${i}: area=${area.toFixed(0)}, %canvas=${percentageOfCanvas.toFixed(3)}, score=${score.toFixed(3)}, points=${points.length}`,
-          )
-
-          rawDetections.push({
-            box: normalizedBox,
-            score,
-            polygon: points,
-          })
-        }
-
-        approx.delete()
-      }
+      const rawDetections = this.runAdaptiveDetection(canvas, cv)
 
       console.log(
         `[OpenCV] Raw detections: ${rawDetections.length}, filtered by area and quadrilateral shape`,
@@ -334,6 +228,300 @@ export class OpenCVDetector implements CardDetector {
   // ============================================================================
   // Private Helper Methods
   // ============================================================================
+
+  private runAdaptiveDetection(
+    canvas: HTMLCanvasElement,
+    cv: CV,
+  ): Array<{
+    box: { xmin: number; ymin: number; xmax: number; ymax: number }
+    score: number
+    polygon: Array<{ x: number; y: number }>
+  }> {
+    const clickPoint = this.clickPoint
+    const roiPasses: Array<{ x: number; y: number; size: number }> = []
+    if (clickPoint) {
+      const maxSize = Math.max(canvas.width, canvas.height)
+      let size = Math.min(this.config.roiStartSize || 300, maxSize)
+      for (let i = 0; i < (this.config.roiMaxPasses || 6); i++) {
+        roiPasses.push({ x: clickPoint.x, y: clickPoint.y, size })
+        size = Math.min(size * (this.config.roiGrowFactor || 1.45), maxSize)
+      }
+    } else {
+      roiPasses.push({
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        size: Math.max(canvas.width, canvas.height),
+      })
+    }
+
+    for (const roi of roiPasses) {
+      const detections = this.detectInRoi(canvas, cv, roi, clickPoint)
+      if (detections.length > 0) {
+        return detections
+      }
+    }
+
+    return []
+  }
+
+  private detectInRoi(
+    canvas: HTMLCanvasElement,
+    cv: CV,
+    roi: { x: number; y: number; size: number },
+    clickPoint: { x: number; y: number } | null,
+  ): Array<{
+    box: { xmin: number; ymin: number; xmax: number; ymax: number }
+    score: number
+    polygon: Array<{ x: number; y: number }>
+  }> {
+    const half = roi.size / 2
+    const roiX = Math.max(0, Math.round(roi.x - half))
+    const roiY = Math.max(0, Math.round(roi.y - half))
+    const roiWidth = Math.min(canvas.width - roiX, Math.round(roi.size))
+    const roiHeight = Math.min(canvas.height - roiY, Math.round(roi.size))
+
+    const regionCanvas = document.createElement('canvas')
+    regionCanvas.width = roiWidth
+    regionCanvas.height = roiHeight
+    const regionCtx = regionCanvas.getContext('2d', {
+      willReadFrequently: true,
+    })
+    if (!regionCtx) {
+      return []
+    }
+    regionCtx.drawImage(
+      canvas,
+      roiX,
+      roiY,
+      roiWidth,
+      roiHeight,
+      0,
+      0,
+      roiWidth,
+      roiHeight,
+    )
+
+    this.src = cv.imread(regionCanvas)
+    if (!this.src) {
+      return []
+    }
+
+    this.gray = new cv.Mat()
+    cv.cvtColor(this.src, this.gray, cv.COLOR_RGBA2GRAY)
+
+    this.blurred = new cv.Mat()
+    const blurSize = new cv.Size(
+      this.config.blurKernelSize || 3,
+      this.config.blurKernelSize || 3,
+    )
+    cv.GaussianBlur(this.gray, this.blurred, blurSize, 0)
+
+    this.edges = new cv.Mat()
+    cv.Canny(
+      this.blurred,
+      this.edges,
+      this.config.cannyLowThreshold || 10,
+      this.config.cannyHighThreshold || 50,
+    )
+
+    const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3))
+    cv.dilate(this.edges, this.edges, kernel, new cv.Point(-1, -1), 2)
+    cv.erode(this.edges, this.edges, kernel, new cv.Point(-1, -1), 1)
+    kernel.delete()
+
+    this.contours = new cv.MatVector()
+    this.hierarchy = new cv.Mat()
+    cv.findContours(
+      this.edges,
+      this.contours,
+      this.hierarchy,
+      cv.RETR_EXTERNAL,
+      cv.CHAIN_APPROX_SIMPLE,
+    )
+
+    const detections: Array<{
+      box: { xmin: number; ymin: number; xmax: number; ymax: number }
+      score: number
+      polygon: Array<{ x: number; y: number }>
+    }> = []
+
+    const roiArea = roiWidth * roiHeight
+    const expectedRatio = this.config.aspectRatio || 1.397
+
+    if (this.contours.size() === 0) {
+      this.cleanupDetectionMats()
+      return []
+    }
+
+    for (let i = 0; i < this.contours.size(); i++) {
+      const contour = this.contours.get(i)
+      if (!contour) continue
+
+      const area = cv.contourArea(contour)
+      if (area < (this.config.minCardArea || 500)) {
+        continue
+      }
+
+      if (clickPoint) {
+        const clickInRoi = new cv.Point(
+          clickPoint.x - roiX,
+          clickPoint.y - roiY,
+        )
+        const distance = cv.pointPolygonTest(contour, clickInRoi, false)
+        if (distance < 0) {
+          continue
+        }
+      }
+
+      let points: Array<{ x: number; y: number }> = []
+      const rect = cv.minAreaRect(contour)
+      const rectWidth = rect.size.width
+      const rectHeight = rect.size.height
+      const rectRatio =
+        rectWidth > 0 && rectHeight > 0
+          ? Math.max(rectWidth, rectHeight) / Math.min(rectWidth, rectHeight)
+          : 0
+      const epsilon =
+        (this.config.approxEpsilon || 0.02) * cv.arcLength(contour, true)
+      const approx = new cv.Mat()
+      cv.approxPolyDP(contour, approx, epsilon, true)
+
+      if (approx.rows === 4) {
+        for (let j = 0; j < 4; j++) {
+          const x = approx.data32S[j * 2]
+          const y = approx.data32S[j * 2 + 1]
+          if (x !== undefined && y !== undefined) {
+            points.push({ x, y })
+          }
+        }
+      } else {
+        const vertices = cv.RotatedRect.points(rect)
+        points = vertices.map((pt: { x: number; y: number }) => ({
+          x: pt.x,
+          y: pt.y,
+        }))
+      }
+
+      approx.delete()
+
+      if (points.length !== 4) {
+        continue
+      }
+
+      const ratio = rectRatio || this.calculateAspectRatio(points)
+      if (
+        Math.abs(ratio - expectedRatio) >
+        (this.config.aspectRatioTolerance || 0.35)
+      ) {
+        continue
+      }
+
+      if (!this.edges) {
+        continue
+      }
+      const supportScore = this.calculateEdgeSupport(
+        this.edges as Mat,
+        points,
+      )
+      if (supportScore < (this.config.edgeSupportThreshold || 0.4)) {
+        continue
+      }
+
+      const areaScore = Math.min(area / roiArea, 1)
+      const ratioScore = Math.max(
+        0,
+        1 - Math.abs(ratio - expectedRatio) / expectedRatio,
+      )
+      const score = areaScore * 1.6 + ratioScore * 0.8 + supportScore * 1.2
+
+      const translatedPoints = points.map((point) => ({
+        x: point.x + roiX,
+        y: point.y + roiY,
+      }))
+
+      const xs = translatedPoints.map((p) => p.x)
+      const ys = translatedPoints.map((p) => p.y)
+      const xmin = Math.min(...xs)
+      const xmax = Math.max(...xs)
+      const ymin = Math.min(...ys)
+      const ymax = Math.max(...ys)
+
+      detections.push({
+        box: {
+          xmin: xmin / canvas.width,
+          ymin: ymin / canvas.height,
+          xmax: xmax / canvas.width,
+          ymax: ymax / canvas.height,
+        },
+        score,
+        polygon: translatedPoints,
+      })
+    }
+
+    const sortedDetections = detections.sort((a, b) => b.score - a.score)
+    this.cleanupDetectionMats()
+    return sortedDetections
+  }
+
+  private cleanupDetectionMats(): void {
+    if (this.src) this.src.delete()
+    if (this.gray) this.gray.delete()
+    if (this.blurred) this.blurred.delete()
+    if (this.edges) this.edges.delete()
+    if (this.contours) this.contours.delete()
+    if (this.hierarchy) this.hierarchy.delete()
+
+    this.src = null
+    this.gray = null
+    this.blurred = null
+    this.edges = null
+    this.contours = null
+    this.hierarchy = null
+  }
+
+  private calculateAspectRatio(points: Array<{ x: number; y: number }>): number {
+    const [p0, p1, p2, p3] = points
+    const width = Math.hypot(p1.x - p0.x, p1.y - p0.y)
+    const height = Math.hypot(p3.x - p0.x, p3.y - p0.y)
+    if (width === 0) {
+      return 0
+    }
+    const ratio = height / width
+    return ratio >= 1 ? ratio : 1 / ratio
+  }
+
+  private calculateEdgeSupport(
+    edges: Mat,
+    points: Array<{ x: number; y: number }>,
+  ): number {
+    const samplesPerEdge = 20
+    let hits = 0
+    let total = 0
+
+    for (let i = 0; i < points.length; i++) {
+      const start = points[i]
+      const end = points[(i + 1) % points.length]
+      if (!start || !end) continue
+      for (let s = 0; s <= samplesPerEdge; s++) {
+        const t = s / samplesPerEdge
+        const x = Math.round(start.x + (end.x - start.x) * t)
+        const y = Math.round(start.y + (end.y - start.y) * t)
+        if (x < 0 || y < 0 || x >= edges.cols || y >= edges.rows) {
+          continue
+        }
+        total += 1
+        const value = edges.ucharPtr(y, x)[0]
+        if (value && value > 0) {
+          hits += 1
+        }
+      }
+    }
+
+    if (total === 0) {
+      return 0
+    }
+    return hits / total
+  }
 
   private setStatus(msg: string) {
     this.config.onProgress?.(msg)
