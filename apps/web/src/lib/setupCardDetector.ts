@@ -86,6 +86,7 @@ let croppedCanvas: HTMLCanvasElement
 
 let clickHandler: ((evt: MouseEvent) => void) | null = null
 const CLICK_DEBOUNCE_MS = 2000 // Minimum time between clicks (2 seconds)
+const CARD_CROP_PADDING_RATIO = 0.02 // Slight padding to avoid clipping card edges
 
 // Use global state to prevent multiple HMR instances from processing clicks concurrently
 declare global {
@@ -105,6 +106,48 @@ function getGlobalClickState() {
     }
   }
   return window.__cardDetectorClickState
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
+}
+
+function getClampedCropRect(
+  box: { xmin: number; ymin: number; xmax: number; ymax: number },
+  canvasWidth: number,
+  canvasHeight: number,
+  paddingRatio: number = 0,
+) {
+  const rawX = box.xmin * canvasWidth
+  const rawY = box.ymin * canvasHeight
+  const rawWidth = (box.xmax - box.xmin) * canvasWidth
+  const rawHeight = (box.ymax - box.ymin) * canvasHeight
+
+  const padX = rawWidth * paddingRatio
+  const padY = rawHeight * paddingRatio
+
+  const paddedX = rawX - padX
+  const paddedY = rawY - padY
+  const paddedWidth = rawWidth + padX * 2
+  const paddedHeight = rawHeight + padY * 2
+
+  const clampedX = clamp(Math.round(paddedX), 0, canvasWidth - 1)
+  const clampedY = clamp(Math.round(paddedY), 0, canvasHeight - 1)
+  const clampedWidth = Math.max(
+    1,
+    Math.min(Math.round(paddedWidth), canvasWidth - clampedX),
+  )
+  const clampedHeight = Math.max(
+    1,
+    Math.min(Math.round(paddedHeight), canvasHeight - clampedY),
+  )
+
+  return {
+    x: clampedX,
+    y: clampedY,
+    width: clampedWidth,
+    height: clampedHeight,
+  }
 }
 
 // ============================================================================
@@ -371,22 +414,29 @@ function cropCardFromBoundingBox(
   }
 
   // Convert normalized coordinates to pixels
-  const x = box.xmin * canvasToUse.width
-  const y = box.ymin * canvasToUse.height
-  const cardWidth = (box.xmax - box.xmin) * canvasToUse.width
-  const cardHeight = (box.ymax - box.ymin) * canvasToUse.height
+  const cropRect = getClampedCropRect(
+    box,
+    canvasToUse.width,
+    canvasToUse.height,
+    CARD_CROP_PADDING_RATIO,
+  )
 
   // Extract the full card region from the bounding box
   const canvasCtx = canvasToUse.getContext('2d', { willReadFrequently: true })
   if (!canvasCtx) {
     throw new Error('setupCardDetector: Failed to get 2d context from canvas')
   }
-  const cardImageData = canvasCtx.getImageData(x, y, cardWidth, cardHeight)
+  const cardImageData = canvasCtx.getImageData(
+    cropRect.x,
+    cropRect.y,
+    cropRect.width,
+    cropRect.height,
+  )
 
   // Create temporary canvas for the extracted card
   const tempCanvas = document.createElement('canvas')
-  tempCanvas.width = cardWidth
-  tempCanvas.height = cardHeight
+  tempCanvas.width = cropRect.width
+  tempCanvas.height = cropRect.height
   const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })
   if (!tempCtx) {
     throw new Error(
@@ -404,14 +454,16 @@ function cropCardFromBoundingBox(
   }
   croppedCtx.fillStyle = 'black'
   croppedCtx.fillRect(0, 0, croppedCanvas.width, croppedCanvas.height)
+  croppedCtx.imageSmoothingEnabled = true
+  croppedCtx.imageSmoothingQuality = 'high'
 
   // Calculate scaling to fit card within 224×224 while preserving aspect ratio
   const scale = Math.min(
-    CROPPED_CARD_WIDTH / cardWidth,
-    CROPPED_CARD_HEIGHT / cardHeight,
+    CROPPED_CARD_WIDTH / cropRect.width,
+    CROPPED_CARD_HEIGHT / cropRect.height,
   )
-  const scaledWidth = cardWidth * scale
-  const scaledHeight = cardHeight * scale
+  const scaledWidth = cropRect.width * scale
+  const scaledHeight = cropRect.height * scale
 
   // Center the card in the canvas
   const offsetX = (CROPPED_CARD_WIDTH - scaledWidth) / 2
@@ -424,8 +476,8 @@ function cropCardFromBoundingBox(
     tempCanvas,
     0,
     0,
-    cardWidth,
-    cardHeight,
+    cropRect.width,
+    cropRect.height,
     offsetX,
     offsetY,
     scaledWidth,
@@ -542,12 +594,14 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
     return false
   }
 
-  const boxXMin = card.box.xmin * sourceCanvas.width
-  const boxYMin = card.box.ymin * sourceCanvas.height
-  const cardWidth = (card.box.xmax - card.box.xmin) * sourceCanvas.width
-  const cardHeight = (card.box.ymax - card.box.ymin) * sourceCanvas.height
-  const cardWidthPx = Math.max(1, Math.round(cardWidth))
-  const cardHeightPx = Math.max(1, Math.round(cardHeight))
+  const cropRect = getClampedCropRect(
+    card.box,
+    sourceCanvas.width,
+    sourceCanvas.height,
+    CARD_CROP_PADDING_RATIO,
+  )
+  const cardWidthPx = cropRect.width
+  const cardHeightPx = cropRect.height
   const detectionCropCanvas = document.createElement('canvas')
   detectionCropCanvas.width = cardWidthPx
   detectionCropCanvas.height = cardHeightPx
@@ -557,10 +611,10 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
   if (detectionCropCtx) {
     detectionCropCtx.drawImage(
       sourceCanvas,
-      boxXMin,
-      boxYMin,
-      cardWidth,
-      cardHeight,
+      cropRect.x,
+      cropRect.y,
+      cropRect.width,
+      cropRect.height,
       0,
       0,
       cardWidthPx,
@@ -592,7 +646,10 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
     if (!croppedCtx) {
       throw new Error('setupCardDetector: croppedCtx is not initialized')
     }
-    croppedCtx.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height)
+    croppedCtx.fillStyle = 'black'
+    croppedCtx.fillRect(0, 0, croppedCanvas.width, croppedCanvas.height)
+    croppedCtx.imageSmoothingEnabled = true
+    croppedCtx.imageSmoothingQuality = 'high'
     croppedCtx.drawImage(
       card.warpedCanvas,
       0,
@@ -638,7 +695,10 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
         if (!croppedCtx) {
           throw new Error('setupCardDetector: croppedCtx is not initialized')
         }
-        croppedCtx.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height)
+        croppedCtx.fillStyle = 'black'
+        croppedCtx.fillRect(0, 0, croppedCanvas.width, croppedCanvas.height)
+        croppedCtx.imageSmoothingEnabled = true
+        croppedCtx.imageSmoothingQuality = 'high'
         croppedCtx.drawImage(
           warpedCanvas,
           0,
