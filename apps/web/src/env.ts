@@ -34,7 +34,7 @@ export const env = createEnv({
     VITE_BASE_URL: z.url().optional().default('https://localhost:1234'),
     VITE_EMBEDDINGS_VERSION: z.string().optional().default('latest-dev'),
     VITE_EMBEDDINGS_FORMAT: z
-      .enum(['float32', 'float16'])
+      .enum(['float32', 'int8'])
       .optional()
       .default('float32'),
     VITE_QUERY_CONTRAST: z.string().optional().default('1.5'),
