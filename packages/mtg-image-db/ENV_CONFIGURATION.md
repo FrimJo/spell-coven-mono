@@ -1,68 +1,71 @@
 # Environment Configuration
 
-This package now reads configuration from the root `.env.development` file in the monorepo.
+This package has been updated to use `build_manifest.json` as the single source of truth for configuration, eliminating environment variable dependencies.
 
-## Supported Environment Variables
+## Configuration via build_manifest.json
 
-### `VITE_EMBEDDINGS_FORMAT`
-- **Type**: string
-- **Default**: `float32`
-- **Description**: Format for embeddings (currently used for documentation/manifest)
-- **Usage**: Loaded via `get_embeddings_format()` in `config.py`
+All configuration is now stored in `build_manifest.json` which is generated during the embedding build process and deployed alongside the embeddings. This ensures perfect consistency between build-time and query-time settings.
 
-### `VITE_QUERY_CONTRAST`
-- **Type**: float
-- **Default**: `1.0` (no enhancement)
-- **Description**: Contrast enhancement factor for images during embedding
-- **Usage**: Automatically used as default for `--contrast` CLI argument in `build_embeddings.py`
-- **Examples**:
+### Why build_manifest.json?
+
+**Problem**: Previously, embedding format and contrast settings were split across environment variables, requiring manual synchronization between Python (build) and JavaScript (query).
+
+**Solution**: The build manifest acts as the single source of truth:
+1. Python writes settings to `build_manifest.json` during build
+2. JavaScript reads settings from `build_manifest.json` during query
+3. Impossible to have mismatched settings between build and query
+
+### Manifest Structure
+
+```json
+{
+  "version": "1.0",
+  "timestamp": "2026-01-24T10:30:00Z",
+  "parameters": {
+    "enhance_contrast": 1.5,
+    "format": "int8",
+    "embeddings_filename": "embeddings.i8bin"
+  },
+  "artifacts": {
+    "embeddings": "mtg_embeddings.npy",
+    "faiss_index": "mtg_cards.faiss",
+    "metadata": "mtg_meta.jsonl"
+  },
+  "file_hash": "a1b2c3d4e5f6g7h8"
+}
+```
+
+### Key Fields
+
+- **`parameters.enhance_contrast`** (required): Contrast enhancement factor applied during embedding
   - `1.0` = no enhancement
-  - `1.2` = 20% contrast boost (recommended for blurry cards)
-  - `1.5` = 50% contrast boost
+  - `1.2` = 20% boost (recommended for blurry cards)
+  - `1.5` = 50% boost (aggressive)
+- **`parameters.format`** (required): Embedding export format (for transparency/documentation)
+  - `int8` = 75% smaller than float32, slight accuracy loss (default)
+  - `float32` = full precision, no quantization
+- **`parameters.embeddings_filename`** (required): Full filename of embeddings file (e.g., `embeddings.i8bin`)
+  - Browser uses this to construct the correct URL without inferring extensions
+- **`file_hash`** (optional): SHA-256 hash for cache-busting in channel deployments
+- **`version`**: Manifest format version
+- **`timestamp`**: Build timestamp
+- **`artifacts`**: Output file names
 
-## How It Works
+## Usage
 
-1. **Root `.env.development`** contains shared configuration:
-   ```
-   VITE_EMBEDDINGS_FORMAT=float32
-   VITE_QUERY_CONTRAST=1.5
-   ```
+### Building Embeddings
 
-2. **`config.py`** loads these variables:
-   - Reads from root `.env.development`
-   - Falls back to OS environment variables
-   - Provides helper functions: `get_embeddings_format()`, `get_query_contrast()`
-
-3. **`build_embeddings.py`** uses the config:
-   - Default `--contrast` value comes from `VITE_QUERY_CONTRAST`
-   - Can still be overridden via CLI: `python build_embeddings.py --contrast 1.2`
-
-## Usage Examples
-
-### Use default contrast from `.env.development`
 ```bash
-python build_embeddings.py --kind unique_artwork
+# Build with contrast enhancement
+python build_embeddings.py --kind unique_artwork --contrast 1.5
 ```
-This will use `VITE_QUERY_CONTRAST=1.5` from the root `.env.development`
 
-### Override contrast via CLI
-```bash
-python build_embeddings.py --kind unique_artwork --contrast 1.2
-```
-This overrides the environment variable value
+The `--contrast` parameter is written to `build_manifest.json` automatically.
 
-### Set contrast via environment variable
-```bash
-VITE_QUERY_CONTRAST=1.3 python build_embeddings.py --kind unique_artwork
-```
-This sets the environment variable before running the script
+### Browser Client
 
-## Consistency with Web App
-
-The web app (`apps/web`) uses the same environment variables:
-- Frontend: `import.meta.env.VITE_QUERY_CONTRAST`
-- Backend: `process.env.VITE_QUERY_CONTRAST` (with dotenv)
-
-**Important**: Keep the contrast values in sync between backend and frontend for consistent results:
-- Backend builds embeddings with `VITE_QUERY_CONTRAST=1.5`
-- Frontend queries with `VITE_QUERY_CONTRAST=1.5`
+The browser client (`apps/web`) automatically reads contrast from the manifest:
+- Fetches `build_manifest.json` during initialization
+- Validates structure using Zod schema
+- Applies the same contrast factor from `parameters.enhance_contrast`
+- **No environment variables needed** - everything comes from the manifest

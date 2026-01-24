@@ -9,7 +9,7 @@
     "./*": "./index_out/*"
   },
   "scripts": {
-    "build": "python3 build_mtg_faiss.py --out index_out --cache image_cache && python3 export_for_browser.py",
+    "build": "python3 download_images.py --kind unique_artwork --cache image_cache && python3 build_embeddings.py --out index_out --cache image_cache && python3 export_for_browser.py",
     "export-browser": "python3 export_for_browser.py",
     "test": "python3 test_perfect_match.py"
   },
