@@ -4,7 +4,11 @@ Build FAISS index from cached images.
 This is step 2 of the build process - run after download_images.py
 """
 import argparse
+import gzip
+import hashlib
+import io
 import json
+import threading
 import time
 import gc
 from datetime import datetime
@@ -17,18 +21,143 @@ from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 
-# Import helpers from build script
+import requests
+import torch
+import clip
+from PIL import Image, UnidentifiedImageError
+
+# Import helpers
 import sys
 sys.path.insert(0, str(Path(__file__).parent))
-from build_mtg_faiss import (
-    load_bulk,
-    face_image_urls,
-    safe_filename,
-    load_image_rgb,
-    Embedder
-)
 from helpers import validate_image, validate_args, safe_percentage
-from config import get_query_contrast
+from config import get_default_contrast
+
+
+# ------------------------- Shared Utilities -------------------------
+
+def get_bulk_download_uri(kind: str) -> str:
+    """kind in {"unique_artwork", "default_cards", "all_cards"}"""
+    r = requests.get("https://api.scryfall.com/bulk-data", timeout=30)
+    r.raise_for_status()
+    data = r.json()["data"]
+    for item in data:
+        if item["type"] == kind:
+            return item["download_uri"]
+    raise ValueError(f"Bulk type '{kind}' not found. Available: {[d['type'] for d in data]}")
+
+def load_bulk(kind: str) -> List[dict]:
+    url = get_bulk_download_uri(kind)
+    r = requests.get(url, stream=True, timeout=60)
+    r.raise_for_status()
+    raw = r.content
+    if url.endswith(".gz"):
+        raw = gzip.GzipFile(fileobj=io.BytesIO(raw)).read()
+    cards = json.loads(raw)
+    return cards
+
+def face_image_urls(card: dict):
+    out = []
+    def pick_card_image(uris):
+        # Prefer higher-res sources for better embedding accuracy.
+        # "normal" is a good balance; fall back to larger sizes if needed.
+        return uris.get("png") or uris.get("large") or uris.get("normal") or uris.get("small") or uris.get("border_crop")
+
+    if "image_uris" in card:
+        card_url = pick_card_image(card["image_uris"])
+        if card_url:
+            out.append((card["name"], card_url, card_url, card.get("id")))
+
+    for i, f in enumerate(card.get("card_faces", [])):
+        if "image_uris" in f:
+            card_url = pick_card_image(f["image_uris"])
+            if card_url:
+                name = f.get("name") or card["name"]
+                face_id = (card.get("id") or "") + f":face:" + str(i)
+                out.append((name, card_url, card_url, face_id))
+    return out
+
+def safe_filename(url: str) -> str:
+    # stable cache name independent of query params
+    h = hashlib.sha1(url.encode("utf-8")).hexdigest()
+    ext = ".jpg"
+    if ".png" in url.lower():
+        ext = ".png"
+    return f"{h}{ext}"
+
+def load_image_rgb(path: Path, target_size: int = 224, enhance_contrast: float = 1.0) -> Optional[Image.Image]:
+    try:
+        img = Image.open(path).convert("RGB")
+
+        # Enhance contrast if requested (helps with blurry cards)
+        if enhance_contrast > 1.0:
+            from PIL import ImageEnhance
+            enhancer = ImageEnhance.Contrast(img)
+            img = enhancer.enhance(enhance_contrast)
+
+        # Pad to square with black borders to preserve all card information
+        # (card name, mana cost, text box, P/T are important for detection)
+        w, h = img.size
+        s = max(w, h)
+
+        # Create black canvas and center the card
+        padded = Image.new("RGB", (s, s), (0, 0, 0))
+        paste_x = (s - w) // 2
+        paste_y = (s - h) // 2
+        padded.paste(img, (paste_x, paste_y))
+
+        # Resize to target size
+        if s != target_size:
+            padded = padded.resize((target_size, target_size), Image.BICUBIC)
+        return padded
+    except (UnidentifiedImageError, OSError):
+        return None
+
+
+# ------------------------- Embeddings -------------------------
+
+class Embedder:
+    def __init__(self, device: str = None):
+        if torch.backends.mps.is_available():
+          self.device = "mps"
+        elif torch.cuda.is_available():
+          self.device = "cuda"
+        else:
+          self.device = "cpu"
+        self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)  # 512-dim, 32px patch size - faster inference
+        self.lock = threading.Lock()  # CLIP is thread-safe with a lock for transform
+        # Get embedding dimension from model (ViT-B/32 = 512)
+        self.embedding_dim = self.model.visual.output_dim
+
+    def encode_images(self, pil_images: List[Image.Image]) -> np.ndarray:
+        tensors = []
+        with torch.no_grad():
+            for im in pil_images:
+                if im is None:
+                    tensors.append(None)
+                else:
+                    with self.lock:
+                        t = self.preprocess(im).unsqueeze(0)
+                    tensors.append(t)
+            batch = [t for t in tensors if t is not None]
+            if not batch:
+                return np.zeros((0, self.embedding_dim), dtype="float32")
+            x = torch.cat(batch, dim=0).to(self.device)
+            z = self.model.encode_image(x)
+            z = z / z.norm(dim=-1, keepdim=True)
+            arr = z.detach().cpu().numpy().astype("float32")
+        # Reinsert blanks for failed images
+        out = np.zeros((len(pil_images), self.embedding_dim), dtype="float32")
+        j = 0
+        for i, t in enumerate(tensors):
+            if t is None:
+                continue
+            out[i] = arr[j]
+            j += 1
+        return out
+
+
+# ------------------------- Build Process -------------------------
+
 
 
 def _validate_cache_worker(args):
@@ -299,7 +428,9 @@ def build_embeddings_from_cache(
             "hnsw_m": hnsw_m,
             "hnsw_ef_construction": hnsw_ef_construction,
             "validate_cache": validate_cache,
-            "enhance_contrast": enhance_contrast
+            "enhance_contrast": enhance_contrast,
+            "format": "int8",  # For transparency/documentation
+            "embeddings_filename": "embeddings.i8bin"  # Full filename for browser
         },
         "statistics": {
             "total_records": len(records),
@@ -363,8 +494,8 @@ def main():
                     help="HNSW M parameter (connectivity, default: 32). Higher = better recall, slower build.")
     ap.add_argument("--hnsw-ef-construction", type=int, default=200,
                     help="HNSW efConstruction parameter (build accuracy, default: 200). Higher = better quality, slower build.")
-    ap.add_argument("--contrast", type=float, default=get_query_contrast(),
-                    help="Contrast enhancement factor (default: loaded from .env.development VITE_QUERY_CONTRAST). Use 1.2 for 20% boost to help with blurry cards.")
+    ap.add_argument("--contrast", type=float, default=get_default_contrast(),
+                    help="Contrast enhancement factor (default: 1.5 recommended for blurry cards). Use 1.0 for no enhancement, 1.2 for 20%% boost.")
     args = ap.parse_args()
 
     # Validate CLI arguments
