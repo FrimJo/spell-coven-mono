@@ -39,37 +39,50 @@ declare global {
  */
 export interface OpenCVConfig extends DetectorConfig {
   /** Minimum card area in pixels */
-  minCardArea?: number
+  minCardArea: number
 
   /** Canny edge detection low threshold */
-  cannyLowThreshold?: number
+  cannyLowThreshold: number
 
   /** Canny edge detection high threshold */
-  cannyHighThreshold?: number
+  cannyHighThreshold: number
 
   /** Gaussian blur kernel size */
-  blurKernelSize?: number
+  blurKernelSize: number
 
   /** Contour approximation epsilon factor */
-  approxEpsilon?: number
+  approxEpsilon: number
 
   /** Starting ROI size in pixels (square) */
-  roiStartSize?: number
+  roiStartSize: number
 
   /** ROI expansion multiplier per pass */
-  roiGrowFactor?: number
+  roiGrowFactor: number
 
   /** Maximum ROI expansion passes */
-  roiMaxPasses?: number
+  roiMaxPasses: number
 
   /** Expected aspect ratio for MTG cards (height / width) */
-  aspectRatio?: number
+  aspectRatio: number
 
   /** Allowed aspect ratio tolerance */
-  aspectRatioTolerance?: number
+  aspectRatioTolerance: number
 
   /** Minimum edge support ratio required */
-  edgeSupportThreshold?: number
+  edgeSupportThreshold: number
+
+  /** Minimum detection quality score to stop ROI expansion */
+  roiQualityThreshold: number
+
+  /** Minimum ratio of valid edge samples required (0-1) */
+  minValidEdgeSampleRatio: number
+
+  /** Scoring weights for detection quality */
+  scoreWeights: {
+    area: number
+    aspectRatio: number
+    edgeSupport: number
+  }
 }
 
 /**
@@ -88,7 +101,7 @@ export class OpenCVDetector implements CardDetector {
   private contours: MatVector | null = null
   private hierarchy: Mat | null = null
 
-  constructor(config: OpenCVConfig) {
+  constructor(config: Partial<OpenCVConfig> & DetectorConfig) {
     this.config = {
       minCardArea: 200, // Very low threshold - even small/distant cards
       cannyLowThreshold: 10, // Very sensitive edge detection
@@ -101,6 +114,13 @@ export class OpenCVDetector implements CardDetector {
       aspectRatio: 1.397,
       aspectRatioTolerance: 0.35,
       edgeSupportThreshold: 0.4,
+      roiQualityThreshold: 2.0, // Minimum quality score to stop ROI expansion
+      minValidEdgeSampleRatio: 0.5, // At least 50% of edge samples must be in bounds
+      scoreWeights: {
+        area: 1.6,
+        aspectRatio: 0.8,
+        edgeSupport: 1.2,
+      },
       ...config,
     }
   }
@@ -241,10 +261,10 @@ export class OpenCVDetector implements CardDetector {
     const roiPasses: Array<{ x: number; y: number; size: number }> = []
     if (clickPoint) {
       const maxSize = Math.max(canvas.width, canvas.height)
-      let size = Math.min(this.config.roiStartSize || 300, maxSize)
-      for (let i = 0; i < (this.config.roiMaxPasses || 6); i++) {
+      let size = Math.min(this.config.roiStartSize, maxSize)
+      for (let i = 0; i < this.config.roiMaxPasses; i++) {
         roiPasses.push({ x: clickPoint.x, y: clickPoint.y, size })
-        size = Math.min(size * (this.config.roiGrowFactor || 1.45), maxSize)
+        size = Math.min(size * this.config.roiGrowFactor, maxSize)
       }
     } else {
       roiPasses.push({
@@ -254,13 +274,49 @@ export class OpenCVDetector implements CardDetector {
       })
     }
 
-    for (const roi of roiPasses) {
+    console.log(
+      `[OpenCV] Running adaptive detection with ${roiPasses.length} ROI passes`,
+    )
+
+    for (let passIdx = 0; passIdx < roiPasses.length; passIdx++) {
+      const roi = roiPasses[passIdx]
+      if (!roi) continue
+
+      const passStartTime = performance.now()
+
+      console.log(
+        `[OpenCV] ROI pass ${passIdx + 1}/${roiPasses.length}: center=(${roi.x.toFixed(0)}, ${roi.y.toFixed(0)}), size=${roi.size.toFixed(0)}`,
+      )
+
       const detections = this.detectInRoi(canvas, cv, roi, clickPoint)
+
+      const passTime = performance.now() - passStartTime
+      console.log(
+        `[OpenCV] ROI pass ${passIdx + 1} completed in ${passTime.toFixed(1)}ms: ${detections.length} detections`,
+      )
+
       if (detections.length > 0) {
-        return detections
+        const bestScore = detections[0]?.score || 0
+        console.log(
+          `[OpenCV] Best detection score: ${bestScore.toFixed(3)}, quality threshold: ${this.config.roiQualityThreshold}`,
+        )
+
+        // Stop if we found a high-quality detection
+        if (bestScore >= this.config.roiQualityThreshold) {
+          console.log(
+            `[OpenCV] Quality threshold met, stopping ROI expansion at pass ${passIdx + 1}`,
+          )
+          return detections
+        }
+
+        // Continue expanding if quality is below threshold
+        console.log(
+          `[OpenCV] Quality below threshold, continuing ROI expansion...`,
+        )
       }
     }
 
+    // Return best detections from all passes
     return []
   }
 
@@ -329,6 +385,10 @@ export class OpenCVDetector implements CardDetector {
     cv.erode(this.edges, this.edges, kernel, new cv.Point(-1, -1), 1)
     kernel.delete()
 
+    // Find contours
+    // Using RETR_EXTERNAL instead of RETR_TREE to only find outermost contours.
+    // This prevents detecting internal features (text, symbols, mana costs) as separate cards
+    // and reduces false positives from complex card artwork.
     this.contours = new cv.MatVector()
     this.hierarchy = new cv.Mat()
     cv.findContours(
@@ -346,19 +406,25 @@ export class OpenCVDetector implements CardDetector {
     }> = []
 
     const roiArea = roiWidth * roiHeight
-    const expectedRatio = this.config.aspectRatio || 1.397
+    const expectedRatio = this.config.aspectRatio
 
     if (this.contours.size() === 0) {
+      console.log(`[OpenCV] No contours found in ROI`)
       this.cleanupDetectionMats()
       return []
     }
+
+    console.log(`[OpenCV] Processing ${this.contours.size()} contours in ROI`)
 
     for (let i = 0; i < this.contours.size(); i++) {
       const contour = this.contours.get(i)
       if (!contour) continue
 
       const area = cv.contourArea(contour)
-      if (area < (this.config.minCardArea || 500)) {
+      if (area < this.config.minCardArea) {
+        console.log(
+          `[OpenCV] Contour ${i}: area=${area.toFixed(0)} < minCardArea=${this.config.minCardArea}, skipping`,
+        )
         continue
       }
 
@@ -369,6 +435,9 @@ export class OpenCVDetector implements CardDetector {
         )
         const distance = cv.pointPolygonTest(contour, clickInRoi, false)
         if (distance < 0) {
+          console.log(
+            `[OpenCV] Contour ${i}: click point not inside contour, skipping`,
+          )
           continue
         }
       }
@@ -381,8 +450,7 @@ export class OpenCVDetector implements CardDetector {
         rectWidth > 0 && rectHeight > 0
           ? Math.max(rectWidth, rectHeight) / Math.min(rectWidth, rectHeight)
           : 0
-      const epsilon =
-        (this.config.approxEpsilon || 0.02) * cv.arcLength(contour, true)
+      const epsilon = this.config.approxEpsilon * cv.arcLength(contour, true)
       const approx = new cv.Mat()
       cv.approxPolyDP(contour, approx, epsilon, true)
 
@@ -405,34 +473,51 @@ export class OpenCVDetector implements CardDetector {
       approx.delete()
 
       if (points.length !== 4) {
+        console.log(
+          `[OpenCV] Contour ${i}: points.length=${points.length} !== 4, skipping`,
+        )
         continue
       }
 
       const ratio = rectRatio || this.calculateAspectRatio(points)
-      if (
-        Math.abs(ratio - expectedRatio) >
-        (this.config.aspectRatioTolerance || 0.35)
-      ) {
+      const ratioDiff = Math.abs(ratio - expectedRatio)
+      if (ratioDiff > this.config.aspectRatioTolerance) {
+        console.log(
+          `[OpenCV] Contour ${i}: aspect ratio=${ratio.toFixed(3)}, expected=${expectedRatio.toFixed(3)}, diff=${ratioDiff.toFixed(3)} > tolerance=${this.config.aspectRatioTolerance}, skipping`,
+        )
         continue
       }
 
       if (!this.edges) {
         continue
       }
-      const supportScore = this.calculateEdgeSupport(
-        this.edges as Mat,
+      const { supportScore, validSampleRatio } = this.calculateEdgeSupport(
+        this.edges,
         points,
       )
-      if (supportScore < (this.config.edgeSupportThreshold || 0.4)) {
+      if (validSampleRatio < this.config.minValidEdgeSampleRatio) {
+        console.log(
+          `[OpenCV] Contour ${i}: validSampleRatio=${validSampleRatio.toFixed(3)} < minValidEdgeSampleRatio=${this.config.minValidEdgeSampleRatio}, skipping`,
+        )
+        continue
+      }
+      if (supportScore < this.config.edgeSupportThreshold) {
+        console.log(
+          `[OpenCV] Contour ${i}: edgeSupport=${supportScore.toFixed(3)} < threshold=${this.config.edgeSupportThreshold}, skipping`,
+        )
         continue
       }
 
       const areaScore = Math.min(area / roiArea, 1)
-      const ratioScore = Math.max(
-        0,
-        1 - Math.abs(ratio - expectedRatio) / expectedRatio,
+      const ratioScore = Math.max(0, 1 - ratioDiff / expectedRatio)
+      const score =
+        areaScore * this.config.scoreWeights.area +
+        ratioScore * this.config.scoreWeights.aspectRatio +
+        supportScore * this.config.scoreWeights.edgeSupport
+
+      console.log(
+        `[OpenCV] Contour ${i}: ACCEPTED - area=${area.toFixed(0)}, ratio=${ratio.toFixed(3)}, edgeSupport=${supportScore.toFixed(3)}, score=${score.toFixed(3)}`,
       )
-      const score = areaScore * 1.6 + ratioScore * 0.8 + supportScore * 1.2
 
       const translatedPoints = points.map((point) => ({
         x: point.x + roiX,
@@ -480,23 +565,46 @@ export class OpenCVDetector implements CardDetector {
   }
 
   private calculateAspectRatio(points: Array<{ x: number; y: number }>): number {
-    const [p0, p1, p2, p3] = points
-    const width = Math.hypot(p1.x - p0.x, p1.y - p0.y)
-    const height = Math.hypot(p3.x - p0.x, p3.y - p0.y)
-    if (width === 0) {
+    if (points.length !== 4) {
       return 0
     }
-    const ratio = height / width
+
+    // Calculate all 4 edge lengths to handle arbitrary point ordering
+    const edges: number[] = []
+    for (let i = 0; i < 4; i++) {
+      const p1 = points[i]
+      const p2 = points[(i + 1) % 4]
+      if (!p1 || !p2) {
+        return 0
+      }
+      const length = Math.hypot(p2.x - p1.x, p2.y - p1.y)
+      edges.push(length)
+    }
+
+    // Sort edges to get the two longest (opposite sides)
+    edges.sort((a, b) => b - a)
+    const longestEdge = edges[0] || 0
+    const secondLongestEdge = edges[1] || 0
+
+    // Avoid division by zero
+    if (secondLongestEdge === 0) {
+      return 0
+    }
+
+    // For a rectangle, opposite sides are equal, so longest/second-longest gives aspect ratio
+    // Ensure ratio is always >= 1 (height/width convention)
+    const ratio = longestEdge / secondLongestEdge
     return ratio >= 1 ? ratio : 1 / ratio
   }
 
   private calculateEdgeSupport(
-    edges: Mat,
+    edges: InputArray,
     points: Array<{ x: number; y: number }>,
-  ): number {
+  ): { supportScore: number; validSampleRatio: number } {
     const samplesPerEdge = 20
     let hits = 0
     let total = 0
+    let validSamples = 0
 
     for (let i = 0; i < points.length; i++) {
       const start = points[i]
@@ -506,10 +614,11 @@ export class OpenCVDetector implements CardDetector {
         const t = s / samplesPerEdge
         const x = Math.round(start.x + (end.x - start.x) * t)
         const y = Math.round(start.y + (end.y - start.y) * t)
+        total += 1
         if (x < 0 || y < 0 || x >= edges.cols || y >= edges.rows) {
           continue
         }
-        total += 1
+        validSamples += 1
         const value = edges.ucharPtr(y, x)[0]
         if (value && value > 0) {
           hits += 1
@@ -518,9 +627,15 @@ export class OpenCVDetector implements CardDetector {
     }
 
     if (total === 0) {
-      return 0
+      return { supportScore: 0, validSampleRatio: 0 }
     }
-    return hits / total
+
+    const validSampleRatio = validSamples / total
+
+    // Calculate support score only from valid samples
+    const supportScore = validSamples > 0 ? hits / validSamples : 0
+
+    return { supportScore, validSampleRatio }
   }
 
   private setStatus(msg: string) {
