@@ -35,7 +35,8 @@ jobs:
     env:
       VITE_BLOB_STORAGE_URL: ${{ secrets.VITE_BLOB_STORAGE_URL }}
       BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
-      VITE_QUERY_CONTRAST: '1.5'
+      # Contrast factor for embedding build (written to build_manifest.json)
+      CONTRAST_FACTOR: '1.5'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -105,7 +106,7 @@ jobs:
             --kind unique_artwork \
             --out index_out \
             --cache image_cache \
-            --contrast "${VITE_QUERY_CONTRAST}" \
+            --contrast "${CONTRAST_FACTOR}" \
             --size 224
 
       - name: Export for browser
