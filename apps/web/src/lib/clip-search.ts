@@ -7,24 +7,44 @@
 import type { ProgressInfo } from '@huggingface/transformers'
 import { env } from '@/env'
 import { env as hfEnv, pipeline } from '@huggingface/transformers'
+import { z } from 'zod'
 
 // Version of the embeddings data - configured via environment variable
 const EMBEDDINGS_VERSION = env.VITE_EMBEDDINGS_VERSION
 const BLOB_STORAGE_URL = env.VITE_BLOB_STORAGE_URL
 
-// Format: float32 (recommended, no quantization) or int8 (75% smaller, slight accuracy loss)
-const EMBEDDINGS_FORMAT = env.VITE_EMBEDDINGS_FORMAT
-const EMB_EXT = EMBEDDINGS_FORMAT === 'float32' ? 'f32bin' : 'i8bin'
-const EMB_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/embeddings.${EMB_EXT}`
+// Embedding format and extension - read from build_manifest.json at runtime
+// This ensures browser always uses the same format as the build pipeline
 const META_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/meta.json`
 const BUILD_MANIFEST_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/build_manifest.json`
 
-// Contrast enhancement for query images to match database preprocessing
-// Set to 1.0 for no enhancement (default)
-// Set to 1.2 for 20% boost (recommended for blurry webcam cards)
-// Set to 1.5 for 50% boost (aggressive, for very blurry conditions)
+// Computed URLs - will be set after reading manifest
+let EMB_URL: string | null = null
+
+// Build manifest schema validation
+const BuildManifestSchema = z.object({
+  file_hash: z.string().optional(),
+  parameters: z.object({
+    enhance_contrast: z.number().positive(),
+    format: z.string(), // For transparency/documentation (e.g., "int8", "float32", "float16")
+    embeddings_filename: z.string(), // Full filename including extension (e.g., "embeddings.i8bin")
+  }),
+})
+
+type BuildManifest = z.infer<typeof BuildManifestSchema>
+
+// Contrast enhancement for query images - read from build manifest
 // Must match the --contrast value used when building the embeddings database
-let queryContrastEnhancement = parseFloat(env.VITE_QUERY_CONTRAST)
+let queryContrastEnhancement = 1.0
+
+/**
+ * Get the current query contrast enhancement factor.
+ * This value is read from the build manifest during embeddings loading.
+ * @returns Contrast enhancement factor (1.0 = no enhancement, >1.0 = enhanced)
+ */
+export function getQueryContrastEnhancement(): number {
+  return queryContrastEnhancement
+}
 
 // Embedding dimension will be read from metadata at runtime
 // Default to 512 (ViT-B/32) but will be overridden by actual metadata
@@ -95,7 +115,7 @@ function l2norm(x: Float32Array) {
  * @param factor Enhancement factor (1.0 = no change, 1.2 = 20% boost, 1.5 = 50% boost)
  * @returns New canvas with enhanced contrast, or original if factor is 1.0
  */
-function enhanceCanvasContrast(
+export function enhanceCanvasContrast(
   canvas: HTMLCanvasElement,
   factor: number,
 ): HTMLCanvasElement {
@@ -157,45 +177,64 @@ export async function loadEmbeddingsAndMetaFromPackage() {
     if (isChannel) {
       const manifestUrl = BUILD_MANIFEST_URL as string
       console.log(
-        '[loadEmbeddingsAndMetaFromPackage] Fetching build manifest for hash...',
+        '[loadEmbeddingsAndMetaFromPackage] Fetching build manifest for hash and contrast...',
       )
       const manifestRes = await fetch(manifestUrl, { cache: 'no-store' })
-      if (manifestRes.ok) {
-        try {
-          const manifest = (await manifestRes.json()) as {
-            file_hash?: string
-            parameters?: { enhance_contrast?: number }
-          }
-          fileHash = manifest.file_hash
-          if (fileHash) {
-            console.log(
-              `[loadEmbeddingsAndMetaFromPackage] Got file_hash from build manifest: ${fileHash}`,
-            )
-          }
-          if (
-            typeof manifest.parameters?.enhance_contrast === 'number' &&
-            manifest.parameters.enhance_contrast > 0
-          ) {
-            queryContrastEnhancement = manifest.parameters.enhance_contrast
-            console.log(
-              `[loadEmbeddingsAndMetaFromPackage] Using contrast from build manifest: ${queryContrastEnhancement}`,
-            )
-          }
-        } catch (e) {
-          console.warn(
-            '[loadEmbeddingsAndMetaFromPackage] Failed to parse build manifest:',
-            e,
-          )
-        }
-      } else {
-        console.warn(
-          `[loadEmbeddingsAndMetaFromPackage] Failed to fetch build manifest: ${manifestRes.status}`,
+      if (!manifestRes.ok) {
+        throw new Error(
+          `Failed to fetch build manifest (${manifestUrl}): ${manifestRes.status} ${manifestRes.statusText}. The build manifest is required for channel deployments.`,
         )
       }
+
+      let manifest: BuildManifest
+      try {
+        const manifestJson = await manifestRes.json()
+        manifest = BuildManifestSchema.parse(manifestJson)
+      } catch (e) {
+        if (e instanceof z.ZodError) {
+          throw new Error(
+            `Invalid build manifest format: ${e.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(', ')}`,
+          )
+        }
+        throw new Error(
+          `Failed to parse build manifest: ${(e as Error).message}`,
+        )
+      }
+
+      fileHash = manifest.file_hash
+      if (fileHash) {
+        console.log(
+          `[loadEmbeddingsAndMetaFromPackage] Got file_hash from build manifest: ${fileHash}`,
+        )
+      }
+
+      // Read contrast enhancement from manifest (required)
+      if (!manifest.parameters?.enhance_contrast) {
+        throw new Error(
+          'Build manifest missing required parameter: parameters.enhance_contrast. Please rebuild embeddings with contrast parameter.',
+        )
+      }
+
+      queryContrastEnhancement = manifest.parameters.enhance_contrast
+      console.log(
+        `[loadEmbeddingsAndMetaFromPackage] Using contrast from build manifest: ${queryContrastEnhancement}`,
+      )
+
+      // Read embeddings filename from manifest (required)
+      if (!manifest.parameters?.embeddings_filename) {
+        throw new Error(
+          'Build manifest missing required parameter: parameters.embeddings_filename. Please rebuild embeddings.',
+        )
+      }
+
+      EMB_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/${manifest.parameters.embeddings_filename}`
+      console.log(
+        `[loadEmbeddingsAndMetaFromPackage] Using embeddings file from build manifest: ${manifest.parameters.embeddings_filename} (format: ${manifest.parameters.format})`,
+      )
     }
 
     // Fetch metadata (with cache-busting hash for channels)
-    let metaUrl = META_URL as string
+    let metaUrl = META_URL
     if (isChannel && fileHash) {
       metaUrl = `${metaUrl}?v=${fileHash}`
     }
@@ -235,7 +274,13 @@ export async function loadEmbeddingsAndMetaFromPackage() {
     // Construct embeddings URL with cache-busting hash for channel deployments
     // Channels (latest-dev, latest-prod) need hash since URL stays the same
     // Snapshots (v2026-01-20-ab12cd3) don't need hash since URL changes with version
-    let embUrl = EMB_URL as string
+    if (!EMB_URL) {
+      throw new Error(
+        'EMB_URL not initialized. build_manifest.json must be fetched and parsed before loading embeddings.',
+      )
+    }
+
+    let embUrl = EMB_URL
     if (isChannel && fileHash) {
       // Append hash to embeddings URL for cache-busting
       embUrl = `${embUrl}?v=${fileHash}`
@@ -554,62 +599,31 @@ export async function embedFromCanvas(
     canvas.height,
   )
 
-  // Apply contrast enhancement if configured (must match database preprocessing)
-  let processedCanvas = canvas
-  let contrastDuration = 0
-  if (queryContrastEnhancement > 1.0) {
-    console.log(
-      `[embedFromCanvas] Applying contrast enhancement (factor: ${queryContrastEnhancement})`,
-    )
-    const enhanceStart = performance.now()
-    processedCanvas = enhanceCanvasContrast(canvas, queryContrastEnhancement)
-    contrastDuration = performance.now() - enhanceStart
-    console.log(
-      `[embedFromCanvas] Contrast enhancement took ${contrastDuration.toFixed(0)}ms`,
-    )
-    // Log enhanced image blob
-    processedCanvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob)
-        console.groupCollapsed(
-          '%c[DEBUG STAGE 6] Final card for CLIP embedding (with contrast enhancement)',
-          'background: #673AB7; color: white; padding: 2px 6px; border-radius: 3px;',
-        )
-        console.log(
-          '%c ',
-          `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
-        )
-        console.log('Blob URL (copy this):', url)
-        console.log(
-          'Dimensions:',
-          `${processedCanvas.width}x${processedCanvas.height}`,
-        )
-        console.log('Contrast factor:', queryContrastEnhancement)
-        console.groupEnd()
-      }
-    }, 'image/png')
-  } else {
-    // Log original image blob if no enhancement
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob)
-        console.groupCollapsed(
-          '%c[DEBUG STAGE 6] Final card for CLIP embedding (no enhancement)',
-          'background: #673AB7; color: white; padding: 2px 6px; border-radius: 3px;',
-        )
-        console.log(
-          '%c ',
-          `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
-        )
-        console.log('Blob URL (copy this):', url)
-        console.log('Dimensions:', `${canvas.width}x${canvas.height}`)
-        console.groupEnd()
-      }
-    }, 'image/png')
-  }
+  // Note: Contrast enhancement is now applied in setupCardDetector.ts BEFORE resize
+  // to match Python preprocessing order (enhance → resize). This canvas should already
+  // be contrast-enhanced at this point.
+
+  // Log canvas for debugging
+  canvas.toBlob((blob) => {
+    if (blob) {
+      const url = URL.createObjectURL(blob)
+      console.groupCollapsed(
+        '%c[DEBUG STAGE 6] Final card for CLIP embedding (contrast already applied)',
+        'background: #673AB7; color: white; padding: 2px 6px; border-radius: 3px;',
+      )
+      console.log(
+        '%c ',
+        `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+      )
+      console.log('Blob URL (copy this):', url)
+      console.log('Dimensions:', `${canvas.width}x${canvas.height}`)
+      console.log('Contrast factor:', queryContrastEnhancement)
+      console.groupEnd()
+    }
+  }, 'image/png')
 
   const inferenceStart = performance.now()
-  const out = await extractor(processedCanvas)
+  const out = await extractor(canvas)
   const inferenceDuration = performance.now() - inferenceStart
   console.log(
     `[embedFromCanvas] Inference took ${inferenceDuration.toFixed(0)}ms`,
@@ -624,7 +638,7 @@ export async function embedFromCanvas(
 
   const totalDuration = performance.now() - totalStart
   const metrics: EmbeddingMetrics = {
-    contrast: contrastDuration,
+    contrast: 0, // Contrast now applied in setupCardDetector before resize
     inference: inferenceDuration,
     normalization: normDuration,
     total: totalDuration,
