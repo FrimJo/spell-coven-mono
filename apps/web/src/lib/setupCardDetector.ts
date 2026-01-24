@@ -4,7 +4,11 @@
 import type { DetectedCard } from '@/types/card-query'
 
 import type { CardDetector, DetectorType } from './detectors/index.js'
-import { warmModel } from './clip-search.js'
+import {
+  enhanceCanvasContrast,
+  getQueryContrastEnhancement,
+  warmModel,
+} from './clip-search.js'
 import {
   CROPPED_CARD_HEIGHT,
   CROPPED_CARD_WIDTH,
@@ -445,6 +449,12 @@ function cropCardFromBoundingBox(
   }
   tempCtx.putImageData(cardImageData, 0, 0)
 
+  // Apply contrast enhancement BEFORE resize to match Python preprocessing order
+  // Python: load → enhance contrast → pad → resize
+  // Browser: crop → enhance contrast → pad → resize
+  const contrastFactor = getQueryContrastEnhancement()
+  const contrastEnhancedCanvas = enhanceCanvasContrast(tempCanvas, contrastFactor)
+
   // Resize to target dimensions (224×224) with aspect ratio preservation and padding
   // The CLIP model expects square images, so we center the card and add black padding
   croppedCanvas.width = CROPPED_CARD_WIDTH
@@ -473,7 +483,7 @@ function cropCardFromBoundingBox(
     throw new Error('setupCardDetector: croppedCtx is not initialized')
   }
   croppedCtx.drawImage(
-    tempCanvas,
+    contrastEnhancedCanvas,
     0,
     0,
     cropRect.width,
@@ -640,6 +650,13 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
       '#FF9800', // Orange
     )
 
+    // Apply contrast enhancement BEFORE resize to match Python preprocessing order
+    const contrastFactor = getQueryContrastEnhancement()
+    const contrastEnhancedCanvas = enhanceCanvasContrast(
+      card.warpedCanvas,
+      contrastFactor,
+    )
+
     // Copy warped canvas to cropped canvas
     croppedCanvas.width = CROPPED_CARD_WIDTH
     croppedCanvas.height = CROPPED_CARD_HEIGHT
@@ -651,11 +668,11 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
     croppedCtx.imageSmoothingEnabled = true
     croppedCtx.imageSmoothingQuality = 'high'
     croppedCtx.drawImage(
-      card.warpedCanvas,
+      contrastEnhancedCanvas,
       0,
       0,
-      card.warpedCanvas.width,
-      card.warpedCanvas.height,
+      contrastEnhancedCanvas.width,
+      contrastEnhancedCanvas.height,
       0,
       0,
       CROPPED_CARD_WIDTH,
@@ -689,6 +706,13 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
           '#FF9800', // Orange
         )
 
+        // Apply contrast enhancement BEFORE resize to match Python preprocessing order
+        const contrastFactor = getQueryContrastEnhancement()
+        const contrastEnhancedCanvas = enhanceCanvasContrast(
+          warpedCanvas,
+          contrastFactor,
+        )
+
         // Copy warped canvas to cropped canvas
         croppedCanvas.width = CROPPED_CARD_WIDTH
         croppedCanvas.height = CROPPED_CARD_HEIGHT
@@ -700,11 +724,11 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
         croppedCtx.imageSmoothingEnabled = true
         croppedCtx.imageSmoothingQuality = 'high'
         croppedCtx.drawImage(
-          warpedCanvas,
+          contrastEnhancedCanvas,
           0,
           0,
-          warpedCanvas.width,
-          warpedCanvas.height,
+          contrastEnhancedCanvas.width,
+          contrastEnhancedCanvas.height,
           0,
           0,
           CROPPED_CARD_WIDTH,
