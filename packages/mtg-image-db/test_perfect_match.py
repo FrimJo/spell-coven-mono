@@ -26,7 +26,7 @@ import faiss
 
 # Import from build scripts
 sys.path.insert(0, str(Path(__file__).parent))
-from build_mtg_faiss import Embedder, load_image_rgb
+from build_embeddings import Embedder, load_image_rgb
 
 
 def get_active_conda_env() -> str | None:

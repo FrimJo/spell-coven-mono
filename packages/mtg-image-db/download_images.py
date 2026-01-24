@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # Import helpers from build script
 import sys
 sys.path.insert(0, str(Path(__file__).parent))
-from build_mtg_faiss import (
+from build_embeddings import (
     get_bulk_download_uri,
     load_bulk,
     face_image_urls,
