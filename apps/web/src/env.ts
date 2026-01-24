@@ -33,11 +33,6 @@ export const env = createEnv({
     // App config
     VITE_BASE_URL: z.url().optional().default('https://localhost:1234'),
     VITE_EMBEDDINGS_VERSION: z.string().optional().default('latest-dev'),
-    VITE_EMBEDDINGS_FORMAT: z
-      .enum(['float32', 'int8'])
-      .optional()
-      .default('float32'),
-    VITE_QUERY_CONTRAST: z.string().optional().default('1.5'),
     VITE_BLOB_STORAGE_URL: z.url().min(1, 'Blob storage URL is required'),
   },
 
@@ -50,8 +45,6 @@ export const env = createEnv({
     VITE_CONVEX_URL: import.meta.env.VITE_CONVEX_URL,
     VITE_BASE_URL: import.meta.env.VITE_BASE_URL,
     VITE_EMBEDDINGS_VERSION: import.meta.env.VITE_EMBEDDINGS_VERSION,
-    VITE_EMBEDDINGS_FORMAT: import.meta.env.VITE_EMBEDDINGS_FORMAT,
-    VITE_QUERY_CONTRAST: import.meta.env.VITE_QUERY_CONTRAST,
     VITE_BLOB_STORAGE_URL: import.meta.env.VITE_BLOB_STORAGE_URL,
   },
 
@@ -97,8 +90,6 @@ export function getClientEnv() {
     VITE_CONVEX_URL: env.VITE_CONVEX_URL,
     VITE_BASE_URL: env.VITE_BASE_URL,
     VITE_EMBEDDINGS_VERSION: env.VITE_EMBEDDINGS_VERSION,
-    VITE_EMBEDDINGS_FORMAT: env.VITE_EMBEDDINGS_FORMAT,
-    VITE_QUERY_CONTRAST: env.VITE_QUERY_CONTRAST,
     VITE_BLOB_STORAGE_URL: env.VITE_BLOB_STORAGE_URL,
   }
 }
