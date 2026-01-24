@@ -65,7 +65,7 @@ If you prefer pip-only (not recommended), see the optional section below. The `r
 
 ### 2) Build the index
 
-**Two-step process (recommended):**
+**Two-step process:**
 
 Step 1: Download and cache images (can be resumed if interrupted):
 ```bash
@@ -120,15 +120,10 @@ Contrast enhancement sharpens card features (text, mana symbols, artwork edges) 
 - `1.2` = 20% boost (recommended starting point)
 - `1.5` = 50% boost (for challenging conditions)
 
-**Single-step process (legacy):**
+**Combined build command:**
 ```bash
-python build_mtg_faiss.py --kind unique_artwork --out index_out --cache image_cache
-# Or: make build
-```
-
-**Combined two-step:**
-```bash
-make build-all  # Runs both download and embed steps
+# Runs both download and embed steps
+make download && make embed
 ```
 
 Artifacts written:
@@ -205,7 +200,7 @@ See `apps/web/README.md` for setup and usage.
 
 ## Development Tips
 
-- **Start with a small subset**: add `--limit 2000` to `build_mtg_faiss.py` for faster iterations.
+- **Start with a small subset**: add `--limit 2000` to `build_embeddings.py` for faster iterations.
 - **Query any image**: pass the image path as an argument to `query_index.py`.
 - **Static server**: any static HTTP server works (Node, Python, etc.). Ensure paths like `index_out/meta.json` resolve from project root.
 - **Model cache**: the first browser load downloads the CLIP model; subsequent loads are faster due to caching.
@@ -216,13 +211,9 @@ See `apps/web/README.md` for setup and usage.
 Common tasks are available if you prefer `make` (note: `make install` is deprecated in favor of Conda targets):
 
 ```bash
-# Two-step build (recommended)
+# Two-step build
 make download   # download and cache images (step 1)
 make embed      # build embeddings from cache (step 2)
-make build-all  # run both download and embed steps
-
-# Legacy single-step build
-make build      # run the index builder (single step)
 
 # Other tasks
 make export     # export browser artifacts
@@ -360,7 +351,6 @@ python scripts/validate_cache.py --cache image_cache --report validation_report.
 
 - `download_images.py` – Step 1: Download and cache images from Scryfall
 - `build_embeddings.py` – Step 2: Build embeddings and FAISS index from cache
-- `build_mtg_faiss.py` – Legacy single-step build pipeline (download + embed)
 - `query_index.py` – Python query using FAISS
 - `export_for_browser.py` – Export embeddings/metadata for browser
 - `image_cache/` – Cached images

@@ -26,7 +26,7 @@ cd packages/mtg-image-db
 # Download images
 make download
 
-# Build embeddings (uses VITE_QUERY_CONTRAST from .env.development)
+# Build embeddings (contrast factor set via --contrast flag, default 1.5)
 make embed
 
 # Export for browser

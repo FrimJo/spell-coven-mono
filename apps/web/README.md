@@ -26,19 +26,19 @@ This app provides a browser-based visual search over pre-generated MTG card art 
 
 ### Contrast Enhancement for Blurry Cards
 
-To improve matching of blurry or low-contrast webcam cards, you can enable query-side contrast enhancement:
+The contrast enhancement factor is now automatically read from `build_manifest.json` at runtime. This ensures the browser always uses the same contrast factor that was used when building the embeddings.
+
+**No configuration needed** - the contrast factor is set during the embedding build process:
 
 ```bash
-# With 20% contrast boost (recommended for typical webcam blur)
-cd apps/web && VITE_QUERY_CONTRAST=1.2 bun run dev
-
-# With 50% contrast boost (aggressive, for very blurry conditions)
-cd apps/web && VITE_QUERY_CONTRAST=1.5 bun run dev
+# Build embeddings with 50% contrast boost (default)
+cd packages/mtg-image-db
+python build_embeddings.py --contrast 1.5
 ```
 
-**Important**: The frontend enhancement factor **must match** the database preprocessing factor. If you built the database with `--contrast 1.2`, set `VITE_QUERY_CONTRAST=1.2` in the frontend.
+The browser will automatically read `parameters.enhance_contrast` from the manifest and apply the same factor to query images.
 
-See [`CONTRAST_ENHANCEMENT_FRONTEND.md`](./CONTRAST_ENHANCEMENT_FRONTEND.md) for detailed configuration and troubleshooting.
+See [`CONTRAST_ENHANCEMENT_FRONTEND.md`](./CONTRAST_ENHANCEMENT_FRONTEND.md) for detailed information.
 
 ### Private Voice Rooms (Discord Integration)
 
