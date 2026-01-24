@@ -45,15 +45,26 @@ def get_config():
 
 
 def get_embeddings_format() -> str:
-    """Get embeddings format from config (default: float32)."""
-    config = get_config()
-    return config.get('VITE_EMBEDDINGS_FORMAT', 'float32')
+    """
+    Get embeddings format.
+    
+    Hardcoded to 'int8' (75% smaller than float32, slight accuracy loss).
+    This must match the format expected by the browser client.
+    
+    Returns:
+        str: Always returns 'int8'
+    """
+    return 'int8'
 
 
-def get_query_contrast() -> float:
-    """Get query contrast enhancement factor from config (default: 1.0)."""
-    config = get_config()
-    try:
-        return float(config.get('VITE_QUERY_CONTRAST', '1.0'))
-    except (ValueError, TypeError):
-        return 1.0
+def get_default_contrast() -> float:
+    """
+    Get default contrast enhancement factor.
+    
+    Returns 1.5 as the recommended default for blurry webcam cards.
+    This value is written to build_manifest.json and read by the browser client.
+    
+    Returns:
+        float: Always returns 1.5 (50% boost)
+    """
+    return 1.5
