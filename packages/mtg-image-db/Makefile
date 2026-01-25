@@ -1,7 +1,11 @@
-.PHONY: install build build-all download embed embed-contrast embed-contrast-aggressive build-all-contrast build-all-contrast-aggressive export deploy deploy-dev deploy-prod test query serve clean conda-cpu conda-gpu conda-mps install-cpu install-gpu install-mps
+.PHONY: install build build-all download embed embed-contrast embed-contrast-aggressive build-all-contrast build-all-contrast-aggressive export deploy deploy-dev deploy-prod test query serve clean conda-cpu conda-gpu conda-mps install-cpu install-gpu install-mps preview-embed-input
 
 PYTHON ?= python
 PORT ?= 8000
+IMAGE ?=
+OUT ?= processed_preview.jpg
+SIZE ?= 224
+CONTRAST ?= 1.5
 
 install:
 	@echo "[DEPRECATED] Use Conda environments instead:" && \
@@ -17,6 +21,10 @@ download:
 
 embed:
 	$(PYTHON) build_embeddings.py --kind unique_artwork --out index_out --cache image_cache --contrast 1.5
+
+preview-embed-input:
+	@if [ -z "$(IMAGE)" ]; then echo "Usage: make preview-embed-input IMAGE=path/to/image [OUT=processed_preview.jpg] [SIZE=224] [CONTRAST=1.5]"; exit 1; fi
+	$(PYTHON) preview_embed_input.py --input "$(IMAGE)" --output "$(OUT)" --size $(SIZE) --contrast $(CONTRAST)
 
 export:
 	$(PYTHON) export_for_browser.py --input-dir index_out --output-dir index_out

@@ -428,9 +428,7 @@ def build_embeddings_from_cache(
             "hnsw_m": hnsw_m,
             "hnsw_ef_construction": hnsw_ef_construction,
             "validate_cache": validate_cache,
-            "enhance_contrast": enhance_contrast,
-            "format": "int8",  # For transparency/documentation
-            "embeddings_filename": "embeddings.i8bin"  # Full filename for browser
+            "enhance_contrast": enhance_contrast
         },
         "statistics": {
             "total_records": len(records),
