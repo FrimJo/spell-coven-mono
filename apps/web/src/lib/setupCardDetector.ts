@@ -8,12 +8,10 @@ import type { CardDetector, DetectorType } from './detectors/index.js'
 import {
   enhanceCanvasContrast,
   getQueryContrastEnhancement,
+  getQueryTargetSize,
+  waitForEmbeddings,
   warmModel,
 } from './clip-search.js'
-import {
-  CROPPED_CARD_HEIGHT,
-  CROPPED_CARD_WIDTH,
-} from './detection-constants.js'
 import { refineBoundingBoxToCorners } from './detectors/geometry/bbox-refinement.js'
 import { warpCardToCanonical } from './detectors/geometry/perspective.js'
 import { createDetector } from './detectors/index.js'
@@ -381,7 +379,7 @@ function stopDetection() {
 /**
  * Crop card from bounding box
  * CRITICAL: Must match Python embedding pipeline preprocessing for accuracy
- * Python pipeline: pad to square with black borders → resize to target size (default 224)
+ * Python pipeline: pad to square with black borders → resize to target size
  * See: packages/mtg-image-db/build_mtg_faiss.py
  * @param box Bounding box from DETR detection (normalized coordinates)
  * @param sourceCanvas Optional source canvas to crop from (if not provided, uses videoEl)
@@ -456,10 +454,11 @@ function cropCardFromBoundingBox(
   const contrastFactor = getQueryContrastEnhancement()
   const contrastEnhancedCanvas = enhanceCanvasContrast(tempCanvas, contrastFactor)
 
-  // Resize to target dimensions (224×224) with aspect ratio preservation and padding
+  // Resize to target dimensions with aspect ratio preservation and padding
   // The CLIP model expects square images, so we center the card and add black padding
-  croppedCanvas.width = CROPPED_CARD_WIDTH
-  croppedCanvas.height = CROPPED_CARD_HEIGHT
+  const targetSize = getQueryTargetSize()
+  croppedCanvas.width = targetSize
+  croppedCanvas.height = targetSize
   if (!croppedCtx) {
     throw new Error('setupCardDetector: croppedCtx is not initialized')
   }
@@ -468,17 +467,17 @@ function cropCardFromBoundingBox(
   croppedCtx.imageSmoothingEnabled = true
   croppedCtx.imageSmoothingQuality = 'high'
 
-  // Calculate scaling to fit card within 224×224 while preserving aspect ratio
+  // Calculate scaling to fit card within target size while preserving aspect ratio
   const scale = Math.min(
-    CROPPED_CARD_WIDTH / cropRect.width,
-    CROPPED_CARD_HEIGHT / cropRect.height,
+    targetSize / cropRect.width,
+    targetSize / cropRect.height,
   )
   const scaledWidth = cropRect.width * scale
   const scaledHeight = cropRect.height * scale
 
   // Center the card in the canvas
-  const offsetX = (CROPPED_CARD_WIDTH - scaledWidth) / 2
-  const offsetY = (CROPPED_CARD_HEIGHT - scaledHeight) / 2
+  const offsetX = (targetSize - scaledWidth) / 2
+  const offsetY = (targetSize - scaledHeight) / 2
 
   if (!croppedCtx) {
     throw new Error('setupCardDetector: croppedCtx is not initialized')
@@ -694,8 +693,9 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
     )
 
     // Copy warped canvas to cropped canvas
-    croppedCanvas.width = CROPPED_CARD_WIDTH
-    croppedCanvas.height = CROPPED_CARD_HEIGHT
+    const targetSize = getQueryTargetSize()
+    croppedCanvas.width = targetSize
+    croppedCanvas.height = targetSize
     if (!croppedCtx) {
       throw new Error('setupCardDetector: croppedCtx is not initialized')
     }
@@ -711,8 +711,8 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
       contrastEnhancedCanvas.height,
       0,
       0,
-      CROPPED_CARD_WIDTH,
-      CROPPED_CARD_HEIGHT,
+      targetSize,
+      targetSize,
     )
 
     return true
@@ -731,7 +731,7 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
       )
 
       if (quad) {
-        // Step 2: Apply perspective correction to get canonical 224×224 image
+        // Step 2: Apply perspective correction to get canonical target-size image
         const warpedCanvas = await warpCardToCanonical(sourceCanvas, quad)
 
         // DEBUG STAGE 3: Log OpenCV warped canvas
@@ -750,8 +750,9 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
         )
 
         // Copy warped canvas to cropped canvas
-        croppedCanvas.width = CROPPED_CARD_WIDTH
-        croppedCanvas.height = CROPPED_CARD_HEIGHT
+        const targetSize = getQueryTargetSize()
+        croppedCanvas.width = targetSize
+        croppedCanvas.height = targetSize
         if (!croppedCtx) {
           throw new Error('setupCardDetector: croppedCtx is not initialized')
         }
@@ -767,8 +768,8 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
           contrastEnhancedCanvas.height,
           0,
           0,
-          CROPPED_CARD_WIDTH,
-          CROPPED_CARD_HEIGHT,
+          targetSize,
+          targetSize,
         )
 
         return true
@@ -809,9 +810,14 @@ export async function setupCardDetector(args: {
   croppedCanvas = args.cropped
   fullResCanvas = args.fullRes
 
-  // Set cropped canvas to MTG card aspect ratio (63:88)
-  croppedCanvas.width = CROPPED_CARD_WIDTH
-  croppedCanvas.height = CROPPED_CARD_HEIGHT
+  // Wait for embeddings/manifest to be loaded before accessing manifest values
+  // This ensures we have contrast enhancement factor and target size from the build
+  await waitForEmbeddings()
+
+  // Set cropped canvas to target size from manifest
+  const targetSize = getQueryTargetSize()
+  croppedCanvas.width = targetSize
+  croppedCanvas.height = targetSize
 
   overlayCtx = overlayEl.getContext('2d', { willReadFrequently: true })
   fullResCtx = fullResCanvas.getContext('2d', { willReadFrequently: true })

@@ -75,10 +75,19 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     (cameraPermission.browserState === 'denied' ||
       microphonePermission.browserState === 'denied')
 
-  const permissionsGranted =
+  // Permissions are granted if:
+  // - Microphone is granted (required for audio chat)
+  // - Camera is either granted OR still at "prompt" state (which happens when macOS blocks video access)
+  // When macOS blocks camera at system level, browser reports "prompt" but no video devices exist.
+  // In this case, we should still allow the user to proceed with audio-only functionality.
+  const microphoneGranted =
+    !isCheckingPermissions && microphonePermission.browserState === 'granted'
+  const cameraGrantedOrUnavailable =
     !isCheckingPermissions &&
-    cameraPermission.browserState === 'granted' &&
-    microphonePermission.browserState === 'granted'
+    (cameraPermission.browserState === 'granted' ||
+      cameraPermission.browserState === 'prompt')
+
+  const permissionsGranted = microphoneGranted && cameraGrantedOrUnavailable
 
   // Use media device hooks - these are the ONLY instances in the app
   // Cleanup will happen when this provider unmounts (navigating away from game page)

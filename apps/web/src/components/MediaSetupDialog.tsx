@@ -118,35 +118,62 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   const [focusMode, setFocusMode] = useState<string>('continuous')
   const [focusDistance, setFocusDistance] = useState<number>(0.5)
   const lastInitializedTrackIdRef = useRef<string | null>(null)
+  const focusTrackIdRef = useRef<string | null>(null)
+  const [focusCapabilities, setFocusCapabilities] =
+    useState<FocusCapabilities | null>(null)
+  const [isFocusSupportForced, setIsFocusSupportForced] = useState(false)
 
-  // Derive focus capabilities from video track (computed, not effect-based)
-  const focusCapabilities = useMemo((): FocusCapabilities | null => {
-    if (!isSuccessState(videoResult) || !videoResult.stream) {
-      return null
-    }
+  const selectedVideoLabel = useMemo(() => {
+    return (
+      videoDevices.find((device) => device.deviceId === selectedVideoId)
+        ?.label ?? ''
+    )
+  }, [videoDevices, selectedVideoId])
 
-    const videoTrack = videoResult.stream.getVideoTracks()[0]
-    if (!videoTrack) {
-      return null
-    }
+  const forceFocusControls = useMemo(() => {
+    return /c920|c922/i.test(selectedVideoLabel)
+  }, [selectedVideoLabel])
 
-    try {
-      const capabilities =
-        videoTrack.getCapabilities() as MediaTrackCapabilities & {
-          focusMode?: string[]
-          focusDistance?: { min: number; max: number; step: number }
+  const deriveFocusCapabilities = useCallback(
+    (videoTrack: MediaStreamTrack): FocusCapabilities => {
+      try {
+        const capabilities =
+          videoTrack.getCapabilities() as MediaTrackCapabilities & {
+            focusMode?: string[]
+            focusDistance?: { min: number; max: number; step: number }
+          }
+        const settings = videoTrack.getSettings() as MediaTrackSettings & {
+          focusMode?: string
+          focusDistance?: number
         }
-      const settings = videoTrack.getSettings() as MediaTrackSettings & {
-        focusMode?: string
-        focusDistance?: number
-      }
 
-      if (capabilities.focusMode && capabilities.focusMode.length > 0) {
+        const focusModeSet = new Set<string>()
+        for (const mode of capabilities.focusMode ?? []) {
+          focusModeSet.add(mode)
+        }
+        if (settings.focusMode) {
+          focusModeSet.add(settings.focusMode)
+        }
+        if (capabilities.focusDistance || settings.focusDistance !== undefined) {
+          focusModeSet.add('manual')
+        }
+
+        const focusModes = Array.from(focusModeSet)
+        const supportsFocus =
+          focusModes.length > 0 ||
+          !!capabilities.focusDistance ||
+          settings.focusMode !== undefined ||
+          settings.focusDistance !== undefined
+
+        if (!supportsFocus) {
+          return { supportsFocus: false, focusModes: [] }
+        }
+
         return {
           supportsFocus: true,
-          focusModes: capabilities.focusMode,
+          focusModes,
           focusDistance: capabilities.focusDistance,
-          initialFocusMode: settings.focusMode,
+          initialFocusMode: settings.focusMode ?? focusModes[0],
           initialFocusDistance:
             settings.focusDistance ??
             (capabilities.focusDistance
@@ -155,13 +182,80 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
                 2
               : undefined),
         }
-      } else {
+      } catch {
         return { supportsFocus: false, focusModes: [] }
       }
-    } catch {
-      return { supportsFocus: false, focusModes: [] }
+    },
+    [],
+  )
+
+  // Derive focus capabilities from video track with a short retry
+  useEffect(() => {
+    let cancelled = false
+    let stateTimer: ReturnType<typeof setTimeout> | null = null
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
+
+    const scheduleStateUpdate = (
+      next: FocusCapabilities | null,
+      forced: boolean,
+    ) => {
+      if (cancelled) return
+      stateTimer = setTimeout(() => {
+        if (!cancelled) {
+          setFocusCapabilities(next)
+          setIsFocusSupportForced(forced)
+        }
+      }, 0)
     }
-  }, [videoResult])
+
+    if (!isSuccessState(videoResult) || !videoResult.stream) {
+      focusTrackIdRef.current = null
+      scheduleStateUpdate(null, false)
+      return () => {
+        cancelled = true
+        if (stateTimer) clearTimeout(stateTimer)
+        if (retryTimer) clearTimeout(retryTimer)
+      }
+    }
+
+    const videoTrack = videoResult.stream.getVideoTracks()[0]
+    if (!videoTrack) {
+      focusTrackIdRef.current = null
+      scheduleStateUpdate(null, false)
+      return () => {
+        cancelled = true
+        if (stateTimer) clearTimeout(stateTimer)
+        if (retryTimer) clearTimeout(retryTimer)
+      }
+    }
+
+    const trackId = videoTrack.id
+    focusTrackIdRef.current = trackId
+
+    const compute = (attempt = 0) => {
+      if (cancelled || focusTrackIdRef.current !== trackId) return
+      const derived = deriveFocusCapabilities(videoTrack)
+      const forced = !derived.supportsFocus && forceFocusControls
+      const nextCapabilities = forced
+        ? {
+            supportsFocus: true,
+            focusModes: ['continuous', 'manual'],
+          }
+        : derived
+      scheduleStateUpdate(nextCapabilities, forced)
+      if (!derived.supportsFocus && attempt < 2) {
+        retryTimer = setTimeout(() => compute(attempt + 1), 300)
+      }
+    }
+
+    compute()
+
+    return () => {
+      cancelled = true
+      if (stateTimer) clearTimeout(stateTimer)
+      if (retryTimer) clearTimeout(retryTimer)
+    }
+  }, [videoResult, deriveFocusCapabilities, forceFocusControls])
 
   // Effect Event for initializing focus settings - reads latest focusCapabilities
   // without making it a reactive dependency of the effect
@@ -259,14 +353,22 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     setOutputDevice: switchAudioOutputDevice,
   } = useAudioOutput(audioOutputOptions)
 
+  // Detect macOS system-level camera block:
+  // Browser permissions are granted but no video devices are enumerated
+  // Note: Don't check isVideoPending here - when there are 0 devices, the stream query
+  // stays pending forever because there's no selectedDeviceId to query for
+  const noVideoDevicesAvailable = hasPermissions && videoDevices.length === 0
+
   // Derive permission error from all error sources
-  const permissionError = videoError
-    ? `Unable to access selected camera: ${videoError.message}`
-    : audioInputError
-      ? `Unable to access selected microphone: ${audioInputError.message}`
-      : audioOutputError
-        ? `Audio output error: ${audioOutputError.message}`
-        : ''
+  const permissionError = noVideoDevicesAvailable
+    ? 'No camera detected. Please check that your camera is connected and that your browser has camera access in macOS System Settings > Privacy & Security > Camera.'
+    : videoError
+      ? `Unable to access selected camera: ${videoError.message}`
+      : audioInputError
+        ? `Unable to access selected microphone: ${audioInputError.message}`
+        : audioOutputError
+          ? `Audio output error: ${audioOutputError.message}`
+          : ''
 
   const handleComplete = () => {
     onComplete()
@@ -278,21 +380,34 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   }
 
   const handlePermissionAccept = async () => {
+    // Try to get permissions - handle case where video device isn't available
+    // (e.g., macOS blocking camera at system level)
+    let gotAnyPermission = false
+    
+    // First try audio only - this usually works even when video is blocked
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      })
-      stream.getTracks().forEach((track) => track.stop())
-
-      // Invalidate the media devices query so it re-enumerates with real device IDs
-      // (Before permission, enumerateDevices returns devices with empty deviceId)
-      await queryClient.invalidateQueries({ queryKey: ['MediaDevices'] })
-
-      await recheckPermissions()
+      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      audioStream.getTracks().forEach((track) => track.stop())
+      gotAnyPermission = true
     } catch {
-      await recheckPermissions()
+      // Audio permission failed
     }
+    
+    // Then try video - may fail if macOS is blocking camera
+    try {
+      const videoStream = await navigator.mediaDevices.getUserMedia({ video: true })
+      videoStream.getTracks().forEach((track) => track.stop())
+      gotAnyPermission = true
+    } catch {
+      // Video failed - likely macOS blocking camera access
+    }
+
+    // Invalidate the media devices query so it re-enumerates with real device IDs
+    if (gotAnyPermission) {
+      await queryClient.invalidateQueries({ queryKey: ['MediaDevices'] })
+    }
+
+    await recheckPermissions()
   }
 
   const handlePermissionDecline = () => {
@@ -352,9 +467,10 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
                 <Select
                   value={selectedVideoId}
                   onValueChange={(deviceId) => switchVideoDevice(deviceId)}
+                  disabled={noVideoDevicesAvailable}
                 >
                   <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200">
-                    <SelectValue placeholder="Select camera" />
+                    <SelectValue placeholder={noVideoDevicesAvailable ? "No cameras available" : "Select camera"} />
                   </SelectTrigger>
                   <SelectContent className="border-slate-700 bg-slate-800">
                     {videoDevices
@@ -379,7 +495,50 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
                     muted
                     className="h-full w-full object-cover"
                   />
-                  {isVideoPending && (
+                  {noVideoDevicesAvailable ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900/95">
+                      <div className="mx-auto max-w-sm space-y-4 p-4">
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20">
+                          <AlertCircle className="h-6 w-6 text-amber-400" />
+                        </div>
+
+                        <div className="text-center">
+                          <h3 className="text-lg font-semibold text-slate-100">
+                            No Camera Detected
+                          </h3>
+                          <p className="mt-1 text-sm text-slate-400">
+                            Your camera may be blocked at the system level
+                          </p>
+                        </div>
+
+                        <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-3">
+                          <h4 className="mb-2 text-xs font-medium text-slate-200">
+                            To enable camera access:
+                          </h4>
+                          <ol className="space-y-1.5 text-xs text-slate-400">
+                            <li className="flex items-start gap-2">
+                              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
+                                1
+                              </span>
+                              <span>Open System Settings → Privacy &amp; Security</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
+                                2
+                              </span>
+                              <span>Click Camera in the sidebar</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
+                                3
+                              </span>
+                              <span>Enable access for your browser</span>
+                            </li>
+                          </ol>
+                        </div>
+                      </div>
+                    </div>
+                  ) : isVideoPending ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-slate-800/50">
                       <div className="flex flex-col items-center space-y-3">
                         <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
@@ -388,7 +547,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
                         </p>
                       </div>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </>
             ) : (
@@ -548,6 +707,12 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
                       ? 'Adjust the slider to focus on your cards'
                       : 'Camera will automatically adjust focus'}
                 </p>
+                {isFocusSupportForced && (
+                  <p className="text-xs text-amber-300">
+                    Browser didn&apos;t report focus support for this camera.
+                    Trying focus controls anyway.
+                  </p>
+                )}
               </div>
             )}
           </div>
