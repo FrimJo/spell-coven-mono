@@ -265,7 +265,22 @@ function GameRoomContent({
           stack: err instanceof Error ? err.stack : undefined,
         })
         if (mounted) {
-          toast.error('Failed to load card recognition model')
+          // Surface user-friendly error message based on error type
+          const errorMessage = err instanceof Error ? err.message : String(err)
+          if (errorMessage.includes('build manifest')) {
+            toast.error(
+              'Failed to load card database configuration. Please check your connection and refresh.',
+            )
+          } else if (
+            errorMessage.includes('embeddings') ||
+            errorMessage.includes('meta.json')
+          ) {
+            toast.error(
+              'Failed to load card database. Please check your connection and refresh.',
+            )
+          } else {
+            toast.error('Failed to load card recognition model')
+          }
         }
       }
     }

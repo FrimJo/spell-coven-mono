@@ -26,6 +26,7 @@ const BuildManifestSchema = z.object({
   file_hash: z.string().optional(),
   parameters: z.object({
     enhance_contrast: z.number().positive(),
+    target_size: z.number().positive(),
     format: z.string(), // For transparency/documentation (e.g., "int8", "float32", "float16")
     embeddings_filename: z.string(), // Full filename including extension (e.g., "embeddings.i8bin")
   }),
@@ -35,15 +36,58 @@ type BuildManifest = z.infer<typeof BuildManifestSchema>
 
 // Contrast enhancement for query images - read from build manifest
 // Must match the --contrast value used when building the embeddings database
-let queryContrastEnhancement = 1.0
+// These are null until manifest is loaded - getters will throw if accessed before load
+let queryContrastEnhancement: number | null = null
+let queryTargetSize: number | null = null
+let manifestLoaded = false
 
 /**
  * Get the current query contrast enhancement factor.
  * This value is read from the build manifest during embeddings loading.
  * @returns Contrast enhancement factor (1.0 = no enhancement, >1.0 = enhanced)
+ * @throws Error if build manifest has not been loaded yet
  */
 export function getQueryContrastEnhancement(): number {
+  if (queryContrastEnhancement === null) {
+    throw new Error(
+      'Build manifest not loaded. Cannot get contrast enhancement before embeddings are initialized.',
+    )
+  }
   return queryContrastEnhancement
+}
+
+/**
+ * Get the target size for query images.
+ * Read from build manifest to match embedding preprocessing.
+ * @returns Target size in pixels (e.g., 224 for CLIP ViT-B/32)
+ * @throws Error if build manifest has not been loaded yet
+ */
+export function getQueryTargetSize(): number {
+  if (queryTargetSize === null) {
+    throw new Error(
+      'Build manifest not loaded. Cannot get target size before embeddings are initialized.',
+    )
+  }
+  return queryTargetSize
+}
+
+/**
+ * Check if the build manifest has been loaded.
+ * Use this to guard operations that require manifest values.
+ * @returns true if manifest is loaded and values are available
+ */
+export function isManifestLoaded(): boolean {
+  return manifestLoaded
+}
+
+/**
+ * Wait for the embeddings and manifest to be loaded.
+ * Use this to block operations that require manifest values.
+ * @returns Promise that resolves when embeddings are loaded
+ * @throws Error if embeddings loading fails
+ */
+export async function waitForEmbeddings(): Promise<void> {
+  await loadEmbeddingsAndMetaFromPackage()
 }
 
 // Embedding dimension will be read from metadata at runtime
@@ -169,73 +213,60 @@ export async function loadEmbeddingsAndMetaFromPackage() {
     return loadTask
   }
   loadTask = (async () => {
-    const isChannel = EMBEDDINGS_VERSION.startsWith('latest-')
+    // Always fetch build_manifest.json to get preprocessing parameters (contrast, target_size, etc.)
+    // This ensures browser uses the same values as the build pipeline
+    // For channels, also use the hash for cache-busting
+    const manifestUrl = BUILD_MANIFEST_URL
+    console.log('[loadEmbeddingsAndMetaFromPackage] Fetching build manifest...')
+    // Use no-store for channels to always get fresh manifest; snapshots are immutable
+    const manifestRes = await fetch(manifestUrl, {
+      cache: 'no-store',
+    })
+    if (!manifestRes.ok) {
+      throw new Error(
+        `Failed to fetch build manifest (${manifestUrl}): ${manifestRes.status} ${manifestRes.statusText}. ` +
+          'The build manifest is required for embeddings initialization.',
+      )
+    }
 
-    // For channels, fetch build_manifest.json first to get the hash for cache-busting
-    // build_manifest.json is small (~1KB) and contains build metadata including file_hash
+    let manifest: BuildManifest
+    try {
+      const manifestJson = await manifestRes.json()
+      manifest = BuildManifestSchema.parse(manifestJson)
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        throw new Error(
+          `Invalid build manifest format: ${e.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(', ')}`,
+        )
+      }
+      throw new Error(`Failed to parse build manifest: ${(e as Error).message}`)
+    }
+
+    // Extract preprocessing parameters from manifest
+    queryContrastEnhancement = manifest.parameters.enhance_contrast
+    queryTargetSize = manifest.parameters.target_size
+    EMB_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/${manifest.parameters.embeddings_filename}`
+    manifestLoaded = true
+
+    console.log('[loadEmbeddingsAndMetaFromPackage] Build manifest loaded:', {
+      contrast: queryContrastEnhancement,
+      targetSize: queryTargetSize,
+      embeddingsFilename: manifest.parameters.embeddings_filename,
+      format: manifest.parameters.format,
+    })
+
+    // Use file hash for cache-busting on channel deployments
     let fileHash: string | undefined
-    if (isChannel) {
-      const manifestUrl = BUILD_MANIFEST_URL as string
-      console.log(
-        '[loadEmbeddingsAndMetaFromPackage] Fetching build manifest for hash and contrast...',
-      )
-      const manifestRes = await fetch(manifestUrl, { cache: 'no-store' })
-      if (!manifestRes.ok) {
-        throw new Error(
-          `Failed to fetch build manifest (${manifestUrl}): ${manifestRes.status} ${manifestRes.statusText}. The build manifest is required for channel deployments.`,
-        )
-      }
-
-      let manifest: BuildManifest
-      try {
-        const manifestJson = await manifestRes.json()
-        manifest = BuildManifestSchema.parse(manifestJson)
-      } catch (e) {
-        if (e instanceof z.ZodError) {
-          throw new Error(
-            `Invalid build manifest format: ${e.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(', ')}`,
-          )
-        }
-        throw new Error(
-          `Failed to parse build manifest: ${(e as Error).message}`,
-        )
-      }
-
+    if (manifest.file_hash) {
       fileHash = manifest.file_hash
-      if (fileHash) {
-        console.log(
-          `[loadEmbeddingsAndMetaFromPackage] Got file_hash from build manifest: ${fileHash}`,
-        )
-      }
-
-      // Read contrast enhancement from manifest (required)
-      if (!manifest.parameters?.enhance_contrast) {
-        throw new Error(
-          'Build manifest missing required parameter: parameters.enhance_contrast. Please rebuild embeddings with contrast parameter.',
-        )
-      }
-
-      queryContrastEnhancement = manifest.parameters.enhance_contrast
       console.log(
-        `[loadEmbeddingsAndMetaFromPackage] Using contrast from build manifest: ${queryContrastEnhancement}`,
-      )
-
-      // Read embeddings filename from manifest (required)
-      if (!manifest.parameters?.embeddings_filename) {
-        throw new Error(
-          'Build manifest missing required parameter: parameters.embeddings_filename. Please rebuild embeddings.',
-        )
-      }
-
-      EMB_URL = `${BLOB_STORAGE_URL}${EMBEDDINGS_VERSION}/${manifest.parameters.embeddings_filename}`
-      console.log(
-        `[loadEmbeddingsAndMetaFromPackage] Using embeddings file from build manifest: ${manifest.parameters.embeddings_filename} (format: ${manifest.parameters.format})`,
+        `[loadEmbeddingsAndMetaFromPackage] Using cache-busting hash for channel: ${fileHash}`,
       )
     }
 
     // Fetch metadata (with cache-busting hash for channels)
     let metaUrl = META_URL
-    if (isChannel && fileHash) {
+    if (fileHash) {
       metaUrl = `${metaUrl}?v=${fileHash}`
     }
 
@@ -244,7 +275,6 @@ export async function loadEmbeddingsAndMetaFromPackage() {
       EMBEDDINGS_VERSION,
       metaUrl,
       embUrl: EMB_URL,
-      isChannel,
       fileHash,
     })
 
@@ -281,7 +311,7 @@ export async function loadEmbeddingsAndMetaFromPackage() {
     }
 
     let embUrl = EMB_URL
-    if (isChannel && fileHash) {
+    if (fileHash) {
       // Append hash to embeddings URL for cache-busting
       embUrl = `${embUrl}?v=${fileHash}`
       console.log(
