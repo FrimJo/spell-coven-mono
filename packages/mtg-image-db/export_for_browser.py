@@ -119,6 +119,10 @@ def main():
         with open(BUILD_MANIFEST, 'r', encoding='utf-8') as f:
             build_manifest = json.load(f)
         build_manifest["file_hash"] = file_hash
+        # Keep manifest aligned with actual export format.
+        params = build_manifest.setdefault("parameters", {})
+        params["format"] = args.format
+        params["embeddings_filename"] = OUT_BIN.name
         BUILD_MANIFEST.write_text(json.dumps(build_manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"  Added file_hash to {BUILD_MANIFEST.name}")
     else:
