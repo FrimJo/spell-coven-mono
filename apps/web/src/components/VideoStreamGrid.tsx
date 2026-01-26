@@ -20,6 +20,7 @@ import { Card } from '@repo/ui/components/card'
 
 import { LocalVideoCard } from './LocalVideoCard'
 import { MediaPermissionGate } from './MediaPermissionGate'
+import { PlayerStatsOverlay } from './PlayerStatsOverlay'
 import {
   PlayerNameBadge,
   VideoDisabledPlaceholder,
@@ -145,8 +146,15 @@ export function VideoStreamGrid({
       .map((participant) => ({
         id: participant.id,
         name: participant.username,
+        // Pass full participant object for stats
+        participantData: participant,
       }))
   }, [gameRoomParticipants, localPlayerName])
+
+  const localParticipant = useMemo(
+    () => gameRoomParticipants.find((p) => p.username === localPlayerName),
+    [gameRoomParticipants, localPlayerName],
+  )
 
   const [streamStates, setStreamStates] = useState<Record<string, StreamState>>(
     players.reduce(
@@ -291,6 +299,10 @@ export function VideoStreamGrid({
           onCardCrop={onCardCrop}
           onToggleVideo={toggleLocalVideo}
           onToggleAudio={toggleLocalAudio}
+          roomId={roomId}
+          participant={localParticipant}
+          currentUser={localParticipant}
+          participants={gameRoomParticipants}
         />
       ) : null}
 
@@ -420,6 +432,16 @@ export function VideoStreamGrid({
               <PlayerNameBadge>
                 <span className="text-white">{player.name}</span>
               </PlayerNameBadge>
+
+              {/* Stats Overlay */}
+              {localParticipant && (
+                <PlayerStatsOverlay
+                  roomId={roomId}
+                  participant={player.participantData}
+                  currentUser={localParticipant}
+                  participants={gameRoomParticipants}
+                />
+              )}
 
               {/* Audio/Video Status Indicators */}
               <div className="absolute right-3 top-3 z-10 flex gap-2">

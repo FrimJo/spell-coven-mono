@@ -11,12 +11,11 @@
 import { v } from 'convex/values'
 
 import { mutation, query } from './_generated/server'
+import { DEFAULT_HEALTH } from './constants'
 
 /**
  * Default starting health for Commander format
  */
-const DEFAULT_HEALTH = 40
-
 /**
  * Presence timeout threshold in milliseconds (30 seconds)
  */
@@ -103,6 +102,9 @@ export const joinRoom = mutation({
         status: 'active',
         username,
         avatar,
+        poison: existingSession.poison ?? 0,
+        commanders: existingSession.commanders ?? [],
+        commanderDamage: existingSession.commanderDamage ?? {},
       })
       return { playerId: existingSession._id }
     }
@@ -116,6 +118,9 @@ export const joinRoom = mutation({
       .first()
 
     const health = existingUserSession?.health ?? DEFAULT_HEALTH
+    const poison = existingUserSession?.poison ?? 0
+    const commanders = existingUserSession?.commanders ?? []
+    const commanderDamage = existingUserSession?.commanderDamage ?? {}
 
     // Create new player session
     const playerId = await ctx.db.insert('roomPlayers', {
@@ -125,6 +130,9 @@ export const joinRoom = mutation({
       username,
       avatar,
       health,
+      poison,
+      commanders,
+      commanderDamage,
       status: 'active',
       joinedAt: now,
       lastSeenAt: now,

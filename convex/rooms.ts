@@ -10,12 +10,13 @@
 import { v } from 'convex/values'
 
 import { mutation, query } from './_generated/server'
+import { DEFAULT_HEALTH } from './constants'
 
 /**
  * Default starting health for Commander format
  * @internal Reserved for Phase 4 game logic
  */
-const _DEFAULT_HEALTH = 40
+const _DEFAULT_HEALTH = DEFAULT_HEALTH
 
 /**
  * Presence timeout threshold in milliseconds (30 seconds)
@@ -335,6 +336,138 @@ export const updatePlayerHealth = mutation({
     for (const session of allSessions) {
       await ctx.db.patch(session._id, {
         health: player.health + delta,
+      })
+    }
+  },
+})
+
+/**
+ * Update a player's poison counters
+ *
+ * NOTE: No auth check for Phase 3. Phase 5 will add proper authorization.
+ */
+export const updatePlayerPoison = mutation({
+  args: {
+    roomId: v.string(),
+    userId: v.string(),
+    delta: v.number(),
+  },
+  handler: async (ctx, { roomId, userId, delta }) => {
+    const player = await ctx.db
+      .query('roomPlayers')
+      .withIndex('by_roomId_userId', (q) =>
+        q.eq('roomId', roomId).eq('userId', userId),
+      )
+      .first()
+
+    if (!player) {
+      throw new Error('Player not found in room')
+    }
+
+    const currentPoison = player.poison ?? 0
+
+    const allSessions = await ctx.db
+      .query('roomPlayers')
+      .withIndex('by_roomId_userId', (q) =>
+        q.eq('roomId', roomId).eq('userId', userId),
+      )
+      .collect()
+
+    for (const session of allSessions) {
+      await ctx.db.patch(session._id, {
+        poison: currentPoison + delta,
+      })
+    }
+  },
+})
+
+/**
+ * Set a player's commander list
+ *
+ * NOTE: No auth check for Phase 3. Phase 5 will add proper authorization.
+ */
+export const setPlayerCommanders = mutation({
+  args: {
+    roomId: v.string(),
+    userId: v.string(),
+    commanders: v.array(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+      }),
+    ),
+  },
+  handler: async (ctx, { roomId, userId, commanders }) => {
+    const player = await ctx.db
+      .query('roomPlayers')
+      .withIndex('by_roomId_userId', (q) =>
+        q.eq('roomId', roomId).eq('userId', userId),
+      )
+      .first()
+
+    if (!player) {
+      throw new Error('Player not found in room')
+    }
+
+    const allSessions = await ctx.db
+      .query('roomPlayers')
+      .withIndex('by_roomId_userId', (q) =>
+        q.eq('roomId', roomId).eq('userId', userId),
+      )
+      .collect()
+
+    for (const session of allSessions) {
+      await ctx.db.patch(session._id, {
+        commanders,
+      })
+    }
+  },
+})
+
+/**
+ * Update commander damage for a player
+ *
+ * NOTE: No auth check for Phase 3. Phase 5 will add proper authorization.
+ */
+export const updateCommanderDamage = mutation({
+  args: {
+    roomId: v.string(),
+    userId: v.string(),
+    ownerUserId: v.string(),
+    commanderId: v.string(),
+    delta: v.number(),
+  },
+  handler: async (ctx, { roomId, userId, ownerUserId, commanderId, delta }) => {
+    const player = await ctx.db
+      .query('roomPlayers')
+      .withIndex('by_roomId_userId', (q) =>
+        q.eq('roomId', roomId).eq('userId', userId),
+      )
+      .first()
+
+    if (!player) {
+      throw new Error('Player not found in room')
+    }
+
+    const key = `${ownerUserId}:${commanderId}`
+    const currentDamage = player.commanderDamage?.[key] ?? 0
+    const nextDamage = currentDamage + delta
+    const nextHealth = player.health - delta
+
+    const allSessions = await ctx.db
+      .query('roomPlayers')
+      .withIndex('by_roomId_userId', (q) =>
+        q.eq('roomId', roomId).eq('userId', userId),
+      )
+      .collect()
+
+    for (const session of allSessions) {
+      await ctx.db.patch(session._id, {
+        health: nextHealth,
+        commanderDamage: {
+          ...(session.commanderDamage ?? {}),
+          [key]: nextDamage,
+        },
       })
     }
   },

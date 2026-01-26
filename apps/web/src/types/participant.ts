@@ -9,4 +9,8 @@ export interface Participant {
   joinedAt: number
   /** Unique session ID per browser tab - used for duplicate detection */
   sessionId: string
+  health: number
+  poison: number
+  commanders: Array<{ id: string; name: string }>
+  commanderDamage: Record<string, number>
 }

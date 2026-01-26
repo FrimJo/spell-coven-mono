@@ -1,10 +1,12 @@
 import type { UseLocalVideoStateOptions } from '@/hooks/useLocalVideoState'
 import type { DetectorType } from '@/lib/detectors'
+import type { Participant } from '@/types/participant'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useCardDetector } from '@/hooks/useCardDetector'
 import { useLocalVideoState } from '@/hooks/useLocalVideoState'
 import { attachVideoStream } from '@/lib/video-stream-utils'
 
+import { PlayerStatsOverlay } from './PlayerStatsOverlay'
 import { PlayerVideoCard } from './PlayerVideoCard'
 import {
   CardDetectionOverlay,
@@ -24,6 +26,10 @@ interface LocalVideoCardProps {
   onCardCrop?: (canvas: HTMLCanvasElement) => void
   onToggleVideo?: (enabled: boolean) => Promise<void>
   onToggleAudio?: (enabled: boolean) => void
+  roomId?: string
+  participant?: Participant
+  currentUser?: Participant
+  participants?: Participant[]
 }
 
 export function LocalVideoCard({
@@ -35,6 +41,10 @@ export function LocalVideoCard({
   onCardCrop,
   onToggleVideo,
   onToggleAudio,
+  roomId,
+  participant,
+  currentUser,
+  participants,
 }: LocalVideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   // Manage local video state
@@ -136,6 +146,16 @@ export function LocalVideoCard({
           You
         </span>
       </PlayerNameBadge>
+
+      {/* Stats Overlay */}
+      {roomId && participant && currentUser && participants && (
+        <PlayerStatsOverlay
+          roomId={roomId}
+          participant={participant}
+          currentUser={currentUser}
+          participants={participants}
+        />
+      )}
 
       {/* Media Controls */}
       <LocalMediaControls
