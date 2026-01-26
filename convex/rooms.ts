@@ -18,6 +18,11 @@ import { mutation, query } from './_generated/server'
 const _DEFAULT_HEALTH = 40
 
 /**
+ * Presence timeout threshold in milliseconds (30 seconds)
+ */
+const PRESENCE_THRESHOLD_MS = 30_000
+
+/**
  * Generate a short room code (6 uppercase alphanumeric characters)
  */
 function generateRoomCode(): string {
@@ -142,6 +147,42 @@ export const updateRoomStatus = mutation({
     }
 
     await ctx.db.patch(room._id, { status })
+  },
+})
+
+/**
+ * Get live activity stats for the landing page
+ *
+ * Counts unique active users and rooms with active players.
+ */
+export const getLiveStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
+
+    const activePlayers = await ctx.db
+      .query('roomPlayers')
+      .filter((q) =>
+        q.and(
+          q.neq(q.field('status'), 'left'),
+          q.gt(q.field('lastSeenAt'), presenceThreshold),
+        ),
+      )
+      .collect()
+
+    const uniqueUsers = new Set<string>()
+    const activeRooms = new Set<string>()
+
+    for (const player of activePlayers) {
+      uniqueUsers.add(player.userId)
+      activeRooms.add(player.roomId)
+    }
+
+    return {
+      onlineUsers: uniqueUsers.size,
+      activeRooms: activeRooms.size,
+      asOf: Date.now(),
+    }
   },
 })
 

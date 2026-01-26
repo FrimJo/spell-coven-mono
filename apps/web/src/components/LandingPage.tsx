@@ -1,7 +1,8 @@
 import type { AuthUser } from '@/contexts/AuthContext'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { sessionStorage } from '@/lib/session-storage'
 import { useNavigate } from '@tanstack/react-router'
+import { useQuery } from 'convex/react'
 import {
   Camera,
   Gamepad2,
@@ -47,6 +48,7 @@ import {
 import { Toaster } from '@repo/ui/components/sonner'
 
 import type { CreatorInviteState } from '../lib/session-storage.js'
+import { api } from '../../../../convex/_generated/api'
 import logo from '../assets/logo_1024x1024.png'
 import { CreateGameDialog } from './CreateGameDialog.js'
 import SpotlightCard from './SpotlightCard'
@@ -88,6 +90,32 @@ export function LandingPage({
     isCreating: false,
     gameId: null,
   })
+  const liveStatsQuery = useQuery(api.rooms.getLiveStats)
+  const liveStats = useMemo(
+    () => [
+      {
+        label: 'Online Users',
+        value:
+          liveStatsQuery?.onlineUsers !== undefined
+            ? liveStatsQuery.onlineUsers.toLocaleString()
+            : '—',
+        icon: Users,
+        accent: 'text-purple-300',
+        badge: 'Live now',
+      },
+      {
+        label: 'Active Game Rooms',
+        value:
+          liveStatsQuery?.activeRooms !== undefined
+            ? liveStatsQuery.activeRooms.toLocaleString()
+            : '—',
+        icon: Gamepad2,
+        accent: 'text-blue-300',
+        badge: 'Playing',
+      },
+    ],
+    [liveStatsQuery],
+  )
   const isAuthenticated = !!user
 
   const handleCreateGame = async () => {
@@ -509,6 +537,31 @@ export function LandingPage({
                     Sign in with Discord
                   </Button>
                 )}
+              </div>
+
+              <div className="mt-8 grid w-full max-w-xl gap-4 sm:grid-cols-2 md:justify-start">
+                {liveStats.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="flex items-center gap-4 rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3 shadow-lg shadow-purple-500/10 backdrop-blur-sm"
+                  >
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-800/60">
+                      <stat.icon className={`h-5 w-5 ${stat.accent}`} />
+                    </div>
+                    <div>
+                      <div className="text-xl font-semibold text-white">
+                        {stat.value}
+                      </div>
+                      <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                        {stat.label}
+                      </div>
+                    </div>
+                    <div className="ml-auto flex items-center gap-2 text-xs font-medium text-emerald-300">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
+                      {stat.badge}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
