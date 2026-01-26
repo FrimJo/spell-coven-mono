@@ -539,26 +539,30 @@ export function LandingPage({
                 )}
               </div>
 
-              <div className="mt-8 grid w-full max-w-xl gap-4 sm:grid-cols-2 md:justify-start">
+              <div className="mt-8 grid w-full max-w-xl grid-cols-2 gap-3 sm:gap-4 md:justify-start">
                 {liveStats.map((stat) => (
                   <div
                     key={stat.label}
-                    className="flex items-center gap-4 rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3 shadow-lg shadow-purple-500/10 backdrop-blur-sm"
+                    className="relative flex flex-col items-start gap-3 rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-3 shadow-lg shadow-purple-500/10 backdrop-blur-sm sm:flex-row sm:items-center sm:gap-4 md:flex-col md:items-start md:gap-3 lg:flex-row lg:items-center lg:gap-4 lg:px-4"
                   >
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-800/60">
-                      <stat.icon className={`h-5 w-5 ${stat.accent}`} />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-800/60 sm:h-11 sm:w-11">
+                      <stat.icon
+                        className={`h-4 w-4 ${stat.accent} sm:h-5 sm:w-5`}
+                      />
                     </div>
-                    <div>
-                      <div className="text-xl font-semibold text-white">
+                    <div className="flex flex-col">
+                      <div className="text-lg font-semibold text-white sm:text-xl">
                         {stat.value}
                       </div>
-                      <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                      <div className="text-[10px] uppercase tracking-wider text-slate-400 sm:text-xs sm:tracking-[0.2em]">
                         {stat.label}
                       </div>
                     </div>
-                    <div className="ml-auto flex items-center gap-2 text-xs font-medium text-emerald-300">
-                      <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-                      {stat.badge}
+                    <div className="absolute right-3 top-3 flex items-center gap-2 text-[10px] font-medium text-emerald-300">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 sm:h-2 sm:w-2" />
+                      <span className="hidden xs:inline sm:inline">
+                        {stat.badge}
+                      </span>
                     </div>
                   </div>
                 ))}
