@@ -173,11 +173,14 @@ export function VideoStreamGrid({
     })
   }
 
+  // Always show 2x2 grid for 4 player slots
   const getGridClass = () => {
-    if (players.length === 0) return 'grid-cols-1' // Only local player, fill space
-    if (players.length === 1) return 'grid-cols-1 lg:grid-cols-2' // Local + 1 remote
-    return 'grid-cols-1 lg:grid-cols-2' // Local + multiple remotes
+    return 'grid-cols-1 lg:grid-cols-2'
   }
+
+  // Calculate empty slots needed (total 4 slots: 1 local + up to 3 remote)
+  const maxRemoteSlots = 3
+  const emptySlots = Math.max(0, maxRemoteSlots - players.length)
 
   // Store refs for remote video elements
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map())
@@ -474,6 +477,26 @@ export function VideoStreamGrid({
           </Card>
         )
       })}
+
+      {/* Empty slots for players who haven't joined yet */}
+      {Array.from({ length: emptySlots }).map((_, index) => (
+        <Card
+          key={`empty-slot-${index}`}
+          className="flex flex-col overflow-hidden border-dashed border-slate-700 bg-slate-900/50"
+        >
+          <div className="relative flex flex-1 items-center justify-center bg-slate-950/50">
+            <div className="space-y-3 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-800/50">
+                <div className="h-8 w-8 rounded-full border-2 border-dashed border-slate-600" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-slate-500">Open Slot</p>
+                <p className="text-xs text-slate-600">Waiting for player...</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      ))}
     </div>
   )
 }
