@@ -84,6 +84,17 @@ export default defineSchema({
     avatar: v.optional(v.string()),
     /** Player's current life total */
     health: v.number(),
+    /** Player's current poison counters */
+    poison: v.number(),
+    /** Player's commander list (1-2 entries, owned by the player) */
+    commanders: v.array(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+      }),
+    ),
+    /** Per-commander damage taken, keyed by ownerUserId:commanderId */
+    commanderDamage: v.record(v.string(), v.number()),
     /** Player status */
     status: playerStatusValues,
     /** When player joined */

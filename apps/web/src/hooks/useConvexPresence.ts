@@ -347,6 +347,10 @@ export function useConvexPresence({
         avatar: player.avatar,
         joinedAt: player.joinedAt,
         sessionId: player.sessionId,
+        health: player.health,
+        poison: player.poison ?? 0,
+        commanders: player.commanders ?? [],
+        commanderDamage: player.commanderDamage ?? {},
       }))
       .sort((a: Participant, b: Participant) => a.joinedAt - b.joinedAt)
   }, [allSessionsData])
