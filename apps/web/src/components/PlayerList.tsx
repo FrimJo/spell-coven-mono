@@ -75,7 +75,27 @@ export function PlayerList({
         </div>
 
         <div className="space-y-2">
-          {players.map((player) => {
+          {Array.from({ length: 4 }).map((_, index) => {
+            const player = players[index]
+
+            // Empty slot
+            if (!player) {
+              return (
+                <div
+                  key={`empty-${index}`}
+                  className="flex items-center justify-between rounded-lg border border-dashed border-slate-700 bg-slate-800/20 p-2 transition-colors"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <div className="h-2 w-2 flex-shrink-0 rounded-full bg-slate-700" />
+                    <span className="truncate text-sm text-slate-600">
+                      Open slot
+                    </span>
+                  </div>
+                </div>
+              )
+            }
+
+            // Filled slot
             const isLocal = player.name === localPlayerName
             const isOwner = ownerId ? player.id === ownerId : player.id === '1' // Use provided ownerId or fallback to first player
 
