@@ -1,11 +1,10 @@
 'use client'
 
 import type { DualCommanderKeyword, ScryfallCard } from '@/lib/scryfall'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef } from 'react'
+import { useMachine } from '@xstate/react'
 import {
-  autocomplete,
   detectDualCommanderKeywords,
-  getCardByName,
   getSpecificPartner,
 } from '@/lib/scryfall'
 import { Loader2 } from 'lucide-react'
@@ -23,6 +22,7 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from '@repo/ui/components/popover'
+import { commanderSearchMachine } from '@/state/commanderSearchMachine'
 
 interface CommanderSearchInputProps {
   id: string
@@ -53,83 +53,87 @@ export function CommanderSearchInput({
   hideLoadingIndicator = false,
   onLoadingChange,
 }: CommanderSearchInputProps) {
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState(value)
-  const [results, setResults] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const debounceRef = useRef<NodeJS.Timeout | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // XState machine for search state
+  const [state, send] = useMachine(commanderSearchMachine)
+
+  // Derive state from machine context
+  const open = state.context.open
+  const query = state.context.query
+  const results = state.context.results
+  const loading = state.context.loading
+  const resolvedCard = state.context.resolvedCard
+
+  // Effect Events - stable handlers that always see latest props/state
+  // These don't need to be in dependency arrays
+  const onLoadingChanged = useEffectEvent((isLoading: boolean) => {
+    onLoadingChange?.(isLoading)
+  })
+
+  const onCardWasResolved = useEffectEvent((card: ScryfallCard) => {
+    onCardResolved?.(card)
+  })
+
+  const syncExternalValue = useEffectEvent(() => {
+    // Only sync if external value differs from machine query
+    if (value !== query) {
+      send({ type: 'SET_EXTERNAL_VALUE', value })
+    }
+  })
+
+  const syncSuggestions = useEffectEvent(() => {
+    send({ type: 'SET_SUGGESTIONS', suggestions, label: suggestionsLabel })
+  })
 
   // Sync external value changes
   useEffect(() => {
-    setQuery(value)
+    syncExternalValue()
   }, [value])
+
+  // Sync external suggestions
+  useEffect(() => {
+    syncSuggestions()
+  }, [suggestions, suggestionsLabel])
 
   // Notify parent of loading state changes
   useEffect(() => {
-    onLoadingChange?.(loading)
-  }, [loading, onLoadingChange])
+    onLoadingChanged(loading)
+  }, [loading])
 
-  // Debounced autocomplete search
-  const doSearch = useCallback(async (q: string) => {
-    if (q.length < 2) {
-      setResults([])
-      return
+  // Track previous resolved card to detect new resolutions
+  const prevResolvedCardRef = useRef<ScryfallCard | null>(null)
+
+  // Watch for resolved card and call callback
+  useEffect(() => {
+    if (resolvedCard !== null && resolvedCard !== prevResolvedCardRef.current) {
+      prevResolvedCardRef.current = resolvedCard
+      onCardWasResolved(resolvedCard)
     }
-    setLoading(true)
-    try {
-      const names = await autocomplete(q)
-      setResults(names)
-    } catch {
-      setResults([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  }, [resolvedCard])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
-    setQuery(val)
     onChange(val)
-    setOpen(true)
-
-    // Debounce API call
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
-      doSearch(val)
-    }, 300)
+    send({ type: 'INPUT_CHANGED', value: val })
   }
 
-  const handleSelect = async (name: string) => {
-    setQuery(name)
+  const handleSelect = (name: string) => {
     onChange(name)
-    setOpen(false)
-    setResults([])
+    send({ type: 'RESULT_SELECTED', name })
+  }
 
-    // Resolve full card data
-    if (onCardResolved) {
-      const card = await getCardByName(name, false)
-      onCardResolved(card)
-    }
+  const handleSuggestionSelect = (name: string) => {
+    onChange(name)
+    send({ type: 'SUGGESTION_SELECTED', name })
   }
 
   const handleFocus = () => {
-    // Always show dropdown on focus if there are suggestions
-    if (suggestions.length > 0) {
-      setOpen(true)
-    }
-    // If there's existing text, trigger a search and show dropdown
-    if (query.length >= 2) {
-      setOpen(true)
-      // Set loading immediately so showResults is true before doSearch runs
-      setLoading(true)
-      doSearch(query)
-    }
+    send({ type: 'FOCUS' })
   }
 
   const handleBlur = () => {
-    // Delay close to allow click on item
-    setTimeout(() => setOpen(false), 200)
+    send({ type: 'BLUR' })
   }
 
   const showResults = results.length > 0 || suggestions.length > 0 || loading
@@ -139,7 +143,7 @@ export function CommanderSearchInput({
     if (!newOpen && document.activeElement === inputRef.current) {
       return
     }
-    setOpen(newOpen)
+    send({ type: 'OPEN_CHANGE', open: newOpen })
   }
 
   return (
@@ -178,7 +182,7 @@ export function CommanderSearchInput({
                   <CommandItem
                     key={`sug-${name}`}
                     value={name}
-                    onSelect={() => handleSelect(name)}
+                    onSelect={() => handleSuggestionSelect(name)}
                     className="cursor-pointer text-purple-300 hover:bg-slate-800"
                   >
                     {name}
@@ -216,7 +220,8 @@ export function CommanderSearchInput({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helper hook for managing commander pair state
+// Helper hook for managing commander pair state (kept for backward compatibility)
+// Note: This hook is no longer used by GameStatsPanel which now uses commanderPanelMachine
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface CommanderPairState {
@@ -229,9 +234,10 @@ export interface CommanderPairState {
   allowsSecondCommander: boolean
 }
 
+/** @deprecated Use commanderPanelMachine instead */
 export function useCommanderPair(
-  initialCommander1: string,
-  initialCommander2: string,
+  _initialCommander1: string,
+  _initialCommander2: string,
 ): {
   state: CommanderPairState
   setCommander1Name: (name: string) => void
@@ -239,38 +245,12 @@ export function useCommanderPair(
   onCommander1Resolved: (card: ScryfallCard | null) => void
   onCommander2Resolved: (card: ScryfallCard | null) => void
 } {
-  const [commander1Name, setCommander1Name] = useState(initialCommander1)
-  const [commander2Name, setCommander2Name] = useState(initialCommander2)
-  const [commander1Card, setCommander1Card] = useState<ScryfallCard | null>(
-    null,
+  // This hook is deprecated but kept for backward compatibility
+  // The actual state is now managed by commanderPanelMachine
+  throw new Error(
+    'useCommanderPair is deprecated. Use commanderPanelMachine instead.',
   )
-  const [commander2Card, setCommander2Card] = useState<ScryfallCard | null>(
-    null,
-  )
-
-  const dualKeywords = commander1Card
-    ? detectDualCommanderKeywords(commander1Card)
-    : []
-
-  const specificPartner = commander1Card
-    ? getSpecificPartner(commander1Card)
-    : null
-
-  const allowsSecondCommander = dualKeywords.length > 0
-
-  return {
-    state: {
-      commander1Name,
-      commander2Name,
-      commander1Card,
-      commander2Card,
-      dualKeywords,
-      specificPartner,
-      allowsSecondCommander,
-    },
-    setCommander1Name,
-    setCommander2Name,
-    onCommander1Resolved: setCommander1Card,
-    onCommander2Resolved: setCommander2Card,
-  }
 }
+
+// Keep these types/functions exported for external use
+export { detectDualCommanderKeywords, getSpecificPartner }

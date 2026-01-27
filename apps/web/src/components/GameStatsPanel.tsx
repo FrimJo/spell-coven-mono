@@ -1,7 +1,7 @@
 import type { Participant } from '@/types/participant'
 import type { ScryfallCard } from '@/lib/scryfall'
-import { useEffect, useState } from 'react'
-import { searchBackgrounds, searchByKeyword } from '@/lib/scryfall'
+import { useEffect, useEffectEvent, useState } from 'react'
+import { useMachine } from '@xstate/react'
 import { useMutation } from '@tanstack/react-query'
 import { useMutation as useConvexMutation } from 'convex/react'
 import {
@@ -15,7 +15,6 @@ import {
   Swords,
   User,
   UserCircle,
-  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -30,7 +29,8 @@ import {
 } from '@repo/ui/components/sheet'
 
 import { api } from '../../../../convex/_generated/api'
-import { CommanderSearchInput, useCommanderPair } from './CommanderSearchInput'
+import { CommanderSearchInput } from './CommanderSearchInput'
+import { commanderPanelMachine } from '@/state/commanderPanelMachine'
 
 /** Maximum players in a Commander game */
 const MAX_PLAYERS = 4
@@ -61,27 +61,56 @@ export function GameStatsPanel({
   // Strip "game-" prefix to match Convex database format
   const convexRoomId = roomId.replace(/^game-/, '')
 
-  // Track which player is being edited
-  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null)
-
   // Determine if viewed player has any commanders set
   const viewedPlayerHasCommanders =
     viewedPlayer.commanders.length > 0 &&
     viewedPlayer.commanders.some((c) => c?.name)
 
-  // Collapse viewed player's own slot by default (self-damage is rare)
-  // Expanded if no commanders are set (to encourage setup)
-  const [viewedPlayerSlotCollapsed, setViewedPlayerSlotCollapsed] = useState(
-    viewedPlayerHasCommanders,
-  )
+  // XState machine for commander panel state
+  const [state, send] = useMachine(commanderPanelMachine)
 
-  // Reset collapsed state when panel opens or viewed player changes
-  useEffect(() => {
+  // Derive state from machine context
+  const editingPlayerId = state.context.editingPlayerId
+  const viewedPlayerSlotCollapsed = state.context.viewedPlayerSlotCollapsed
+  const cmdState = {
+    commander1Name: state.context.commander1Name,
+    commander2Name: state.context.commander2Name,
+    commander1Card: state.context.commander1Card,
+    commander2Card: state.context.commander2Card,
+    dualKeywords: state.context.dualKeywords,
+    specificPartner: state.context.specificPartner,
+    allowsSecondCommander: state.context.allowsSecondCommander,
+  }
+  const commander2Suggestions = state.context.commander2Suggestions
+  const suggestionsLabel = state.context.suggestionsLabel
+
+  const isClosed = state.matches('closed')
+
+  // Effect Events - stable handlers that always see latest props/state
+  const syncPanelOpenState = useEffectEvent(() => {
+    if (isOpen && isClosed) {
+      send({ type: 'OPEN_PANEL', viewedPlayerHasCommanders })
+    } else if (!isOpen && !isClosed) {
+      send({ type: 'CLOSE_PANEL' })
+    }
+  })
+
+  const syncCollapsedState = useEffectEvent(() => {
     if (isOpen) {
       const hasCommanders = viewedPlayer.commanders.some((c) => c?.name)
-      setViewedPlayerSlotCollapsed(hasCommanders)
+      send({ type: 'SET_COLLAPSED', collapsed: hasCommanders })
     }
-  }, [isOpen, viewedPlayer.id])
+  })
+
+  // Sync panel open state with machine
+  useEffect(() => {
+    syncPanelOpenState()
+  }, [isOpen])
+
+  // Reset collapsed state when viewed player changes
+  useEffect(() => {
+    syncCollapsedState()
+  }, [viewedPlayer.id])
 
   // Convex mutation functions
   const setCommandersMutation = useConvexMutation(api.rooms.setPlayerCommanders)
@@ -132,21 +161,19 @@ export function GameStatsPanel({
     },
   })
 
-  // Commander pair state with Scryfall integration
-  // This state now tracks the CURRENTLY EDITED player's commanders
-  const {
-    state: cmdState,
-    setCommander1Name,
-    setCommander2Name,
-    onCommander1Resolved: baseOnCommander1Resolved,
-    onCommander2Resolved: baseOnCommander2Resolved,
-  } = useCommanderPair('', '')
-
-  // Suggestions for Commander 2 based on Commander 1's keywords
-  const [commander2Suggestions, setCommander2Suggestions] = useState<string[]>(
-    [],
-  )
-  const [suggestionsLabel, setSuggestionsLabel] = useState('Suggested')
+  // Commander name setters via machine events
+  const setCommander1Name = (name: string) => {
+    send({ type: 'SET_CMD1_NAME', name })
+  }
+  const setCommander2Name = (name: string) => {
+    send({ type: 'SET_CMD2_NAME', name })
+  }
+  const baseOnCommander1Resolved = (card: ScryfallCard | null) => {
+    send({ type: 'CMD1_RESOLVED', card })
+  }
+  const baseOnCommander2Resolved = (card: ScryfallCard | null) => {
+    send({ type: 'CMD2_RESOLVED', card })
+  }
 
   // Helper to build commanders array and save
   const saveCommanders = (
@@ -238,15 +265,9 @@ export function GameStatsPanel({
       ? [{ id: keepCommander.id, name: keepCommander.name }]
       : []
 
-    // If clearing from currently edited player, also clear local state for that slot
+    // If clearing from currently edited player, also clear local state via machine
     if (player.id === editingPlayerId) {
-      if (slotNumber === 1) {
-        setCommander1Name('')
-        baseOnCommander1Resolved(null)
-      } else {
-        setCommander2Name('')
-        baseOnCommander2Resolved(null)
-      }
+      send({ type: 'CLEAR_CMD', slot: slotNumber })
     }
 
     setCommandersMutation({
@@ -258,13 +279,12 @@ export function GameStatsPanel({
   }
 
   const handleStartEditing = (player: Participant) => {
-    setEditingPlayerId(player.id)
-    setCommander1Name(player.commanders[0]?.name ?? '')
-    setCommander2Name(player.commanders[1]?.name ?? '')
-    // Reset resolved cards since we are starting fresh edit session
-    // Ideally we'd resolve them but names are enough for inputs
-    baseOnCommander1Resolved(null)
-    baseOnCommander2Resolved(null)
+    send({
+      type: 'START_EDIT',
+      playerId: player.id,
+      commander1Name: player.commanders[0]?.name ?? '',
+      commander2Name: player.commanders[1]?.name ?? '',
+    })
   }
 
   // Derive status for each commander input using React Query state
@@ -293,94 +313,7 @@ export function GameStatsPanel({
     return 'idle'
   }
 
-  // Fetch Commander 2 suggestions when Commander 1 is resolved
-  useEffect(() => {
-    const { dualKeywords, specificPartner, commander1Name, commander1Card } =
-      cmdState
-
-    if (!commander1Card) {
-      setCommander2Suggestions([])
-      return
-    }
-
-    if (dualKeywords.length === 0) {
-      setCommander2Suggestions([])
-      return
-    }
-
-    let cancelled = false
-
-    const fetchSuggestions = async () => {
-      if (dualKeywords.includes('Partner with') && specificPartner) {
-        if (!cancelled) {
-          setCommander2Suggestions([specificPartner])
-          setSuggestionsLabel('Partner')
-        }
-        return
-      }
-
-      if (dualKeywords.includes('Choose a background')) {
-        const backgrounds = await searchBackgrounds()
-        if (!cancelled) {
-          setCommander2Suggestions(backgrounds.map((c) => c.name).slice(0, 20))
-          setSuggestionsLabel('Backgrounds')
-        }
-        return
-      }
-
-      if (dualKeywords.includes('Partner')) {
-        const partners = await searchByKeyword('Partner')
-        if (!cancelled) {
-          const filtered = partners
-            .filter((c) => c.name !== commander1Name)
-            .map((c) => c.name)
-            .slice(0, 20)
-            .filter(Boolean)
-          setCommander2Suggestions(filtered)
-          setSuggestionsLabel('Partners')
-        }
-        return
-      }
-
-      if (dualKeywords.includes('Friends forever')) {
-        const friends = await searchByKeyword('Friends forever')
-        if (!cancelled) {
-          const filtered = friends
-            .filter((c) => c.name !== commander1Name)
-            .map((c) => c.name)
-            .slice(0, 20)
-            .filter(Boolean)
-          setCommander2Suggestions(filtered)
-          setSuggestionsLabel('Friends Forever')
-        }
-        return
-      }
-
-      if (dualKeywords.includes("Doctor's companion")) {
-        const companions = await searchByKeyword("Doctor's companion")
-        if (!cancelled) {
-          const filtered = companions
-            .filter((c) => c.name !== commander1Name)
-            .map((c) => c.name)
-            .slice(0, 20)
-            .filter(Boolean)
-          setCommander2Suggestions(filtered)
-          setSuggestionsLabel("Doctor's Companions")
-        }
-        return
-      }
-
-      if (!cancelled) {
-        setCommander2Suggestions([])
-      }
-    }
-
-    fetchSuggestions()
-
-    return () => {
-      cancelled = true
-    }
-  }, [cmdState.commander1Card?.id])
+  // Suggestions are now fetched by the machine when CMD1_RESOLVED is dispatched
 
   const handleUpdateDamage = (
     ownerUserId: string,
@@ -450,10 +383,10 @@ export function GameStatsPanel({
                     <div
                       role="button"
                       tabIndex={0}
-                      onClick={() => setViewedPlayerSlotCollapsed(false)}
+                      onClick={() => send({ type: 'SET_COLLAPSED', collapsed: false })}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
-                          setViewedPlayerSlotCollapsed(false)
+                          send({ type: 'SET_COLLAPSED', collapsed: false })
                         }
                       }}
                       className="flex w-full cursor-pointer items-center gap-2 text-left"
@@ -493,7 +426,7 @@ export function GameStatsPanel({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setViewedPlayerSlotCollapsed(false)
+                                send({ type: 'SET_COLLAPSED', collapsed: false })
                                 handleStartEditing(player)
                               }}
                               className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-slate-600 bg-slate-900/50 text-slate-500 transition-colors hover:border-purple-500 hover:bg-purple-500/10 hover:text-purple-400"
@@ -514,7 +447,7 @@ export function GameStatsPanel({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setViewedPlayerSlotCollapsed(false)
+                                send({ type: 'SET_COLLAPSED', collapsed: false })
                                 handleStartEditing(player)
                               }}
                               className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-slate-600 bg-slate-900/50 text-slate-500 transition-colors hover:border-purple-500 hover:bg-purple-500/10 hover:text-purple-400"
@@ -586,7 +519,7 @@ export function GameStatsPanel({
                           size="sm"
                           variant="outline"
                           className="h-7 border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-slate-100"
-                          onClick={() => setEditingPlayerId(null)}
+                          onClick={() => send({ type: 'DONE_EDIT' })}
                         >
                           Done
                         </Button>
@@ -606,7 +539,7 @@ export function GameStatsPanel({
                         <button
                           type="button"
                           onClick={() =>
-                            setViewedPlayerSlotCollapsed(true)
+                            send({ type: 'SET_COLLAPSED', collapsed: true })
                           }
                           className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                           title="Minimize"
@@ -763,10 +696,10 @@ function CommanderSlot({
   commander,
   damage,
   isEditing,
-  isViewedPlayer,
+  isViewedPlayer: _isViewedPlayer,
   getCommanderImageUrl,
   onDamageChange,
-  onStartEdit,
+  onStartEdit: _onStartEdit,
   onClear,
   inputValue,
   onInputChange,

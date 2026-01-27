@@ -31,6 +31,7 @@
     "@tanstack/zod-adapter": "^1.133.3",
     "@techstark/opencv-js": "4.11.0-release.1",
     "@vercel/speed-insights": "^1.2.0",
+    "@xstate/react": "^6.0.0",
     "cross-fetch": "^4.1.0",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.487.0",
@@ -43,6 +44,7 @@
     "tailwindcss": "catalog:",
     "vite-plugin-mkcert": "^1.17.9",
     "vite-tsconfig-paths": "^5.1.4",
+    "xstate": "^5.26.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {

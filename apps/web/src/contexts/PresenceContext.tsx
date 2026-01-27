@@ -17,7 +17,6 @@ import {
   useCallback,
   useContext,
   useMemo,
-  useRef,
   useState,
 } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -86,28 +85,21 @@ export function PresenceProvider({
   const [disconnectReason, setDisconnectReason] =
     useState<DisconnectReason | null>(null)
 
-  // Use ref to track disconnect reason for the kicked callback
-  // This avoids stale closure issues
-  const disconnectReasonRef = useRef<DisconnectReason | null>(null)
-
   // Callbacks for presence events
   const handleKicked = useCallback(() => {
     console.log('[PresenceProvider] User was kicked')
-    disconnectReasonRef.current = 'kicked'
     setDisconnectReason('kicked')
     setIsConnected(false)
   }, [])
 
   const handleBanned = useCallback(() => {
     console.log('[PresenceProvider] User was banned')
-    disconnectReasonRef.current = 'banned'
     setDisconnectReason('banned')
     setIsConnected(false)
   }, [])
 
   const handleError = useCallback((error: Error) => {
     console.error('[PresenceProvider] Presence error:', error)
-    disconnectReasonRef.current = 'disconnected'
     setDisconnectReason('disconnected')
     setIsConnected(false)
   }, [])
@@ -139,14 +131,12 @@ export function PresenceProvider({
   const connect = useCallback(() => {
     console.log('[PresenceProvider] Connecting to presence')
     setDisconnectReason(null)
-    disconnectReasonRef.current = null
     setIsConnected(true)
   }, [])
 
   // Disconnect callback - disconnects from presence with a reason
   const disconnect = useCallback((reason: DisconnectReason) => {
     console.log('[PresenceProvider] Disconnecting from presence:', reason)
-    disconnectReasonRef.current = reason
     setDisconnectReason(reason)
     setIsConnected(false)
   }, [])
