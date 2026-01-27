@@ -6,6 +6,12 @@ import { Button } from '@repo/ui/components/button'
 export function NotFoundPage() {
   const navigate = useNavigate()
 
+  const handleReturnHome = () => {
+    // Use replace: true to properly handle navigation from route-level notFound()
+    // This ensures the router clears the not-found state
+    navigate({ to: '/', replace: true })
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950">
       <style>{`
@@ -74,7 +80,7 @@ export function NotFoundPage() {
             <Button
               size="lg"
               className="h-12 min-w-[160px] gap-2 bg-purple-600 font-medium text-white shadow-lg shadow-purple-500/25 hover:bg-purple-700"
-              onClick={() => navigate({ to: '/' })}
+              onClick={handleReturnHome}
             >
               <Home className="h-4 w-4" />
               Return Home
