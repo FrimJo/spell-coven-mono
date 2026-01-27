@@ -7,6 +7,8 @@ import { useMutation as useConvexMutation } from 'convex/react'
 import {
   AlertCircle,
   Check,
+  ChevronDown,
+  ChevronUp,
   Loader2,
   Pencil,
   Plus,
@@ -62,6 +64,25 @@ export function GameStatsPanel({
   const [editingCommanderSlot, setEditingCommanderSlot] = useState<
     null | 1 | 2
   >(null)
+
+  // Determine if viewed player has any commanders set
+  const viewedPlayerHasCommanders =
+    viewedPlayer.commanders.length > 0 &&
+    viewedPlayer.commanders.some((c) => c?.name)
+
+  // Collapse viewed player's own slot by default (self-damage is rare)
+  // Expanded if no commanders are set (to encourage setup)
+  const [viewedPlayerSlotCollapsed, setViewedPlayerSlotCollapsed] = useState(
+    viewedPlayerHasCommanders,
+  )
+
+  // Reset collapsed state when panel opens or viewed player changes
+  useEffect(() => {
+    if (isOpen) {
+      const hasCommanders = viewedPlayer.commanders.some((c) => c?.name)
+      setViewedPlayerSlotCollapsed(hasCommanders)
+    }
+  }, [isOpen, viewedPlayer.id])
 
   // Convex mutation functions
   const setCommandersMutation = useConvexMutation(api.rooms.setPlayerCommanders)
@@ -368,6 +389,89 @@ export function GameStatsPanel({
               const isCurrentUser = player.id === currentUser.id
               const isViewedPlayer = player.id === viewedPlayer.id
               const canEditCommanders = isViewingOwnStats && isCurrentUser
+              const isCollapsed = isViewedPlayer && viewedPlayerSlotCollapsed
+
+              // Minimized view for viewed player's own slot (self-damage is rare)
+              if (isCollapsed) {
+                const commander1 = player.commanders[0]
+                const commander2 = player.commanders[1]
+                const cmd1ImageUrl = commander1
+                  ? getCommanderImageUrl(commander1.id)
+                  : null
+                const cmd2ImageUrl = commander2
+                  ? getCommanderImageUrl(commander2.id)
+                  : null
+
+                return (
+                  <div
+                    key={player.id}
+                    className="rounded-lg border border-purple-600/50 bg-purple-900/20 p-3"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setViewedPlayerSlotCollapsed(false)}
+                      className="flex w-full items-center gap-2 text-left"
+                    >
+                      {player.avatar ? (
+                        <img
+                          src={player.avatar}
+                          alt={player.username}
+                          className="h-5 w-5 rounded-full"
+                        />
+                      ) : (
+                        <User className="h-4 w-4 text-purple-300" />
+                      )}
+                      <span className="font-semibold text-purple-200">
+                        {player.username}
+                        {isCurrentUser && (
+                          <span className="ml-1.5 text-xs font-normal text-slate-500">
+                            (You)
+                          </span>
+                        )}
+                      </span>
+                      <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-purple-300">
+                        Viewing
+                      </span>
+                      <span className="ml-auto flex items-center gap-1.5">
+                        {/* Commander thumbnails */}
+                        <span className="flex -space-x-1">
+                          {cmd1ImageUrl ? (
+                            <img
+                              src={cmd1ImageUrl}
+                              alt={commander1?.name}
+                              title={commander1?.name}
+                              className="h-6 w-6 rounded-full border border-purple-500/50 object-cover"
+                            />
+                          ) : (
+                            <span
+                              className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-purple-500/30 bg-purple-950/50"
+                              title="Commander 1 not set"
+                            >
+                              <Plus className="h-3 w-3 text-purple-400/50" />
+                            </span>
+                          )}
+                          {cmd2ImageUrl ? (
+                            <img
+                              src={cmd2ImageUrl}
+                              alt={commander2?.name}
+                              title={commander2?.name}
+                              className="h-6 w-6 rounded-full border border-purple-500/50 object-cover"
+                            />
+                          ) : (
+                            <span
+                              className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-purple-500/30 bg-purple-950/50"
+                              title="Commander 2 not set"
+                            >
+                              <Plus className="h-3 w-3 text-purple-400/50" />
+                            </span>
+                          )}
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-purple-400" />
+                      </span>
+                    </button>
+                  </div>
+                )
+              }
 
               return (
                 <div
@@ -408,9 +512,21 @@ export function GameStatsPanel({
                       )}
                     </span>
                     {isViewedPlayer && (
-                      <span className="ml-auto rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-purple-300">
-                        Viewing
-                      </span>
+                      <>
+                        <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-purple-300">
+                          Viewing
+                        </span>
+                        {viewedPlayerHasCommanders && (
+                          <button
+                            type="button"
+                            onClick={() => setViewedPlayerSlotCollapsed(true)}
+                            className="ml-auto rounded p-1 text-slate-400 hover:bg-purple-800/30 hover:text-purple-300"
+                            title="Minimize"
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
 
