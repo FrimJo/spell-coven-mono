@@ -24,7 +24,10 @@ import {
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useAudioOutput } from '@/hooks/useAudioOutput'
 import { useMediaPermissions } from '@/hooks/useMediaPermissions'
-import { useMediaEnabledState } from '@/hooks/useSelectedMediaDevice'
+import {
+  commitMediaDevicesToStorage,
+  useMediaEnabledState,
+} from '@/hooks/useSelectedMediaDevice'
 import { attachVideoStream } from '@/lib/video-stream-utils'
 import { mediaSetupMachine } from '@/state/mediaSetupMachine'
 import { isSuccessState } from '@/types/async-resource'
@@ -550,7 +553,6 @@ export function MediaSetupPanel({
 
   // Check if setup can be completed
   const canComplete =
-    hasPermissions &&
     (!videoEnabled || selectedVideoId) &&
     (!audioEnabled || selectedAudioInputId) &&
     !permissionError
@@ -560,6 +562,9 @@ export function MediaSetupPanel({
   // ───────────────────────────────────────────────────────────────────────────
 
   const handleComplete = useCallback(() => {
+    // Commit device selections to localStorage before completing
+    // This persists the user's choices so they're used in the game room
+    commitMediaDevicesToStorage()
     send({ type: 'COMPLETE' })
     onComplete()
   }, [send, onComplete])
@@ -697,33 +702,34 @@ export function MediaSetupPanel({
 
         {/* Video Section */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {videoEnabled ? (
-                <Camera className="h-4 w-4 text-purple-400" />
-              ) : (
-                <CameraOff className="h-4 w-4 text-slate-500" />
-              )}
-              <Label
-                className={videoEnabled ? 'text-slate-200' : 'text-slate-500'}
-              >
-                Camera Source
-              </Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">
-                {videoEnabled ? 'On' : 'Off'}
-              </span>
-              <Switch
-                checked={videoEnabled}
-                onCheckedChange={handleVideoToggle}
-                className="data-[state=checked]:bg-purple-600"
-              />
-            </div>
-          </div>
-
           {hasPermissions ? (
             <>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {videoEnabled ? (
+                    <Camera className="h-4 w-4 text-purple-400" />
+                  ) : (
+                    <CameraOff className="h-4 w-4 text-slate-500" />
+                  )}
+                  <Label
+                    className={
+                      videoEnabled ? 'text-slate-200' : 'text-slate-500'
+                    }
+                  >
+                    Camera Source
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400">
+                    {videoEnabled ? 'On' : 'Off'}
+                  </span>
+                  <Switch
+                    checked={videoEnabled}
+                    onCheckedChange={handleVideoToggle}
+                    className="data-[state=checked]:bg-purple-600"
+                  />
+                </div>
+              </div>
               {videoEnabled ? (
                 <>
                   <Select
@@ -1086,61 +1092,59 @@ export function MediaSetupPanel({
         )}
 
         {/* Audio Output Section - only show if has permissions */}
-        {hasPermissions && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Volume2 className="h-4 w-4 text-purple-400" />
-              <Label className="text-slate-200">Speaker / Headphones</Label>
-            </div>
-
-            <div className="flex gap-2">
-              <Select
-                value={selectedAudioOutputId}
-                onValueChange={handleAudioOutputChange}
-                disabled={!isAudioOutputSupported}
-              >
-                <SelectTrigger className="flex-1 border-slate-700 bg-slate-800 text-slate-200">
-                  <SelectValue
-                    placeholder={
-                      isAudioOutputSupported
-                        ? 'Select speaker'
-                        : 'Not supported in this browser'
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent className="border-slate-700 bg-slate-800">
-                  {audioOutputDevices
-                    .filter((device) => device.deviceId !== '')
-                    .map((device) => (
-                      <SelectItem
-                        key={device.deviceId}
-                        value={device.deviceId}
-                        className="text-slate-200 focus:bg-slate-700"
-                      >
-                        {device.label}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-
-              <Button
-                variant="outline"
-                onClick={() => void testAudioOutput()}
-                disabled={
-                  isTestingOutput ||
-                  !selectedAudioOutputId ||
-                  !isAudioOutputSupported
-                }
-                className="border-slate-700 bg-slate-800 hover:bg-slate-700"
-              >
-                {isTestingOutput ? 'Playing...' : 'Test'}
-              </Button>
-            </div>
-            <p className="text-xs text-slate-500">
-              Click &quot;Test&quot; to play a short sound
-            </p>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Volume2 className="h-4 w-4 text-purple-400" />
+            <Label className="text-slate-200">Speaker / Headphones</Label>
           </div>
-        )}
+
+          <div className="flex gap-2">
+            <Select
+              value={selectedAudioOutputId}
+              onValueChange={handleAudioOutputChange}
+              disabled={!isAudioOutputSupported}
+            >
+              <SelectTrigger className="flex-1 border-slate-700 bg-slate-800 text-slate-200">
+                <SelectValue
+                  placeholder={
+                    isAudioOutputSupported
+                      ? 'Select speaker'
+                      : 'Not supported in this browser'
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent className="border-slate-700 bg-slate-800">
+                {audioOutputDevices
+                  .filter((device) => device.deviceId !== '')
+                  .map((device) => (
+                    <SelectItem
+                      key={device.deviceId}
+                      value={device.deviceId}
+                      className="text-slate-200 focus:bg-slate-700"
+                    >
+                      {device.label}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+
+            <Button
+              variant="outline"
+              onClick={() => void testAudioOutput()}
+              disabled={
+                isTestingOutput ||
+                !selectedAudioOutputId ||
+                !isAudioOutputSupported
+              }
+              className="border-slate-700 bg-slate-800 hover:bg-slate-700"
+            >
+              {isTestingOutput ? 'Playing...' : 'Test'}
+            </Button>
+          </div>
+          <p className="text-xs text-slate-500">
+            Click &quot;Test&quot; to play a short sound
+          </p>
+        </div>
       </div>
 
       {showFooter && (
