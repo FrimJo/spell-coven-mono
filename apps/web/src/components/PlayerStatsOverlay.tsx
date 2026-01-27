@@ -1,11 +1,17 @@
+import type { Participant } from '@/types/participant'
 import { useState } from 'react'
 import { useMutation } from 'convex/react'
-import { api } from '../../../../convex/_generated/api'
-import type { Participant } from '@/types/participant'
+import { Heart, Minus, Plus, Skull } from 'lucide-react'
+
 import { Button } from '@repo/ui/components/button'
-import { Activity, Heart, Minus, Plus, Skull } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@repo/ui/components/tooltip'
+
+import { api } from '../../../../convex/_generated/api'
 import { GameStatsPanel } from './GameStatsPanel'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@repo/ui/components/tooltip'
 
 interface PlayerStatsOverlayProps {
   roomId: string
@@ -39,75 +45,75 @@ export function PlayerStatsOverlay({
 
   return (
     <>
-      <div className="absolute left-3 top-16 z-10 flex flex-col gap-1.5 rounded-lg border border-slate-800 bg-slate-950/90 p-2 backdrop-blur-sm transition-opacity hover:opacity-100 opacity-80 hover:bg-slate-950">
-          {/* Life */}
-          <div className="flex items-center justify-between gap-3">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1.5 text-red-400 cursor-help">
-                  <Heart className="h-4 w-4" />
-                  <span className="font-mono font-bold text-white min-w-[2ch] text-center">
-                    {participant.health}
-                  </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right">Life Total</TooltipContent>
-            </Tooltip>
-            
-            <div className="flex gap-0.5">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-6 w-6 rounded-md text-slate-400 hover:bg-red-900/20 hover:text-red-400"
-                onClick={() => handleHealthChange(-1)}
-              >
-                <Minus className="h-3 w-3" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-6 w-6 rounded-md text-slate-400 hover:bg-green-900/20 hover:text-green-400"
-                onClick={() => handleHealthChange(1)}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
+      <div className="absolute left-3 top-16 z-10 flex flex-col gap-1.5 rounded-lg border border-slate-800 bg-slate-950/90 p-2 opacity-80 backdrop-blur-sm transition-opacity hover:bg-slate-950 hover:opacity-100">
+        {/* Life */}
+        <div className="flex items-center justify-between gap-3">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex cursor-help items-center gap-1.5 text-red-400">
+                <Heart className="h-4 w-4" />
+                <span className="min-w-[2ch] text-center font-mono font-bold text-white">
+                  {participant.health}
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right">Life Total</TooltipContent>
+          </Tooltip>
 
-          {/* Poison */}
-          <div className="flex items-center justify-between gap-3">
-             <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1.5 text-green-400 cursor-help">
-                  <Skull className="h-4 w-4" />
-                  <span className="font-mono font-bold text-white min-w-[2ch] text-center">
-                    {participant.poison}
-                  </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right">Poison Counters</TooltipContent>
-            </Tooltip>
-
-            <div className="flex gap-0.5">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-6 w-6 rounded-md text-slate-400 hover:bg-red-900/20 hover:text-red-400"
-                onClick={() => handlePoisonChange(-1)}
-              >
-                <Minus className="h-3 w-3" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-6 w-6 rounded-md text-slate-400 hover:bg-green-900/20 hover:text-green-400"
-                onClick={() => handlePoisonChange(1)}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
-            </div>
+          <div className="flex gap-0.5">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 rounded-md text-slate-400 hover:bg-red-900/20 hover:text-red-400"
+              onClick={() => handleHealthChange(-1)}
+            >
+              <Minus className="h-3 w-3" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 rounded-md text-slate-400 hover:bg-green-900/20 hover:text-green-400"
+              onClick={() => handleHealthChange(1)}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
           </div>
-        
+        </div>
+
+        {/* Poison */}
+        <div className="flex items-center justify-between gap-3">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex cursor-help items-center gap-1.5 text-green-400">
+                <Skull className="h-4 w-4" />
+                <span className="min-w-[2ch] text-center font-mono font-bold text-white">
+                  {participant.poison}
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right">Poison Counters</TooltipContent>
+          </Tooltip>
+
+          <div className="flex gap-0.5">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 rounded-md text-slate-400 hover:bg-red-900/20 hover:text-red-400"
+              onClick={() => handlePoisonChange(-1)}
+            >
+              <Minus className="h-3 w-3" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 rounded-md text-slate-400 hover:bg-green-900/20 hover:text-green-400"
+              onClick={() => handlePoisonChange(1)}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+
         {/* Commander Damage Panel Toggle */}
         <Button
           variant="ghost"
@@ -115,7 +121,6 @@ export function PlayerStatsOverlay({
           className="mt-1 h-6 w-full text-[10px] text-slate-400 hover:bg-purple-900/20 hover:text-purple-300"
           onClick={() => setPanelOpen(true)}
         >
-          <Activity className="mr-1.5 h-3 w-3" />
           COMMANDERS
         </Button>
       </div>

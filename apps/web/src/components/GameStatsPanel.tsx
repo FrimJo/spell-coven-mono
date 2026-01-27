@@ -61,10 +61,8 @@ export function GameStatsPanel({
   // Strip "game-" prefix to match Convex database format
   const convexRoomId = roomId.replace(/^game-/, '')
 
-  // Track which commander slot is being edited (null = none, 1 or 2 = editing that slot)
-  const [editingCommanderSlot, setEditingCommanderSlot] = useState<
-    null | 1 | 2
-  >(null)
+  // Track which player is being edited
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null)
 
   // Determine if viewed player has any commanders set
   const viewedPlayerHasCommanders =
@@ -93,6 +91,7 @@ export function GameStatsPanel({
 
   // Mutation variables type includes which commander triggered the save
   type SaveCommandersInput = {
+    userId: string
     commanders: { id: string; name: string }[]
     triggeredBy: 1 | 2
   }
@@ -109,22 +108,21 @@ export function GameStatsPanel({
 
   // React Query mutation for saving commanders
   const saveCommandersMutation = useMutation({
-    mutationFn: async ({ commanders }: SaveCommandersInput) => {
+    mutationFn: async ({ userId, commanders }: SaveCommandersInput) => {
       console.log('[GameStatsPanel] Saving commanders:', {
         roomId: convexRoomId,
-        userId: viewedPlayer.id,
+        userId,
         commanders,
       })
       return setCommandersMutation({
         roomId: convexRoomId,
-        userId: viewedPlayer.id,
+        userId,
         commanders,
       })
     },
     onSuccess: () => {
       console.log('[GameStatsPanel] Commanders saved successfully')
-      toast.success('Commanders saved!')
-      setEditingCommanderSlot(null)
+      // Don't exit edit mode or show toast - user stays in edit mode until they click "Done"
     },
     onError: (error) => {
       console.error('[GameStatsPanel] Failed to save commanders:', error)
@@ -135,16 +133,14 @@ export function GameStatsPanel({
   })
 
   // Commander pair state with Scryfall integration
+  // This state now tracks the CURRENTLY EDITED player's commanders
   const {
     state: cmdState,
     setCommander1Name,
     setCommander2Name,
     onCommander1Resolved: baseOnCommander1Resolved,
     onCommander2Resolved: baseOnCommander2Resolved,
-  } = useCommanderPair(
-    viewedPlayer.commanders[0]?.name ?? '',
-    viewedPlayer.commanders[1]?.name ?? '',
-  )
+  } = useCommanderPair('', '')
 
   // Suggestions for Commander 2 based on Commander 1's keywords
   const [commander2Suggestions, setCommander2Suggestions] = useState<string[]>(
@@ -159,27 +155,33 @@ export function GameStatsPanel({
     triggeredBy: 1 | 2,
     newIds?: { c1?: string; c2?: string },
   ) => {
+    if (!editingPlayerId) return
+
+    // Find the player being edited
+    const player = participants.find((p) => p.id === editingPlayerId)
+    if (!player) return
+
     const commanders = []
 
     let c1Id = newIds?.c1
     if (!c1Id) {
-      if (commander1.trim() === viewedPlayer.commanders[0]?.name) {
-        c1Id = viewedPlayer.commanders[0]?.id
+      if (commander1.trim() === player.commanders[0]?.name) {
+        c1Id = player.commanders[0]?.id
       } else if (commander1.trim() === cmdState.commander1Card?.name) {
         c1Id = cmdState.commander1Card?.id
       }
     }
-    c1Id = c1Id ?? viewedPlayer.commanders[0]?.id ?? 'c1'
+    c1Id = c1Id ?? player.commanders[0]?.id ?? 'c1'
 
     let c2Id = newIds?.c2
     if (!c2Id) {
-      if (commander2.trim() === viewedPlayer.commanders[1]?.name) {
-        c2Id = viewedPlayer.commanders[1]?.id
+      if (commander2.trim() === player.commanders[1]?.name) {
+        c2Id = player.commanders[1]?.id
       } else if (commander2.trim() === cmdState.commander2Card?.name) {
         c2Id = cmdState.commander2Card?.id
       }
     }
-    c2Id = c2Id ?? viewedPlayer.commanders[1]?.id ?? 'c2'
+    c2Id = c2Id ?? player.commanders[1]?.id ?? 'c2'
 
     if (commander1.trim()) {
       commanders.push({ id: c1Id, name: commander1.trim() })
@@ -187,7 +189,11 @@ export function GameStatsPanel({
     if (commander2.trim()) {
       commanders.push({ id: c2Id, name: commander2.trim() })
     }
-    saveCommandersMutation.mutate({ commanders, triggeredBy })
+    saveCommandersMutation.mutate({
+      userId: player.id,
+      commanders,
+      triggeredBy,
+    })
   }
 
   // Wrapper to auto-save when Commander 1 is selected
@@ -223,8 +229,8 @@ export function GameStatsPanel({
     }
   }
 
-  // Remove a commander from any player
-  const handleRemoveCommander = (player: Participant, slotNumber: 1 | 2) => {
+  // Clear a specific commander slot for a player
+  const handleClearCommander = (player: Participant, slotNumber: 1 | 2) => {
     // Keep the other commander if it exists
     const keepSlot = slotNumber === 1 ? 1 : 0
     const keepCommander = player.commanders[keepSlot]
@@ -232,8 +238,8 @@ export function GameStatsPanel({
       ? [{ id: keepCommander.id, name: keepCommander.name }]
       : []
 
-    // If removing from viewed player, also clear local state
-    if (player.id === viewedPlayer.id) {
+    // If clearing from currently edited player, also clear local state for that slot
+    if (player.id === editingPlayerId) {
       if (slotNumber === 1) {
         setCommander1Name('')
         baseOnCommander1Resolved(null)
@@ -248,7 +254,17 @@ export function GameStatsPanel({
       userId: player.id,
       commanders,
     })
-    toast.success('Commander removed')
+    toast.success(`Commander ${slotNumber} cleared`)
+  }
+
+  const handleStartEditing = (player: Participant) => {
+    setEditingPlayerId(player.id)
+    setCommander1Name(player.commanders[0]?.name ?? '')
+    setCommander2Name(player.commanders[1]?.name ?? '')
+    // Reset resolved cards since we are starting fresh edit session
+    // Ideally we'd resolve them but names are enough for inputs
+    baseOnCommander1Resolved(null)
+    baseOnCommander2Resolved(null)
   }
 
   // Derive status for each commander input using React Query state
@@ -274,15 +290,6 @@ export function GameStatsPanel({
     }
     return 'idle'
   }
-
-  const commander1Status = getCommanderStatus(
-    1,
-    Boolean(viewedPlayer.commanders[0]?.name),
-  )
-  const commander2Status = getCommanderStatus(
-    2,
-    Boolean(viewedPlayer.commanders[1]?.name),
-  )
 
   // Fetch Commander 2 suggestions when Commander 1 is resolved
   useEffect(() => {
@@ -326,6 +333,7 @@ export function GameStatsPanel({
             .filter((c) => c.name !== commander1Name)
             .map((c) => c.name)
             .slice(0, 20)
+            .filter(Boolean)
           setCommander2Suggestions(filtered)
           setSuggestionsLabel('Partners')
         }
@@ -339,6 +347,7 @@ export function GameStatsPanel({
             .filter((c) => c.name !== commander1Name)
             .map((c) => c.name)
             .slice(0, 20)
+            .filter(Boolean)
           setCommander2Suggestions(filtered)
           setSuggestionsLabel('Friends Forever')
         }
@@ -352,6 +361,7 @@ export function GameStatsPanel({
             .filter((c) => c.name !== commander1Name)
             .map((c) => c.name)
             .slice(0, 20)
+            .filter(Boolean)
           setCommander2Suggestions(filtered)
           setSuggestionsLabel("Doctor's Companions")
         }
@@ -417,8 +427,6 @@ export function GameStatsPanel({
             {participants.map((player) => {
               const isCurrentUser = player.id === currentUser.id
               const isViewedPlayer = player.id === viewedPlayer.id
-              // Anyone can edit anyone's commanders
-              const canEditCommanders = true
               const isCollapsed = isViewedPlayer && viewedPlayerSlotCollapsed
 
               // Minimized view for viewed player's own slot (self-damage is rare)
@@ -437,10 +445,16 @@ export function GameStatsPanel({
                     key={player.id}
                     className="rounded-lg border border-slate-800 bg-slate-900/50 p-3"
                   >
-                    <button
-                      type="button"
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => setViewedPlayerSlotCollapsed(false)}
-                      className="flex w-full items-center gap-2 text-left"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          setViewedPlayerSlotCollapsed(false)
+                        }
+                      }}
+                      className="flex w-full cursor-pointer items-center gap-2 text-left"
                     >
                       {player.avatar ? (
                         <img
@@ -473,12 +487,18 @@ export function GameStatsPanel({
                               className="h-6 w-6 rounded-full border border-slate-600 object-cover"
                             />
                           ) : (
-                            <span
-                              className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-slate-600 bg-slate-900/50"
-                              title="Commander 1 not set"
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setViewedPlayerSlotCollapsed(false)
+                                handleStartEditing(player)
+                              }}
+                              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-slate-600 bg-slate-900/50 text-slate-500 transition-colors hover:border-purple-500 hover:bg-purple-500/10 hover:text-purple-400"
+                              title="Add Commander 1"
                             >
-                              <Plus className="h-3 w-3 text-slate-500" />
-                            </span>
+                              <Plus className="h-3 w-3" />
+                            </button>
                           )}
                           {cmd2ImageUrl ? (
                             <img
@@ -488,20 +508,41 @@ export function GameStatsPanel({
                               className="h-6 w-6 rounded-full border border-slate-600 object-cover"
                             />
                           ) : (
-                            <span
-                              className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-slate-600 bg-slate-900/50"
-                              title="Commander 2 not set"
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setViewedPlayerSlotCollapsed(false)
+                                handleStartEditing(player)
+                              }}
+                              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-slate-600 bg-slate-900/50 text-slate-500 transition-colors hover:border-purple-500 hover:bg-purple-500/10 hover:text-purple-400"
+                              title="Add Commander 2"
                             >
-                              <Plus className="h-3 w-3 text-slate-500" />
-                            </span>
+                              <Plus className="h-3 w-3" />
+                            </button>
                           )}
                         </span>
                         <ChevronDown className="h-4 w-4 text-slate-400" />
                       </span>
-                    </button>
+                    </div>
                   </div>
                 )
               }
+
+              const isEditingThisPlayer = editingPlayerId === player.id
+              // Get status only if this player is being edited
+              const playerCommander1Status = isEditingThisPlayer
+                ? getCommanderStatus(
+                    1,
+                    Boolean(player.commanders[0]?.name),
+                  )
+                : 'saved'
+              const playerCommander2Status = isEditingThisPlayer
+                ? getCommanderStatus(
+                    2,
+                    Boolean(player.commanders[1]?.name),
+                  )
+                : 'saved'
 
               return (
                 <div
@@ -527,27 +568,67 @@ export function GameStatsPanel({
                         </span>
                       )}
                     </span>
-                    {isViewedPlayer && (
-                      <>
+                    
+                    {/* Controls: Viewing Badge, Edit Button, Minimize Button */}
+                    <div className="ml-auto flex items-center gap-1">
+                      {isViewedPlayer && (
                         <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-purple-300">
                           Viewing
                         </span>
-                        {viewedPlayerHasCommanders && (
-                          <button
-                            type="button"
-                            onClick={() => setViewedPlayerSlotCollapsed(true)}
-                            className="ml-auto rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                            title="Minimize"
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                        )}
-                      </>
-                    )}
+                      )}
+                      
+                      {isEditingThisPlayer ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-slate-100"
+                          onClick={() => setEditingPlayerId(null)}
+                        >
+                          Done
+                        </Button>
+                      ) : (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-slate-400 hover:bg-slate-800 hover:text-purple-300"
+                          onClick={() => handleStartEditing(player)}
+                          title="Edit commanders"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+
+                      {isViewedPlayer && viewedPlayerHasCommanders && !isEditingThisPlayer && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setViewedPlayerSlotCollapsed(true)
+                          }
+                          className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                          title="Minimize"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Commander slots */}
                   <div className="space-y-3">
+                    {!isEditingThisPlayer &&
+                      !player.commanders[0]?.name &&
+                      !player.commanders[1]?.name && (
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditing(player)}
+                          className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-700 bg-slate-900/30 p-6 text-slate-500 transition-colors hover:border-slate-600 hover:bg-slate-900/50 hover:text-slate-400 cursor-pointer"
+                        >
+                          <Plus className="h-5 w-5" />
+                          <span className="text-sm font-medium">
+                            Add Commanders
+                          </span>
+                        </button>
+                      )}
                     {/* Commander 1 */}
                     <CommanderSlot
                       slotNumber={1}
@@ -559,8 +640,7 @@ export function GameStatsPanel({
                             ] ?? 0
                           : 0
                       }
-                      isEditing={canEditCommanders && editingCommanderSlot === 1}
-                      canEdit={canEditCommanders}
+                      isEditing={isEditingThisPlayer}
                       isViewedPlayer={isViewedPlayer}
                       getCommanderImageUrl={getCommanderImageUrl}
                       onDamageChange={(delta) =>
@@ -571,14 +651,13 @@ export function GameStatsPanel({
                           delta,
                         )
                       }
-                      onStartEdit={() => setEditingCommanderSlot(1)}
-                      onCancelEdit={() => setEditingCommanderSlot(null)}
-                      onRemove={() => handleRemoveCommander(player, 1)}
-                      // Edit props
-                      inputValue={cmdState.commander1Name}
+                      onStartEdit={() => handleStartEditing(player)}
+                      onClear={() => handleClearCommander(player, 1)}
+                      // Edit props - pass shared state if editing this player
+                      inputValue={isEditingThisPlayer ? cmdState.commander1Name : ''}
                       onInputChange={setCommander1Name}
                       onCardResolved={onCommander1Resolved}
-                      status={commander1Status}
+                      status={playerCommander1Status}
                       dualKeywords={cmdState.dualKeywords}
                       specificPartner={cmdState.specificPartner}
                       suggestions={commander2Suggestions}
@@ -597,8 +676,7 @@ export function GameStatsPanel({
                             ] ?? 0
                           : 0
                       }
-                      isEditing={canEditCommanders && editingCommanderSlot === 2}
-                      canEdit={canEditCommanders}
+                      isEditing={isEditingThisPlayer}
                       isViewedPlayer={isViewedPlayer}
                       getCommanderImageUrl={getCommanderImageUrl}
                       onDamageChange={(delta) =>
@@ -609,14 +687,13 @@ export function GameStatsPanel({
                           delta,
                         )
                       }
-                      onStartEdit={() => setEditingCommanderSlot(2)}
-                      onCancelEdit={() => setEditingCommanderSlot(null)}
-                      onRemove={() => handleRemoveCommander(player, 2)}
+                      onStartEdit={() => handleStartEditing(player)}
+                      onClear={() => handleClearCommander(player, 2)}
                       // Edit props
-                      inputValue={cmdState.commander2Name}
+                      inputValue={isEditingThisPlayer ? cmdState.commander2Name : ''}
                       onInputChange={setCommander2Name}
                       onCardResolved={onCommander2Resolved}
-                      status={commander2Status}
+                      status={playerCommander2Status}
                       allowsSecondCommander={cmdState.allowsSecondCommander}
                       suggestions={commander2Suggestions}
                       suggestionsLabel={suggestionsLabel}
@@ -657,13 +734,11 @@ interface CommanderSlotProps {
   commander?: { id: string; name: string }
   damage: number
   isEditing: boolean
-  canEdit: boolean
   isViewedPlayer: boolean
   getCommanderImageUrl: (id: string) => string | null
   onDamageChange: (delta: number) => void
   onStartEdit: () => void
-  onCancelEdit: () => void
-  onRemove?: () => void
+  onClear: () => void
   // Edit mode props
   inputValue: string
   onInputChange: (value: string) => void
@@ -684,13 +759,11 @@ function CommanderSlot({
   commander,
   damage,
   isEditing,
-  canEdit,
   isViewedPlayer,
   getCommanderImageUrl,
   onDamageChange,
   onStartEdit,
-  onCancelEdit,
-  onRemove,
+  onClear,
   inputValue,
   onInputChange,
   onCardResolved,
@@ -705,26 +778,9 @@ function CommanderSlot({
   const isLethal = damage >= 21
   const imageUrl = commander ? getCommanderImageUrl(commander.id) : null
 
-  // Empty slot - show placeholder with Set action
+  // Empty slot - hide if not set and not editing
   if (!commander && !isEditing) {
-    return (
-      <div className="flex items-center justify-between rounded-md border border-dashed border-slate-700 bg-slate-950/30 p-3">
-        <span className="text-sm text-slate-500">
-          Commander {slotNumber} not set
-        </span>
-        {canEdit && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 border-slate-600 bg-slate-800/50 text-slate-300 hover:bg-slate-700 hover:text-slate-100"
-            onClick={onStartEdit}
-          >
-            <Plus className="mr-1 h-3 w-3" />
-            Set
-          </Button>
-        )}
-      </div>
-    )
+    return null
   }
 
   // Edit mode - show search input
@@ -735,17 +791,17 @@ function CommanderSlot({
           <span className="text-xs font-medium text-slate-400">
             Commander {slotNumber}
             {slotNumber === 2 &&
-              (allowsSecondCommander
-                ? ` (${suggestionsLabel})`
-                : ' (Partner)')}
+              allowsSecondCommander &&
+              ` (${suggestionsLabel})`}
           </span>
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 px-2 text-xs text-slate-400 hover:text-slate-200"
-            onClick={onCancelEdit}
+            className="h-6 px-2 text-xs text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
+            onClick={onClear}
+            disabled={!commander && !inputValue.trim()}
           >
-            Cancel
+            Clear
           </Button>
         </div>
         <div className="relative">
@@ -823,10 +879,10 @@ function CommanderSlot({
   if (!commander) return null
 
   return (
-    <div className="group relative overflow-hidden rounded-md border border-slate-800 bg-slate-950/50">
+    <div className="group relative rounded-md border border-slate-800 bg-slate-950/50">
       {/* Commander Background Image */}
       {imageUrl && (
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 overflow-hidden rounded-md">
           <img
             src={imageUrl}
             alt={commander.name}
@@ -842,28 +898,6 @@ function CommanderSlot({
             <span className="text-shadow-sm text-sm font-medium text-slate-200 shadow-black">
               {commander.name}
             </span>
-            {canEdit && (
-              <div className="flex items-center gap-0.5">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-5 w-5 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                  onClick={onStartEdit}
-                  title="Edit commander"
-                >
-                  <Pencil className="h-3 w-3" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-5 w-5 text-slate-400 hover:bg-red-900/50 hover:text-red-400"
-                  onClick={onRemove}
-                  title="Remove commander"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
           </div>
           {isLethal && (
             <span className="flex items-center gap-1.5 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-bold text-red-400 backdrop-blur-sm">
