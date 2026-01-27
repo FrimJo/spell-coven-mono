@@ -11,6 +11,7 @@
  */
 
 import type { UseAudioOutputOptions } from '@/hooks/useAudioOutput'
+import type { DeclineType } from '@/lib/permission-storage'
 import type { OriginalDeviceState } from '@/state/mediaSetupMachine'
 import {
   useCallback,
@@ -22,12 +23,13 @@ import {
 } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useAudioOutput } from '@/hooks/useAudioOutput'
+import { useMediaPermissions } from '@/hooks/useMediaPermissions'
 import { useMediaEnabledState } from '@/hooks/useSelectedMediaDevice'
 import { attachVideoStream } from '@/lib/video-stream-utils'
 import { mediaSetupMachine } from '@/state/mediaSetupMachine'
 import { isSuccessState } from '@/types/async-resource'
-import { useMachine } from '@xstate/react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useMachine } from '@xstate/react'
 import {
   AlertCircle,
   Camera,
@@ -140,6 +142,9 @@ export function MediaSetupPanel({
       recheckPermissions,
     },
   } = useMediaStreams()
+
+  // Get recordDecline for persisting user's decline choice
+  const { recordDecline } = useMediaPermissions()
 
   // Extract video device info
   const videoDevices = videoResult.devices
@@ -321,10 +326,11 @@ export function MediaSetupPanel({
   const deriveFocusCapabilities = useCallback(
     (videoTrack: MediaStreamTrack): FocusCapabilities => {
       try {
-        const capabilities = videoTrack.getCapabilities() as MediaTrackCapabilities & {
-          focusMode?: string[]
-          focusDistance?: { min: number; max: number; step: number }
-        }
+        const capabilities =
+          videoTrack.getCapabilities() as MediaTrackCapabilities & {
+            focusMode?: string[]
+            focusDistance?: { min: number; max: number; step: number }
+          }
         const settings = videoTrack.getSettings() as MediaTrackSettings & {
           focusMode?: string
           focusDistance?: number
@@ -602,9 +608,14 @@ export function MediaSetupPanel({
     await recheckPermissions()
   }, [send, queryClient, recheckPermissions])
 
-  const handlePermissionDecline = useCallback(() => {
-    // User declined - they can still continue without camera/microphone
-  }, [])
+  const handlePermissionDecline = useCallback(
+    (type: DeclineType) => {
+      // Record decline for both camera and microphone since we request both
+      recordDecline('camera', type)
+      recordDecline('microphone', type)
+    },
+    [recordDecline],
+  )
 
   const handleVideoToggle = useCallback(
     (enabled: boolean) => {
@@ -694,9 +705,7 @@ export function MediaSetupPanel({
                 <CameraOff className="h-4 w-4 text-slate-500" />
               )}
               <Label
-                className={
-                  videoEnabled ? 'text-slate-200' : 'text-slate-500'
-                }
+                className={videoEnabled ? 'text-slate-200' : 'text-slate-500'}
               >
                 Camera Source
               </Label>
@@ -1140,6 +1149,7 @@ export function MediaSetupPanel({
             variant="ghost"
             onClick={handleCancel}
             className="text-slate-400 hover:text-slate-300"
+            data-testid="media-setup-cancel-button"
           >
             <X className="mr-2 h-4 w-4" />
             Cancel
@@ -1149,6 +1159,7 @@ export function MediaSetupPanel({
             onClick={handleComplete}
             disabled={!canComplete}
             className="bg-purple-600 text-white hover:bg-purple-700"
+            data-testid="media-setup-complete-button"
           >
             <Check className="mr-2 h-4 w-4" />
             Complete Setup

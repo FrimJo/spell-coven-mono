@@ -115,6 +115,7 @@ export function MediaPermissionGate({
 
   // Handle user declining our custom dialog
   const handleDecline = (type: DeclineType) => {
+    console.log('[MediaPermissionGate] Handling decline:', type)
     if (needsCameraCheck) {
       recordDecline('camera', type)
     }

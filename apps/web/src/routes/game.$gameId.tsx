@@ -38,8 +38,8 @@ const gameParamsSchema = z.object({
     .string()
     .min(1, 'Game ID is required')
     .regex(
-      /^game-[A-Z0-9]{6}$/,
-      'Game ID must follow format: game-XXXXXX (6 alphanumeric characters)',
+      /^game-([A-Z0-9]{6}|TEST[A-Za-z0-9]+)$/,
+      'Game ID must follow format: game-XXXXXX or game-TEST* for tests',
     ),
 })
 
@@ -174,7 +174,9 @@ function GameRoomRoute() {
         >
           <GameRoom
             roomId={gameId}
-            playerName={user?.username ?? (isTestMode ? 'TestPlayer' : 'Player')}
+            playerName={
+              user?.username ?? (isTestMode ? 'TestPlayer' : 'Player')
+            }
             onLeaveGame={handleLeaveGame}
             detectorType={detector as DetectorType | undefined}
             usePerspectiveWarp={usePerspectiveWarp}

@@ -69,6 +69,7 @@ export function MediaPermissionInline({
   }
 
   const handleDecline = (type: DeclineType) => {
+    console.log('[MediaPermissionInline] Handling decline:', type)
     setShowDeclineMenu(false)
     onDecline(type)
   }

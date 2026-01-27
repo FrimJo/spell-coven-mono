@@ -46,6 +46,7 @@ function loadPrefs(): PermissionPrefs {
  * Save permission preferences to localStorage
  */
 function savePrefs(prefs: PermissionPrefs): void {
+  console.log('[permission-storage] Saving preferences:', prefs)
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs))
   } catch (error) {

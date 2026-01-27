@@ -47,6 +47,7 @@ export function LeaveGameDialog({
           <button
             onClick={onCancel}
             className="flex-1 cursor-pointer rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-sm font-medium text-slate-200 transition-all hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500/50"
+            data-testid="leave-dialog-cancel-button"
           >
             <div className="flex items-center justify-center gap-2">
               <X className="h-4 w-4" />
@@ -57,6 +58,7 @@ export function LeaveGameDialog({
           <button
             onClick={onConfirm}
             className="flex-1 cursor-pointer rounded-lg border border-red-500/30 bg-red-950/30 px-4 py-2.5 text-sm font-medium text-red-200 transition-all hover:border-red-500/60 hover:bg-red-900/40 focus:outline-none focus:ring-2 focus:ring-red-500/50"
+            data-testid="leave-dialog-confirm-button"
           >
             <div className="flex items-center justify-center gap-2">
               <DoorOpen className="h-4 w-4" />

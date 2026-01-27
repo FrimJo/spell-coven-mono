@@ -211,6 +211,7 @@ export function useMediaPermissions(): UseMediaPermissionsReturn {
 
   const handleRecordDecline = useCallback(
     (permission: 'camera' | 'microphone', type: DeclineType) => {
+      console.log('[useMediaPermissions] Recording decline:', permission, type)
       recordDecline(permission, type)
       // Trigger re-calculation of shouldShowDialog
       setUpdateTrigger((t) => t + 1)
