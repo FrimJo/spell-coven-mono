@@ -400,6 +400,7 @@ function GameRoomContent({
               onClick={handleManualLeave}
               className="text-slate-400 hover:text-white"
               title="Leave game room"
+              data-testid="leave-game-button"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Leave
@@ -409,7 +410,10 @@ function GameRoomContent({
 
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-400">Share Link:</span>
-              <code className="max-w-xs truncate rounded bg-slate-800 px-2 py-1 text-sm text-purple-400">
+              <code
+                className="max-w-xs truncate rounded bg-slate-800 px-2 py-1 text-sm text-purple-400"
+                data-testid="game-id-display"
+              >
                 {shareLink}
               </code>
               <Button
@@ -418,6 +422,7 @@ function GameRoomContent({
                 onClick={handleCopyShareLink}
                 className="text-slate-400 hover:text-white"
                 title="Copy shareable link"
+                data-testid="copy-share-link-button"
               >
                 {copied ? (
                   <Check className="h-4 w-4" />
@@ -436,6 +441,7 @@ function GameRoomContent({
               onClick={handleOpenSettings}
               className="text-slate-400 hover:text-white"
               title="Audio & video settings"
+              data-testid="settings-button"
             >
               <Settings className="h-4 w-4" />
             </Button>

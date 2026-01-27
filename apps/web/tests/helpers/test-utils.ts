@@ -1,0 +1,229 @@
+import type { Page } from '@playwright/test'
+
+/**
+ * Shared test utilities for e2e tests.
+ * These utilities help with common testing patterns and mock setups.
+ */
+
+/** Test game ID that bypasses authentication (must start with 'game-TEST') */
+export const TEST_GAME_ID = 'game-TESTe2e01'
+
+/** Storage keys used by the application */
+export const STORAGE_KEYS = {
+  MEDIA_DEVICES: 'mtg-selected-media-devices',
+  GAME_STATE: 'spell-coven:game-state',
+  CREATOR_INVITE: 'spell-coven:creator-invite',
+  SESSION_ID: 'spell-coven-session-id',
+  PERMISSION_PREFS: 'spell-coven:media-permission-prefs',
+} as const
+
+/**
+ * Navigate to a test game room (bypasses authentication).
+ */
+export async function navigateToTestGame(
+  page: Page,
+  gameId = TEST_GAME_ID,
+): Promise<void> {
+  await page.goto(`/game/${gameId}`)
+}
+
+/**
+ * Wait for page to be fully loaded.
+ */
+export async function waitForPageLoad(page: Page): Promise<void> {
+  await page.waitForLoadState('networkidle')
+}
+
+/**
+ * Mock navigator.mediaDevices.enumerateDevices to return fake devices.
+ * This allows testing device selection without actual hardware.
+ */
+export async function mockMediaDevices(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const mockDevices: MediaDeviceInfo[] = [
+      {
+        deviceId: 'mock-camera-1',
+        groupId: 'group-1',
+        kind: 'videoinput',
+        label: 'Mock Camera 1',
+        toJSON: () => ({}),
+      },
+      {
+        deviceId: 'mock-camera-2',
+        groupId: 'group-2',
+        kind: 'videoinput',
+        label: 'Mock Camera 2',
+        toJSON: () => ({}),
+      },
+      {
+        deviceId: 'mock-mic-1',
+        groupId: 'group-1',
+        kind: 'audioinput',
+        label: 'Mock Microphone 1',
+        toJSON: () => ({}),
+      },
+      {
+        deviceId: 'mock-mic-2',
+        groupId: 'group-2',
+        kind: 'audioinput',
+        label: 'Mock Microphone 2',
+        toJSON: () => ({}),
+      },
+      {
+        deviceId: 'mock-speaker-1',
+        groupId: 'group-1',
+        kind: 'audiooutput',
+        label: 'Mock Speaker 1',
+        toJSON: () => ({}),
+      },
+    ]
+
+    navigator.mediaDevices.enumerateDevices = async () => mockDevices
+  })
+}
+
+/**
+ * Mock navigator.mediaDevices.getUserMedia to return a fake stream.
+ * This avoids requiring actual camera/microphone access.
+ */
+export async function mockGetUserMedia(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    navigator.mediaDevices.getUserMedia = async (
+      _constraints: MediaStreamConstraints,
+    ) => {
+      // Create a fake MediaStream with empty tracks
+      const canvas = document.createElement('canvas')
+      canvas.width = 640
+      canvas.height = 480
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.fillStyle = '#1e293b' // slate-800 color
+        ctx.fillRect(0, 0, 640, 480)
+      }
+
+      const stream = canvas.captureStream(30)
+
+      // Add a fake audio track using AudioContext
+      try {
+        const audioContext = new AudioContext()
+        const oscillator = audioContext.createOscillator()
+        const destination = audioContext.createMediaStreamDestination()
+        oscillator.connect(destination)
+        oscillator.frequency.value = 0 // Silent
+        oscillator.start()
+
+        destination.stream.getAudioTracks().forEach((track) => {
+          stream.addTrack(track)
+        })
+      } catch {
+        // AudioContext might not be available in all contexts
+      }
+
+      return stream
+    }
+  })
+}
+
+/**
+ * Set up localStorage with media device preferences.
+ */
+export async function setMediaPreferences(
+  page: Page,
+  preferences: {
+    videoEnabled?: boolean
+    audioEnabled?: boolean
+    videoinput?: string
+    audioinput?: string
+    audiooutput?: string
+  },
+): Promise<void> {
+  await page.evaluate(
+    ({ prefs, key }) => {
+      const existing = localStorage.getItem(key)
+      const current = existing ? JSON.parse(existing) : {}
+      localStorage.setItem(key, JSON.stringify({ ...current, ...prefs }))
+    },
+    { prefs: preferences, key: STORAGE_KEYS.MEDIA_DEVICES },
+  )
+}
+
+/**
+ * Get localStorage value for media device preferences.
+ */
+export async function getMediaPreferences(
+  page: Page,
+): Promise<Record<string, unknown> | null> {
+  return await page.evaluate((key) => {
+    const value = localStorage.getItem(key)
+    return value ? JSON.parse(value) : null
+  }, STORAGE_KEYS.MEDIA_DEVICES)
+}
+
+/**
+ * Get sessionStorage value for game state.
+ */
+export async function getGameState(
+  page: Page,
+): Promise<Record<string, unknown> | null> {
+  return await page.evaluate((key) => {
+    const value = sessionStorage.getItem(key)
+    return value ? JSON.parse(value) : null
+  }, STORAGE_KEYS.GAME_STATE)
+}
+
+/**
+ * Clear all storage for a clean test state.
+ */
+export async function clearStorage(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+}
+
+/**
+ * Set viewport to mobile size for mobile menu testing.
+ */
+export async function setMobileViewport(page: Page): Promise<void> {
+  await page.setViewportSize({ width: 375, height: 667 })
+}
+
+/**
+ * Set viewport to desktop size.
+ */
+export async function setDesktopViewport(page: Page): Promise<void> {
+  await page.setViewportSize({ width: 1280, height: 720 })
+}
+
+/**
+ * Wait for a toast notification to appear with specific text.
+ */
+export async function waitForToast(
+  page: Page,
+  text: string,
+  timeout = 5000,
+): Promise<void> {
+  await page.getByText(text).waitFor({ timeout })
+}
+
+/**
+ * Check if an element is in the viewport.
+ */
+export async function isElementInViewport(
+  page: Page,
+  selector: string,
+): Promise<boolean> {
+  return await page.evaluate((sel) => {
+    const element = document.querySelector(sel)
+    if (!element) return false
+
+    const rect = element.getBoundingClientRect()
+    return (
+      rect.top >= 0 &&
+      rect.left >= 0 &&
+      rect.bottom <=
+        (window.innerHeight || document.documentElement.clientHeight) &&
+      rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    )
+  }, selector)
+}

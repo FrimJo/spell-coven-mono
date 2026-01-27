@@ -447,6 +447,7 @@ export function LandingPage({
                       className="h-14 min-w-[200px] gap-2 bg-purple-600 text-lg font-semibold text-white shadow-lg shadow-purple-500/25 transition-all duration-200 hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
                       onClick={handleCreateClick}
                       disabled={gameCreation.isCreating}
+                      data-testid="create-game-button"
                     >
                       {gameCreation.isCreating ? (
                         <>
@@ -473,6 +474,7 @@ export function LandingPage({
                           variant="outline"
                           className="h-14 min-w-[200px] gap-2 border-slate-700 bg-slate-900/50 text-lg font-semibold text-slate-300 hover:bg-slate-800 hover:text-white"
                           onClick={handleJoinClick}
+                          data-testid="join-game-button"
                         >
                           <Play className="h-5 w-5" />
                           Join Game
@@ -498,12 +500,14 @@ export function LandingPage({
                               onKeyDown={(e) =>
                                 e.key === 'Enter' && handleJoin()
                               }
+                              data-testid="join-game-id-input"
                             />
                           </div>
                           <Button
                             onClick={handleJoin}
                             disabled={!joinGameId.trim()}
                             className="w-full bg-purple-600 text-white hover:bg-purple-700"
+                            data-testid="join-game-submit-button"
                           >
                             Join Game Room
                           </Button>
@@ -560,7 +564,7 @@ export function LandingPage({
                     </div>
                     <div className="absolute right-3 top-3 flex items-center gap-2 text-[10px] font-medium text-emerald-300">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 sm:h-2 sm:w-2" />
-                      <span className="hidden xs:inline sm:inline">
+                      <span className="xs:inline hidden sm:inline">
                         {stat.badge}
                       </span>
                     </div>
