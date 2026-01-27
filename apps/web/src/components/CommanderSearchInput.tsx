@@ -35,6 +35,10 @@ interface CommanderSearchInputProps {
   suggestions?: string[]
   /** Label for suggestions group */
   suggestionsLabel?: string
+  /** Hide the internal loading indicator (use when parent provides external status icons) */
+  hideLoadingIndicator?: boolean
+  /** Callback to expose loading state to parent */
+  onLoadingChange?: (loading: boolean) => void
 }
 
 export function CommanderSearchInput({
@@ -46,6 +50,8 @@ export function CommanderSearchInput({
   className,
   suggestions = [],
   suggestionsLabel = 'Suggested',
+  hideLoadingIndicator = false,
+  onLoadingChange,
 }: CommanderSearchInputProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState(value)
@@ -58,6 +64,11 @@ export function CommanderSearchInput({
   useEffect(() => {
     setQuery(value)
   }, [value])
+
+  // Notify parent of loading state changes
+  useEffect(() => {
+    onLoadingChange?.(loading)
+  }, [loading, onLoadingChange])
 
   // Debounced autocomplete search
   const doSearch = useCallback(async (q: string) => {
@@ -146,7 +157,7 @@ export function CommanderSearchInput({
             className={className}
             autoComplete="off"
           />
-          {loading && (
+          {loading && !hideLoadingIndicator && (
             <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-500" />
           )}
         </div>
