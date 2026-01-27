@@ -58,8 +58,8 @@ export function GameStatsPanel({
   // The player whose stats we're viewing (defaults to current user)
   const viewedPlayer = selectedPlayer ?? currentUser
   const isViewingOwnStats = viewedPlayer.id === currentUser.id
-  // Strip "game-" prefix to match Convex database format
-  const convexRoomId = roomId.replace(/^game-/, '')
+  // Use roomId as-is - roomPlayers table stores full roomId including "game-" prefix
+  const convexRoomId = roomId
 
   // Determine if viewed player has any commanders set
   const viewedPlayerHasCommanders =
