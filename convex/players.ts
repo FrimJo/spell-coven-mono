@@ -48,29 +48,14 @@ export const joinRoom = mutation({
       throw new Error('userId is required')
     }
 
-    // Check if room exists, auto-create if not (migration-friendly)
-    // During Phase 3, rooms may be created in Supabase but not yet in Convex
-    let room = await ctx.db
+    // Check if room exists
+    const room = await ctx.db
       .query('rooms')
       .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
       .first()
 
     if (!room) {
-      // Auto-create room with joining user as owner
-      // This supports migration where rooms exist in Supabase but not Convex
-      console.log(
-        `[joinRoom] Auto-creating room: ${roomId} with owner: ${userId}`,
-      )
-      await ctx.db.insert('rooms', {
-        roomId,
-        ownerId: userId,
-        status: 'waiting',
-        createdAt: Date.now(),
-      })
-      room = await ctx.db
-        .query('rooms')
-        .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-        .first()
+      throw new Error('Room not found')
     }
 
     // Check if user is banned

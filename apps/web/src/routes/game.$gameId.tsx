@@ -1,13 +1,15 @@
 import type { DetectorType } from '@/lib/detectors'
 import { Suspense } from 'react'
+import { AuthRequiredDialog } from '@/components/AuthRequiredDialog'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
 import { useAuth } from '@/contexts/AuthContext'
 import { MediaStreamProvider } from '@/contexts/MediaStreamContext'
+import { convex } from '@/integrations/convex/provider'
 import { sessionStorage } from '@/lib/session-storage'
 import {
   createFileRoute,
-  Navigate,
+  notFound,
   redirect,
   stripSearchParams,
   useNavigate,
@@ -16,6 +18,8 @@ import { zodValidator } from '@tanstack/zod-adapter'
 import { Loader2 } from 'lucide-react'
 import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
+
+import { api } from '../../../../convex/_generated/api'
 
 const defaultValues = {
   detector: 'opencv' as const,
@@ -55,10 +59,20 @@ function isTestGameId(gameId: string): boolean {
 }
 
 /**
- * Check if user has configured media devices (camera and microphone).
- * Returns true if the user has completed setup, which means:
- * - Video is explicitly disabled, OR a video device is selected
- * - Audio is explicitly disabled, OR an audio device is selected
+ * Check if the user can access the room.
+ * Returns the access status: 'ok', 'not_found', or 'banned'.
+ */
+async function checkRoomAccess(
+  roomId: string,
+): Promise<{ status: 'ok' | 'not_found' | 'banned' }> {
+  return await convex.query(api.rooms.checkRoomAccess, { roomId })
+}
+
+/**
+ * Check if user has completed media setup.
+ * Returns true if the user has clicked "Complete Setup" at least once.
+ * Users can complete setup without granting permissions - they'll see
+ * the permission prompt in the game room via MediaPermissionInline.
  */
 function isMediaConfigured(): boolean {
   if (typeof window === 'undefined') return true // Skip check on server
@@ -67,13 +81,8 @@ function isMediaConfigured(): boolean {
     const stored = localStorage.getItem(MEDIA_DEVICES_KEY)
     if (stored) {
       const parsed = JSON.parse(stored)
-      // Check if video is configured (disabled or device selected)
-      // Default to true for videoEnabled/audioEnabled for backwards compatibility
-      const videoConfigured =
-        parsed.videoEnabled === false || !!parsed.videoinput
-      const audioConfigured =
-        parsed.audioEnabled === false || !!parsed.audioinput
-      return videoConfigured && audioConfigured
+      // Check if setup was completed (has timestamp from commitToStorage)
+      return !!parsed.timestamp
     }
   } catch {
     // If parsing fails, treat as not configured
@@ -83,15 +92,48 @@ function isMediaConfigured(): boolean {
 
 export const Route = createFileRoute('/game/$gameId')({
   component: GameRoomRoute,
-  beforeLoad: ({ location }) => {
-    // Check if media devices are configured before entering game room
-    if (!isMediaConfigured()) {
+  beforeLoad: async ({ location, params }) => {
+    const isTestMode = isTestGameId(params.gameId)
+
+    // Check if media devices are configured before entering game room (unless in test mode)
+    const mediaConfigured = isMediaConfigured()
+    if (!isTestGameId(params.gameId) && !mediaConfigured) {
       // Redirect to setup page with return URL
       throw redirect({
         to: '/setup',
         search: { returnTo: location.pathname },
       })
     }
+
+    // Check if room exists and user is not banned
+    const roomAccess = await checkRoomAccess(params.gameId)
+    if (roomAccess.status !== 'ok') {
+      // Show same error for both 'not_found' and 'banned' (security - don't reveal ban status)
+      throw notFound()
+    }
+
+    return { isTestMode }
+  },
+  loader: async () => {
+    // // Load embeddings
+    // await loadEmbeddingsAndMetaFromPackage()
+
+    // // Load CLIP model
+    // await loadModel()
+
+    // // Load OpenCV with timeout (continue if fails - will lazy-load later)
+    // try {
+    //   await Promise.race([
+    //     loadOpenCV(),
+    //     new Promise((_, reject) =>
+    //       setTimeout(() => reject(new Error('OpenCV loading timeout')), 30000),
+    //     ),
+    //   ])
+    // } catch (err) {
+    //   console.error('Failed to load OpenCV:', err)
+    // }
+
+    return {}
   },
   pendingComponent: () => (
     <div className="flex h-screen items-center justify-center bg-slate-950">
@@ -111,6 +153,9 @@ export const Route = createFileRoute('/game/$gameId')({
       </div>
     </div>
   ),
+  errorComponent: ({ error, reset }) => (
+    <ErrorFallback error={error} resetErrorBoundary={reset} />
+  ),
   validateSearch: zodValidator(gameSearchSchema),
   search: {
     middlewares: [stripSearchParams(defaultValues)],
@@ -120,22 +165,33 @@ export const Route = createFileRoute('/game/$gameId')({
   },
 })
 
+// Key for storing the return URL after OAuth
+const AUTH_RETURN_TO_KEY = 'auth-return-to'
+
 function GameRoomRoute() {
   const { gameId } = Route.useParams()
+  const { isTestMode } = Route.useRouteContext()
   const { detector, usePerspectiveWarp } = Route.useSearch()
   const navigate = useNavigate()
-  const { user, isLoading, isAuthenticated } = useAuth()
-
-  // Allow test game IDs to bypass authentication (for e2e tests)
-  const isTestMode = isTestGameId(gameId)
+  const { user, isLoading: isAuthLoading, isAuthenticated, signIn } = useAuth()
 
   const handleLeaveGame = () => {
     sessionStorage.clearGameState()
     navigate({ to: '/' })
   }
 
-  // Show loading while checking auth (skip for test mode)
-  if (isLoading && !isTestMode) {
+  const handleSignIn = async () => {
+    // Store the current game room path so we can return after OAuth
+    window.sessionStorage.setItem(AUTH_RETURN_TO_KEY, `/game/${gameId}`)
+    await signIn()
+  }
+
+  const handleClose = () => {
+    navigate({ to: '/' })
+  }
+
+  // Show loading state while auth is being determined
+  if (isAuthLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-950">
         <div className="flex flex-col items-center space-y-4">
@@ -143,16 +199,30 @@ function GameRoomRoute() {
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-500/20">
               <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
             </div>
+            <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/10" />
           </div>
-          <p className="text-sm text-slate-400">Checking authentication...</p>
+          <div className="space-y-1 text-center">
+            <h2 className="text-lg font-medium text-slate-200">
+              Checking authentication...
+            </h2>
+          </div>
         </div>
       </div>
     )
   }
 
-  // Redirect to home if not authenticated (skip for test mode)
+  // Show auth dialog if not authenticated (unless in test mode)
   if (!isAuthenticated && !isTestMode) {
-    return <Navigate to="/" />
+    return (
+      <div className="h-screen bg-slate-950">
+        <AuthRequiredDialog
+          open={true}
+          onSignIn={handleSignIn}
+          onClose={handleClose}
+          message="You need to sign in with Discord to join this game room."
+        />
+      </div>
+    )
   }
 
   return (

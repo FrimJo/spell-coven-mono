@@ -7,6 +7,7 @@
  * In Phase 5 (auth migration), we'll use getAuthUserId for proper authorization.
  */
 
+import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 
 import { mutation, query } from './_generated/server'
@@ -41,32 +42,51 @@ function generateRoomCode(): string {
  * Creates the room, initial room state, and adds the creator as the first player.
  *
  * NOTE: ownerId is passed as parameter for Phase 3. Phase 5 will use getAuthUserId.
+ *
+ * @param ownerId - The user ID of the room creator
+ * @param roomId - Optional custom room ID (e.g., 'game-ABC123'). If not provided, one is generated.
  */
 export const createRoom = mutation({
   args: {
     ownerId: v.string(), // Discord user ID, will use Convex Auth in Phase 5
+    roomId: v.optional(v.string()), // Optional custom room ID
   },
-  handler: async (ctx, { ownerId }) => {
+  handler: async (ctx, { ownerId, roomId: customRoomId }) => {
     const userId = ownerId
     if (!userId) {
       throw new Error('ownerId is required')
     }
 
-    // Generate unique room code
     let roomId: string
-    let attempts = 0
-    do {
-      roomId = generateRoomCode()
+
+    if (customRoomId) {
+      // Use custom room ID - verify it doesn't already exist
       const existing = await ctx.db
         .query('rooms')
-        .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+        .withIndex('by_roomId', (q) => q.eq('roomId', customRoomId))
         .first()
-      if (!existing) break
-      attempts++
-    } while (attempts < 10)
 
-    if (attempts >= 10) {
-      throw new Error('Failed to generate unique room code')
+      if (existing) {
+        throw new Error('Room already exists')
+      }
+
+      roomId = customRoomId
+    } else {
+      // Generate unique room code with game- prefix
+      let attempts = 0
+      do {
+        roomId = `game-${generateRoomCode()}`
+        const existing = await ctx.db
+          .query('rooms')
+          .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+          .first()
+        if (!existing) break
+        attempts++
+      } while (attempts < 10)
+
+      if (attempts >= 10) {
+        throw new Error('Failed to generate unique room code')
+      }
     }
 
     const now = Date.now()
@@ -115,6 +135,54 @@ export const getRoom = query({
       ...room,
       state,
     }
+  },
+})
+
+/**
+ * Check if a user can access a room
+ *
+ * Returns the access status:
+ * - 'ok': Room exists and user is not banned
+ * - 'not_found': Room does not exist
+ * - 'banned': User is banned from this room
+ *
+ * @param roomId - The room ID to check
+ *
+ * Uses the authenticated user's ID from the Convex auth context to check for bans.
+ */
+export const checkRoomAccess = query({
+  args: {
+    roomId: v.string(),
+  },
+  handler: async (ctx, { roomId }) => {
+    // Check if room exists
+    const room = await ctx.db
+      .query('rooms')
+      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+      .first()
+
+    if (!room) {
+      return { status: 'not_found' as const }
+    }
+
+    // Get current user ID from auth context
+    const userId = await getAuthUserId(ctx)
+
+    // If user is authenticated, check if they're banned
+    if (userId) {
+      const ban = await ctx.db
+        .query('roomBans')
+        .withIndex('by_roomId_userId', (q) =>
+          q.eq('roomId', roomId).eq('userId', userId),
+        )
+        .first()
+
+      if (ban) {
+        return { status: 'banned' as const }
+      }
+    }
+
+    return { status: 'ok' as const }
   },
 })
 

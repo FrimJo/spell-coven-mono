@@ -2,7 +2,7 @@ import type { AuthUser } from '@/contexts/AuthContext'
 import { useMemo, useState } from 'react'
 import { sessionStorage } from '@/lib/session-storage'
 import { useNavigate } from '@tanstack/react-router'
-import { useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import {
   Camera,
   Gamepad2,
@@ -51,6 +51,7 @@ import type { CreatorInviteState } from '../lib/session-storage.js'
 import { api } from '../../../../convex/_generated/api'
 import logo from '../assets/logo_1024x1024.png'
 import { CreateGameDialog } from './CreateGameDialog.js'
+import { RoomNotFoundDialog } from './RoomNotFoundDialog.js'
 import SpotlightCard from './SpotlightCard'
 
 interface LandingPageProps {
@@ -82,7 +83,13 @@ export function LandingPage({
     join: false,
     create: false,
   })
-  const [error, setError] = useState<string | null>(initialError || null)
+  const [error, setError] = useState<string | null>(
+    // Don't show room_not_found as banner error - it's shown in a dialog
+    initialError === 'room_not_found' ? null : initialError || null,
+  )
+  const [showRoomNotFoundDialog, setShowRoomNotFoundDialog] = useState(
+    initialError === 'room_not_found',
+  )
   const [gameCreation, setGameCreation] = useState<{
     isCreating: boolean
     gameId: string | null
@@ -91,6 +98,7 @@ export function LandingPage({
     gameId: null,
   })
   const liveStatsQuery = useQuery(api.rooms.getLiveStats)
+  const createRoom = useMutation(api.rooms.createRoom)
   const liveStats = useMemo(
     () => [
       {
@@ -128,11 +136,13 @@ export function LandingPage({
     setGameCreation({ isCreating: true, gameId: null })
 
     try {
-      // Generate short unique ID for the game
-      const shortId = Math.random().toString(36).substring(2, 8).toUpperCase()
-      const gameId = `game-${shortId}`
+      console.log('[LandingPage] Creating new game room via Convex...')
 
-      console.log('[LandingPage] Creating new game room:', gameId)
+      // Create room in Convex - server generates the room ID
+      const result = await createRoom({ ownerId: user.id })
+      const gameId = result.roomId
+
+      console.log('[LandingPage] Game room created successfully:', gameId)
 
       // Save to session storage
       sessionStorage.saveGameState({
@@ -140,11 +150,6 @@ export function LandingPage({
         playerName: user.username,
         timestamp: Date.now(),
       })
-
-      // Simulate brief creation delay for UX
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      console.log('[LandingPage] Game room ID generated successfully')
 
       // Show success state
       setGameCreation({ isCreating: false, gameId })
@@ -201,6 +206,12 @@ export function LandingPage({
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
+  }
+
+  const handleRoomNotFoundDialogClose = () => {
+    setShowRoomNotFoundDialog(false)
+    // Clear the error from URL search params
+    navigate({ to: '/', search: {} })
   }
 
   return (
@@ -1026,6 +1037,10 @@ export function LandingPage({
         </footer>
       </div>
       <Toaster />
+      <RoomNotFoundDialog
+        open={showRoomNotFoundDialog}
+        onClose={handleRoomNotFoundDialogClose}
+      />
     </div>
   )
 }

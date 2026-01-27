@@ -552,10 +552,9 @@ export function MediaSetupPanel({
           : ''
 
   // Check if setup can be completed
-  const canComplete =
-    (!videoEnabled || selectedVideoId) &&
-    (!audioEnabled || selectedAudioInputId) &&
-    !permissionError
+  // Users can always complete setup - if permissions aren't granted,
+  // they'll see the permission prompt in the game room via MediaPermissionInline
+  const canComplete = !isCheckingPermissions
 
   // ───────────────────────────────────────────────────────────────────────────
   // Event handlers
