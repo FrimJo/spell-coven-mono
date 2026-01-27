@@ -1,3 +1,10 @@
+/**
+ * MediaSetupPage - Full-page media setup experience
+ *
+ * Uses MediaSetupPanel directly (not in a dialog) for initial setup flow.
+ * Shows a cancel warning dialog when user tries to leave without completing.
+ */
+
 import { useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 
@@ -12,7 +19,7 @@ import {
   AlertDialogTitle,
 } from '@repo/ui/components/alert-dialog'
 
-import { MediaSetupDialog } from './MediaSetupDialog'
+import { MediaSetupPanel } from './MediaSetupPanel'
 
 interface MediaSetupPageProps {
   onComplete: () => void
@@ -22,7 +29,7 @@ interface MediaSetupPageProps {
 export function MediaSetupPage({ onComplete, onCancel }: MediaSetupPageProps) {
   const [showCancelWarning, setShowCancelWarning] = useState(false)
 
-  const handleDialogCancel = () => {
+  const handlePanelCancel = () => {
     // Show warning dialog before navigating away
     setShowCancelWarning(true)
   }
@@ -44,12 +51,16 @@ export function MediaSetupPage({ onComplete, onCancel }: MediaSetupPageProps) {
         <div className="absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full bg-blue-500/10 blur-3xl" />
       </div>
 
-      {/* Media Setup Dialog - always open */}
-      <MediaSetupDialog
-        open={true}
-        onComplete={onComplete}
-        onCancel={handleDialogCancel}
-      />
+      {/* Media Setup Panel - centered card */}
+      <div className="relative z-10 w-full max-w-[700px] rounded-lg border border-slate-800 bg-slate-900 p-6 shadow-xl">
+        <MediaSetupPanel
+          onComplete={onComplete}
+          onCancel={handlePanelCancel}
+          isInGameSettings={false}
+          showHeader={true}
+          showFooter={true}
+        />
+      </div>
 
       {/* Cancel Warning Dialog */}
       <AlertDialog open={showCancelWarning} onOpenChange={setShowCancelWarning}>
