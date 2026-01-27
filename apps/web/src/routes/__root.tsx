@@ -9,8 +9,6 @@ import {
 // import globalCss from '@repo/ui/styles/globals.css?url'
 import globalCss from '@repo/ui/styles/globals.css?url'
 
-import { ErrorPage } from '../components/ErrorPage.js'
-import { NotFoundPage } from '../components/NotFoundPage.js'
 import { AuthProvider } from '../contexts/AuthContext.js'
 import { ConvexProvider } from '../integrations/convex/provider.js'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools.js'
@@ -141,8 +139,6 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   }),
 
   shellComponent: RootDocument,
-  notFoundComponent: NotFoundPage,
-  errorComponent: ErrorPage,
 })
 
 const TanStackDevtoolsProduction = lazy(() =>

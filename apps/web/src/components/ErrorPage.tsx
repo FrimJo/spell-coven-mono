@@ -11,6 +11,12 @@ interface ErrorPageProps {
 export function ErrorPage({ error, reset }: ErrorPageProps) {
   const navigate = useNavigate()
 
+  const handleReturnHome = () => {
+    // Use replace: true to properly handle navigation from error states
+    // This ensures the router clears any error state and transitions cleanly
+    navigate({ to: '/', replace: true })
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950">
       <style>{`
@@ -90,7 +96,7 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
               variant="outline"
               size="lg"
               className="h-12 min-w-[160px] gap-2 border-slate-700 bg-slate-900/50 font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
-              onClick={() => navigate({ to: '/' })}
+              onClick={handleReturnHome}
             >
               <Home className="h-4 w-4" />
               Return Home
