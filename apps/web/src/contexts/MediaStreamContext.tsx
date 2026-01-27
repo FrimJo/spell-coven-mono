@@ -19,6 +19,7 @@ import {
 } from 'react'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
 import { useMediaPermissions } from '@/hooks/useMediaPermissions'
+import { useMediaEnabledState } from '@/hooks/useSelectedMediaDevice'
 import { stopMediaStream } from '@/lib/media-stream-manager'
 import { isSuccessState } from '@/types/async-resource'
 
@@ -29,9 +30,16 @@ interface MediaStreamContextValue {
   audio: UseMediaDeviceReturn
   // Combined stream for WebRTC (video + audio tracks)
   combinedStream: MediaStream | null
-  // Toggle functions
+  // Toggle functions (for runtime toggling during a session)
   toggleVideo: (enabled: boolean) => Promise<void>
   toggleAudio: (enabled: boolean) => void
+  // User preferences for camera/mic enabled (persisted to localStorage)
+  mediaPreferences: {
+    videoEnabled: boolean
+    audioEnabled: boolean
+    setVideoEnabled: (enabled: boolean) => void
+    setAudioEnabled: (enabled: boolean) => void
+  }
   // Permission states
   permissions: {
     camera: {
@@ -89,35 +97,46 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
 
   const permissionsGranted = microphoneGranted && cameraGrantedOrUnavailable
 
+  // Get user's preferences for camera/mic enabled state (persisted to localStorage)
+  const {
+    videoEnabled,
+    audioEnabled,
+    setVideoEnabled,
+    setAudioEnabled,
+  } = useMediaEnabledState()
+
   // Use media device hooks - these are the ONLY instances in the app
   // Cleanup will happen when this provider unmounts (navigating away from game page)
+  // Only enable stream acquisition if permissions are granted AND the user has enabled the device
   const videoResult = useMediaDevice({
     kind: 'videoinput',
-    enabled: permissionsGranted,
+    enabled: permissionsGranted && videoEnabled,
   })
 
   const audioResult = useMediaDevice({
     kind: 'audioinput',
-    enabled: permissionsGranted,
+    enabled: permissionsGranted && audioEnabled,
   })
 
   // Combine streams into a single MediaStream for WebRTC
+  // Handle cases where video or audio is intentionally disabled
   const combinedStream = useMemo((): MediaStream | null => {
-    if (!isSuccessState(videoResult) || !isSuccessState(audioResult)) {
-      return null
+    const tracks: MediaStreamTrack[] = []
+
+    // Add video tracks if video is enabled and stream is available
+    if (videoEnabled && isSuccessState(videoResult) && videoResult.stream) {
+      tracks.push(...videoResult.stream.getVideoTracks())
     }
 
-    const video = videoResult.stream
-    const audio = audioResult.stream
-
-    const tracks: MediaStreamTrack[] = []
-    if (video) tracks.push(...video.getVideoTracks())
-    if (audio) tracks.push(...audio.getAudioTracks())
+    // Add audio tracks if audio is enabled and stream is available
+    if (audioEnabled && isSuccessState(audioResult) && audioResult.stream) {
+      tracks.push(...audioResult.stream.getAudioTracks())
+    }
 
     if (tracks.length === 0) return null
 
     return new MediaStream(tracks)
-  }, [videoResult, audioResult])
+  }, [videoResult, audioResult, videoEnabled, audioEnabled])
 
   // Toggle video tracks
   const toggleVideo = useCallback(
@@ -159,6 +178,12 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
       combinedStream,
       toggleVideo,
       toggleAudio,
+      mediaPreferences: {
+        videoEnabled,
+        audioEnabled,
+        setVideoEnabled,
+        setAudioEnabled,
+      },
       permissions: {
         camera: {
           browserState: isCheckingPermissions
@@ -185,6 +210,10 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
       combinedStream,
       toggleVideo,
       toggleAudio,
+      videoEnabled,
+      audioEnabled,
+      setVideoEnabled,
+      setAudioEnabled,
       isCheckingPermissions,
       cameraPermission,
       microphonePermission,

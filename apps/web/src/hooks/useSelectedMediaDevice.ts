@@ -15,6 +15,9 @@ export interface SelectedDeviceState {
   videoinput: string | null
   audioinput: string | null
   audiooutput: string | null
+  // Enabled/disabled state for camera and microphone
+  videoEnabled: boolean
+  audioEnabled: boolean
 }
 
 /**
@@ -27,6 +30,8 @@ const sharedState = {
     videoinput: null,
     audioinput: null,
     audiooutput: null,
+    videoEnabled: true,
+    audioEnabled: true,
   } as SelectedDeviceState,
 
   // Shared listeners across all store instances
@@ -79,11 +84,14 @@ function loadFromStorage(): void {
       const parsed = JSON.parse(stored)
       // Support both old format (single device) and new format (all devices)
       if (parsed.videoinput || parsed.audioinput || parsed.audiooutput) {
-        // New format: { videoinput: '...', audioinput: '...', audiooutput: '...' }
+        // New format: { videoinput: '...', audioinput: '...', audiooutput: '...', videoEnabled: boolean, audioEnabled: boolean }
         sharedState.cachedState = {
           videoinput: parsed.videoinput ?? null,
           audioinput: parsed.audioinput ?? null,
           audiooutput: parsed.audiooutput ?? null,
+          // Default to true for backwards compatibility with existing localStorage
+          videoEnabled: parsed.videoEnabled ?? true,
+          audioEnabled: parsed.audioEnabled ?? true,
         }
       }
     }
@@ -111,6 +119,8 @@ function createSelectedDeviceStore() {
           videoinput: sharedState.cachedState.videoinput,
           audioinput: sharedState.cachedState.audioinput,
           audiooutput: sharedState.cachedState.audiooutput,
+          videoEnabled: sharedState.cachedState.videoEnabled,
+          audioEnabled: sharedState.cachedState.audioEnabled,
           timestamp: Date.now(),
         }),
       )
@@ -137,6 +147,8 @@ function createSelectedDeviceStore() {
       videoinput: null,
       audioinput: null,
       audiooutput: null,
+      videoEnabled: true,
+      audioEnabled: true,
     }
   }
 
@@ -184,12 +196,37 @@ function createSelectedDeviceStore() {
         videoinput: null,
         audioinput: null,
         audiooutput: null,
+        videoEnabled: true,
+        audioEnabled: true,
       }
       localStorage.removeItem(STORAGE_KEY)
       notifyListeners()
     } catch (error) {
       console.error(
         '[createSelectedDeviceStore] Failed to clear localStorage:',
+        error,
+      )
+    }
+  }
+
+  /**
+   * Save enabled state for video or audio
+   */
+  function saveEnabledState(
+    kind: 'video' | 'audio',
+    enabled: boolean,
+  ): void {
+    try {
+      const key = kind === 'video' ? 'videoEnabled' : 'audioEnabled'
+      sharedState.cachedState = {
+        ...sharedState.cachedState,
+        [key]: enabled,
+      }
+      saveAllDevicesToStorage()
+      notifyListeners()
+    } catch (error) {
+      console.error(
+        '[createSelectedDeviceStore] Failed to save enabled state:',
         error,
       )
     }
@@ -226,6 +263,7 @@ function createSelectedDeviceStore() {
     getServerSnapshot,
     subscribe,
     saveDevice,
+    saveEnabledState,
     clearDevice,
   }
 }
@@ -333,4 +371,62 @@ export function useSelectedMediaDevice(
       clearSelectedDevice,
     }
   }, [clearSelectedDevice, kind, saveSelectedDevice, state])
+}
+
+export interface UseMediaEnabledStateReturn {
+  /** Whether video is enabled */
+  videoEnabled: boolean
+  /** Whether audio is enabled */
+  audioEnabled: boolean
+  /** Set video enabled state */
+  setVideoEnabled: (enabled: boolean) => void
+  /** Set audio enabled state */
+  setAudioEnabled: (enabled: boolean) => void
+}
+
+/**
+ * Hook to manage video/audio enabled state with localStorage persistence
+ *
+ * @returns Object with enabled states and functions to toggle them
+ *
+ * @example
+ * ```tsx
+ * function MediaToggle() {
+ *   const { videoEnabled, audioEnabled, setVideoEnabled, setAudioEnabled } = useMediaEnabledState()
+ *
+ *   return (
+ *     <>
+ *       <Switch checked={videoEnabled} onCheckedChange={setVideoEnabled} />
+ *       <Switch checked={audioEnabled} onCheckedChange={setAudioEnabled} />
+ *     </>
+ *   )
+ * }
+ * ```
+ */
+export function useMediaEnabledState(): UseMediaEnabledStateReturn {
+  const state = useSyncExternalStore(
+    globalStore.subscribe,
+    globalStore.getSnapshot,
+    globalStore.getServerSnapshot,
+  )
+
+  const setVideoEnabled = useCallback(
+    (enabled: boolean) => globalStore.saveEnabledState('video', enabled),
+    [],
+  )
+
+  const setAudioEnabled = useCallback(
+    (enabled: boolean) => globalStore.saveEnabledState('audio', enabled),
+    [],
+  )
+
+  return useMemo(
+    () => ({
+      videoEnabled: state.videoEnabled,
+      audioEnabled: state.audioEnabled,
+      setVideoEnabled,
+      setAudioEnabled,
+    }),
+    [state.videoEnabled, state.audioEnabled, setVideoEnabled, setAudioEnabled],
+  )
 }

@@ -8,6 +8,7 @@ import { sessionStorage } from '@/lib/session-storage'
 import {
   createFileRoute,
   Navigate,
+  redirect,
   stripSearchParams,
   useNavigate,
 } from '@tanstack/react-router'
@@ -42,8 +43,48 @@ const gameParamsSchema = z.object({
     ),
 })
 
+// Key for localStorage where media device preferences are stored
+const MEDIA_DEVICES_KEY = 'mtg-selected-media-devices'
+
+/**
+ * Check if user has configured media devices (camera and microphone).
+ * Returns true if the user has completed setup, which means:
+ * - Video is explicitly disabled, OR a video device is selected
+ * - Audio is explicitly disabled, OR an audio device is selected
+ */
+function isMediaConfigured(): boolean {
+  if (typeof window === 'undefined') return true // Skip check on server
+
+  try {
+    const stored = localStorage.getItem(MEDIA_DEVICES_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      // Check if video is configured (disabled or device selected)
+      // Default to true for videoEnabled/audioEnabled for backwards compatibility
+      const videoConfigured =
+        parsed.videoEnabled === false || !!parsed.videoinput
+      const audioConfigured =
+        parsed.audioEnabled === false || !!parsed.audioinput
+      return videoConfigured && audioConfigured
+    }
+  } catch {
+    // If parsing fails, treat as not configured
+  }
+  return false
+}
+
 export const Route = createFileRoute('/game/$gameId')({
   component: GameRoomRoute,
+  beforeLoad: ({ location }) => {
+    // Check if media devices are configured before entering game room
+    if (!isMediaConfigured()) {
+      // Redirect to setup page with return URL
+      throw redirect({
+        to: '/setup',
+        search: { returnTo: location.pathname },
+      })
+    }
+  },
   pendingComponent: () => (
     <div className="flex h-screen items-center justify-center bg-slate-950">
       <div className="flex flex-col items-center space-y-4">

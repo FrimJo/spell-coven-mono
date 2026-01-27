@@ -9,17 +9,19 @@ import {
 } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useAudioOutput } from '@/hooks/useAudioOutput'
+import { useMediaEnabledState } from '@/hooks/useSelectedMediaDevice'
 import { attachVideoStream } from '@/lib/video-stream-utils'
 import { isSuccessState } from '@/types/async-resource'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   AlertCircle,
   Camera,
+  CameraOff,
   Check,
   Focus,
   Loader2,
   Mic,
-  SkipForward,
+  MicOff,
   Volume2,
   X,
 } from 'lucide-react'
@@ -43,6 +45,7 @@ import {
   SelectValue,
 } from '@repo/ui/components/select'
 import { Slider } from '@repo/ui/components/slider'
+import { Switch } from '@repo/ui/components/switch'
 import {
   Tooltip,
   TooltipContent,
@@ -55,6 +58,8 @@ import { MediaPermissionInline } from './MediaPermissionInline'
 interface MediaSetupDialogProps {
   open: boolean
   onComplete: () => void
+  /** Called when user explicitly cancels (X button or skip). If not provided, calls onComplete. */
+  onCancel?: () => void
 }
 
 // Focus control state
@@ -66,7 +71,11 @@ interface FocusCapabilities {
   initialFocusDistance?: number
 }
 
-export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
+export function MediaSetupDialog({
+  open,
+  onComplete,
+  onCancel,
+}: MediaSetupDialogProps) {
   const queryClient = useQueryClient()
 
   // Get streams from context (shared with VideoStreamGrid)
@@ -98,6 +107,33 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
   const audioInputError = audioResult.error
   const isAudioInputPending = audioResult.isPending
   const switchAudioInputDevice = audioResult.saveSelectedDevice
+
+  // Get enabled state for video and audio
+  const {
+    videoEnabled,
+    audioEnabled,
+    setVideoEnabled,
+    setAudioEnabled,
+  } = useMediaEnabledState()
+
+  // Track original device IDs when dialog opens (for cancel/restore functionality)
+  const originalDeviceIds = useRef<{
+    video: string | null
+    audio: string | null
+  } | null>(null)
+
+  // Capture original device IDs when dialog opens
+  useEffect(() => {
+    if (open && originalDeviceIds.current === null) {
+      originalDeviceIds.current = {
+        video: selectedVideoId || null,
+        audio: selectedAudioInputId || null,
+      }
+    } else if (!open) {
+      // Reset when dialog closes
+      originalDeviceIds.current = null
+    }
+  }, [open, selectedVideoId, selectedAudioInputId])
 
   // Callback ref to attach stream when video element mounts
   // This is more reliable than useEffect because it fires exactly when the DOM element appears
@@ -374,9 +410,28 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     onComplete()
   }
 
-  const handleSkip = () => {
-    // Allow user to skip setup and continue without camera/microphone
-    onComplete()
+  const handleCancel = () => {
+    if (onCancel) {
+      // Setup page flow: just call onCancel (navigates to landing without saving)
+      onCancel()
+    } else {
+      // In-game settings flow: restore original device selections and close
+      if (originalDeviceIds.current) {
+        if (
+          originalDeviceIds.current.video &&
+          originalDeviceIds.current.video !== selectedVideoId
+        ) {
+          switchVideoDevice(originalDeviceIds.current.video)
+        }
+        if (
+          originalDeviceIds.current.audio &&
+          originalDeviceIds.current.audio !== selectedAudioInputId
+        ) {
+          switchAudioInputDevice(originalDeviceIds.current.audio)
+        }
+      }
+      onComplete()
+    }
   }
 
   const handlePermissionAccept = async () => {
@@ -415,11 +470,14 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
     // No action needed, the UI will update
   }
 
-  // Check if setup can be completed (has working devices)
+  // Check if setup can be completed
+  // Allow completion when:
+  // - Camera is disabled OR camera is enabled with a valid device selected
+  // - Microphone is disabled OR microphone is enabled with a valid device selected
   const canComplete =
     hasPermissions &&
-    selectedVideoId &&
-    selectedAudioInputId &&
+    (!videoEnabled || selectedVideoId) &&
+    (!audioEnabled || selectedAudioInputId) &&
     !permissionError
 
   return (
@@ -427,7 +485,7 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
       <DialogContent className="border-slate-800 bg-slate-900 sm:max-w-[700px] [&>button]:hidden">
         <div className="absolute right-4 top-4">
           <button
-            onClick={handleSkip}
+            onClick={handleCancel}
             className="rounded-sm text-slate-400 opacity-70 ring-offset-slate-900 transition-opacity hover:text-slate-300 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
             aria-label="Close"
           >
@@ -457,98 +515,133 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
 
           {/* Video Section */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Camera className="h-4 w-4 text-purple-400" />
-              <Label className="text-slate-200">Camera Source</Label>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {videoEnabled ? (
+                  <Camera className="h-4 w-4 text-purple-400" />
+                ) : (
+                  <CameraOff className="h-4 w-4 text-slate-500" />
+                )}
+                <Label className={videoEnabled ? 'text-slate-200' : 'text-slate-500'}>
+                  Camera Source
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400">
+                  {videoEnabled ? 'On' : 'Off'}
+                </span>
+                <Switch
+                  checked={videoEnabled}
+                  onCheckedChange={setVideoEnabled}
+                  className="data-[state=checked]:bg-purple-600"
+                />
+              </div>
             </div>
 
             {hasPermissions ? (
               <>
-                <Select
-                  value={selectedVideoId}
-                  onValueChange={(deviceId) => switchVideoDevice(deviceId)}
-                  disabled={noVideoDevicesAvailable}
-                >
-                  <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200">
-                    <SelectValue placeholder={noVideoDevicesAvailable ? "No cameras available" : "Select camera"} />
-                  </SelectTrigger>
-                  <SelectContent className="border-slate-700 bg-slate-800">
-                    {videoDevices
-                      .filter((device) => device.deviceId !== '')
-                      .map((device) => (
-                        <SelectItem
-                          key={device.deviceId}
-                          value={device.deviceId}
-                          className="text-slate-200 focus:bg-slate-700"
-                        >
-                          {device.label}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                {videoEnabled ? (
+                  <>
+                    <Select
+                      value={selectedVideoId}
+                      onValueChange={(deviceId) => switchVideoDevice(deviceId)}
+                      disabled={noVideoDevicesAvailable}
+                    >
+                      <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200">
+                        <SelectValue placeholder={noVideoDevicesAvailable ? "No cameras available" : "Select camera"} />
+                      </SelectTrigger>
+                      <SelectContent className="border-slate-700 bg-slate-800">
+                        {videoDevices
+                          .filter((device) => device.deviceId !== '')
+                          .map((device) => (
+                            <SelectItem
+                              key={device.deviceId}
+                              value={device.deviceId}
+                              className="text-slate-200 focus:bg-slate-700"
+                            >
+                              {device.label}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
 
-                {/* Video Preview */}
-                <div className="relative aspect-video overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
-                  <video
-                    ref={videoRefCallback}
-                    playsInline
-                    muted
-                    className="h-full w-full object-cover"
-                  />
-                  {noVideoDevicesAvailable ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900/95">
-                      <div className="mx-auto max-w-sm space-y-4 p-4">
-                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20">
-                          <AlertCircle className="h-6 w-6 text-amber-400" />
-                        </div>
+                    {/* Video Preview */}
+                    <div className="relative aspect-video overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
+                      <video
+                        ref={videoRefCallback}
+                        playsInline
+                        muted
+                        className="h-full w-full object-cover"
+                      />
+                      {noVideoDevicesAvailable ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/95">
+                          <div className="mx-auto max-w-sm space-y-4 p-4">
+                            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20">
+                              <AlertCircle className="h-6 w-6 text-amber-400" />
+                            </div>
 
-                        <div className="text-center">
-                          <h3 className="text-lg font-semibold text-slate-100">
-                            No Camera Detected
-                          </h3>
-                          <p className="mt-1 text-sm text-slate-400">
-                            Your camera may be blocked at the system level
-                          </p>
-                        </div>
+                            <div className="text-center">
+                              <h3 className="text-lg font-semibold text-slate-100">
+                                No Camera Detected
+                              </h3>
+                              <p className="mt-1 text-sm text-slate-400">
+                                Your camera may be blocked at the system level
+                              </p>
+                            </div>
 
-                        <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-3">
-                          <h4 className="mb-2 text-xs font-medium text-slate-200">
-                            To enable camera access:
-                          </h4>
-                          <ol className="space-y-1.5 text-xs text-slate-400">
-                            <li className="flex items-start gap-2">
-                              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
-                                1
-                              </span>
-                              <span>Open System Settings → Privacy &amp; Security</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
-                                2
-                              </span>
-                              <span>Click Camera in the sidebar</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
-                                3
-                              </span>
-                              <span>Enable access for your browser</span>
-                            </li>
-                          </ol>
+                            <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-3">
+                              <h4 className="mb-2 text-xs font-medium text-slate-200">
+                                To enable camera access:
+                              </h4>
+                              <ol className="space-y-1.5 text-xs text-slate-400">
+                                <li className="flex items-start gap-2">
+                                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
+                                    1
+                                  </span>
+                                  <span>Open System Settings → Privacy &amp; Security</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
+                                    2
+                                  </span>
+                                  <span>Click Camera in the sidebar</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
+                                    3
+                                  </span>
+                                  <span>Enable access for your browser</span>
+                                </li>
+                              </ol>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      ) : isVideoPending ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-slate-800/50">
+                          <div className="flex flex-col items-center space-y-3">
+                            <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+                            <p className="text-sm text-slate-200">
+                              Initializing Camera
+                            </p>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
-                  ) : isVideoPending ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-800/50">
-                      <div className="flex flex-col items-center space-y-3">
-                        <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
-                        <p className="text-sm text-slate-200">
-                          Initializing Camera
-                        </p>
+                  </>
+                ) : (
+                  /* Camera Off state */
+                  <div className="relative aspect-video overflow-hidden rounded-lg border border-slate-700 bg-slate-900">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-800">
+                        <CameraOff className="h-8 w-8 text-slate-500" />
                       </div>
+                      <p className="mt-4 text-sm text-slate-400">Camera is turned off</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        You can join the game without sharing video
+                      </p>
                     </div>
-                  ) : null}
-                </div>
+                  </div>
+                )}
               </>
             ) : (
               /* Show inline permission UI in video preview area */
@@ -573,8 +666,8 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
               </div>
             )}
 
-            {/* Focus Control - always show when permissions granted */}
-            {hasPermissions && (
+            {/* Focus Control - only show when permissions granted and video enabled */}
+            {hasPermissions && videoEnabled && (
               <div
                 className={`mt-3 space-y-3 rounded-lg border border-slate-700 bg-slate-800/50 p-3 ${
                   !focusCapabilities?.supportsFocus ? 'opacity-50' : ''
@@ -720,45 +813,82 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
           {/* Audio Input Section - only show if has permissions */}
           {hasPermissions && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Mic className="h-4 w-4 text-purple-400" />
-                <Label className="text-slate-200">Microphone</Label>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {audioEnabled ? (
+                    <Mic className="h-4 w-4 text-purple-400" />
+                  ) : (
+                    <MicOff className="h-4 w-4 text-slate-500" />
+                  )}
+                  <Label className={audioEnabled ? 'text-slate-200' : 'text-slate-500'}>
+                    Microphone
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400">
+                    {audioEnabled ? 'On' : 'Off'}
+                  </span>
+                  <Switch
+                    checked={audioEnabled}
+                    onCheckedChange={setAudioEnabled}
+                    className="data-[state=checked]:bg-purple-600"
+                  />
+                </div>
               </div>
 
-              <div className="relative">
-                <Select
-                  value={selectedAudioInputId}
-                  onValueChange={(deviceId) =>
-                    void switchAudioInputDevice(deviceId)
-                  }
-                  disabled={isAudioInputPending}
-                >
-                  <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200">
-                    <SelectValue placeholder="Select microphone" />
-                  </SelectTrigger>
-                  <SelectContent className="border-slate-700 bg-slate-800">
-                    {audioInputDevices
-                      .filter((device) => device.deviceId !== '')
-                      .map((device) => (
-                        <SelectItem
-                          key={device.deviceId}
-                          value={device.deviceId}
-                          className="text-slate-200 focus:bg-slate-700"
-                        >
-                          {device.label}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-                {isAudioInputPending && (
-                  <div className="absolute right-10 top-1/2 -translate-y-1/2">
-                    <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+              {audioEnabled ? (
+                <>
+                  <div className="relative">
+                    <Select
+                      value={selectedAudioInputId}
+                      onValueChange={(deviceId) =>
+                        void switchAudioInputDevice(deviceId)
+                      }
+                      disabled={isAudioInputPending}
+                    >
+                      <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200">
+                        <SelectValue placeholder="Select microphone" />
+                      </SelectTrigger>
+                      <SelectContent className="border-slate-700 bg-slate-800">
+                        {audioInputDevices
+                          .filter((device) => device.deviceId !== '')
+                          .map((device) => (
+                            <SelectItem
+                              key={device.deviceId}
+                              value={device.deviceId}
+                              className="text-slate-200 focus:bg-slate-700"
+                            >
+                              {device.label}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    {isAudioInputPending && (
+                      <div className="absolute right-10 top-1/2 -translate-y-1/2">
+                        <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* Audio Level Indicator */}
-              <AudioLevelIndicator audioStream={audioInputStream} />
+                  {/* Audio Level Indicator */}
+                  <AudioLevelIndicator audioStream={audioInputStream} />
+                </>
+              ) : (
+                /* Microphone Off state */
+                <div className="rounded-lg border border-slate-700 bg-slate-900 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800">
+                      <MicOff className="h-5 w-5 text-slate-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-400">Microphone is turned off</p>
+                      <p className="text-xs text-slate-500">
+                        You can join the game without sending audio
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -825,11 +955,11 @@ export function MediaSetupDialog({ open, onComplete }: MediaSetupDialogProps) {
         <DialogFooter className="flex-row justify-between gap-2 sm:justify-between">
           <Button
             variant="ghost"
-            onClick={handleSkip}
+            onClick={handleCancel}
             className="text-slate-400 hover:text-slate-300"
           >
-            <SkipForward className="mr-2 h-4 w-4" />
-            Skip for now
+            <X className="mr-2 h-4 w-4" />
+            Cancel
           </Button>
 
           <Button

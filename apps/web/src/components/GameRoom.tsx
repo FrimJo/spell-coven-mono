@@ -90,25 +90,9 @@ function GameRoomContent({
   // Consider loaded once we have participants (even if 0 initially triggers sync)
   const isLoading = isEventLoading || isPresenceLoading
 
-  // HOOK: Dialog open state - only show if user hasn't configured media devices yet
-  // Note: Permissions are handled locally in VideoStreamGrid and MediaSetupDialog
-  const [mediaDialogOpen, setMediaDialogOpen] = useState<boolean>(() => {
-    // Check if user has already saved media device settings (globally, not per-room)
-    if (typeof window === 'undefined') return false
-    try {
-      const stored = localStorage.getItem('mtg-selected-media-devices')
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        // If user has at least video and audio input configured, skip the dialog
-        if (parsed.videoinput && parsed.audioinput) {
-          return false
-        }
-      }
-    } catch {
-      // If parsing fails, show the dialog to let user configure
-    }
-    return true // Show dialog if no settings found
-  })
+  // HOOK: Dialog open state - only opens when user clicks settings button
+  // Initial media setup is now handled by the route guard (redirects to /setup if not configured)
+  const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
 
   const handleLoadingComplete = () => {
     setIsEventLoading(false)
