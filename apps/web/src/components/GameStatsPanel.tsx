@@ -15,6 +15,7 @@ import {
   Swords,
   User,
   UserCircle,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -222,6 +223,34 @@ export function GameStatsPanel({
     }
   }
 
+  // Remove a commander from any player
+  const handleRemoveCommander = (player: Participant, slotNumber: 1 | 2) => {
+    // Keep the other commander if it exists
+    const keepSlot = slotNumber === 1 ? 1 : 0
+    const keepCommander = player.commanders[keepSlot]
+    const commanders = keepCommander?.name
+      ? [{ id: keepCommander.id, name: keepCommander.name }]
+      : []
+
+    // If removing from viewed player, also clear local state
+    if (player.id === viewedPlayer.id) {
+      if (slotNumber === 1) {
+        setCommander1Name('')
+        baseOnCommander1Resolved(null)
+      } else {
+        setCommander2Name('')
+        baseOnCommander2Resolved(null)
+      }
+    }
+
+    setCommandersMutation({
+      roomId: convexRoomId,
+      userId: player.id,
+      commanders,
+    })
+    toast.success('Commander removed')
+  }
+
   // Derive status for each commander input using React Query state
   const lastTriggeredBy = saveCommandersMutation.variables?.triggeredBy
 
@@ -388,7 +417,8 @@ export function GameStatsPanel({
             {participants.map((player) => {
               const isCurrentUser = player.id === currentUser.id
               const isViewedPlayer = player.id === viewedPlayer.id
-              const canEditCommanders = isViewingOwnStats && isCurrentUser
+              // Anyone can edit anyone's commanders
+              const canEditCommanders = true
               const isCollapsed = isViewedPlayer && viewedPlayerSlotCollapsed
 
               // Minimized view for viewed player's own slot (self-damage is rare)
@@ -405,7 +435,7 @@ export function GameStatsPanel({
                 return (
                   <div
                     key={player.id}
-                    className="rounded-lg border border-purple-600/50 bg-purple-900/20 p-3"
+                    className="rounded-lg border border-slate-800 bg-slate-900/50 p-3"
                   >
                     <button
                       type="button"
@@ -419,9 +449,9 @@ export function GameStatsPanel({
                           className="h-5 w-5 rounded-full"
                         />
                       ) : (
-                        <User className="h-4 w-4 text-purple-300" />
+                        <User className="h-4 w-4 text-slate-400" />
                       )}
-                      <span className="font-semibold text-purple-200">
+                      <span className="font-semibold text-slate-200">
                         {player.username}
                         {isCurrentUser && (
                           <span className="ml-1.5 text-xs font-normal text-slate-500">
@@ -440,14 +470,14 @@ export function GameStatsPanel({
                               src={cmd1ImageUrl}
                               alt={commander1?.name}
                               title={commander1?.name}
-                              className="h-6 w-6 rounded-full border border-purple-500/50 object-cover"
+                              className="h-6 w-6 rounded-full border border-slate-600 object-cover"
                             />
                           ) : (
                             <span
-                              className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-purple-500/30 bg-purple-950/50"
+                              className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-slate-600 bg-slate-900/50"
                               title="Commander 1 not set"
                             >
-                              <Plus className="h-3 w-3 text-purple-400/50" />
+                              <Plus className="h-3 w-3 text-slate-500" />
                             </span>
                           )}
                           {cmd2ImageUrl ? (
@@ -455,18 +485,18 @@ export function GameStatsPanel({
                               src={cmd2ImageUrl}
                               alt={commander2?.name}
                               title={commander2?.name}
-                              className="h-6 w-6 rounded-full border border-purple-500/50 object-cover"
+                              className="h-6 w-6 rounded-full border border-slate-600 object-cover"
                             />
                           ) : (
                             <span
-                              className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-purple-500/30 bg-purple-950/50"
+                              className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-slate-600 bg-slate-900/50"
                               title="Commander 2 not set"
                             >
-                              <Plus className="h-3 w-3 text-purple-400/50" />
+                              <Plus className="h-3 w-3 text-slate-500" />
                             </span>
                           )}
                         </span>
-                        <ChevronDown className="h-4 w-4 text-purple-400" />
+                        <ChevronDown className="h-4 w-4 text-slate-400" />
                       </span>
                     </button>
                   </div>
@@ -476,20 +506,10 @@ export function GameStatsPanel({
               return (
                 <div
                   key={player.id}
-                  className={`rounded-lg border p-4 ${
-                    isViewedPlayer
-                      ? 'border-purple-600/50 bg-purple-900/20'
-                      : 'border-slate-800 bg-slate-900/50'
-                  }`}
+                  className="rounded-lg border border-slate-800 bg-slate-900/50 p-4"
                 >
                   {/* Player header */}
-                  <div
-                    className={`mb-3 flex items-center gap-2 border-b pb-2 ${
-                      isViewedPlayer
-                        ? 'border-purple-800/50'
-                        : 'border-slate-800'
-                    }`}
-                  >
+                  <div className="mb-3 flex items-center gap-2 border-b border-slate-800 pb-2">
                     {player.avatar ? (
                       <img
                         src={player.avatar}
@@ -497,13 +517,9 @@ export function GameStatsPanel({
                         className="h-6 w-6 rounded-full"
                       />
                     ) : (
-                      <User
-                        className={`h-5 w-5 ${isViewedPlayer ? 'text-purple-300' : 'text-slate-400'}`}
-                      />
+                      <User className="h-5 w-5 text-slate-400" />
                     )}
-                    <span
-                      className={`font-semibold ${isViewedPlayer ? 'text-purple-200' : 'text-slate-200'}`}
-                    >
+                    <span className="font-semibold text-slate-200">
                       {player.username}
                       {isCurrentUser && (
                         <span className="ml-1.5 text-xs font-normal text-slate-500">
@@ -520,7 +536,7 @@ export function GameStatsPanel({
                           <button
                             type="button"
                             onClick={() => setViewedPlayerSlotCollapsed(true)}
-                            className="ml-auto rounded p-1 text-slate-400 hover:bg-purple-800/30 hover:text-purple-300"
+                            className="ml-auto rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                             title="Minimize"
                           >
                             <ChevronUp className="h-4 w-4" />
@@ -557,6 +573,7 @@ export function GameStatsPanel({
                       }
                       onStartEdit={() => setEditingCommanderSlot(1)}
                       onCancelEdit={() => setEditingCommanderSlot(null)}
+                      onRemove={() => handleRemoveCommander(player, 1)}
                       // Edit props
                       inputValue={cmdState.commander1Name}
                       onInputChange={setCommander1Name}
@@ -594,6 +611,7 @@ export function GameStatsPanel({
                       }
                       onStartEdit={() => setEditingCommanderSlot(2)}
                       onCancelEdit={() => setEditingCommanderSlot(null)}
+                      onRemove={() => handleRemoveCommander(player, 2)}
                       // Edit props
                       inputValue={cmdState.commander2Name}
                       onInputChange={setCommander2Name}
@@ -645,6 +663,7 @@ interface CommanderSlotProps {
   onDamageChange: (delta: number) => void
   onStartEdit: () => void
   onCancelEdit: () => void
+  onRemove?: () => void
   // Edit mode props
   inputValue: string
   onInputChange: (value: string) => void
@@ -671,6 +690,7 @@ function CommanderSlot({
   onDamageChange,
   onStartEdit,
   onCancelEdit,
+  onRemove,
   inputValue,
   onInputChange,
   onCardResolved,
@@ -688,13 +708,7 @@ function CommanderSlot({
   // Empty slot - show placeholder with Set action
   if (!commander && !isEditing) {
     return (
-      <div
-        className={`flex items-center justify-between rounded-md border border-dashed p-3 ${
-          isViewedPlayer
-            ? 'border-purple-700/50 bg-purple-950/20'
-            : 'border-slate-700 bg-slate-950/30'
-        }`}
-      >
+      <div className="flex items-center justify-between rounded-md border border-dashed border-slate-700 bg-slate-950/30 p-3">
         <span className="text-sm text-slate-500">
           Commander {slotNumber} not set
         </span>
@@ -702,7 +716,7 @@ function CommanderSlot({
           <Button
             size="sm"
             variant="outline"
-            className="h-7 border-purple-600/50 bg-purple-900/30 text-purple-300 hover:bg-purple-800/50 hover:text-purple-100"
+            className="h-7 border-slate-600 bg-slate-800/50 text-slate-300 hover:bg-slate-700 hover:text-slate-100"
             onClick={onStartEdit}
           >
             <Plus className="mr-1 h-3 w-3" />
@@ -716,13 +730,7 @@ function CommanderSlot({
   // Edit mode - show search input
   if (isEditing) {
     return (
-      <div
-        className={`rounded-md border p-3 ${
-          isViewedPlayer
-            ? 'border-purple-600/50 bg-purple-950/30'
-            : 'border-slate-700 bg-slate-950/50'
-        }`}
-      >
+      <div className="rounded-md border border-slate-700 bg-slate-950/50 p-3">
         <div className="mb-2 flex items-center justify-between">
           <span className="text-xs font-medium text-slate-400">
             Commander {slotNumber}
@@ -815,13 +823,7 @@ function CommanderSlot({
   if (!commander) return null
 
   return (
-    <div
-      className={`group relative overflow-hidden rounded-md border ${
-        isViewedPlayer
-          ? 'border-purple-500/30 bg-purple-950/20'
-          : 'border-slate-800 bg-slate-950/50'
-      }`}
-    >
+    <div className="group relative overflow-hidden rounded-md border border-slate-800 bg-slate-950/50">
       {/* Commander Background Image */}
       {imageUrl && (
         <div className="absolute inset-0 z-0">
@@ -830,35 +832,37 @@ function CommanderSlot({
             alt={commander.name}
             className="absolute inset-0 h-full w-full object-cover opacity-40 transition-opacity duration-500 group-hover:opacity-60"
           />
-          <div
-            className={`absolute inset-0 bg-gradient-to-r ${
-              isViewedPlayer
-                ? 'from-purple-950/80 via-purple-950/40 to-transparent'
-                : 'from-slate-950/80 via-slate-950/40 to-transparent'
-            }`}
-          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/40 to-transparent" />
         </div>
       )}
 
       <div className="relative z-10 flex items-center justify-between p-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span
-              className={`text-shadow-sm text-sm font-medium shadow-black ${
-                isViewedPlayer ? 'text-purple-100' : 'text-slate-200'
-              }`}
-            >
+            <span className="text-shadow-sm text-sm font-medium text-slate-200 shadow-black">
               {commander.name}
             </span>
             {canEdit && (
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-5 w-5 text-slate-400 opacity-0 transition-opacity hover:text-purple-300 group-hover:opacity-100"
-                onClick={onStartEdit}
-              >
-                <Pencil className="h-3 w-3" />
-              </Button>
+              <div className="flex items-center gap-0.5">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-5 w-5 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  onClick={onStartEdit}
+                  title="Edit commander"
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-5 w-5 text-slate-400 hover:bg-red-900/50 hover:text-red-400"
+                  onClick={onRemove}
+                  title="Remove commander"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
             )}
           </div>
           {isLethal && (
@@ -873,22 +877,14 @@ function CommanderSlot({
           <Button
             size="icon"
             variant="outline"
-            className={`h-8 w-8 backdrop-blur-sm ${
-              isViewedPlayer
-                ? 'border-purple-500/30 bg-purple-900/60 text-purple-100 hover:bg-purple-800/80 hover:text-white'
-                : 'border-slate-700 bg-slate-900/80 text-slate-200 hover:bg-slate-800 hover:text-white'
-            }`}
+            className="h-8 w-8 border-slate-700 bg-slate-900/80 text-slate-200 backdrop-blur-sm hover:bg-slate-800 hover:text-white"
             onClick={() => onDamageChange(-1)}
           >
             -
           </Button>
           <span
             className={`text-shadow-sm min-w-[2rem] text-center font-mono text-lg font-bold shadow-black ${
-              isLethal
-                ? 'text-red-400'
-                : isViewedPlayer
-                  ? 'text-purple-100'
-                  : 'text-slate-200'
+              isLethal ? 'text-red-400' : 'text-slate-200'
             }`}
           >
             {damage}
@@ -896,11 +892,7 @@ function CommanderSlot({
           <Button
             size="icon"
             variant="outline"
-            className={`h-8 w-8 backdrop-blur-sm ${
-              isViewedPlayer
-                ? 'border-purple-500/30 bg-purple-900/60 text-purple-100 hover:bg-purple-800/80 hover:text-white'
-                : 'border-slate-700 bg-slate-900/80 text-slate-200 hover:bg-slate-800 hover:text-white'
-            }`}
+            className="h-8 w-8 border-slate-700 bg-slate-900/80 text-slate-200 backdrop-blur-sm hover:bg-slate-800 hover:text-white"
             onClick={() => onDamageChange(1)}
           >
             +
