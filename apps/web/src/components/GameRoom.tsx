@@ -1,15 +1,11 @@
 import type { DetectorType } from '@/lib/detectors'
-import type { LoadingEvent } from '@/lib/loading-events'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
 import { PresenceProvider, usePresence } from '@/contexts/PresenceContext'
-import { loadEmbeddingsAndMetaFromPackage, loadModel } from '@/lib/clip-search'
-import { loadingEvents } from '@/lib/loading-events'
-import { loadOpenCV } from '@/lib/opencv-loader'
 import { ArrowLeft, Check, Copy, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -18,7 +14,6 @@ import { Toaster } from '@repo/ui/components/sonner'
 
 import type { RejoinReason } from './RejoinGameDialog.js'
 import { DuplicateSessionDialog } from './DuplicateSessionDialog.js'
-import { GameRoomLoader } from './GameRoomLoader.js'
 import { GameRoomPlayerCount } from './GameRoomPlayerCount.js'
 import { GameRoomSidebar } from './GameRoomSidebar.js'
 import { LeaveGameDialog } from './LeaveGameDialog.js'
@@ -52,7 +47,6 @@ function GameRoomContent({
 
   // Get presence data and actions from context
   const {
-    isLoading: isPresenceLoading,
     ownerId,
     isOwner,
     isConnected,
@@ -85,196 +79,9 @@ function GameRoomContent({
     return `${window.location.origin}/game/${roomId}`
   }, [roomId])
 
-  const [isEventLoading, setIsEventLoading] = useState(true)
-
-  // Consider loaded once we have participants (even if 0 initially triggers sync)
-  const isLoading = isEventLoading || isPresenceLoading
-
   // HOOK: Dialog open state - only opens when user clicks settings button
   // Initial media setup is now handled by the route guard (redirects to /setup if not configured)
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
-
-  const handleLoadingComplete = () => {
-    setIsEventLoading(false)
-  }
-
-  // Listen to loading events and complete when voice-channel step reaches 95%
-  useEffect(() => {
-    const handleLoadingEvent = (event: LoadingEvent) => {
-      if (event.step === 'voice-channel' && event.progress >= 95) {
-        handleLoadingComplete()
-      }
-    }
-
-    const unsubscribe = loadingEvents.subscribe(handleLoadingEvent)
-    return unsubscribe
-  }, [])
-
-  // Voice channel validation is now done in the route's beforeLoad hook
-  // If user is not in voice channel, they won't reach this component
-  useEffect(() => {
-    // Emit loading events to complete the loading sequence
-    loadingEvents.emit({
-      step: 'voice-channel',
-      progress: 88,
-      message: 'Connecting to voice channel...',
-    })
-
-    loadingEvents.emit({
-      step: 'voice-channel',
-      progress: 95,
-      message: 'Voice channel ready',
-    })
-  }, [])
-
-  // Initialize CLIP model and embeddings on mount
-  useEffect(() => {
-    console.log('[GameRoom] Component mounted, starting initialization...')
-
-    let mounted = true
-
-    async function initModel() {
-      console.log('[GameRoom] initModel() called')
-      try {
-        if (!mounted) {
-          console.log('[GameRoom] Component unmounted, aborting initialization')
-          return
-        }
-
-        // Step 1: Load embeddings (0-16.67%)
-        console.log('[GameRoom] Step 1: Loading embeddings...')
-        loadingEvents.emit({
-          step: 'embeddings',
-          progress: 10,
-          message: 'Loading card embeddings...',
-        })
-
-        await loadEmbeddingsAndMetaFromPackage()
-        console.log('[GameRoom] Embeddings loaded successfully')
-
-        if (!mounted) return
-
-        loadingEvents.emit({
-          step: 'embeddings',
-          progress: 16.67,
-          message: 'Card embeddings loaded',
-        })
-
-        // Step 2: Load CLIP model (16.67-33.33%)
-        loadingEvents.emit({
-          step: 'clip-model',
-          progress: 20,
-          message: 'Downloading CLIP model...',
-        })
-
-        await loadModel({
-          onProgress: (msg) => {
-            if (mounted) {
-              console.log('[GameRoom] CLIP model loading:', msg)
-              // Parse progress from message (e.g., "progress onnx/model.onnx 45.5%")
-              const percentMatch = msg.match(/(\d+(?:\.\d+)?)\s*%/)
-              let progress = 20 // Default start
-
-              if (percentMatch && percentMatch[1]) {
-                const downloadPercent = parseFloat(percentMatch[1])
-                // Map download progress (0-100%) to loading range (20-33.33%)
-                progress = 20 + (downloadPercent / 100) * 13.33
-              }
-
-              loadingEvents.emit({
-                step: 'clip-model',
-                progress: Math.min(progress, 33.33),
-                message: msg,
-              })
-            }
-          },
-        })
-
-        if (!mounted) return
-
-        console.log('[GameRoom] CLIP model loaded successfully')
-        loadingEvents.emit({
-          step: 'clip-model',
-          progress: 33.33,
-          message: 'CLIP model ready',
-        })
-
-        if (!mounted) return
-
-        // Step 3: Load OpenCV (33.33-50%)
-        loadingEvents.emit({
-          step: 'opencv',
-          progress: 38,
-          message: 'Loading OpenCV.js...',
-        })
-
-        try {
-          // Add timeout to prevent hanging
-          const openCVPromise = loadOpenCV()
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(
-              () => reject(new Error('OpenCV loading timeout')),
-              30000,
-            ),
-          )
-          await Promise.race([openCVPromise, timeoutPromise])
-          console.log(
-            '[GameRoom] OpenCV loaded successfully during initialization',
-          )
-        } catch (err) {
-          console.error(
-            '[GameRoom] Failed to load OpenCV during initialization:',
-            err,
-          )
-          // Continue anyway - OpenCV will be lazy-loaded when needed
-        }
-
-        if (!mounted) return
-
-        loadingEvents.emit({
-          step: 'opencv',
-          progress: 50,
-          message: 'OpenCV.js ready',
-        })
-
-        if (!mounted) return
-
-        // Note: Detector initialization happens in VideoStreamGrid/useWebcam
-        // It will emit its own loading events (50-83.33%) when it initializes
-        // Voice channel validation happens in a separate effect after auth is available
-      } catch (err) {
-        console.error('[GameRoom] Model initialization error:', err)
-        console.error('[GameRoom] Error details:', {
-          message: err instanceof Error ? err.message : String(err),
-          stack: err instanceof Error ? err.stack : undefined,
-        })
-        if (mounted) {
-          // Surface user-friendly error message based on error type
-          const errorMessage = err instanceof Error ? err.message : String(err)
-          if (errorMessage.includes('build manifest')) {
-            toast.error(
-              'Failed to load card database configuration. Please check your connection and refresh.',
-            )
-          } else if (
-            errorMessage.includes('embeddings') ||
-            errorMessage.includes('meta.json')
-          ) {
-            toast.error(
-              'Failed to load card database. Please check your connection and refresh.',
-            )
-          } else {
-            toast.error('Failed to load card recognition model')
-          }
-        }
-      }
-    }
-
-    initModel()
-
-    return () => {
-      mounted = false
-    }
-  }, [])
 
   // Show dialog until user completes media setup
   const handleDialogComplete = async () => {
@@ -474,15 +281,11 @@ function GameRoomContent({
               onCardCrop={(canvas: HTMLCanvasElement) => {
                 query(canvas)
               }}
+              enableCardDetection={false}
             />
           </div>
         </div>
       </div>
-
-      {/* Loading Overlay */}
-      {isLoading && (
-        <GameRoomLoader onLoadingComplete={handleLoadingComplete} />
-      )}
     </div>
   )
 }

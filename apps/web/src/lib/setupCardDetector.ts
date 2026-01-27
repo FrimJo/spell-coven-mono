@@ -2,8 +2,8 @@
 // Uses pluggable detector architecture (DETR, OWL-ViT, etc.)
 
 import type { DetectedCard } from '@/types/card-query'
-
 import { isDevelopment } from '@/env.js'
+
 import type { CardDetector, DetectorType } from './detectors/index.js'
 import {
   enhanceCanvasContrast,
@@ -15,7 +15,6 @@ import {
 import { refineBoundingBoxToCorners } from './detectors/geometry/bbox-refinement.js'
 import { warpCardToCanonical } from './detectors/geometry/perspective.js'
 import { createDetector } from './detectors/index.js'
-import { loadingEvents } from './loading-events.js'
 
 // ============================================================================
 // Debug Blob URL Helpers
@@ -184,37 +183,11 @@ async function initializeDetector(
       detector.getStatus() === 'ready' &&
       currentDetectorType === detectorType
     ) {
-      // Still emit events for already-initialized detector
-      loadingEvents.emit({
-        step: 'detector',
-        progress: 80,
-        message: 'Card detector ready',
-      })
       return
     }
 
-    // Emit detector initialization start
-    loadingEvents.emit({
-      step: 'detector',
-      progress: 60,
-      message: 'Initializing card detector...',
-    })
-
     // Create detector if not exists
     if (!detector) {
-      // Track progress for smooth loading bar updates
-      let lastProgress = 60
-      const progressCallback = (msg: string) => {
-        onProgress?.(msg)
-        // Increment progress gradually (60-75% during download)
-        lastProgress = Math.min(lastProgress + 1, 75)
-        loadingEvents.emit({
-          step: 'detector',
-          progress: lastProgress,
-          message: msg,
-        })
-      }
-
       if (!detectorType) {
         throw new Error(
           'Detector type is required. Please specify a detector type.',
@@ -222,20 +195,13 @@ async function initializeDetector(
       }
 
       detector = createDetector(detectorType, {
-        onProgress: progressCallback,
+        onProgress,
       })
       currentDetectorType = detectorType
     }
 
     // Initialize detector
     await detector.initialize()
-
-    // Emit detector ready
-    loadingEvents.emit({
-      step: 'detector',
-      progress: 80,
-      message: 'Card detector ready',
-    })
   } catch (err) {
     // Provide user-friendly error messages based on error type
     const errorMessage = err instanceof Error ? err.message : String(err)
@@ -452,7 +418,10 @@ function cropCardFromBoundingBox(
   // Python: load → enhance contrast → pad → resize
   // Browser: crop → enhance contrast → pad → resize
   const contrastFactor = getQueryContrastEnhancement()
-  const contrastEnhancedCanvas = enhanceCanvasContrast(tempCanvas, contrastFactor)
+  const contrastEnhancedCanvas = enhanceCanvasContrast(
+    tempCanvas,
+    contrastFactor,
+  )
 
   // Resize to target dimensions with aspect ratio preservation and padding
   // The CLIP model expects square images, so we center the card and add black padding
