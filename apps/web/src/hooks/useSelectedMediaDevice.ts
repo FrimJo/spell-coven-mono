@@ -40,6 +40,10 @@ const sharedState = {
   // Storage event handler for cross-tab synchronization
   boundStorageHandler: null as ((event: StorageEvent) => void) | null,
 
+  // Whether setup has been committed (localStorage has been written to)
+  // This is true if we loaded existing data from localStorage
+  isCommitted: false,
+
   /**
    * Handle storage events from other tabs/windows
    */
@@ -93,6 +97,8 @@ function loadFromStorage(): void {
           videoEnabled: parsed.videoEnabled ?? true,
           audioEnabled: parsed.audioEnabled ?? true,
         }
+        // Mark as committed since we loaded existing data
+        sharedState.isCommitted = true
       }
     }
   } catch (error) {
@@ -109,9 +115,16 @@ function loadFromStorage(): void {
  */
 function createSelectedDeviceStore() {
   /**
-   * Save all devices to localStorage in the new format
+   * Save all devices to localStorage in the new format.
+   * Only saves if setup has been committed (user clicked "Complete Setup").
    */
   function saveAllDevicesToStorage(): void {
+    // Only persist to localStorage if setup has been committed
+    // This prevents saving during initial setup before user clicks "Complete Setup"
+    if (!sharedState.isCommitted) {
+      return
+    }
+
     try {
       localStorage.setItem(
         STORAGE_KEY,
@@ -127,6 +140,32 @@ function createSelectedDeviceStore() {
     } catch (error) {
       console.error(
         '[createSelectedDeviceStore] Failed to save all devices to localStorage:',
+        error,
+      )
+    }
+  }
+
+  /**
+   * Commit current state to localStorage.
+   * Call this when user clicks "Complete Setup" to persist their choices.
+   */
+  function commitToStorage(): void {
+    sharedState.isCommitted = true
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          videoinput: sharedState.cachedState.videoinput,
+          audioinput: sharedState.cachedState.audioinput,
+          audiooutput: sharedState.cachedState.audiooutput,
+          videoEnabled: sharedState.cachedState.videoEnabled,
+          audioEnabled: sharedState.cachedState.audioEnabled,
+          timestamp: Date.now(),
+        }),
+      )
+    } catch (error) {
+      console.error(
+        '[createSelectedDeviceStore] Failed to commit to localStorage:',
         error,
       )
     }
@@ -265,6 +304,7 @@ function createSelectedDeviceStore() {
     saveDevice,
     saveEnabledState,
     clearDevice,
+    commitToStorage,
   }
 }
 
@@ -429,4 +469,15 @@ export function useMediaEnabledState(): UseMediaEnabledStateReturn {
     }),
     [state.videoEnabled, state.audioEnabled, setVideoEnabled, setAudioEnabled],
   )
+}
+
+/**
+ * Commit current media device selections to localStorage.
+ *
+ * Call this when user clicks "Complete Setup" to persist their device choices.
+ * Before this is called, device selections are kept in memory only and won't
+ * persist across page reloads.
+ */
+export function commitMediaDevicesToStorage(): void {
+  globalStore.commitToStorage()
 }
