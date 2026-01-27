@@ -1,6 +1,6 @@
 'use client'
 
-import type { DualCommanderKeyword, ScryfallCard } from '@/lib/scryfall'
+import type { ScryfallCard } from '@/lib/scryfall'
 import { useEffect, useEffectEvent, useRef } from 'react'
 import { useMachine } from '@xstate/react'
 import {
@@ -220,37 +220,6 @@ export function CommanderSearchInput({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helper hook for managing commander pair state (kept for backward compatibility)
-// Note: This hook is no longer used by GameStatsPanel which now uses commanderPanelMachine
+// Re-exported utilities for external use
 // ─────────────────────────────────────────────────────────────────────────────
-
-export interface CommanderPairState {
-  commander1Name: string
-  commander2Name: string
-  commander1Card: ScryfallCard | null
-  commander2Card: ScryfallCard | null
-  dualKeywords: DualCommanderKeyword[]
-  specificPartner: string | null
-  allowsSecondCommander: boolean
-}
-
-/** @deprecated Use commanderPanelMachine instead */
-export function useCommanderPair(
-  _initialCommander1: string,
-  _initialCommander2: string,
-): {
-  state: CommanderPairState
-  setCommander1Name: (name: string) => void
-  setCommander2Name: (name: string) => void
-  onCommander1Resolved: (card: ScryfallCard | null) => void
-  onCommander2Resolved: (card: ScryfallCard | null) => void
-} {
-  // This hook is deprecated but kept for backward compatibility
-  // The actual state is now managed by commanderPanelMachine
-  throw new Error(
-    'useCommanderPair is deprecated. Use commanderPanelMachine instead.',
-  )
-}
-
-// Keep these types/functions exported for external use
 export { detectDualCommanderKeywords, getSpecificPartner }
