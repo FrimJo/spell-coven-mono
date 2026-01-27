@@ -250,6 +250,22 @@ export const commanderSearchMachine = setup({
         BLUR: {
           target: 'closing',
         },
+        RESULT_SELECTED: {
+          target: 'resolving',
+          actions: assign({
+            query: ({ event }) => event.name,
+            open: false,
+            results: [],
+          }),
+        },
+        SUGGESTION_SELECTED: {
+          target: 'resolving',
+          actions: assign({
+            query: ({ event }) => event.name,
+            open: false,
+            results: [],
+          }),
+        },
       },
     },
     showingResults: {
