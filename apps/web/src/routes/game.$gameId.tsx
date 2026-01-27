@@ -47,6 +47,14 @@ const gameParamsSchema = z.object({
 const MEDIA_DEVICES_KEY = 'mtg-selected-media-devices'
 
 /**
+ * Check if this is a test game ID (used for e2e tests).
+ * Test game IDs start with "game-TEST" to bypass authentication.
+ */
+function isTestGameId(gameId: string): boolean {
+  return gameId.startsWith('game-TEST')
+}
+
+/**
  * Check if user has configured media devices (camera and microphone).
  * Returns true if the user has completed setup, which means:
  * - Video is explicitly disabled, OR a video device is selected
@@ -118,13 +126,16 @@ function GameRoomRoute() {
   const navigate = useNavigate()
   const { user, isLoading, isAuthenticated } = useAuth()
 
+  // Allow test game IDs to bypass authentication (for e2e tests)
+  const isTestMode = isTestGameId(gameId)
+
   const handleLeaveGame = () => {
     sessionStorage.clearGameState()
     navigate({ to: '/' })
   }
 
-  // Show loading while checking auth
-  if (isLoading) {
+  // Show loading while checking auth (skip for test mode)
+  if (isLoading && !isTestMode) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-950">
         <div className="flex flex-col items-center space-y-4">
@@ -139,8 +150,8 @@ function GameRoomRoute() {
     )
   }
 
-  // Redirect to home if not authenticated
-  if (!isAuthenticated) {
+  // Redirect to home if not authenticated (skip for test mode)
+  if (!isAuthenticated && !isTestMode) {
     return <Navigate to="/" />
   }
 
@@ -163,7 +174,7 @@ function GameRoomRoute() {
         >
           <GameRoom
             roomId={gameId}
-            playerName={user?.username ?? 'Player'}
+            playerName={user?.username ?? (isTestMode ? 'TestPlayer' : 'Player')}
             onLeaveGame={handleLeaveGame}
             detectorType={detector as DetectorType | undefined}
             usePerspectiveWarp={usePerspectiveWarp}
