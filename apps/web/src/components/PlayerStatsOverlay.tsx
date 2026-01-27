@@ -108,7 +108,7 @@ export function PlayerStatsOverlay({
             </div>
           </div>
         
-        {/* Commander Stats Panel Toggle */}
+        {/* Commander Damage Panel Toggle */}
         <Button
           variant="ghost"
           size="sm"
@@ -116,7 +116,7 @@ export function PlayerStatsOverlay({
           onClick={() => setPanelOpen(true)}
         >
           <Activity className="mr-1.5 h-3 w-3" />
-          STATS
+          COMMANDERS
         </Button>
       </div>
 
