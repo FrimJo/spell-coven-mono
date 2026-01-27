@@ -24,6 +24,9 @@ import {
 } from '@repo/ui/components/popover'
 import { commanderSearchMachine } from '@/state/commanderSearchMachine'
 
+// Stable empty array to prevent infinite re-render loops
+const EMPTY_SUGGESTIONS: string[] = []
+
 interface CommanderSearchInputProps {
   id: string
   value: string
@@ -48,11 +51,13 @@ export function CommanderSearchInput({
   onCardResolved,
   placeholder = 'Search for a commander...',
   className,
-  suggestions = [],
+  suggestions,
   suggestionsLabel = 'Suggested',
   hideLoadingIndicator = false,
   onLoadingChange,
 }: CommanderSearchInputProps) {
+  // Use stable reference for empty array to prevent infinite loops
+  const effectiveSuggestions = suggestions ?? EMPTY_SUGGESTIONS
   const inputRef = useRef<HTMLInputElement>(null)
 
   // XState machine for search state
@@ -83,7 +88,7 @@ export function CommanderSearchInput({
   })
 
   const syncSuggestions = useEffectEvent(() => {
-    send({ type: 'SET_SUGGESTIONS', suggestions, label: suggestionsLabel })
+    send({ type: 'SET_SUGGESTIONS', suggestions: effectiveSuggestions, label: suggestionsLabel })
   })
 
   // Sync external value changes
@@ -94,7 +99,7 @@ export function CommanderSearchInput({
   // Sync external suggestions
   useEffect(() => {
     syncSuggestions()
-  }, [suggestions, suggestionsLabel])
+  }, [effectiveSuggestions, suggestionsLabel])
 
   // Notify parent of loading state changes
   useEffect(() => {
@@ -136,7 +141,7 @@ export function CommanderSearchInput({
     send({ type: 'BLUR' })
   }
 
-  const showResults = results.length > 0 || suggestions.length > 0 || loading
+  const showResults = results.length > 0 || effectiveSuggestions.length > 0 || loading
 
   const handleOpenChange = (newOpen: boolean) => {
     // Ignore close requests when the input is focused (prevents Radix from closing on anchor click)
@@ -173,12 +178,12 @@ export function CommanderSearchInput({
       >
         <Command className="bg-transparent">
           <CommandList>
-            {suggestions.length > 0 && (
+            {effectiveSuggestions.length > 0 && (
               <CommandGroup
                 heading={suggestionsLabel}
                 className="text-slate-400"
               >
-                {suggestions.map((name) => (
+                {effectiveSuggestions.map((name) => (
                   <CommandItem
                     key={`sug-${name}`}
                     value={name}
@@ -206,7 +211,7 @@ export function CommanderSearchInput({
             )}
             {!loading &&
               results.length === 0 &&
-              suggestions.length === 0 &&
+              effectiveSuggestions.length === 0 &&
               query.length >= 2 && (
                 <CommandEmpty className="text-slate-500">
                   No cards found
