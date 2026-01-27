@@ -282,7 +282,9 @@ export function GameStatsPanel({
     if (saveCommandersMutation.isError && isTriggered) {
       return 'error'
     }
-    if (saveCommandersMutation.isSuccess && isTriggered) {
+    // Only return 'saved' from mutation success if the commander still exists
+    // This prevents showing 'saved' status after clearing
+    if (saveCommandersMutation.isSuccess && isTriggered && hasExistingCommander) {
       return 'saved'
     }
     if (hasExistingCommander) {
@@ -531,16 +533,18 @@ export function GameStatsPanel({
 
               const isEditingThisPlayer = editingPlayerId === player.id
               // Get status only if this player is being edited
+              // Use local state (cmdState) for hasExistingCommander when editing, not props (player.commanders)
+              // This ensures that when clearing, the status updates immediately based on local state
               const playerCommander1Status = isEditingThisPlayer
                 ? getCommanderStatus(
                     1,
-                    Boolean(player.commanders[0]?.name),
+                    Boolean(cmdState.commander1Name || cmdState.commander1Card),
                   )
                 : 'saved'
               const playerCommander2Status = isEditingThisPlayer
                 ? getCommanderStatus(
                     2,
-                    Boolean(player.commanders[1]?.name),
+                    Boolean(cmdState.commander2Name || cmdState.commander2Card),
                   )
                 : 'saved'
 
@@ -586,7 +590,7 @@ export function GameStatsPanel({
                         >
                           Done
                         </Button>
-                      ) : (
+                      ) : (player.commanders[0]?.name || player.commanders[1]?.name) ? (
                         <Button
                           size="icon"
                           variant="ghost"
@@ -596,7 +600,7 @@ export function GameStatsPanel({
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                      )}
+                      ) : null}
 
                       {isViewedPlayer && viewedPlayerHasCommanders && !isEditingThisPlayer && (
                         <button
@@ -625,7 +629,7 @@ export function GameStatsPanel({
                         >
                           <Plus className="h-5 w-5" />
                           <span className="text-sm font-medium">
-                            Add Commanders
+                            {isCurrentUser ? 'Add your Commander' : 'Add commander'}
                           </span>
                         </button>
                       )}
@@ -775,6 +779,7 @@ function CommanderSlot({
   suggestions,
   suggestionsLabel,
 }: CommanderSlotProps) {
+  const [isSearching, setIsSearching] = useState(false)
   const isLethal = damage >= 21
   const imageUrl = commander ? getCommanderImageUrl(commander.id) : null
 
@@ -818,20 +823,20 @@ function CommanderSlot({
             className="h-9 border-slate-700 bg-slate-900 pr-10 text-sm text-slate-100 transition-colors placeholder:text-slate-500 hover:border-slate-500 focus-visible:ring-purple-500"
             suggestions={slotNumber === 2 ? suggestions : undefined}
             suggestionsLabel={slotNumber === 2 ? suggestionsLabel : undefined}
+            hideLoadingIndicator
+            onLoadingChange={setIsSearching}
           />
-          {status !== 'idle' && (
-            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-              {status === 'saving' && (
-                <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
-              )}
-              {status === 'saved' && (
-                <Check className="h-4 w-4 text-green-400" />
-              )}
-              {status === 'error' && (
-                <AlertCircle className="h-4 w-4 text-red-400" />
-              )}
-            </div>
-          )}
+          <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+            {isSearching ? (
+              <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
+            ) : status === 'saving' ? (
+              <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+            ) : status === 'saved' ? (
+              <Check className="h-4 w-4 text-green-400" />
+            ) : status === 'error' ? (
+              <AlertCircle className="h-4 w-4 text-red-400" />
+            ) : null}
+          </div>
         </div>
         {/* Show partner suggestions for slot 1 */}
         {slotNumber === 1 && dualKeywords && dualKeywords.length > 0 && (
