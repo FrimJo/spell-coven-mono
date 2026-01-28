@@ -4,6 +4,7 @@ import { useEffect, useEffectEvent, useState } from 'react'
 import { useMachine } from '@xstate/react'
 import { useMutation } from '@tanstack/react-query'
 import { useMutation as useConvexMutation } from 'convex/react'
+import type { Doc } from '../../../../convex/_generated/dataModel'
 import {
   AlertCircle,
   Check,
@@ -114,9 +115,77 @@ export function GameStatsPanel({
 
   // Convex mutation functions
   const setCommandersMutation = useConvexMutation(api.rooms.setPlayerCommanders)
+  
+  // Helper function for optimistic updates on player queries
+  type RoomPlayer = Doc<'roomPlayers'>
+  
+  const updatePlayerQueriesOptimistically = (
+    localStore: Parameters<
+      Parameters<
+        ReturnType<typeof useConvexMutation<typeof api.rooms.updateCommanderDamage>>['withOptimisticUpdate']
+      >[0]
+    >[0],
+    roomId: string,
+    userId: string,
+    updater: (player: RoomPlayer) => RoomPlayer,
+  ) => {
+    const existingSessions = localStore.getQuery(
+      api.players.listAllPlayerSessions,
+      { roomId },
+    )
+    if (existingSessions !== undefined) {
+      const nextSessions = existingSessions.map((session: RoomPlayer) =>
+        session.userId === userId ? updater(session) : session,
+      )
+      localStore.setQuery(
+        api.players.listAllPlayerSessions,
+        { roomId },
+        nextSessions,
+      )
+    }
+
+    const activePlayers = localStore.getQuery(
+      api.players.listActivePlayers,
+      { roomId },
+    )
+    if (activePlayers !== undefined) {
+      const nextActive = activePlayers.map((player: RoomPlayer) =>
+        player.userId === userId ? updater(player) : player,
+      )
+      localStore.setQuery(
+        api.players.listActivePlayers,
+        { roomId },
+        nextActive,
+      )
+    }
+  }
+
   const updateCommanderDamage = useConvexMutation(
     api.rooms.updateCommanderDamage,
-  )
+  ).withOptimisticUpdate((localStore, args) => {
+    const damageKey = `${args.ownerUserId}:${args.commanderId}`
+    
+    updatePlayerQueriesOptimistically(
+      localStore,
+      args.roomId,
+      args.userId,
+      (player) => {
+        const currentDamage = player.commanderDamage?.[damageKey] ?? 0
+        const nextDamage = Math.max(0, currentDamage + args.delta)
+        const actualDamageChange = nextDamage - currentDamage
+        const nextHealth = (player.health ?? 0) - actualDamageChange
+
+        return {
+          ...player,
+          health: nextHealth,
+          commanderDamage: {
+            ...(player.commanderDamage ?? {}),
+            [damageKey]: nextDamage,
+          },
+        }
+      },
+    )
+  })
 
   // Mutation variables type includes which commander triggered the save
   type SaveCommandersInput = {
@@ -326,6 +395,8 @@ export function GameStatsPanel({
       ownerUserId, // From this owner
       commanderId, // From this commander
       delta,
+    }).catch(() => {
+      toast.error('Failed to update commander damage')
     })
   }
 
@@ -851,6 +922,7 @@ function CommanderSlot({
             variant="outline"
             className="h-8 w-8 border-slate-700 bg-slate-900/80 text-slate-200 backdrop-blur-sm hover:bg-slate-800 hover:text-white"
             onClick={() => onDamageChange(-1)}
+            disabled={damage <= 0}
           >
             -
           </Button>

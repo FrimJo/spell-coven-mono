@@ -401,9 +401,10 @@ export const updatePlayerHealth = mutation({
       )
       .collect()
 
+    const nextHealth = Math.max(0, player.health + delta)
     for (const session of allSessions) {
       await ctx.db.patch(session._id, {
-        health: player.health + delta,
+        health: nextHealth,
       })
     }
   },
@@ -433,6 +434,7 @@ export const updatePlayerPoison = mutation({
     }
 
     const currentPoison = player.poison ?? 0
+    const nextPoison = Math.max(0, currentPoison + delta)
 
     const allSessions = await ctx.db
       .query('roomPlayers')
@@ -443,7 +445,7 @@ export const updatePlayerPoison = mutation({
 
     for (const session of allSessions) {
       await ctx.db.patch(session._id, {
-        poison: currentPoison + delta,
+        poison: nextPoison,
       })
     }
   },
@@ -519,8 +521,9 @@ export const updateCommanderDamage = mutation({
 
     const key = `${ownerUserId}:${commanderId}`
     const currentDamage = player.commanderDamage?.[key] ?? 0
-    const nextDamage = currentDamage + delta
-    const nextHealth = player.health - delta
+    const nextDamage = Math.max(0, currentDamage + delta)
+    const actualDamageChange = nextDamage - currentDamage
+    const nextHealth = player.health - actualDamageChange
 
     const allSessions = await ctx.db
       .query('roomPlayers')

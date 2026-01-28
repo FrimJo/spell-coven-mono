@@ -323,7 +323,10 @@ export function MediaSetupPanel({
   }, [videoDevices, selectedVideoId])
 
   const forceFocusControls = useMemo(() => {
-    return /c920|c922/i.test(selectedVideoLabel)
+    // Check for Logitech C920/C922 cameras (case-insensitive, flexible matching)
+    // Common label formats: "HD Pro Webcam C920", "Logitech HD Pro Webcam C920", "C920", etc.
+    const label = selectedVideoLabel.toLowerCase()
+    return /logitech.*c9(20|22)|c9(20|22)|hd pro webcam c9(20|22)/i.test(label)
   }, [selectedVideoLabel])
 
   const deriveFocusCapabilities = useCallback(
@@ -339,45 +342,68 @@ export function MediaSetupPanel({
           focusDistance?: number
         }
 
+        // Collect all available focus modes
         const focusModeSet = new Set<string>()
-        for (const mode of capabilities.focusMode ?? []) {
-          focusModeSet.add(mode)
+
+        // Add modes from capabilities
+        if (capabilities.focusMode && Array.isArray(capabilities.focusMode)) {
+          for (const mode of capabilities.focusMode) {
+            focusModeSet.add(mode)
+          }
         }
+
+        // Add mode from current settings
         if (settings.focusMode) {
           focusModeSet.add(settings.focusMode)
         }
-        if (
-          capabilities.focusDistance ||
-          settings.focusDistance !== undefined
-        ) {
+
+        // If focusDistance is available (in capabilities or settings), manual mode is supported
+        const hasFocusDistance =
+          !!capabilities.focusDistance || settings.focusDistance !== undefined
+
+        if (hasFocusDistance) {
           focusModeSet.add('manual')
         }
 
         const focusModes = Array.from(focusModeSet)
-        const supportsFocus =
-          focusModes.length > 0 ||
-          !!capabilities.focusDistance ||
-          settings.focusMode !== undefined ||
-          settings.focusDistance !== undefined
+
+        // Support focus if we have any modes or focusDistance capability
+        const supportsFocus = focusModes.length > 0 || hasFocusDistance
 
         if (!supportsFocus) {
           return { supportsFocus: false, focusModes: [] }
+        }
+
+        // Determine initial focus mode
+        let initialFocusMode = settings.focusMode
+        if (!initialFocusMode && focusModes.length > 0) {
+          // Prefer 'continuous' if available, otherwise use first mode
+          initialFocusMode = focusModes.includes('continuous')
+            ? 'continuous'
+            : focusModes[0]
+        }
+
+        // Determine initial focus distance
+        let initialFocusDistance = settings.focusDistance
+        if (initialFocusDistance === undefined && capabilities.focusDistance) {
+          // Use midpoint if no current setting
+          initialFocusDistance =
+            (capabilities.focusDistance.min + capabilities.focusDistance.max) /
+            2
         }
 
         return {
           supportsFocus: true,
           focusModes,
           focusDistance: capabilities.focusDistance,
-          initialFocusMode: settings.focusMode ?? focusModes[0],
-          initialFocusDistance:
-            settings.focusDistance ??
-            (capabilities.focusDistance
-              ? (capabilities.focusDistance.min +
-                  capabilities.focusDistance.max) /
-                2
-              : undefined),
+          initialFocusMode,
+          initialFocusDistance,
         }
-      } catch {
+      } catch (error) {
+        console.warn(
+          '[MediaSetupPanel] Failed to derive focus capabilities:',
+          error,
+        )
         return { supportsFocus: false, focusModes: [] }
       }
     },
@@ -430,15 +456,72 @@ export function MediaSetupPanel({
     const compute = (attempt = 0) => {
       if (cancelled || focusTrackIdRef.current !== trackId) return
       const derived = deriveFocusCapabilities(videoTrack)
-      const forced = !derived.supportsFocus && forceFocusControls
-      const nextCapabilities = forced
+
+      // If we should force focus controls for Logitech cameras, but capabilities weren't detected
+      const shouldForce = !derived.supportsFocus && forceFocusControls
+
+      if (attempt === 0) {
+        console.log(
+          `[MediaSetupPanel] Focus capabilities check (attempt ${attempt + 1}):`,
+          {
+            deviceLabel: selectedVideoLabel,
+            forceFocusControls,
+            derivedSupportsFocus: derived.supportsFocus,
+            derivedFocusModes: derived.focusModes,
+            derivedFocusDistance: derived.focusDistance,
+            shouldForce,
+          },
+        )
+      }
+
+      // Try to get actual focusDistance from capabilities even if focusMode wasn't detected
+      let focusDistance = derived.focusDistance
+      if (shouldForce && !focusDistance) {
+        try {
+          const capabilities =
+            videoTrack.getCapabilities() as MediaTrackCapabilities & {
+              focusDistance?: { min: number; max: number; step: number }
+            }
+          if (capabilities.focusDistance) {
+            focusDistance = capabilities.focusDistance
+            console.log(
+              '[MediaSetupPanel] Found focusDistance in capabilities:',
+              focusDistance,
+            )
+          }
+        } catch (error) {
+          console.warn(
+            '[MediaSetupPanel] Error checking focusDistance capabilities:',
+            error,
+          )
+        }
+      }
+
+      const nextCapabilities: FocusCapabilities = shouldForce
         ? {
             supportsFocus: true,
             focusModes: ['continuous', 'manual'],
+            focusDistance: focusDistance ?? {
+              min: 0,
+              max: 1,
+              step: 0.01,
+            },
+            initialFocusMode: derived.initialFocusMode ?? 'continuous',
+            initialFocusDistance: derived.initialFocusDistance ?? 0.5,
           }
         : derived
-      scheduleStateUpdate(nextCapabilities, forced)
-      if (!derived.supportsFocus && attempt < 2) {
+
+      if (shouldForce) {
+        console.log(
+          '[MediaSetupPanel] Forcing focus controls for Logitech camera:',
+          nextCapabilities,
+        )
+      }
+
+      scheduleStateUpdate(nextCapabilities, shouldForce)
+
+      // Retry if capabilities weren't detected (even if forcing, we want to get real values)
+      if (!derived.supportsFocus && attempt < 3) {
         retryTimer = setTimeout(() => compute(attempt + 1), 300)
       }
     }
@@ -450,7 +533,12 @@ export function MediaSetupPanel({
       if (stateTimer) clearTimeout(stateTimer)
       if (retryTimer) clearTimeout(retryTimer)
     }
-  }, [videoResult, deriveFocusCapabilities, forceFocusControls])
+  }, [
+    videoResult,
+    deriveFocusCapabilities,
+    forceFocusControls,
+    selectedVideoLabel,
+  ])
 
   // Effect Event for initializing focus settings
   const onFocusTrackChanged = useEffectEvent(
@@ -494,19 +582,50 @@ export function MediaSetupPanel({
       if (!videoTrack) return
 
       try {
-        const constraints: MediaTrackConstraints & {
-          advanced?: Array<{ focusMode?: string; focusDistance?: number }>
-        } = {
-          advanced: [{ focusMode: mode }],
-        }
-
-        if (mode === 'manual' && distance !== undefined) {
-          constraints.advanced = [{ focusMode: mode, focusDistance: distance }]
-        }
+        // Use extended type for focus constraints (experimental API)
+        const constraints = {
+          advanced: [
+            mode === 'manual' && distance !== undefined
+              ? ({ focusMode: mode, focusDistance: distance } as {
+                  focusMode: string
+                  focusDistance: number
+                })
+              : ({ focusMode: mode } as { focusMode: string }),
+          ],
+        } as MediaTrackConstraints
 
         await videoTrack.applyConstraints(constraints)
+        console.log(
+          `[MediaSetupPanel] Applied focus constraints: mode=${mode}, distance=${distance ?? 'N/A'}`,
+        )
       } catch (error) {
-        console.warn('Failed to apply focus constraints:', error)
+        console.warn(
+          '[MediaSetupPanel] Failed to apply focus constraints:',
+          error,
+          { mode, distance },
+        )
+        // Try simpler constraint format as fallback
+        try {
+          const fallbackConstraints = {
+            advanced: [
+              mode === 'manual' && distance !== undefined
+                ? ({ focusMode: mode, focusDistance: distance } as {
+                    focusMode: string
+                    focusDistance: number
+                  })
+                : ({ focusMode: mode } as { focusMode: string }),
+            ],
+          } as MediaTrackConstraints
+          await videoTrack.applyConstraints(fallbackConstraints)
+          console.log(
+            `[MediaSetupPanel] Applied focus constraints (fallback): mode=${mode}`,
+          )
+        } catch (fallbackError) {
+          console.warn(
+            '[MediaSetupPanel] Fallback constraint application also failed:',
+            fallbackError,
+          )
+        }
       }
     },
     [videoResult],

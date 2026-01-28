@@ -6,7 +6,7 @@
  */
 
 import type { WebRTCSignal } from '@/types/webrtc-signal'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { validateWebRTCSignal } from '@/types/webrtc-signal'
 import { useMutation, useQuery } from 'convex/react'
 
