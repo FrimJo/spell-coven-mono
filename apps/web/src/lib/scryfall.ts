@@ -198,3 +198,30 @@ export async function searchCommanders(query: string): Promise<ScryfallCard[]> {
     20,
   )
 }
+
+/**
+ * Search for commanders and sidekick cards (Backgrounds, Partners, etc.)
+ * Returns only card names for autocomplete-like behavior
+ * Uses Scryfall's is:commander filter plus sidekick keywords
+ */
+export async function searchCommanderAndSidekicks(
+  query: string,
+): Promise<string[]> {
+  if (query.length < 2) return []
+  
+  // Build query: user text + (is:commander OR sidekick keywords)
+  // Sidekick keywords: Background, Partner, Partner with, Friends forever, Doctor's companion, Choose a Background
+  const sidekickQuery = [
+    'is:commander',
+    'type:background',
+    'keyword:"Partner"',
+    'keyword:"Partner with"',
+    'keyword:"Friends forever"',
+    'keyword:"Doctor\'s companion"',
+    'keyword:"Choose a background"',
+  ].join(' OR ')
+  
+  const fullQuery = `${query} (${sidekickQuery})`
+  const cards = await searchCards(fullQuery, 20)
+  return cards.map((card) => card.name)
+}

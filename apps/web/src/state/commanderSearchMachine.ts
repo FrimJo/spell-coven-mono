@@ -5,7 +5,10 @@
  */
 
 import { assign, setup, fromPromise } from 'xstate'
-import { autocomplete, getCardByName } from '@/lib/scryfall'
+import {
+  searchCommanderAndSidekicks,
+  getCardByName,
+} from '@/lib/scryfall'
 import type { ScryfallCard } from '@/lib/scryfall'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,7 +47,7 @@ const searchActor = fromPromise<string[], { query: string }>(async ({ input }) =
   if (input.query.length < 2) {
     return []
   }
-  return autocomplete(input.query)
+  return searchCommanderAndSidekicks(input.query)
 })
 
 const resolveCardActor = fromPromise<ScryfallCard | null, { name: string }>(
