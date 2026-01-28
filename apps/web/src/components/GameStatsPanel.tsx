@@ -30,6 +30,7 @@ import {
 } from '@repo/ui/components/sheet'
 
 import { api } from '../../../../convex/_generated/api'
+import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
 import { CommanderSearchInput } from './CommanderSearchInput'
 import { commanderPanelMachine } from '@/state/commanderPanelMachine'
 
@@ -787,6 +788,19 @@ function CommanderSlot({
   const isLethal = damage >= 21
   const imageUrl = commander ? getCommanderImageUrl(commander.id) : null
 
+  // Hold-to-repeat hooks for damage buttons
+  const damageMinus = useHoldToRepeat({
+    onChange: onDamageChange,
+    immediateDelta: -1,
+    repeatDelta: -10,
+  })
+
+  const damagePlus = useHoldToRepeat({
+    onChange: onDamageChange,
+    immediateDelta: 1,
+    repeatDelta: 10,
+  })
+
   // Empty slot - hide if not set and not editing
   if (!commander && !isEditing) {
     return null
@@ -921,7 +935,11 @@ function CommanderSlot({
             size="icon"
             variant="outline"
             className="h-8 w-8 border-slate-700 bg-slate-900/80 text-slate-200 backdrop-blur-sm hover:bg-slate-800 hover:text-white"
-            onClick={() => onDamageChange(-1)}
+            onMouseDown={damageMinus.handleStart}
+            onMouseUp={damageMinus.handleStop}
+            onMouseLeave={damageMinus.handleStop}
+            onTouchStart={damageMinus.handleStart}
+            onTouchEnd={damageMinus.handleStop}
             disabled={damage <= 0}
           >
             -
@@ -937,7 +955,11 @@ function CommanderSlot({
             size="icon"
             variant="outline"
             className="h-8 w-8 border-slate-700 bg-slate-900/80 text-slate-200 backdrop-blur-sm hover:bg-slate-800 hover:text-white"
-            onClick={() => onDamageChange(1)}
+            onMouseDown={damagePlus.handleStart}
+            onMouseUp={damagePlus.handleStop}
+            onMouseLeave={damagePlus.handleStop}
+            onTouchStart={damagePlus.handleStart}
+            onTouchEnd={damagePlus.handleStop}
           >
             +
           </Button>

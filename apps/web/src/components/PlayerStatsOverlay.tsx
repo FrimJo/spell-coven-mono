@@ -13,6 +13,7 @@ import {
 
 import type { Doc } from '../../../../convex/_generated/dataModel'
 import { api } from '../../../../convex/_generated/api'
+import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
 import { GameStatsPanel } from './GameStatsPanel'
 
 interface PlayerStatsOverlayProps {
@@ -122,6 +123,31 @@ export function PlayerStatsOverlay({
     })
   }
 
+  // Hold-to-repeat hooks for each button
+  const healthMinus = useHoldToRepeat({
+    onChange: (delta) => handleHealthChange(delta),
+    immediateDelta: -1,
+    repeatDelta: -10,
+  })
+
+  const healthPlus = useHoldToRepeat({
+    onChange: (delta) => handleHealthChange(delta),
+    immediateDelta: 1,
+    repeatDelta: 10,
+  })
+
+  const poisonMinus = useHoldToRepeat({
+    onChange: (delta) => handlePoisonChange(delta),
+    immediateDelta: -1,
+    repeatDelta: -10,
+  })
+
+  const poisonPlus = useHoldToRepeat({
+    onChange: (delta) => handlePoisonChange(delta),
+    immediateDelta: 1,
+    repeatDelta: 10,
+  })
+
   // Determine if this is the current user (affects UI emphasis or layout, though controls are available for all)
   const isMe = participant.id === currentUser.id
 
@@ -156,7 +182,11 @@ export function PlayerStatsOverlay({
               size="icon"
               variant="ghost"
               className="h-6 w-6 rounded-md text-slate-400 hover:bg-red-900/20 hover:text-red-400"
-              onClick={() => handleHealthChange(-1)}
+              onMouseDown={healthMinus.handleStart}
+              onMouseUp={healthMinus.handleStop}
+              onMouseLeave={healthMinus.handleStop}
+              onTouchStart={healthMinus.handleStart}
+              onTouchEnd={healthMinus.handleStop}
               disabled={displayHealth <= 0}
             >
               <Minus className="h-3 w-3" />
@@ -165,7 +195,11 @@ export function PlayerStatsOverlay({
               size="icon"
               variant="ghost"
               className="h-6 w-6 rounded-md text-slate-400 hover:bg-green-900/20 hover:text-green-400"
-              onClick={() => handleHealthChange(1)}
+              onMouseDown={healthPlus.handleStart}
+              onMouseUp={healthPlus.handleStop}
+              onMouseLeave={healthPlus.handleStop}
+              onTouchStart={healthPlus.handleStart}
+              onTouchEnd={healthPlus.handleStop}
             >
               <Plus className="h-3 w-3" />
             </Button>
@@ -191,7 +225,11 @@ export function PlayerStatsOverlay({
               size="icon"
               variant="ghost"
               className="h-6 w-6 rounded-md text-slate-400 hover:bg-red-900/20 hover:text-red-400"
-              onClick={() => handlePoisonChange(-1)}
+              onMouseDown={poisonMinus.handleStart}
+              onMouseUp={poisonMinus.handleStop}
+              onMouseLeave={poisonMinus.handleStop}
+              onTouchStart={poisonMinus.handleStart}
+              onTouchEnd={poisonMinus.handleStop}
               disabled={displayPoison <= 0}
             >
               <Minus className="h-3 w-3" />
@@ -200,7 +238,11 @@ export function PlayerStatsOverlay({
               size="icon"
               variant="ghost"
               className="h-6 w-6 rounded-md text-slate-400 hover:bg-green-900/20 hover:text-green-400"
-              onClick={() => handlePoisonChange(1)}
+              onMouseDown={poisonPlus.handleStart}
+              onMouseUp={poisonPlus.handleStop}
+              onMouseLeave={poisonPlus.handleStop}
+              onTouchStart={poisonPlus.handleStart}
+              onTouchEnd={poisonPlus.handleStop}
             >
               <Plus className="h-3 w-3" />
             </Button>
