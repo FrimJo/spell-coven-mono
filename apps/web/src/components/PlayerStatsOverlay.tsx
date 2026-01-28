@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { useMutation } from 'convex/react'
 import { Heart, Minus, Plus, Skull } from 'lucide-react'
 import { toast } from 'sonner'
-import type { Doc } from '../../../../convex/_generated/dataModel'
 
 import { Button } from '@repo/ui/components/button'
 import {
@@ -12,6 +11,7 @@ import {
   TooltipTrigger,
 } from '@repo/ui/components/tooltip'
 
+import type { Doc } from '../../../../convex/_generated/dataModel'
 import { api } from '../../../../convex/_generated/api'
 import { GameStatsPanel } from './GameStatsPanel'
 
@@ -34,11 +34,13 @@ export function PlayerStatsOverlay({
 
   // Helper function for optimistic updates on player queries
   type RoomPlayer = Doc<'roomPlayers'>
-  
+
   const updatePlayerQueriesOptimistically = (
     localStore: Parameters<
       Parameters<
-        ReturnType<typeof useMutation<typeof api.rooms.updatePlayerHealth>>['withOptimisticUpdate']
+        ReturnType<
+          typeof useMutation<typeof api.rooms.updatePlayerHealth>
+        >['withOptimisticUpdate']
       >[0]
     >[0],
     roomId: string,
@@ -60,48 +62,45 @@ export function PlayerStatsOverlay({
       )
     }
 
-    const activePlayers = localStore.getQuery(
-      api.players.listActivePlayers,
-      { roomId },
-    )
+    const activePlayers = localStore.getQuery(api.players.listActivePlayers, {
+      roomId,
+    })
     if (activePlayers !== undefined) {
       const nextActive = activePlayers.map((player: RoomPlayer) =>
         player.userId === userId ? updater(player) : player,
       )
-      localStore.setQuery(
-        api.players.listActivePlayers,
-        { roomId },
-        nextActive,
-      )
+      localStore.setQuery(api.players.listActivePlayers, { roomId }, nextActive)
     }
   }
 
   // Convex mutations with optimistic updates
-  const updateHealth = useMutation(api.rooms.updatePlayerHealth)
-    .withOptimisticUpdate((localStore, args) => {
-      updatePlayerQueriesOptimistically(
-        localStore,
-        args.roomId,
-        args.userId,
-        (player) => ({
-          ...player,
-          health: Math.max(0, (player.health ?? 0) + args.delta),
-        }),
-      )
-    })
+  const updateHealth = useMutation(
+    api.rooms.updatePlayerHealth,
+  ).withOptimisticUpdate((localStore, args) => {
+    updatePlayerQueriesOptimistically(
+      localStore,
+      args.roomId,
+      args.userId,
+      (player) => ({
+        ...player,
+        health: Math.max(0, (player.health ?? 0) + args.delta),
+      }),
+    )
+  })
 
-  const updatePoison = useMutation(api.rooms.updatePlayerPoison)
-    .withOptimisticUpdate((localStore, args) => {
-      updatePlayerQueriesOptimistically(
-        localStore,
-        args.roomId,
-        args.userId,
-        (player) => ({
-          ...player,
-          poison: Math.max(0, (player.poison ?? 0) + args.delta),
-        }),
-      )
-    })
+  const updatePoison = useMutation(
+    api.rooms.updatePlayerPoison,
+  ).withOptimisticUpdate((localStore, args) => {
+    updatePlayerQueriesOptimistically(
+      localStore,
+      args.roomId,
+      args.userId,
+      (player) => ({
+        ...player,
+        poison: Math.max(0, (player.poison ?? 0) + args.delta),
+      }),
+    )
+  })
 
   const handleHealthChange = (delta: number) => {
     updateHealth({
@@ -127,10 +126,9 @@ export function PlayerStatsOverlay({
   const isMe = participant.id === currentUser.id
 
   // Calculate total commander damage
-  const totalCommanderDamage = Object.values(participant.commanderDamage ?? {}).reduce(
-    (sum, damage) => sum + damage,
-    0,
-  )
+  const totalCommanderDamage = Object.values(
+    participant.commanderDamage ?? {},
+  ).reduce((sum, damage) => sum + damage, 0)
 
   // Clamp health and poison to 0 minimum for display
   const displayHealth = Math.max(0, participant.health ?? 0)
@@ -224,7 +222,11 @@ export function PlayerStatsOverlay({
                 </div>
               </TooltipTrigger>
               <TooltipContent side="right">
-                Total Commander Damage ({totalCommanderDamage >= 21 ? 'Lethal' : `${21 - totalCommanderDamage} to lethal`})
+                Total Commander Damage (
+                {totalCommanderDamage >= 21
+                  ? 'Lethal'
+                  : `${21 - totalCommanderDamage} to lethal`}
+                )
               </TooltipContent>
             </Tooltip>
           </div>
