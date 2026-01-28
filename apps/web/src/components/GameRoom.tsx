@@ -218,8 +218,10 @@ function GameRoomContent({
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-400">Share Link:</span>
               <code
-                className="max-w-xs truncate rounded bg-slate-800 px-2 py-1 text-sm text-purple-400"
+                className="break-all cursor-pointer rounded bg-slate-800 px-2 py-1 text-sm text-purple-400 transition-colors hover:bg-slate-700"
                 data-testid="game-id-display"
+                onClick={handleCopyShareLink}
+                title="Click to copy shareable link"
               >
                 {shareLink}
               </code>
