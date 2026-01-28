@@ -26,8 +26,8 @@ export function PlayerStatsOverlay({
   currentUser,
   participants,
 }: PlayerStatsOverlayProps) {
-  // Strip "game-" prefix to match Convex database format
-  const convexRoomId = roomId.replace(/^game-/, '')
+  // Use roomId as-is - roomPlayers table stores full roomId including "game-" prefix
+  const convexRoomId = roomId
   const [panelOpen, setPanelOpen] = useState(false)
   const updateHealth = useMutation(api.rooms.updatePlayerHealth)
   const updatePoison = useMutation(api.rooms.updatePlayerPoison)
