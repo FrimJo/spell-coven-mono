@@ -9,7 +9,7 @@
   "scripts": {
     "build": "bunx turbo run build",
     "dev": "bunx turbo run dev",
-    "dev:convex": "bunx convex dev --local",
+    "dev:convex": "bunx convex dev",
     "test": "bunx turbo run test",
     "lint": "bunx turbo run lint && bun run lint:convex",
     "lint:convex": "bunx eslint --config convex/eslint.config.mjs convex/ --max-warnings 0",

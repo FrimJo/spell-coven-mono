@@ -42,8 +42,8 @@ export function useConvexSignaling({
   onSignal,
   onError,
 }: UseConvexSignalingProps): UseConvexSignalingReturn {
-  // Strip the "game-" prefix from roomId for Convex (Convex uses short codes)
-  const convexRoomId = roomId.replace(/^game-/, '')
+  // Use roomId as-is - roomSignals table stores full roomId including "game-" prefix
+  const convexRoomId = roomId
 
   // State
   const [isInitialized, setIsInitialized] = useState(false)
