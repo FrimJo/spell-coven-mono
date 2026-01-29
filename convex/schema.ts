@@ -47,7 +47,8 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index('by_roomId', ['roomId'])
-    .index('by_ownerId', ['ownerId']),
+    .index('by_ownerId', ['ownerId'])
+    .index('by_ownerId_createdAt', ['ownerId', 'createdAt']),
 
   /**
    * roomState - Game state for a room
@@ -150,14 +151,14 @@ export default defineSchema({
     .index('by_roomId_userId', ['roomId', 'userId']),
 
   /**
-   * roomCreationAttempts - Rate limiting for room creation
+   * counters - Sequential counters for generating IDs
    *
-   * Tracks recent room creation attempts per user.
+   * Used to track total counts for various entities (e.g., rooms).
    */
-  roomCreationAttempts: defineTable({
-    /** Discord user ID of the creator */
-    userId: v.string(),
-    /** When the room creation attempt occurred */
-    createdAt: v.number(),
-  }).index('by_userId_createdAt', ['userId', 'createdAt']),
+  counters: defineTable({
+    /** Counter name (e.g., "rooms") */
+    name: v.string(),
+    /** Total count */
+    count: v.number(),
+  }).index('by_name', ['name']),
 })
