@@ -12,6 +12,17 @@ import { v } from 'convex/values'
 
 import { mutation, query } from './_generated/server'
 import { DEFAULT_HEALTH } from './constants'
+import {
+  AuthMismatchError,
+  AuthRequiredError,
+  NoActivePlayersError,
+  NotCurrentTurnError,
+  NotRoomOwnerError,
+  PlayerNotFoundError,
+  RoomNotFoundError,
+  RoomStateNotFoundError,
+  TurnAdvanceFailedError,
+} from './errors'
 
 /**
  * Default starting health for Commander format
@@ -25,97 +36,105 @@ const _DEFAULT_HEALTH = DEFAULT_HEALTH
 const PRESENCE_THRESHOLD_MS = 30_000
 
 /**
- * Room creation rate limiting
+ * Room creation throttle (minimum time between room creations)
  */
-const ROOM_CREATION_WINDOW_MS = 10 * 60 * 1_000
-const MAX_ROOMS_PER_WINDOW = 3
+const ROOM_CREATION_COOLDOWN_MS = 5_000
 
 /**
- * Generate a short room code (6 uppercase alphanumeric characters)
+ * Base-32 character set (excludes confusing chars: 0, O, 1, I)
  */
-function generateRoomCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // Removed confusing chars: 0, O, 1, I
-  let code = ''
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)]
+const BASE32_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+
+/**
+ * Convert a number to base-32 code with minimum length padding
+ *
+ * @param num - The number to convert (0-indexed, so room #1 uses value 0)
+ * @param minLength - Minimum length of the resulting code (default: 6)
+ * @returns Base-32 encoded string padded to minLength
+ *
+ * @example
+ * toBase32Code(0) // "222222"
+ * toBase32Code(9) // "22222B"
+ * toBase32Code(99) // "22223B"
+ */
+function toBase32Code(num: number, minLength = 6): string {
+  if (num === 0) {
+    return BASE32_CHARS[0].repeat(minLength)
   }
-  return code
+
+  let result = ''
+  while (num > 0) {
+    result = BASE32_CHARS[num % 32] + result
+    num = Math.floor(num / 32)
+  }
+
+  return result.padStart(minLength, BASE32_CHARS[0])
 }
 
 /**
  * Create a new room
  *
  * Creates the room, initial room state, and adds the creator as the first player.
+ * Room ID is generated server-side.
  *
- * NOTE: ownerId is passed as parameter for Phase 3. Phase 5 will use getAuthUserId.
- *
- * @param ownerId - The user ID of the room creator
- * @param roomId - Optional custom room ID (e.g., 'game-ABC123'). If not provided, one is generated.
+ * @param ownerId - The user ID of the room creator (must match authenticated user)
+ * @returns { roomId, waitMs } - roomId is null if throttled, waitMs indicates retry delay
  */
 export const createRoom = mutation({
   args: {
-    ownerId: v.string(), // Discord user ID, will use Convex Auth in Phase 5
-    roomId: v.optional(v.string()), // Optional custom room ID
+    ownerId: v.string(), // Must match authenticated user ID
   },
-  handler: async (ctx, { ownerId, roomId: customRoomId }) => {
-    const authUserId = await getAuthUserId(ctx)
-    if (!authUserId) {
-      throw new Error('Authentication required')
-    }
-
-    if (ownerId !== authUserId) {
-      throw new Error('ownerId does not match authenticated user')
-    }
-
-    const userId = authUserId
+  handler: async (ctx, { ownerId }) => {
+    const userId = await getAuthUserId(ctx)
     if (!userId) {
-      throw new Error('ownerId is required')
+      throw new AuthRequiredError()
+    }
+
+    if (ownerId !== userId) {
+      throw new AuthMismatchError()
     }
 
     const now = Date.now()
-    const rateLimitThreshold = now - ROOM_CREATION_WINDOW_MS
-    const recentAttempts = await ctx.db
-      .query('roomCreationAttempts')
-      .withIndex('by_userId_createdAt', (q) =>
-        q.eq('userId', userId).gt('createdAt', rateLimitThreshold),
-      )
-      .collect()
 
-    if (recentAttempts.length >= MAX_ROOMS_PER_WINDOW) {
-      throw new Error('Room creation rate limit exceeded')
+    // Check throttle: find user's most recent room creation
+    const lastRoom = await ctx.db
+      .query('rooms')
+      .withIndex('by_ownerId_createdAt', (q) => q.eq('ownerId', userId))
+      .order('desc')
+      .first()
+
+    if (lastRoom) {
+      const timeSinceLastCreation = now - lastRoom.createdAt
+      if (timeSinceLastCreation < ROOM_CREATION_COOLDOWN_MS) {
+        const waitMs = ROOM_CREATION_COOLDOWN_MS - timeSinceLastCreation
+        return { roomId: null, waitMs }
+      }
     }
 
-    let roomId: string
+    // Get or create counter for rooms
+    let counter = await ctx.db
+      .query('counters')
+      .withIndex('by_name', (q) => q.eq('name', 'rooms'))
+      .first()
 
-    if (customRoomId) {
-      // Use custom room ID - verify it doesn't already exist
-      const existing = await ctx.db
-        .query('rooms')
-        .withIndex('by_roomId', (q) => q.eq('roomId', customRoomId))
+    if (!counter) {
+      await ctx.db.insert('counters', { name: 'rooms', count: 0 })
+      // Query again to get the full document with _creationTime
+      counter = await ctx.db
+        .query('counters')
+        .withIndex('by_name', (q) => q.eq('name', 'rooms'))
         .first()
-
-      if (existing) {
-        throw new Error('Room already exists')
-      }
-
-      roomId = customRoomId
-    } else {
-      // Generate unique room code with game- prefix
-      let attempts = 0
-      do {
-        roomId = `game-${generateRoomCode()}`
-        const existing = await ctx.db
-          .query('rooms')
-          .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-          .first()
-        if (!existing) break
-        attempts++
-      } while (attempts < 10)
-
-      if (attempts >= 10) {
-        throw new Error('Failed to generate unique room code')
+      if (!counter) {
+        throw new Error('Failed to create counter')
       }
     }
+
+    // Increment counter atomically
+    const newCount = counter.count + 1
+    await ctx.db.patch(counter._id, { count: newCount })
+
+    // Generate sequential room code (newCount - 1 because we want 0-indexed)
+    const roomId = `game-${toBase32Code(newCount - 1)}`
 
     // Create room
     await ctx.db.insert('rooms', {
@@ -133,12 +152,7 @@ export const createRoom = mutation({
       lastUpdatedAt: now,
     })
 
-    await ctx.db.insert('roomCreationAttempts', {
-      userId,
-      createdAt: now,
-    })
-
-    return { roomId }
+    return { roomId, waitMs: null }
   },
 })
 
@@ -239,11 +253,11 @@ export const updateRoomStatus = mutation({
       .first()
 
     if (!room) {
-      throw new Error('Room not found')
+      throw new RoomNotFoundError()
     }
 
     if (callerId && room.ownerId !== callerId) {
-      throw new Error('Only the room owner can change room status')
+      throw new NotRoomOwnerError('change room status')
     }
 
     await ctx.db.patch(room._id, { status })
@@ -304,12 +318,12 @@ export const setTurn = mutation({
       .first()
 
     if (!room) {
-      throw new Error('Room not found')
+      throw new RoomNotFoundError()
     }
 
     // Only owner can set turn arbitrarily
     if (callerId && room.ownerId !== callerId) {
-      throw new Error('Only the room owner can set turn')
+      throw new NotRoomOwnerError('set turn')
     }
 
     const state = await ctx.db
@@ -318,7 +332,7 @@ export const setTurn = mutation({
       .first()
 
     if (!state) {
-      throw new Error('Room state not found')
+      throw new RoomStateNotFoundError()
     }
 
     await ctx.db.patch(state._id, {
@@ -347,12 +361,12 @@ export const advanceTurn = mutation({
       .first()
 
     if (!state) {
-      throw new Error('Room state not found')
+      throw new RoomStateNotFoundError()
     }
 
     // Only current turn player can advance
     if (callerId && state.currentTurnUserId !== callerId) {
-      throw new Error('Only the current turn player can advance turn')
+      throw new NotCurrentTurnError()
     }
 
     // Get active players sorted by join time
@@ -377,7 +391,7 @@ export const advanceTurn = mutation({
     )
 
     if (uniquePlayers.length === 0) {
-      throw new Error('No active players in room')
+      throw new NoActivePlayersError()
     }
 
     // Find current player index and advance
@@ -389,7 +403,7 @@ export const advanceTurn = mutation({
     const nextPlayer = uniquePlayers[nextIndex]
 
     if (!nextPlayer) {
-      throw new Error('Failed to determine next player')
+      throw new TurnAdvanceFailedError()
     }
 
     await ctx.db.patch(state._id, {
@@ -421,7 +435,7 @@ export const updatePlayerHealth = mutation({
       .first()
 
     if (!player) {
-      throw new Error('Player not found in room')
+      throw new PlayerNotFoundError()
     }
 
     // Update health for all sessions of this user
@@ -461,7 +475,7 @@ export const updatePlayerPoison = mutation({
       .first()
 
     if (!player) {
-      throw new Error('Player not found in room')
+      throw new PlayerNotFoundError()
     }
 
     const currentPoison = player.poison ?? 0
@@ -507,7 +521,7 @@ export const setPlayerCommanders = mutation({
       .first()
 
     if (!player) {
-      throw new Error('Player not found in room')
+      throw new PlayerNotFoundError()
     }
 
     const allSessions = await ctx.db
@@ -547,7 +561,7 @@ export const updateCommanderDamage = mutation({
       .first()
 
     if (!player) {
-      throw new Error('Player not found in room')
+      throw new PlayerNotFoundError()
     }
 
     const key = `${ownerUserId}:${commanderId}`
