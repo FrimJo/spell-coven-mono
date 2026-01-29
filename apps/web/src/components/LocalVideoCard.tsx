@@ -1,6 +1,6 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { Participant } from '@/types/participant'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useCardDetector } from '@/hooks/useCardDetector'
 import { attachVideoStream } from '@/lib/video-stream-utils'
@@ -79,18 +79,25 @@ export function LocalVideoCard({
   // Audio muted state is derived from context's audioEnabled preference
   const isAudioMuted = !audioEnabled
 
-  // Callback ref that combines ref assignment with stream attachment
-  // Called when video element is mounted/unmounted
+  // Stable callback ref - only assigns the element to the ref
+  // Stream attachment is handled separately in useEffect to avoid flickering
+  // when the stream reference changes (e.g., when toggling audio)
   const handleVideoRef = useCallback(
     (videoElement: HTMLVideoElement | null) => {
-      // Attach stream when element is mounted and stream exists
-      if (videoElement && stream) {
-        videoRef.current = videoElement
-        attachVideoStream(videoElement, stream)
-      }
+      videoRef.current = videoElement
     },
-    [stream],
+    [],
   )
+
+  // Attach stream to video element when stream changes
+  // This is separate from the ref callback to prevent flickering:
+  // - Callback refs that depend on props cause React to call old(null) then new(element) when props change
+  // - By using a stable callback ref + useEffect, we update the srcObject without remounting
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      attachVideoStream(videoRef.current, stream)
+    }
+  }, [stream])
 
   const handleToggleAudio = useCallback(() => {
     // Toggle audio - context will release/acquire mic resources

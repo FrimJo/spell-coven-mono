@@ -88,14 +88,15 @@ function loadFromStorage(): void {
       const parsed = JSON.parse(stored)
       // Support both old format (single device) and new format (all devices)
       if (parsed.videoinput || parsed.audioinput || parsed.audiooutput) {
-        // New format: { videoinput: '...', audioinput: '...', audiooutput: '...', videoEnabled: boolean, audioEnabled: boolean }
+        // New format: { videoinput: '...', audioinput: '...', audiooutput: '...' }
+        // Note: videoEnabled and audioEnabled are NOT persisted - they always default to true
         sharedState.cachedState = {
           videoinput: parsed.videoinput ?? null,
           audioinput: parsed.audioinput ?? null,
           audiooutput: parsed.audiooutput ?? null,
-          // Default to true for backwards compatibility with existing localStorage
-          videoEnabled: parsed.videoEnabled ?? true,
-          audioEnabled: parsed.audioEnabled ?? true,
+          // Always default to true - these states are not persisted
+          videoEnabled: true,
+          audioEnabled: true,
         }
         // Mark as committed since we loaded existing data
         sharedState.isCommitted = true
@@ -132,8 +133,6 @@ function createSelectedDeviceStore() {
           videoinput: sharedState.cachedState.videoinput,
           audioinput: sharedState.cachedState.audioinput,
           audiooutput: sharedState.cachedState.audiooutput,
-          videoEnabled: sharedState.cachedState.videoEnabled,
-          audioEnabled: sharedState.cachedState.audioEnabled,
           timestamp: Date.now(),
         }),
       )
@@ -158,8 +157,6 @@ function createSelectedDeviceStore() {
           videoinput: sharedState.cachedState.videoinput,
           audioinput: sharedState.cachedState.audioinput,
           audiooutput: sharedState.cachedState.audiooutput,
-          videoEnabled: sharedState.cachedState.videoEnabled,
-          audioEnabled: sharedState.cachedState.audioEnabled,
           timestamp: Date.now(),
         }),
       )
@@ -250,18 +247,17 @@ function createSelectedDeviceStore() {
 
   /**
    * Save enabled state for video or audio
+   * Note: This only updates in-memory state and does NOT persist to localStorage.
+   * Camera/mic on/off state should not persist across page reloads.
    */
-  function saveEnabledState(
-    kind: 'video' | 'audio',
-    enabled: boolean,
-  ): void {
+  function saveEnabledState(kind: 'video' | 'audio', enabled: boolean): void {
     try {
       const key = kind === 'video' ? 'videoEnabled' : 'audioEnabled'
       sharedState.cachedState = {
         ...sharedState.cachedState,
         [key]: enabled,
       }
-      saveAllDevicesToStorage()
+      // Don't persist enabled state to localStorage - only keep in memory
       notifyListeners()
     } catch (error) {
       console.error(
@@ -425,7 +421,10 @@ export interface UseMediaEnabledStateReturn {
 }
 
 /**
- * Hook to manage video/audio enabled state with localStorage persistence
+ * Hook to manage video/audio enabled state (in-memory only, not persisted)
+ *
+ * Note: The enabled state is NOT persisted to localStorage. Camera/mic will
+ * always default to ON when the page loads, regardless of previous state.
  *
  * @returns Object with enabled states and functions to toggle them
  *
