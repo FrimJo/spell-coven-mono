@@ -98,12 +98,8 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
   const permissionsGranted = microphoneGranted && cameraGrantedOrUnavailable
 
   // Get user's preferences for camera/mic enabled state (persisted to localStorage)
-  const {
-    videoEnabled,
-    audioEnabled,
-    setVideoEnabled,
-    setAudioEnabled,
-  } = useMediaEnabledState()
+  const { videoEnabled, audioEnabled, setVideoEnabled, setAudioEnabled } =
+    useMediaEnabledState()
 
   // Use media device hooks - these are the ONLY instances in the app
   // Cleanup will happen when this provider unmounts (navigating away from game page)
@@ -120,17 +116,26 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
 
   // Combine streams into a single MediaStream for WebRTC
   // Handle cases where video or audio is intentionally disabled
+  // Only include 'live' tracks to avoid using stopped/ended tracks from cache
   const combinedStream = useMemo((): MediaStream | null => {
     const tracks: MediaStreamTrack[] = []
 
     // Add video tracks if video is enabled and stream is available
+    // Filter to only 'live' tracks (excludes stopped tracks from cache)
     if (videoEnabled && isSuccessState(videoResult) && videoResult.stream) {
-      tracks.push(...videoResult.stream.getVideoTracks())
+      const liveTracks = videoResult.stream
+        .getVideoTracks()
+        .filter((track) => track.readyState === 'live')
+      tracks.push(...liveTracks)
     }
 
     // Add audio tracks if audio is enabled and stream is available
+    // Filter to only 'live' tracks (excludes stopped tracks from cache)
     if (audioEnabled && isSuccessState(audioResult) && audioResult.stream) {
-      tracks.push(...audioResult.stream.getAudioTracks())
+      const liveTracks = audioResult.stream
+        .getAudioTracks()
+        .filter((track) => track.readyState === 'live')
+      tracks.push(...liveTracks)
     }
 
     if (tracks.length === 0) return null
@@ -138,24 +143,44 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     return new MediaStream(tracks)
   }, [videoResult, audioResult, videoEnabled, audioEnabled])
 
-  // Toggle video tracks
+  // Toggle video - releases hardware when disabled, re-acquires when enabled
   const toggleVideo = useCallback(
     async (enabled: boolean): Promise<void> => {
-      if (combinedStream) {
-        combinedStream.getVideoTracks().forEach((t) => (t.enabled = enabled))
+      if (!enabled) {
+        // Stop video tracks to release camera hardware
+        if (isSuccessState(videoResult) && videoResult.stream) {
+          videoResult.stream.getVideoTracks().forEach((track) => {
+            track.stop()
+            console.log(
+              '[MediaStreamProvider] Stopped video track to release camera',
+            )
+          })
+        }
       }
+      // Update preference - this controls whether useMediaDevice acquires a new stream
+      setVideoEnabled(enabled)
     },
-    [combinedStream],
+    [videoResult, setVideoEnabled],
   )
 
-  // Toggle audio tracks
+  // Toggle audio - releases hardware when disabled, re-acquires when enabled
   const toggleAudio = useCallback(
     (enabled: boolean) => {
-      if (combinedStream) {
-        combinedStream.getAudioTracks().forEach((t) => (t.enabled = enabled))
+      if (!enabled) {
+        // Stop audio tracks to release microphone hardware
+        if (isSuccessState(audioResult) && audioResult.stream) {
+          audioResult.stream.getAudioTracks().forEach((track) => {
+            track.stop()
+            console.log(
+              '[MediaStreamProvider] Stopped audio track to release microphone',
+            )
+          })
+        }
       }
+      // Update preference - this controls whether useMediaDevice acquires a new stream
+      setAudioEnabled(enabled)
     },
-    [combinedStream],
+    [audioResult, setAudioEnabled],
   )
 
   const onStreamUnmount = useEffectEvent(() => {

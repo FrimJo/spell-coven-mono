@@ -1,10 +1,8 @@
-import type { UseLocalVideoStateOptions } from '@/hooks/useLocalVideoState'
 import type { DetectorType } from '@/lib/detectors'
 import type { Participant } from '@/types/participant'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useCardDetector } from '@/hooks/useCardDetector'
-import { useLocalVideoState } from '@/hooks/useLocalVideoState'
 import { attachVideoStream } from '@/lib/video-stream-utils'
 
 import { PlayerStatsOverlay } from './PlayerStatsOverlay'
@@ -20,7 +18,7 @@ import {
 
 interface LocalVideoCardProps {
   localPlayerName: string
-  stream: MediaStream
+  stream?: MediaStream | null
   enableCardDetection?: boolean
   detectorType?: DetectorType
   usePerspectiveWarp?: boolean
@@ -45,46 +43,48 @@ export function LocalVideoCard({
 }: LocalVideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  // Get toggle functions from media stream context
-  const { toggleVideo: toggleLocalVideo, toggleAudio: toggleLocalAudio } =
-    useMediaStreams()
+  // Get toggle functions and state from media stream context
+  // Using context directly for proper resource release/acquisition
+  const {
+    toggleVideo,
+    toggleAudio: toggleLocalAudio,
+    mediaPreferences: { videoEnabled, audioEnabled },
+  } = useMediaStreams()
 
-  // Manage local video state
-  const localVideoStateOptions = useMemo<UseLocalVideoStateOptions>(
-    () => ({
-      stream,
-      onVideoStateChanged: toggleLocalVideo,
-      initialEnabled: true,
-    }),
-    [stream, toggleLocalVideo],
+  const [isTogglingVideo, setIsTogglingVideo] = useState(false)
+
+  // Wrap toggle to handle loading state
+  const handleToggleVideo = useCallback(
+    async (enabled: boolean) => {
+      setIsTogglingVideo(true)
+      try {
+        await toggleVideo(enabled)
+      } finally {
+        setIsTogglingVideo(false)
+      }
+    },
+    [toggleVideo],
   )
 
-  const { videoEnabled, toggleVideo, isTogglingVideo } = useLocalVideoState(
-    localVideoStateOptions,
-  )
-
-  // Initialize card detector
+  // Initialize card detector (only when stream exists)
   const { overlayRef, croppedRef, fullResRef } = useCardDetector({
     videoRef: videoRef,
-    enableCardDetection,
+    enableCardDetection: enableCardDetection && !!stream,
     detectorType,
     usePerspectiveWarp,
     onCrop: onCardCrop,
     reinitializeTrigger: stream ? 1 : 0,
   })
 
-  // Track audio muted state - initialize from stream tracks
-  const [isAudioMuted, setIsAudioMuted] = useState(() => {
-    const audioTracks = stream.getAudioTracks()
-    return audioTracks.length > 0 && !audioTracks[0]?.enabled
-  })
+  // Audio muted state is derived from context's audioEnabled preference
+  const isAudioMuted = !audioEnabled
 
   // Callback ref that combines ref assignment with stream attachment
   // Called when video element is mounted/unmounted
   const handleVideoRef = useCallback(
     (videoElement: HTMLVideoElement | null) => {
-      // Attach stream when element is mounted
-      if (videoElement) {
+      // Attach stream when element is mounted and stream exists
+      if (videoElement && stream) {
         videoRef.current = videoElement
         attachVideoStream(videoElement, stream)
       }
@@ -93,15 +93,18 @@ export function LocalVideoCard({
   )
 
   const handleToggleAudio = useCallback(() => {
-    const newMutedState = !isAudioMuted
-    setIsAudioMuted(newMutedState)
-    // Use centralized toggle function from context
-    toggleLocalAudio(!newMutedState)
+    // Toggle audio - context will release/acquire mic resources
+    // isAudioMuted = !audioEnabled, so passing isAudioMuted toggles to the opposite state
+    toggleLocalAudio(isAudioMuted)
   }, [toggleLocalAudio, isAudioMuted])
+
+  // Show video only when enabled AND stream has video tracks
+  const hasVideoStream =
+    videoEnabled && stream && stream.getVideoTracks().length > 0
 
   return (
     <PlayerVideoCard>
-      {videoEnabled ? (
+      {hasVideoStream ? (
         <>
           <video
             ref={handleVideoRef}
@@ -154,7 +157,7 @@ export function LocalVideoCard({
       <LocalMediaControls
         videoEnabled={videoEnabled}
         isAudioMuted={isAudioMuted}
-        onToggleVideo={toggleVideo}
+        onToggleVideo={handleToggleVideo}
         onToggleAudio={handleToggleAudio}
         isTogglingVideo={isTogglingVideo}
       />
