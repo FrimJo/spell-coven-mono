@@ -25,6 +25,12 @@ const _DEFAULT_HEALTH = DEFAULT_HEALTH
 const PRESENCE_THRESHOLD_MS = 30_000
 
 /**
+ * Room creation rate limiting
+ */
+const ROOM_CREATION_WINDOW_MS = 10 * 60 * 1_000
+const MAX_ROOMS_PER_WINDOW = 3
+
+/**
  * Generate a short room code (6 uppercase alphanumeric characters)
  */
 function generateRoomCode(): string {
@@ -52,9 +58,31 @@ export const createRoom = mutation({
     roomId: v.optional(v.string()), // Optional custom room ID
   },
   handler: async (ctx, { ownerId, roomId: customRoomId }) => {
-    const userId = ownerId
+    const authUserId = await getAuthUserId(ctx)
+    if (!authUserId) {
+      throw new Error('Authentication required')
+    }
+
+    if (ownerId !== authUserId) {
+      throw new Error('ownerId does not match authenticated user')
+    }
+
+    const userId = authUserId
     if (!userId) {
       throw new Error('ownerId is required')
+    }
+
+    const now = Date.now()
+    const rateLimitThreshold = now - ROOM_CREATION_WINDOW_MS
+    const recentAttempts = await ctx.db
+      .query('roomCreationAttempts')
+      .withIndex('by_userId_createdAt', (q) =>
+        q.eq('userId', userId).gt('createdAt', rateLimitThreshold),
+      )
+      .collect()
+
+    if (recentAttempts.length >= MAX_ROOMS_PER_WINDOW) {
+      throw new Error('Room creation rate limit exceeded')
     }
 
     let roomId: string
@@ -89,8 +117,6 @@ export const createRoom = mutation({
       }
     }
 
-    const now = Date.now()
-
     // Create room
     await ctx.db.insert('rooms', {
       roomId,
@@ -105,6 +131,11 @@ export const createRoom = mutation({
       currentTurnUserId: userId,
       turnNumber: 1,
       lastUpdatedAt: now,
+    })
+
+    await ctx.db.insert('roomCreationAttempts', {
+      userId,
+      createdAt: now,
     })
 
     return { roomId }
