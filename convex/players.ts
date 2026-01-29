@@ -12,6 +12,11 @@ import { v } from 'convex/values'
 
 import { mutation, query } from './_generated/server'
 import { DEFAULT_HEALTH } from './constants'
+import {
+  BannedFromRoomError,
+  MissingUserIdError,
+  RoomNotFoundError,
+} from './errors'
 
 /**
  * Default starting health for Commander format
@@ -45,7 +50,7 @@ export const joinRoom = mutation({
     // For Phase 3, use passed userId. Phase 5 will use getAuthUserId
     const userId = passedUserId
     if (!userId) {
-      throw new Error('userId is required')
+      throw new MissingUserIdError()
     }
 
     // Check if room exists
@@ -55,7 +60,7 @@ export const joinRoom = mutation({
       .first()
 
     if (!room) {
-      throw new Error('Room not found')
+      throw new RoomNotFoundError()
     }
 
     // Check if user is banned
@@ -67,7 +72,7 @@ export const joinRoom = mutation({
       .first()
 
     if (ban) {
-      throw new Error('You are banned from this room')
+      throw new BannedFromRoomError()
     }
 
     // Check if this session already exists
