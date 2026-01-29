@@ -288,7 +288,7 @@ export function VideoStreamGrid({
             </div>
           </div>
         </div>
-      ) : localStream != null ? (
+      ) : (
         <LocalVideoCard
           localPlayerName={localPlayerName}
           stream={localStream}
@@ -301,7 +301,7 @@ export function VideoStreamGrid({
           currentUser={localParticipant}
           participants={gameRoomParticipants}
         />
-      ) : null}
+      )}
 
       {/* Render remote players */}
       {players.map((player) => {
