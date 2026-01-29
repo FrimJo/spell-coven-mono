@@ -2,6 +2,7 @@ import type { UseLocalVideoStateOptions } from '@/hooks/useLocalVideoState'
 import type { DetectorType } from '@/lib/detectors'
 import type { Participant } from '@/types/participant'
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useCardDetector } from '@/hooks/useCardDetector'
 import { useLocalVideoState } from '@/hooks/useLocalVideoState'
 import { attachVideoStream } from '@/lib/video-stream-utils'
@@ -24,8 +25,6 @@ interface LocalVideoCardProps {
   detectorType?: DetectorType
   usePerspectiveWarp?: boolean
   onCardCrop?: (canvas: HTMLCanvasElement) => void
-  onToggleVideo?: (enabled: boolean) => Promise<void>
-  onToggleAudio?: (enabled: boolean) => void
   roomId?: string
   participant?: Participant
   currentUser?: Participant
@@ -39,22 +38,25 @@ export function LocalVideoCard({
   detectorType,
   usePerspectiveWarp = true,
   onCardCrop,
-  onToggleVideo,
-  onToggleAudio,
   roomId,
   participant,
   currentUser,
   participants,
 }: LocalVideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
+
+  // Get toggle functions from media stream context
+  const { toggleVideo: toggleLocalVideo, toggleAudio: toggleLocalAudio } =
+    useMediaStreams()
+
   // Manage local video state
   const localVideoStateOptions = useMemo<UseLocalVideoStateOptions>(
     () => ({
       stream,
-      onVideoStateChanged: onToggleVideo,
+      onVideoStateChanged: toggleLocalVideo,
       initialEnabled: true,
     }),
-    [stream, onToggleVideo],
+    [stream, toggleLocalVideo],
   )
 
   const { videoEnabled, toggleVideo, isTogglingVideo } = useLocalVideoState(
@@ -90,21 +92,12 @@ export function LocalVideoCard({
     [stream],
   )
 
-  const toggleLocalAudio = useCallback(() => {
+  const handleToggleAudio = useCallback(() => {
     const newMutedState = !isAudioMuted
     setIsAudioMuted(newMutedState)
-
-    if (onToggleAudio) {
-      // Use centralized toggle function if provided
-      onToggleAudio(!newMutedState)
-    } else {
-      // Fallback to local implementation if prop not provided
-      const audioTracks = stream.getAudioTracks()
-      audioTracks.forEach((track) => {
-        track.enabled = !newMutedState
-      })
-    }
-  }, [onToggleAudio, isAudioMuted, stream])
+    // Use centralized toggle function from context
+    toggleLocalAudio(!newMutedState)
+  }, [toggleLocalAudio, isAudioMuted])
 
   return (
     <PlayerVideoCard>
@@ -162,7 +155,7 @@ export function LocalVideoCard({
         videoEnabled={videoEnabled}
         isAudioMuted={isAudioMuted}
         onToggleVideo={toggleVideo}
-        onToggleAudio={toggleLocalAudio}
+        onToggleAudio={handleToggleAudio}
         isTogglingVideo={isTogglingVideo}
       />
     </PlayerVideoCard>
