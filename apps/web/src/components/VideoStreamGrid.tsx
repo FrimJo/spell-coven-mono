@@ -83,12 +83,11 @@ export function VideoStreamGrid({
   }, [gameRoomParticipants, userId])
 
   // --- Local Media Management (from context) ---
+  // Note: Toggle functions are used directly in LocalVideoCard via useMediaStreams()
   const {
     video: videoResult,
     audio: audioResult,
     combinedStream: localStream,
-    toggleVideo: toggleLocalVideo,
-    toggleAudio: toggleLocalAudio,
     permissions: {
       isChecking: isCheckingPermissions,
       needsPermissionDialog,
@@ -297,8 +296,6 @@ export function VideoStreamGrid({
           detectorType={detectorType}
           usePerspectiveWarp={usePerspectiveWarp}
           onCardCrop={onCardCrop}
-          onToggleVideo={toggleLocalVideo}
-          onToggleAudio={toggleLocalAudio}
           roomId={roomId}
           participant={localParticipant}
           currentUser={localParticipant}

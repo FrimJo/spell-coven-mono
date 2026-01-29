@@ -4,7 +4,6 @@ import { AuthRequiredDialog } from '@/components/AuthRequiredDialog'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
 import { useAuth } from '@/contexts/AuthContext'
-import { MediaStreamProvider } from '@/contexts/MediaStreamContext'
 import { convex } from '@/integrations/convex/provider'
 import { sessionStorage } from '@/lib/session-storage'
 import {
@@ -234,25 +233,22 @@ function GameRoomRoute() {
     >
       {/* MediaStreamProvider manages video/audio streams at page level.
           Streams are cleaned up when user navigates away from the game page. */}
-      <MediaStreamProvider>
-        <Suspense
-          fallback={
-            <div className="flex h-screen items-center justify-center">
-              Loading game room...
-            </div>
-          }
-        >
-          <GameRoom
-            roomId={gameId}
-            playerName={
-              user?.username ?? (isTestMode ? 'TestPlayer' : 'Player')
-            }
-            onLeaveGame={handleLeaveGame}
-            detectorType={detector as DetectorType | undefined}
-            usePerspectiveWarp={usePerspectiveWarp}
-          />
-        </Suspense>
-      </MediaStreamProvider>
+
+      <Suspense
+        fallback={
+          <div className="flex h-screen items-center justify-center">
+            Loading game room...
+          </div>
+        }
+      >
+        <GameRoom
+          roomId={gameId}
+          playerName={user?.username ?? (isTestMode ? 'TestPlayer' : 'Player')}
+          onLeaveGame={handleLeaveGame}
+          detectorType={detector as DetectorType | undefined}
+          usePerspectiveWarp={usePerspectiveWarp}
+        />
+      </Suspense>
     </ErrorBoundary>
   )
 }

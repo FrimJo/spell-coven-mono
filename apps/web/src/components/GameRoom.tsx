@@ -5,6 +5,7 @@ import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
+import { MediaStreamProvider } from '@/contexts/MediaStreamContext.js'
 import { PresenceProvider, usePresence } from '@/contexts/PresenceContext'
 import { ArrowLeft, Check, Copy, Settings } from 'lucide-react'
 import { toast } from 'sonner'
@@ -218,7 +219,7 @@ function GameRoomContent({
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-400">Share Link:</span>
               <code
-                className="break-all cursor-pointer rounded bg-slate-800 px-2 py-1 text-sm text-purple-400 transition-colors hover:bg-slate-700"
+                className="cursor-pointer break-all rounded bg-slate-800 px-2 py-1 text-sm text-purple-400 transition-colors hover:bg-slate-700"
                 data-testid="game-id-display"
                 onClick={handleCopyShareLink}
                 title="Click to copy shareable link"
@@ -333,8 +334,10 @@ function GameRoomWithPresence({
 
 export function GameRoom(props: GameRoomProps) {
   return (
-    <CardQueryProvider>
-      <GameRoomWithPresence {...props} />
-    </CardQueryProvider>
+    <MediaStreamProvider>
+      <CardQueryProvider>
+        <GameRoomWithPresence {...props} />
+      </CardQueryProvider>
+    </MediaStreamProvider>
   )
 }
