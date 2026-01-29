@@ -148,4 +148,16 @@ export default defineSchema({
   })
     .index('by_roomId', ['roomId'])
     .index('by_roomId_userId', ['roomId', 'userId']),
+
+  /**
+   * roomCreationAttempts - Rate limiting for room creation
+   *
+   * Tracks recent room creation attempts per user.
+   */
+  roomCreationAttempts: defineTable({
+    /** Discord user ID of the creator */
+    userId: v.string(),
+    /** When the room creation attempt occurred */
+    createdAt: v.number(),
+  }).index('by_userId_createdAt', ['userId', 'createdAt']),
 })
