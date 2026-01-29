@@ -10,6 +10,11 @@
 import { v } from 'convex/values'
 
 import { mutation, query } from './_generated/server'
+import {
+  CannotTargetSelfError,
+  NotRoomOwnerError,
+  RoomNotFoundError,
+} from './errors'
 
 /**
  * Ban a player from a room
@@ -34,17 +39,17 @@ export const banPlayer = mutation({
       .first()
 
     if (!room) {
-      throw new Error('Room not found')
+      throw new RoomNotFoundError()
     }
 
     // Phase 3: Check if caller is owner (when callerId is provided)
     // Phase 5: Use getAuthUserId for proper authorization
     if (callerId && room.ownerId !== callerId) {
-      throw new Error('Only the room owner can ban players')
+      throw new NotRoomOwnerError('ban players')
     }
 
     if (callerId && userId === callerId) {
-      throw new Error('Cannot ban yourself')
+      throw new CannotTargetSelfError('ban')
     }
 
     // Check if already banned
@@ -111,17 +116,17 @@ export const kickPlayer = mutation({
       .first()
 
     if (!room) {
-      throw new Error('Room not found')
+      throw new RoomNotFoundError()
     }
 
     // Phase 3: Check if caller is owner (when callerId is provided)
     // Phase 5: Use getAuthUserId for proper authorization
     if (callerId && room.ownerId !== callerId) {
-      throw new Error('Only the room owner can kick players')
+      throw new NotRoomOwnerError('kick players')
     }
 
     if (callerId && userId === callerId) {
-      throw new Error('Cannot kick yourself')
+      throw new CannotTargetSelfError('kick')
     }
 
     // Mark all player sessions as 'left'
@@ -159,12 +164,12 @@ export const unbanPlayer = mutation({
       .first()
 
     if (!room) {
-      throw new Error('Room not found')
+      throw new RoomNotFoundError()
     }
 
     // Phase 3: Check if caller is owner (when callerId is provided)
     if (callerId && room.ownerId !== callerId) {
-      throw new Error('Only the room owner can unban players')
+      throw new NotRoomOwnerError('unban players')
     }
 
     const ban = await ctx.db
