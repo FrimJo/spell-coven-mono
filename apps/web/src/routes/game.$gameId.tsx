@@ -177,7 +177,7 @@ function GameRoomRoute() {
 
   const handleLeaveGame = () => {
     sessionStorage.clearGameState()
-    navigate({ to: '/' })
+    navigate({ to: '/', reloadDocument: true }) // reloadDocument: true is needed to ensure the browser releases the camera/mic indicator
   }
 
   const handleSignIn = async () => {
