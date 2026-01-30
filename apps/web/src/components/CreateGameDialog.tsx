@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check, CheckCircle2, Copy, Loader2, Play } from 'lucide-react'
 import Confetti from 'react-confetti'
@@ -32,10 +32,15 @@ export function CreateGameDialog({
   const [copied, setCopied] = useState(false)
   const { width, height } = useWindowSize()
 
+  // Compute shareable link (only on client)
+  const shareLink = useMemo(() => {
+    if (!createdGameId || typeof window === 'undefined') return ''
+    return `${window.location.origin}/game/${createdGameId}`
+  }, [createdGameId])
+
   const handleCopy = async () => {
-    if (!createdGameId) return
-    const url = `${window.location.origin}/game/${createdGameId}`
-    await navigator.clipboard.writeText(url)
+    if (!shareLink) return
+    await navigator.clipboard.writeText(shareLink)
     setCopied(true)
     toast.success('Game room sharable link copied to clipboard')
     setTimeout(() => setCopied(false), 2000)
@@ -118,16 +123,16 @@ export function CreateGameDialog({
                   className="group flex cursor-pointer items-center justify-between rounded-lg border border-slate-700 bg-slate-950 p-3 transition-colors hover:border-purple-500/50"
                   onClick={handleCopy}
                 >
-                  <div className="text-left">
-                    <p className="text-sm text-slate-400">Room ID</p>
-                    <p className="font-mono text-lg text-purple-400">
-                      {createdGameId}
+                  <div className="text-left flex-1 min-w-0">
+                    <p className="text-sm text-slate-400">Share Link</p>
+                    <p className="font-mono text-sm text-purple-400 break-all">
+                      {shareLink}
                     </p>
                   </div>
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-8 w-8 text-slate-400 group-hover:text-white"
+                    className="h-8 w-8 text-slate-400 group-hover:text-white shrink-0 ml-2"
                   >
                     {copied ? (
                       <Check className="h-4 w-4" />

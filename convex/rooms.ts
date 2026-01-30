@@ -46,6 +46,21 @@ const ROOM_CREATION_COOLDOWN_MS = 5_000
 const BASE32_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 
 /**
+ * Scramble a sequential number to produce a pseudo-random looking value.
+ * Uses a Linear Congruential Generator (LCG) for deterministic, collision-free mapping.
+ *
+ * @param n - Sequential counter value (0, 1, 2, ...)
+ * @returns Scrambled number in range [0, 32^6)
+ */
+function scrambleId(n: number): number {
+  const MAX = 32 ** 6 // 1,073,741,824 - max value for 6-digit base-32
+  const MULTIPLIER = 1103515245 // LCG multiplier (odd, coprime with 2^30)
+  const INCREMENT = 12345 // Offset to avoid 0 → 0
+
+  return (((n * MULTIPLIER + INCREMENT) % MAX) + MAX) % MAX
+}
+
+/**
  * Convert a number to base-32 code with minimum length padding
  *
  * @param num - The number to convert (0-indexed, so room #1 uses value 0)
@@ -53,19 +68,22 @@ const BASE32_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
  * @returns Base-32 encoded string padded to minLength
  *
  * @example
- * toBase32Code(0) // "222222"
- * toBase32Code(9) // "22222B"
- * toBase32Code(99) // "22223B"
+ * toBase32Code(0) // "K3FVMR" (scrambled)
+ * toBase32Code(1) // "5PVS8H" (scrambled)
+ * toBase32Code(2) // "RBL5U7" (scrambled)
  */
 function toBase32Code(num: number, minLength = 6): string {
-  if (num === 0) {
+  // Scramble the sequential number to look random
+  let scrambled = scrambleId(num)
+
+  if (scrambled === 0) {
     return BASE32_CHARS[0].repeat(minLength)
   }
 
   let result = ''
-  while (num > 0) {
-    result = BASE32_CHARS[num % 32] + result
-    num = Math.floor(num / 32)
+  while (scrambled > 0) {
+    result = BASE32_CHARS[scrambled % 32] + result
+    scrambled = Math.floor(scrambled / 32)
   }
 
   return result.padStart(minLength, BASE32_CHARS[0])
