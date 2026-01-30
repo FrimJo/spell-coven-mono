@@ -134,12 +134,25 @@ export function LandingPage({
 
     setError(null)
     setGameCreation({ isCreating: true, gameId: null })
+    // Open the dialog immediately to show skeleton loading state
+    setDialogs((prev) => ({ ...prev, create: true }))
 
     try {
       console.log('[LandingPage] Creating new game room via Convex...')
 
       // Create room in Convex - server generates the room ID
-      const result = await createRoom({ ownerId: user.id })
+      // If throttled, wait and retry automatically
+      let result = await createRoom({ ownerId: user.id })
+
+      while (result.roomId == null && result.waitMs != null) {
+        const awaitMs = result.waitMs
+        console.log(
+          `[LandingPage] Throttled, waiting ${awaitMs}ms before retry...`,
+        )
+        await new Promise((resolve) => setTimeout(resolve, awaitMs))
+        result = await createRoom({ ownerId: user.id })
+      }
+
       const gameId = result.roomId
 
       console.log('[LandingPage] Game room created successfully:', gameId)
@@ -153,13 +166,14 @@ export function LandingPage({
 
       // Show success state
       setGameCreation({ isCreating: false, gameId })
-      setDialogs((prev) => ({ ...prev, create: true }))
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to create game room'
       setError(message)
       console.error('Failed to create game room:', err)
       setGameCreation({ isCreating: false, gameId: null })
+      // Close the dialog on error
+      setDialogs((prev) => ({ ...prev, create: false }))
     }
   }
 
