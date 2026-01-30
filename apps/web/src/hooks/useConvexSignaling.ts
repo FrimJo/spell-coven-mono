@@ -42,7 +42,7 @@ export function useConvexSignaling({
   onSignal,
   onError,
 }: UseConvexSignalingProps): UseConvexSignalingReturn {
-  // Use roomId as-is - roomSignals table stores full roomId including "game-" prefix
+  // Use roomId as-is - roomSignals table stores bare roomId (e.g., "ABC123")
   const convexRoomId = roomId
 
   // State

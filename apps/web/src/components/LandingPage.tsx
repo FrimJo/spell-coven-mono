@@ -504,7 +504,7 @@ export function LandingPage({
                             </Label>
                             <Input
                               id="game-id"
-                              placeholder="Enter game ID (e.g., game-ABC123)"
+                              placeholder="Enter game ID (e.g., ABC123)"
                               value={joinGameId}
                               onChange={(e) => setJoinGameId(e.target.value)}
                               className="border-slate-700 bg-slate-950 text-white"
@@ -622,9 +622,7 @@ export function LandingPage({
                     <div className="h-4 w-px bg-slate-800" />
                     <span className="text-sm text-slate-500">
                       Game ID:{' '}
-                      <span className="font-mono text-purple-400">
-                        game-97dbado10
-                      </span>
+                      <span className="font-mono text-purple-400">ABC123</span>
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-slate-400">

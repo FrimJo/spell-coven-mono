@@ -1,389 +1,150 @@
-# Room Management Architecture (No Database)
+# Room Management Architecture (Convex)
 
-This document describes the simplified room management using only Supabase Realtime channels - no database required.
+This document describes how game rooms are created, validated, and maintained.
 
 ## Overview
 
-The application uses a lightweight approach:
-
-- **Room Management**: Realtime channels (created automatically on first join)
-- **WebRTC Streaming**: Same channels for video/audio signaling
-
-**Key Insight**: With Supabase Realtime, channels are created automatically when the first person subscribes. There's no need to check if a room "exists" - any room ID is valid!
-
-## Benefits
-
-✅ **Simple**: No database migrations or schemas
-✅ **Fast**: Instant room creation (automatic)
-✅ **Scalable**: Supabase handles channel management
-✅ **Clean**: Channels auto-cleanup when empty
-✅ **No Validation**: Any room ID works - channel is created on first join
-
-## How Realtime Channels Work
-
-### Channel Lifecycle
-
-```
-User navigates to /game/ABC123
-        ↓
-Component subscribes to channel "game:ABC123"
-        ↓
-Channel is created automatically (if it doesn't exist)
-        ↓
-User joins presence
-        ↓
-Channel now has 1 participant
-        ↓
-Other users can join the same channel
-        ↓
-Last user leaves
-        ↓
-Channel is automatically cleaned up by Supabase
-```
-
-### Important: No "Room Exists" Check Needed!
-
-**Before (Wrong Thinking)**:
-
-- ❌ Check if room exists
-- ❌ If no participants, room doesn't exist
-- ❌ First person can't join because room doesn't exist
-- ❌ Catch-22!
-
-**After (Correct Understanding)**:
-
-- ✅ Any room ID is valid
-- ✅ Channel created automatically on first subscription
-- ✅ First person creates the channel by joining
-- ✅ No validation needed!
-
-## Architecture
-
-### No Database Schema
-
-Rooms are just Realtime channel names (e.g., `game:game-AB12CD`). They:
-
-1. Are created automatically when first person subscribes
-2. Exist as long as someone is subscribed
-3. Are cleaned up automatically when everyone leaves
-4. Don't require any pre-creation or validation
-
-### File Structure
-
-```
-apps/web/src/
-├── lib/supabase/
-│   ├── client.ts                  # Supabase client
-│   ├── room-types.ts              # Simple types (no validation)
-│   ├── room-service.ts            # Optional helper (get participant count)
-│   ├── presence.ts                # Presence management (existing)
-│   ├── signaling.ts               # WebRTC signaling (existing)
-│   └── channel-manager.ts         # Shared channel manager (existing)
-├── hooks/
-│   ├── useGameRoom.ts             # Track participant count
-│   ├── useSupabasePresence.ts     # Presence hook (existing)
-│   └── useSupabaseWebRTC.ts       # WebRTC hook (existing)
-├── routes/
-│   ├── index.tsx                  # Landing page with create game
-│   └── game.$gameId.tsx           # Game room route (no validation!)
-└── components/
-    ├── LandingPage.tsx            # Create game modal
-    ├── CreateGameDialog.tsx       # Create game dialog component
-    ├── GameRoom.tsx               # Game room component
-    └── GameRoomPlayerCount.tsx    # Player count display
-```
-
-## Flow Diagrams
-
-### Creating a Game Room
-
-```
-User clicks "Create Game"
-        ↓
-Modal opens (loading state)
-        ↓
-Generate room ID (game-XXXXXX)
-        ↓
-Save to session storage
-        ↓
-Modal shows success state with room ID
-        ↓
-User clicks "Enter Game Room"
-        ↓
-Navigate to /game/$gameId
-        ↓
-First participant subscribes → Channel created automatically!
-```
+Rooms are first-class Convex records. Creating a room writes to `rooms` and
+`roomState`, and presence is tracked in `roomPlayers`. WebRTC signaling moves
+through `roomSignals`.
 
-### Joining a Game Room
+## Data Model
 
-```
-User navigates to /game/$gameId
-        ↓
-Render GameRoom component
-        ↓
-Subscribe to Realtime channel (created if doesn't exist)
-        ↓
-Join presence
-        ↓
-Channel now exists with this participant
-        ↓
-WebRTC streaming starts
-```
+Convex tables involved in room management:
 
-### The Beauty of This Approach
+- `rooms`: metadata for each room (owner, status, createdAt)
+- `roomState`: per-room turn and state
+- `roomPlayers`: presence, sessions, and player stats
+- `roomSignals`: WebRTC signaling messages
+- `roomBans`: persistent bans
+- `counters`: sequential counters for room ID generation
 
-**Any URL works**:
+See `convex/schema.ts` for definitions and indexes.
 
-- `/game/ABC123` - Valid! Channel created when first person joins
-- `/game/my-cool-game` - Valid! Channel created when first person joins
-- `/game/random-12345` - Valid! Channel created when first person joins
+## Room IDs
 
-**No 404s needed**: Every room ID is valid because channels are created automatically.
+Room IDs are server-generated 6-character base-32 codes. The ID is created in
+`convex/rooms.ts` using a monotonically increasing counter and a custom base-32
+alphabet that avoids ambiguous characters.
 
-## Key Components
+## Room Lifecycle
 
-### 1. Room Service (`room-service.ts`)
+### Create Room
 
-**Purpose**: Optional helper to get participant count
+The landing page calls `api.rooms.createRoom`. The server:
 
-**Functions**:
+1. Requires an authenticated user (Convex auth)
+2. Enforces a per-user throttle (5s cooldown)
+3. Increments the `counters` record
+4. Generates a new room ID
+5. Inserts `rooms` and `roomState`
 
-- `getRoomParticipantCount()` - Get current count (returns 0 if empty)
+Room ID creation happens server-side; the client only receives the final code.
 
-**Note**: No validation functions needed!
+### Join Room
 
-**Example**:
+The `game.$gameId` route validates access in `beforeLoad`:
 
-```typescript
-// Optional - get current participant count
-const count = await getRoomParticipantCount('game-AB12CD')
-console.log(`Room has ${count} participants`)
-// Returns 0 if no one is there yet - room will be created when someone joins!
-```
+- `checkRoomAccess` returns `ok`, `not_found`, or `banned`
+- Any non-`ok` result throws `notFound()` (same UI for banned/not-found)
 
-### 2. useGameRoom Hook (`useGameRoom.ts`)
+After validation, the game room mounts and presence starts.
 
-**Purpose**: Track real-time participant count
+### Leave Room
 
-**Features**:
+Presence is tracked per session. Each tab has a unique `sessionId` stored in
+`sessionStorage`. Leaving a room marks the session as left server-side.
+Heartbeats keep a session active.
 
-- Real-time presence updates
-- Participant count tracking
-- Error handling
-- Automatic cleanup
+## Presence & Players
 
-**Example**:
+Presence is managed via `apps/web/src/hooks/useConvexPresence.ts`:
 
-```typescript
-const { participantCount, isLoading, error } = useGameRoom({
-  roomId: 'game-AB12CD',
-  onParticipantCountChange: (count) => {
-    console.log('Participants:', count)
-  },
-  onError: (error) => {
-    console.error('Error:', error)
-  },
-})
-```
+- `joinRoom` inserts/updates a `roomPlayers` session
+- `heartbeat` updates `lastSeenAt` on a 10s interval
+- `leaveRoom` marks the session as `left`
+- Duplicate sessions are detected and can be transferred
+- The room owner comes from the `rooms` record, not from presence
 
-### 3. Game Route (`game.$gameId.tsx`)
+Active players are determined by `lastSeenAt` within a threshold (30s on server
+queries).
 
-**Purpose**: Simple route rendering - no validation needed!
+## WebRTC Signaling
 
-**No `beforeLoad` or `loader` validation** - every room ID is valid because channels are created automatically when someone subscribes.
+Signaling lives in `roomSignals` and is handled by `useConvexSignaling`:
 
-```typescript
-// Just render the component - no checks needed!
-function GameRoomRoute() {
-  const { gameId } = Route.useParams()
+- `sendSignal` writes an SDP/ICE payload to `roomSignals`
+- `listSignals` subscribes reactively to messages scoped by room
+- Client-side de-duplication avoids double processing
 
-  return <GameRoom roomId={gameId} ... />
-}
-```
+Signals are intended to be short-lived and cleaned up by a scheduled job.
 
-### 4. Landing Page Modal (`LandingPage.tsx` + `CreateGameDialog.tsx`)
+## Access Control & Bans
 
-**Purpose**: Generate room ID and show success modal
+`checkRoomAccess`:
 
-**States**:
+- Verifies room existence
+- If authenticated, checks for a ban in `roomBans`
+- Returns `not_found` or `banned` (UI treats both the same)
 
-1. **Idle** - User can click "Create Game"
-2. **Loading** - Brief animation for UX (500ms)
-3. **Success** - Shows room ID and "Enter Room" button
+Owners can kick or ban players via `useConvexPresence`.
 
-## Setup Instructions
+## Session Storage
 
-### No Setup Required! 🎉
+Client session storage is used for:
 
-Since we're not using a database and channels are created automatically, there's nothing to set up. Just:
+- `spell-coven:game-state` (gameId, playerName, timestamp)
+- `spell-coven-session-id` (per-tab sessionId)
 
-1. **Start the dev server**:
+Validation enforces a 6-character uppercase code and a 24-hour max age.
 
-   ```bash
-   cd apps/web
-   npm run dev
-   ```
+## Key Files
 
-2. **Create a game** and start playing!
-
-## How It Really Works
-
-### Room Creation
-
-When you click "Create Game":
-
-1. Generate random room ID (`game-XXXXXX`)
-2. Save to session storage
-3. Show success modal
-4. Navigate to room
-
-### Channel Creation (Automatic)
-
-When first person navigates to a room:
-
-1. GameRoom component renders
-2. useSupabasePresence hook subscribes to channel
-3. **Channel is created automatically by Supabase**
-4. User joins presence
-5. Room now "exists" with 1 participant
-
-### Participant Tracking
-
-- Uses Supabase Presence API
-- Real-time updates when people join/leave
-- Displayed as "N/4 Players" in UI
-- Returns 0 if channel is empty (but still valid!)
-
-### When Everyone Leaves
-
-- Last person unsubscribes
-- Channel is automatically cleaned up by Supabase
-- No manual cleanup needed
-- Room effectively "doesn't exist" anymore
-- But it will be recreated when someone joins again!
-
-## Error Handling
-
-The system follows: **Fail loudly, never use fallbacks** [[memory:10824677]]
-
-### Channel Errors
-
-- Connection errors → Show error toast
-- Subscription fails → Display error message
-- Never silently fall back
-
-## Testing
-
-### Manual Testing Checklist
-
-**Create Game Flow**:
-
-- [x] ✅ Click "Create Game" shows modal
-- [x] ✅ Modal displays loading state (500ms)
-- [x] ✅ Modal shows success with room ID
-- [x] ✅ "Enter Room" button navigates
-
-**Join Game Flow**:
-
-- [x] ✅ Navigate to ANY room ID → Always works
-- [x] ✅ First person to join creates the channel
-- [x] ✅ Player count updates in real-time
-- [x] ✅ No 404 errors (every room ID is valid!)
-
-**Room State**:
-
-- [x] ✅ Channel created when first person subscribes
-- [x] ✅ Channel exists while participants present
-- [x] ✅ Channel cleaned up when everyone leaves
-- [x] ✅ Participant count tracks presence
-- [x] ✅ Max players displayed (default: 4)
-
-## Advantages vs Database Approach
-
-| Feature         | Database            | Realtime Only         |
-| --------------- | ------------------- | --------------------- |
-| Setup           | Migrations required | None                  |
-| Room validation | beforeLoad check    | Not needed!           |
-| Room creation   | Manual insert       | Automatic             |
-| Room cleanup    | Manual/scheduled    | Automatic             |
-| First join      | Must exist first    | Creates automatically |
-| Complexity      | High                | Very Low              |
-| Latency         | DB query            | Instant               |
-| Scalability     | DB limits           | Supabase scale        |
-
-## Common Misconceptions
-
-### ❌ Wrong: "Need to check if room exists before joining"
-
-**Reality**: Channels are created automatically. Any room ID is valid.
-
-### ❌ Wrong: "Room doesn't exist if no participants"
-
-**Reality**: Channel is created when first person subscribes. Count of 0 just means no one is there yet.
-
-### ❌ Wrong: "Need beforeLoad validation"
-
-**Reality**: No validation needed - every room ID works!
-
-### ✅ Correct: "First person creates the room by joining"
-
-**Yes!** That's exactly how Supabase Realtime works.
-
-## Future Enhancements
-
-1. **Optional Room Metadata**
-   - Store in session/localStorage
-   - Share via URL params
-   - No DB needed
-
-2. **Room Discovery**
-   - List active channels via Supabase API
-   - Filter by participant count > 0
-
-3. **Room Settings**
-   - Store in channel metadata
-   - Broadcast to participants
+- `convex/rooms.ts`: create room, access checks, live stats
+- `convex/schema.ts`: room tables and indexes
+- `apps/web/src/hooks/useConvexPresence.ts`: presence + heartbeat
+- `apps/web/src/hooks/useConvexSignaling.ts`: WebRTC signaling
+- `apps/web/src/routes/game.$gameId.tsx`: access validation + auth gating
+- `apps/web/src/components/LandingPage.tsx`: create/join room flow
+- `apps/web/src/lib/session-storage.ts`: saved game state
+
+## Testing Checklist
+
+- Create room as authed user -> receives a valid 6-char code
+- Create room twice quickly -> throttled (roomId null + waitMs)
+- Join room with invalid code -> notFound dialog on landing
+- Join room when banned -> same notFound dialog
+- Presence heartbeat updates active players within 30s
+- Duplicate session detection works across tabs
+- Signaling sends/receives within the same room
 
 ## Troubleshooting
 
-### "No participants" after joining
+### Room not found
 
 Check:
 
-1. Presence hook is working
-2. Channel subscription succeeded
-3. User ID and username are set
-4. Console logs: `[WebRTC:Presence]`
+- Room code format (must be 6 uppercase alphanumerics)
+- `rooms` table contains the code
+- `checkRoomAccess` returns `ok`
 
-### Can't join room
+### Presence not updating
 
 Check:
 
-1. Supabase connection working
-2. Environment variables set
-3. Network tab for failed requests
-4. Console for errors
+- `joinRoom` and `heartbeat` mutations in network logs
+- `roomPlayers.lastSeenAt` changes
+- `useConvexPresence` enabled flag is true
 
-### Room "doesn't exist"
+### Signaling not received
 
-**Remember**: Rooms don't need to exist beforehand! They're created when the first person joins. If you're seeing "doesn't exist" errors, the issue is likely in the code logic, not with Supabase.
+Check:
 
-## Related Documentation
-
-- [Supabase Realtime Docs](https://supabase.com/docs/guides/realtime)
-- [Supabase Presence Docs](https://supabase.com/docs/guides/realtime/presence)
-- [WebRTC Implementation](./specs/001-webrtc-video-streaming/)
-
-## Support
-
-For issues:
-
-1. Check console logs: `[RoomService]`, `[useGameRoom]`
-2. Verify Supabase connection
-3. Check Realtime inspector in dashboard
-4. Review this documentation
+- `roomSignals` records are being created
+- `listSignals` is subscribed with the correct roomId/userId
+- Client de-duplication is not filtering new messages
 
 ## Key Takeaway
 
-🎯 **With Supabase Realtime, channels are created automatically when the first person subscribes. There's no need for room validation - any room ID is valid!**
+Rooms are explicit Convex records with authenticated creation, access
+validation, and heartbeat-based presence.

@@ -30,8 +30,8 @@ function validateGameState(data: unknown): GameState | null {
   if (!state.playerName || typeof state.playerName !== 'string') return null
   if (!state.timestamp || typeof state.timestamp !== 'number') return null
 
-  // Validate gameId format
-  if (!/^game-[a-z0-9]{9}$/.test(state.gameId)) return null
+  // Validate gameId format (6-character uppercase base-32 code)
+  if (!/^[A-Z0-9]{6}$/.test(state.gameId)) return null
 
   // Validate playerName length
   if (state.playerName.length < 1 || state.playerName.length > 50) return null

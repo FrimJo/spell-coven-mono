@@ -41,21 +41,13 @@ const gameParamsSchema = z.object({
     .string()
     .min(1, 'Game ID is required')
     .regex(
-      /^game-([A-Z0-9]{6}|TEST[A-Za-z0-9]+)$/,
-      'Game ID must follow format: game-XXXXXX or game-TEST* for tests',
+      /^[A-Z0-9]{6}$/,
+      'Game ID must be a 6-character uppercase alphanumeric code',
     ),
 })
 
 // Key for localStorage where media device preferences are stored
 const MEDIA_DEVICES_KEY = 'mtg-selected-media-devices'
-
-/**
- * Check if this is a test game ID (used for e2e tests).
- * Test game IDs start with "game-TEST" to bypass authentication.
- */
-function isTestGameId(gameId: string): boolean {
-  return gameId.startsWith('game-TEST')
-}
 
 /**
  * Check if the user can access the room.
@@ -92,11 +84,9 @@ function isMediaConfigured(): boolean {
 export const Route = createFileRoute('/game/$gameId')({
   component: GameRoomRoute,
   beforeLoad: async ({ location, params }) => {
-    const isTestMode = isTestGameId(params.gameId)
-
-    // Check if media devices are configured before entering game room (unless in test mode)
+    // Check if media devices are configured before entering game room
     const mediaConfigured = isMediaConfigured()
-    if (!isTestGameId(params.gameId) && !mediaConfigured) {
+    if (!mediaConfigured) {
       // Redirect to setup page with return URL
       throw redirect({
         to: '/setup',
@@ -110,8 +100,6 @@ export const Route = createFileRoute('/game/$gameId')({
       // Show same error for both 'not_found' and 'banned' (security - don't reveal ban status)
       throw notFound()
     }
-
-    return { isTestMode }
   },
   loader: async () => {
     // // Load embeddings
@@ -169,7 +157,6 @@ const AUTH_RETURN_TO_KEY = 'auth-return-to'
 
 function GameRoomRoute() {
   const { gameId } = Route.useParams()
-  const { isTestMode } = Route.useRouteContext()
   const { detector, usePerspectiveWarp } = Route.useSearch()
   const navigate = useNavigate()
   const { user, isLoading: isAuthLoading, isAuthenticated, signIn } = useAuth()
@@ -210,8 +197,8 @@ function GameRoomRoute() {
     )
   }
 
-  // Show auth dialog if not authenticated (unless in test mode)
-  if (!isAuthenticated && !isTestMode) {
+  // Show auth dialog if not authenticated
+  if (!isAuthenticated) {
     return (
       <div className="h-screen bg-slate-950">
         <AuthRequiredDialog
@@ -243,7 +230,7 @@ function GameRoomRoute() {
       >
         <GameRoom
           roomId={gameId}
-          playerName={user?.username ?? (isTestMode ? 'TestPlayer' : 'Player')}
+          playerName={user?.username ?? 'Player'}
           onLeaveGame={handleLeaveGame}
           detectorType={detector as DetectorType | undefined}
           usePerspectiveWarp={usePerspectiveWarp}

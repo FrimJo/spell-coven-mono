@@ -56,7 +56,7 @@ test.describe('Media Setup Page', () => {
       page,
     }) => {
       // Skip: This test requires real camera permissions which are not available in headless browsers
-      const returnPath = '/game/game-TESTreturn'
+      const returnPath = '/game/TEST01'
       await page.goto(`/setup?returnTo=${encodeURIComponent(returnPath)}`)
 
       // Wait for page to load
