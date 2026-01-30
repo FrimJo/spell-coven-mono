@@ -112,7 +112,7 @@ export function useConvexPresence({
   // Track if we've joined the room (using state so heartbeat effect re-runs)
   const [hasJoined, setHasJoined] = useState(false)
 
-  // Use roomId as-is - rooms are stored with the full ID (e.g., "game-ABC123")
+  // Use roomId as-is - rooms are stored with the bare ID (e.g., "ABC123")
   const convexRoomId = roomId
 
   // Convex mutations - store in refs to avoid lint warnings about unstable deps

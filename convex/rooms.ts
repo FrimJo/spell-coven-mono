@@ -134,7 +134,7 @@ export const createRoom = mutation({
     await ctx.db.patch(counter._id, { count: newCount })
 
     // Generate sequential room code (newCount - 1 because we want 0-indexed)
-    const roomId = `game-${toBase32Code(newCount - 1)}`
+    const roomId = toBase32Code(newCount - 1)
 
     // Create room
     await ctx.db.insert('rooms', {

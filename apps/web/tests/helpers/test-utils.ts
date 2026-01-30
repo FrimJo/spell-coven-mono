@@ -5,8 +5,8 @@ import type { Page } from '@playwright/test'
  * These utilities help with common testing patterns and mock setups.
  */
 
-/** Test game ID that bypasses authentication (must start with 'game-TEST') */
-export const TEST_GAME_ID = 'game-TESTe2e01'
+/** Test game ID for e2e tests */
+export const TEST_GAME_ID = 'TEST01'
 
 /** Storage keys used by the application */
 export const STORAGE_KEYS = {

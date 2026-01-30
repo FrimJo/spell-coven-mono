@@ -10,7 +10,7 @@ import {
 /**
  * Game room e2e tests.
  * Tests cover route access, header controls, share link, leave flow, and settings dialog.
- * Uses test game IDs (game-TEST*) to bypass authentication.
+ * Note: These tests require authentication setup as test IDs no longer bypass auth.
  */
 test.describe('Game Room', () => {
   test.use({ permissions: ['camera'] })
@@ -43,7 +43,9 @@ test.describe('Game Room', () => {
       // The authenticated user's name should be visible somewhere in the game room
       // For test mode with auth, the Discord username is used
       // Just verify the game room is loaded with player list visible
-      await expect(page.locator('[data-testid="leave-game-button"]')).toBeVisible()
+      await expect(
+        page.locator('[data-testid="leave-game-button"]'),
+      ).toBeVisible()
     })
   })
 
@@ -288,7 +290,10 @@ test.describe('Game Room', () => {
       await expect(page.getByTestId('media-setup-dialog')).toBeVisible()
 
       // Video toggle switch should be visible (first switch in the dialog)
-      const videoSwitch = page.getByTestId('media-setup-dialog').getByRole('switch').first()
+      const videoSwitch = page
+        .getByTestId('media-setup-dialog')
+        .getByRole('switch')
+        .first()
       await expect(videoSwitch).toBeVisible()
     })
 

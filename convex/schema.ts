@@ -37,7 +37,7 @@ export default defineSchema({
    * Each room has a unique roomId (short shareable code), an owner, and a status.
    */
   rooms: defineTable({
-    /** Short shareable room code (e.g., "ABC123") */
+    /** Short shareable room code (e.g., "ABC123" - 6 character base-32 code) */
     roomId: v.string(),
     /** Discord user ID of the room owner */
     ownerId: v.string(),

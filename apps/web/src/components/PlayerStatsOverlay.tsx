@@ -1,5 +1,6 @@
 import type { Participant } from '@/types/participant'
 import { useState } from 'react'
+import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
 import { useMutation } from 'convex/react'
 import { Heart, Minus, Plus, Skull } from 'lucide-react'
 import { toast } from 'sonner'
@@ -13,7 +14,6 @@ import {
 
 import type { Doc } from '../../../../convex/_generated/dataModel'
 import { api } from '../../../../convex/_generated/api'
-import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
 import { GameStatsPanel } from './GameStatsPanel'
 
 interface PlayerStatsOverlayProps {
@@ -29,7 +29,7 @@ export function PlayerStatsOverlay({
   currentUser,
   participants,
 }: PlayerStatsOverlayProps) {
-  // Use roomId as-is - roomPlayers table stores full roomId including "game-" prefix
+  // Use roomId as-is - roomPlayers table stores bare roomId (e.g., "ABC123")
   const convexRoomId = roomId
   const [panelOpen, setPanelOpen] = useState(false)
 

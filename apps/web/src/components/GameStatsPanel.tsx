@@ -1,10 +1,11 @@
-import type { Participant } from '@/types/participant'
 import type { ScryfallCard } from '@/lib/scryfall'
+import type { Participant } from '@/types/participant'
 import { useEffect, useEffectEvent, useState } from 'react'
-import { useMachine } from '@xstate/react'
+import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
+import { commanderPanelMachine } from '@/state/commanderPanelMachine'
 import { useMutation } from '@tanstack/react-query'
+import { useMachine } from '@xstate/react'
 import { useMutation as useConvexMutation } from 'convex/react'
-import type { Doc } from '../../../../convex/_generated/dataModel'
 import {
   AlertCircle,
   Check,
@@ -29,10 +30,9 @@ import {
   SheetTitle,
 } from '@repo/ui/components/sheet'
 
+import type { Doc } from '../../../../convex/_generated/dataModel'
 import { api } from '../../../../convex/_generated/api'
-import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
 import { CommanderSearchInput } from './CommanderSearchInput'
-import { commanderPanelMachine } from '@/state/commanderPanelMachine'
 
 /** Maximum players in a Commander game */
 const MAX_PLAYERS = 4
@@ -60,7 +60,7 @@ export function GameStatsPanel({
   // The player whose stats we're viewing (defaults to current user)
   const viewedPlayer = selectedPlayer ?? currentUser
   const isViewingOwnStats = viewedPlayer.id === currentUser.id
-  // Use roomId as-is - roomPlayers table stores full roomId including "game-" prefix
+  // Use roomId as-is - roomPlayers table stores bare roomId (e.g., "ABC123")
   const convexRoomId = roomId
 
   // Determine if viewed player has any commanders set
@@ -116,14 +116,16 @@ export function GameStatsPanel({
 
   // Convex mutation functions
   const setCommandersMutation = useConvexMutation(api.rooms.setPlayerCommanders)
-  
+
   // Helper function for optimistic updates on player queries
   type RoomPlayer = Doc<'roomPlayers'>
-  
+
   const updatePlayerQueriesOptimistically = (
     localStore: Parameters<
       Parameters<
-        ReturnType<typeof useConvexMutation<typeof api.rooms.updateCommanderDamage>>['withOptimisticUpdate']
+        ReturnType<
+          typeof useConvexMutation<typeof api.rooms.updateCommanderDamage>
+        >['withOptimisticUpdate']
       >[0]
     >[0],
     roomId: string,
@@ -145,19 +147,14 @@ export function GameStatsPanel({
       )
     }
 
-    const activePlayers = localStore.getQuery(
-      api.players.listActivePlayers,
-      { roomId },
-    )
+    const activePlayers = localStore.getQuery(api.players.listActivePlayers, {
+      roomId,
+    })
     if (activePlayers !== undefined) {
       const nextActive = activePlayers.map((player: RoomPlayer) =>
         player.userId === userId ? updater(player) : player,
       )
-      localStore.setQuery(
-        api.players.listActivePlayers,
-        { roomId },
-        nextActive,
-      )
+      localStore.setQuery(api.players.listActivePlayers, { roomId }, nextActive)
     }
   }
 
@@ -165,7 +162,7 @@ export function GameStatsPanel({
     api.rooms.updateCommanderDamage,
   ).withOptimisticUpdate((localStore, args) => {
     const damageKey = `${args.ownerUserId}:${args.commanderId}`
-    
+
     updatePlayerQueriesOptimistically(
       localStore,
       args.roomId,
@@ -374,7 +371,11 @@ export function GameStatsPanel({
     }
     // Only return 'saved' from mutation success if the commander still exists
     // This prevents showing 'saved' status after clearing
-    if (saveCommandersMutation.isSuccess && isTriggered && hasExistingCommander) {
+    if (
+      saveCommandersMutation.isSuccess &&
+      isTriggered &&
+      hasExistingCommander
+    ) {
       return 'saved'
     }
     if (hasExistingCommander) {
@@ -455,7 +456,9 @@ export function GameStatsPanel({
                     <div
                       role="button"
                       tabIndex={0}
-                      onClick={() => send({ type: 'SET_COLLAPSED', collapsed: false })}
+                      onClick={() =>
+                        send({ type: 'SET_COLLAPSED', collapsed: false })
+                      }
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           send({ type: 'SET_COLLAPSED', collapsed: false })
@@ -498,7 +501,10 @@ export function GameStatsPanel({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                send({ type: 'SET_COLLAPSED', collapsed: false })
+                                send({
+                                  type: 'SET_COLLAPSED',
+                                  collapsed: false,
+                                })
                                 handleStartEditing(player)
                               }}
                               className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-slate-600 bg-slate-900/50 text-slate-500 transition-colors hover:border-purple-500 hover:bg-purple-500/10 hover:text-purple-400"
@@ -519,7 +525,10 @@ export function GameStatsPanel({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                send({ type: 'SET_COLLAPSED', collapsed: false })
+                                send({
+                                  type: 'SET_COLLAPSED',
+                                  collapsed: false,
+                                })
                                 handleStartEditing(player)
                               }}
                               className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-slate-600 bg-slate-900/50 text-slate-500 transition-colors hover:border-purple-500 hover:bg-purple-500/10 hover:text-purple-400"
@@ -577,7 +586,7 @@ export function GameStatsPanel({
                         </span>
                       )}
                     </span>
-                    
+
                     {/* Controls: Viewing Badge, Edit Button, Minimize Button */}
                     <div className="ml-auto flex items-center gap-1">
                       {isViewedPlayer && (
@@ -585,7 +594,7 @@ export function GameStatsPanel({
                           Viewing
                         </span>
                       )}
-                      
+
                       {isEditingThisPlayer ? (
                         <Button
                           size="sm"
@@ -595,7 +604,8 @@ export function GameStatsPanel({
                         >
                           Done
                         </Button>
-                      ) : (player.commanders[0]?.name || player.commanders[1]?.name) ? (
+                      ) : player.commanders[0]?.name ||
+                        player.commanders[1]?.name ? (
                         <Button
                           size="icon"
                           variant="ghost"
@@ -607,18 +617,20 @@ export function GameStatsPanel({
                         </Button>
                       ) : null}
 
-                      {isViewedPlayer && viewedPlayerHasCommanders && !isEditingThisPlayer && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            send({ type: 'SET_COLLAPSED', collapsed: true })
-                          }
-                          className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                          title="Minimize"
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                        </button>
-                      )}
+                      {isViewedPlayer &&
+                        viewedPlayerHasCommanders &&
+                        !isEditingThisPlayer && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              send({ type: 'SET_COLLAPSED', collapsed: true })
+                            }
+                            className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                            title="Minimize"
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </button>
+                        )}
                     </div>
                   </div>
 
@@ -630,11 +642,13 @@ export function GameStatsPanel({
                         <button
                           type="button"
                           onClick={() => handleStartEditing(player)}
-                          className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-700 bg-slate-900/30 p-6 text-slate-500 transition-colors hover:border-slate-600 hover:bg-slate-900/50 hover:text-slate-400 cursor-pointer"
+                          className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-700 bg-slate-900/30 p-6 text-slate-500 transition-colors hover:border-slate-600 hover:bg-slate-900/50 hover:text-slate-400"
                         >
                           <Plus className="h-5 w-5" />
                           <span className="text-sm font-medium">
-                            {isCurrentUser ? 'Add your Commander' : 'Add commander'}
+                            {isCurrentUser
+                              ? 'Add your Commander'
+                              : 'Add commander'}
                           </span>
                         </button>
                       )}
@@ -644,9 +658,9 @@ export function GameStatsPanel({
                       commander={player.commanders[0]}
                       damage={
                         player.commanders[0]
-                          ? viewedPlayer.commanderDamage[
+                          ? (viewedPlayer.commanderDamage[
                               `${player.id}:${player.commanders[0].id}`
-                            ] ?? 0
+                            ] ?? 0)
                           : 0
                       }
                       isEditing={isEditingThisPlayer}
@@ -663,7 +677,9 @@ export function GameStatsPanel({
                       onStartEdit={() => handleStartEditing(player)}
                       onClear={() => handleClearCommander(player, 1)}
                       // Edit props - pass shared state if editing this player
-                      inputValue={isEditingThisPlayer ? cmdState.commander1Name : ''}
+                      inputValue={
+                        isEditingThisPlayer ? cmdState.commander1Name : ''
+                      }
                       onInputChange={setCommander1Name}
                       onCardResolved={onCommander1Resolved}
                       status={playerCommander1Status}
@@ -680,9 +696,9 @@ export function GameStatsPanel({
                       commander={player.commanders[1]}
                       damage={
                         player.commanders[1]
-                          ? viewedPlayer.commanderDamage[
+                          ? (viewedPlayer.commanderDamage[
                               `${player.id}:${player.commanders[1].id}`
-                            ] ?? 0
+                            ] ?? 0)
                           : 0
                       }
                       isEditing={isEditingThisPlayer}
@@ -699,7 +715,9 @@ export function GameStatsPanel({
                       onStartEdit={() => handleStartEditing(player)}
                       onClear={() => handleClearCommander(player, 2)}
                       // Edit props
-                      inputValue={isEditingThisPlayer ? cmdState.commander2Name : ''}
+                      inputValue={
+                        isEditingThisPlayer ? cmdState.commander2Name : ''
+                      }
                       onInputChange={setCommander2Name}
                       onCardResolved={onCommander2Resolved}
                       status={playerCommander2Status}
