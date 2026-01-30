@@ -11,7 +11,6 @@ import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 
 import { mutation, query } from './_generated/server'
-import { DEFAULT_HEALTH } from './constants'
 import {
   AuthMismatchError,
   AuthRequiredError,
@@ -25,12 +24,6 @@ import {
 } from './errors'
 
 /**
- * Default starting health for Commander format
- * @internal Reserved for Phase 4 game logic
- */
-const _DEFAULT_HEALTH = DEFAULT_HEALTH
-
-/**
  * Presence timeout threshold in milliseconds (30 seconds)
  */
 const PRESENCE_THRESHOLD_MS = 30_000
@@ -38,7 +31,7 @@ const PRESENCE_THRESHOLD_MS = 30_000
 /**
  * Room creation throttle (minimum time between room creations)
  */
-const ROOM_CREATION_COOLDOWN_MS = 5_000
+const ROOM_CREATION_COOLDOWN_MS = 10_000
 
 /**
  * Base-32 character set (excludes confusing chars: 0, O, 1, I)

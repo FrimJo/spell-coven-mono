@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
-import { Check, CheckCircle2, Copy, Loader2, Play } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import {
+  Check,
+  CheckCircle2,
+  Copy,
+  Gamepad2,
+  Loader2,
+  Play,
+} from 'lucide-react'
 import Confetti from 'react-confetti'
 import { toast } from 'sonner'
 
@@ -32,6 +39,9 @@ export function CreateGameDialog({
   const [copied, setCopied] = useState(false)
   const { width, height } = useWindowSize()
 
+  const isReady = !!createdGameId
+  const isPending = isCreating && !createdGameId
+
   // Compute shareable link (only on client)
   const shareLink = useMemo(() => {
     if (!createdGameId || typeof window === 'undefined') return ''
@@ -49,7 +59,7 @@ export function CreateGameDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="overflow-hidden border-slate-800 bg-slate-900 sm:max-w-md">
-        {createdGameId && (
+        {isReady && (
           <Confetti
             width={width}
             height={height}
@@ -67,106 +77,184 @@ export function CreateGameDialog({
         )}
         <DialogHeader>
           <DialogTitle className="text-white">
-            {createdGameId
+            {isReady
               ? '🎮 Your Game Room is Ready!'
-              : 'Creating Game Room...'}
+              : '🎮 Creating Game Room...'}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-6 pt-4">
-          {isCreating && !createdGameId ? (
-            /* Loading State */
-            <div className="flex flex-col items-center space-y-4 py-8">
-              <div className="relative">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-500/20">
-                  <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
-                </div>
-                <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/10" />
-              </div>
-              <div className="space-y-1 text-center">
-                <p className="text-lg font-medium text-slate-200">
-                  Setting up your game room
-                </p>
-                <p className="text-sm text-slate-400">
-                  This will only take a moment...
-                </p>
-              </div>
-            </div>
-          ) : createdGameId ? (
-            /* Success State */
+          <div className="flex flex-col items-center space-y-6 py-4">
+            {/* Icon - transitions between loading and success */}
             <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', duration: 0.6, bounce: 0.4 }}
-              className="flex flex-col items-center space-y-6 py-4"
+              className="relative flex h-16 w-16 items-center justify-center rounded-full"
+              animate={{
+                backgroundColor: isReady
+                  ? 'rgba(34, 197, 94, 0.2)'
+                  : 'rgba(168, 85, 247, 0.2)',
+              }}
+              transition={{ duration: 0.5, ease: 'easeInOut' }}
             >
-              <motion.div
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{
-                  type: 'spring',
-                  duration: 0.8,
-                  bounce: 0.5,
-                  delay: 0.1,
-                }}
-                className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20"
+              <AnimatePresence mode="wait">
+                {isReady ? (
+                  <motion.div
+                    key="success"
+                    initial={{ scale: 0, rotate: -180, opacity: 0 }}
+                    animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                    transition={{
+                      type: 'spring',
+                      duration: 0.8,
+                      bounce: 0.5,
+                    }}
+                    className="flex items-center justify-center"
+                  >
+                    <CheckCircle2 className="h-8 w-8 text-green-400" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="pending"
+                    exit={{
+                      scale: 0,
+                      rotate: 180,
+                      opacity: 0,
+                    }}
+                    transition={{
+                      duration: 0.4,
+                      ease: 'easeInOut',
+                    }}
+                    className="flex items-center justify-center"
+                  >
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.1, 1],
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: 'easeInOut',
+                      }}
+                    >
+                      <Gamepad2 className="h-8 w-8 text-purple-400" />
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {/* Pulsing ring effect - only when pending */}
+              <AnimatePresence>
+                {!isReady && (
+                  <motion.div
+                    key="pulse-ring"
+                    className="absolute inset-0 rounded-full bg-purple-500/20"
+                    initial={{ scale: 1, opacity: 0.5 }}
+                    animate={{
+                      scale: [1, 1.4, 1],
+                      opacity: [0.5, 0, 0.5],
+                    }}
+                    exit={{ scale: 1.5, opacity: 0 }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+              {/* Success burst effect */}
+              <AnimatePresence>
+                {isReady && (
+                  <motion.div
+                    key="success-burst"
+                    className="absolute inset-0 rounded-full bg-green-500/30"
+                    initial={{ scale: 0.8, opacity: 1 }}
+                    animate={{ scale: 2, opacity: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                  />
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            <div className="w-full space-y-2 text-center">
+              <p className="text-lg font-medium text-slate-200">
+                {isReady
+                  ? 'Game room created successfully!'
+                  : 'Setting up your game room...'}
+              </p>
+
+              {/* Share Link Box */}
+              <div
+                className={`group flex items-center justify-between rounded-lg border p-3 transition-colors ${
+                  isReady
+                    ? 'cursor-pointer border-slate-700 bg-slate-950 hover:border-purple-500/50'
+                    : 'cursor-default border-slate-800 bg-slate-950/50'
+                }`}
+                onClick={isReady ? handleCopy : undefined}
               >
-                <CheckCircle2 className="h-8 w-8 text-green-400" />
-              </motion.div>
-              <div className="w-full space-y-2 text-center">
-                <p className="text-lg font-medium text-slate-200">
-                  Game room created successfully!
-                </p>
-                <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="group flex cursor-pointer items-center justify-between rounded-lg border border-slate-700 bg-slate-950 p-3 transition-colors hover:border-purple-500/50"
-                  onClick={handleCopy}
-                >
-                  <div className="text-left flex-1 min-w-0">
-                    <p className="text-sm text-slate-400">Share Link</p>
+                <div className="text-left flex-1 min-w-0">
+                  <p className="text-sm text-slate-400">Share Link</p>
+                  {isReady ? (
                     <p className="font-mono text-sm text-purple-400 break-all">
                       {shareLink}
                     </p>
-                  </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-slate-400 group-hover:text-white shrink-0 ml-2"
-                  >
-                    {copied ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </motion.div>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                  className="text-sm text-slate-400"
-                >
-                  Share this link with your friends to let them join
-                </motion.p>
-              </div>
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="w-full"
-              >
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 animate-pulse rounded bg-slate-700" />
+                      <p className="font-mono text-sm text-slate-500">
+                        Generating link...
+                      </p>
+                    </div>
+                  )}
+                </div>
                 <Button
-                  onClick={onNavigateToRoom}
-                  className="w-full bg-purple-600 text-white transition-all hover:scale-[1.02] hover:bg-purple-700"
-                  size="lg"
+                  size="icon"
+                  variant="ghost"
+                  className={`h-8 w-8 shrink-0 ml-2 ${
+                    isReady
+                      ? 'text-slate-400 group-hover:text-white'
+                      : 'text-slate-600 cursor-default'
+                  }`}
+                  disabled={!isReady}
                 >
-                  <Play className="mr-2 h-5 w-5" />
-                  Enter Game Room
+                  {copied ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
                 </Button>
-              </motion.div>
-            </motion.div>
-          ) : null}
+              </div>
+
+              <p className="text-sm text-slate-400">
+                {isReady
+                  ? 'Share this link with your friends to let them join'
+                  : 'This will only take a moment...'}
+              </p>
+            </div>
+
+            {/* Enter Game Room Button */}
+            <div className="w-full">
+              <Button
+                onClick={onNavigateToRoom}
+                disabled={!isReady}
+                className={`w-full transition-all ${
+                  isReady
+                    ? 'bg-purple-600 text-white hover:scale-[1.02] hover:bg-purple-700'
+                    : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                }`}
+                size="lg"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Preparing Room...
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-5 w-5" />
+                    Enter Game Room
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
