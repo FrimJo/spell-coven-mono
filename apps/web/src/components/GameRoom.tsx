@@ -85,24 +85,24 @@ function GameRoomContent({
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
 
   // Show dialog until user completes media setup
-  const handleDialogComplete = async () => {
+  const handleDialogComplete = useCallback(async () => {
     console.log('[GameRoom] Media dialog completed')
     // Device selections are saved by MediaSetupDialog via useSelectedMediaDevice
     // No need to save a per-room flag - we check for device settings globally
     setMediaDialogOpen(false)
     console.log('[GameRoom] Media setup complete')
-  }
+  }, [])
 
-  const handleCopyShareLink = () => {
+  const handleCopyShareLink = useCallback(() => {
     navigator.clipboard.writeText(shareLink)
     setCopied(true)
     toast.success('Shareable link copied to clipboard!')
     setTimeout(() => setCopied(false), 2000)
-  }
+  }, [shareLink])
 
-  const handleOpenSettings = () => {
+  const handleOpenSettings = useCallback(() => {
     setMediaDialogOpen(true)
-  }
+  }, [])
 
   const handleKickPlayer = async (playerId: string) => {
     try {
@@ -143,25 +143,25 @@ function GameRoomContent({
   }
 
   // Handle manual leave request - show confirmation first
-  const handleManualLeave = () => {
+  const handleManualLeave = useCallback(() => {
     setShowLeaveConfirmDialog(true)
-  }
+  }, [])
 
   // Handle confirmed leave - navigate away directly
   // The presence cleanup happens automatically when the component unmounts
   // We don't call disconnect('left') because that would show the RejoinGameDialog
-  const handleConfirmLeave = () => {
+  const handleConfirmLeave = useCallback(() => {
     setShowLeaveConfirmDialog(false)
     onLeaveGame()
-  }
+  }, [onLeaveGame])
 
   // Handle rejoin attempt - use connect callback
-  const handleRejoin = () => {
+  const handleRejoin = useCallback(() => {
     connect()
     if (rejoinReason === 'kicked') {
       toast.success('Rejoining game...')
     }
-  }
+  }, [connect, rejoinReason])
 
   return (
     <div className="flex h-screen flex-col bg-slate-950">
@@ -281,9 +281,7 @@ function GameRoomContent({
               localPlayerName={username}
               detectorType={detectorType}
               usePerspectiveWarp={usePerspectiveWarp}
-              onCardCrop={(canvas: HTMLCanvasElement) => {
-                query(canvas)
-              }}
+              onCardCrop={query}
               enableCardDetection={false}
             />
           </div>

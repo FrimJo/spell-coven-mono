@@ -16,6 +16,7 @@ import {
   useEffect,
   useEffectEvent,
   useMemo,
+  useRef,
 } from 'react'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
 import { useMediaPermissions } from '@/hooks/useMediaPermissions'
@@ -143,13 +144,26 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     return new MediaStream(tracks)
   }, [videoResult, audioResult, videoEnabled, audioEnabled])
 
+  // Use refs to avoid recreating callbacks when results change
+  const videoResultRef = useRef(videoResult)
+  const audioResultRef = useRef(audioResult)
+  
+  useEffect(() => {
+    videoResultRef.current = videoResult
+  }, [videoResult])
+  
+  useEffect(() => {
+    audioResultRef.current = audioResult
+  }, [audioResult])
+
   // Toggle video - releases hardware when disabled, re-acquires when enabled
   const toggleVideo = useCallback(
     async (enabled: boolean): Promise<void> => {
       if (!enabled) {
         // Stop video tracks to release camera hardware
-        if (isSuccessState(videoResult) && videoResult.stream) {
-          videoResult.stream.getVideoTracks().forEach((track) => {
+        const currentVideoResult = videoResultRef.current
+        if (isSuccessState(currentVideoResult) && currentVideoResult.stream) {
+          currentVideoResult.stream.getVideoTracks().forEach((track: MediaStreamTrack) => {
             track.stop()
             console.log(
               '[MediaStreamProvider] Stopped video track to release camera',
@@ -160,7 +174,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
       // Update preference - this controls whether useMediaDevice acquires a new stream
       setVideoEnabled(enabled)
     },
-    [videoResult, setVideoEnabled],
+    [setVideoEnabled],
   )
 
   // Toggle audio - releases hardware when disabled, re-acquires when enabled
@@ -168,8 +182,9 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     (enabled: boolean) => {
       if (!enabled) {
         // Stop audio tracks to release microphone hardware
-        if (isSuccessState(audioResult) && audioResult.stream) {
-          audioResult.stream.getAudioTracks().forEach((track) => {
+        const currentAudioResult = audioResultRef.current
+        if (isSuccessState(currentAudioResult) && currentAudioResult.stream) {
+          currentAudioResult.stream.getAudioTracks().forEach((track: MediaStreamTrack) => {
             track.stop()
             console.log(
               '[MediaStreamProvider] Stopped audio track to release microphone',
@@ -180,7 +195,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
       // Update preference - this controls whether useMediaDevice acquires a new stream
       setAudioEnabled(enabled)
     },
-    [audioResult, setAudioEnabled],
+    [setAudioEnabled],
   )
 
   const onStreamUnmount = useEffectEvent(() => {

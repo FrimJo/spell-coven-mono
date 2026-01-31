@@ -2,7 +2,7 @@ import * as React from 'react'
 
 import { cn } from '@repo/ui/lib/utils'
 
-function Card({ className, ...props }: React.ComponentProps<'div'>) {
+const Card = React.memo(function Card({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="card"
@@ -13,7 +13,7 @@ function Card({ className, ...props }: React.ComponentProps<'div'>) {
       {...props}
     />
   )
-}
+})
 
 function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
