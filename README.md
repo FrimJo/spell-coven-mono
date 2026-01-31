@@ -10,7 +10,7 @@ Spell Coven aims to provide a comprehensive remote play experience for Magic: Th
 
 - **Multi-party Video & Voice**: Browser-based video chat optimized for overhead camera views of playmats (2-4 players per game)
 - **Intelligent Card Recognition**: Computer vision powered by CLIP to identify cards in real-time and display rulings/details
-- **Game Management Tools**: Life total tracking, commander damage tracking, turn indicators, and game timers
+- **Game Management Tools**: Life total tracking, commander damage tracking, and game timers
 - **Flexible Room System**: Create or join private/public game rooms with format and power level metadata for better matchmaking
 - **Device Flexibility**: Use standard webcams or mobile devices as overhead cameras without separate apps
 - **Fully Browser-Based**: No installation required—works on modern browsers (Chrome, Firefox, Safari)
@@ -24,7 +24,7 @@ Spell Coven aims to provide a comprehensive remote play experience for Magic: Th
 - ✅ Pre-computed embeddings for ~20k+ MTG cards
 
 **Phase 2 (Planned)**: Multi-party video/audio and room system
-**Phase 3 (Planned)**: Game aids (life tracking, commander damage, turn management)
+**Phase 3 (Planned)**: Game aids (life tracking, commander damage, game timers)
 **Phase 4 (Planned)**: Enhanced matchmaking and social features
 
 ## Target Use Case
@@ -34,7 +34,7 @@ Spell Coven is designed for Magic: The Gathering players who want to play with t
 - **Remote Play Sessions**: Play paper MTG with friends across distances using video chat
 - **Casual & Competitive Play**: Support for various formats (Commander, Modern, Standard, etc.) with power level indicators
 - **Card Identification**: Quickly identify cards on camera for rules lookups and oracle text
-- **Game State Tracking**: Keep track of life totals, commander damage, and turn order
+- **Game State Tracking**: Keep track of life totals and commander damage
 - **Flexible Setup**: Use any webcam or smartphone as an overhead camera—no special equipment needed
 
 ### Competitive Landscape
@@ -44,7 +44,7 @@ Spell Coven is designed for Magic: The Gathering players who want to play with t
 - Multi-party video chat (2-4 players)
 - Card recognition with click-to-identify
 - Built-in life/commander damage tracking
-- Turn indicators and timers
+- Timers
 - Mobile device support as overhead cameras
 
 **Spell Coven's Differentiators** (planned):

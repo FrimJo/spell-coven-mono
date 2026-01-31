@@ -17,21 +17,17 @@ export const ErrorCode = {
   AUTH_REQUIRED: 'AUTH_REQUIRED',
   AUTH_MISMATCH: 'AUTH_MISMATCH',
   NOT_ROOM_OWNER: 'NOT_ROOM_OWNER',
-  NOT_CURRENT_TURN: 'NOT_CURRENT_TURN',
   BANNED_FROM_ROOM: 'BANNED_FROM_ROOM',
   CANNOT_TARGET_SELF: 'CANNOT_TARGET_SELF',
 
   // Not Found
   ROOM_NOT_FOUND: 'ROOM_NOT_FOUND',
-  ROOM_STATE_NOT_FOUND: 'ROOM_STATE_NOT_FOUND',
   PLAYER_NOT_FOUND: 'PLAYER_NOT_FOUND',
-  NO_ACTIVE_PLAYERS: 'NO_ACTIVE_PLAYERS',
 
   // Validation
   MISSING_USER_ID: 'MISSING_USER_ID',
 
   // Server/Internal
-  TURN_ADVANCE_FAILED: 'TURN_ADVANCE_FAILED',
 } as const
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode]
@@ -74,13 +70,6 @@ export class NotRoomOwnerError extends AppError {
   }
 }
 
-export class NotCurrentTurnError extends AppError {
-  constructor(message = 'Only the current turn player can advance turn') {
-    super(ErrorCode.NOT_CURRENT_TURN, message)
-    this.name = 'NotCurrentTurnError'
-  }
-}
-
 export class BannedFromRoomError extends AppError {
   constructor(message = 'You are banned from this room') {
     super(ErrorCode.BANNED_FROM_ROOM, message)
@@ -106,24 +95,10 @@ export class RoomNotFoundError extends AppError {
   }
 }
 
-export class RoomStateNotFoundError extends AppError {
-  constructor(message = 'Room state not found') {
-    super(ErrorCode.ROOM_STATE_NOT_FOUND, message)
-    this.name = 'RoomStateNotFoundError'
-  }
-}
-
 export class PlayerNotFoundError extends AppError {
   constructor(message = 'Player not found in room') {
     super(ErrorCode.PLAYER_NOT_FOUND, message)
     this.name = 'PlayerNotFoundError'
-  }
-}
-
-export class NoActivePlayersError extends AppError {
-  constructor(message = 'No active players in room') {
-    super(ErrorCode.NO_ACTIVE_PLAYERS, message)
-    this.name = 'NoActivePlayersError'
   }
 }
 
@@ -135,17 +110,6 @@ export class MissingUserIdError extends AppError {
   constructor(message = 'userId is required') {
     super(ErrorCode.MISSING_USER_ID, message)
     this.name = 'MissingUserIdError'
-  }
-}
-
-// ============================================================================
-// Server/Internal Errors
-// ============================================================================
-
-export class TurnAdvanceFailedError extends AppError {
-  constructor(message = 'Failed to determine next player') {
-    super(ErrorCode.TURN_ADVANCE_FAILED, message)
-    this.name = 'TurnAdvanceFailedError'
   }
 }
 

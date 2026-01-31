@@ -2,7 +2,7 @@
 
 > Audience: LLMs and engineers continuing the migration work.
 > Scope: Replace Supabase auth/realtime/presence/signaling with Convex and move shared room state
-> (player health, room owner, current turn) into Convex-managed state.
+> (player health, room owner) into Convex-managed state.
 
 ## 1. Current Supabase Responsibilities (Inventory)
 
@@ -38,12 +38,6 @@
 - `createdAt` (timestamp)
 - `status` (enum)
 
-**roomState**
-- `roomId` (string)
-- `currentTurnUserId` (string)
-- `turnNumber` (number)
-- `lastUpdatedAt` (timestamp)
-
 **roomPlayers** (also used for presence tracking via `lastSeenAt`)
 - `roomId` (string)
 - `userId` (string)
@@ -73,11 +67,9 @@
 - `getCurrentUser` / `useUser` (Convex auth hooks)
 
 **Room creation**
-- `createRoom(ownerId, initialState)`
+- `createRoom(ownerId)`
 
 **Room state**
-- `setTurn(roomId, userId)`
-- `advanceTurn(roomId)`
 - `updatePlayerHealth(roomId, userId, delta)`
 
 **Presence** (uses `roomPlayers` table)
@@ -100,10 +92,6 @@
 - `ownerId` references a Discord user ID from Convex Auth.
 - `status` enum: `"waiting"` | `"playing"` | `"finished"`.
 
-**roomState**
-- One-to-one with `rooms` (keyed by `roomId`).
-- `currentTurnUserId` must reference an active player in `roomPlayers`.
-
 **roomPlayers**
 - Composite uniqueness: `(roomId, sessionId)` — one record per session.
 - Index on `roomId` for querying all players in a room.
@@ -123,7 +111,7 @@
 
 **Auth (Convex Auth + Discord OAuth)**
 - User identity comes from Convex Auth; `userId` fields store Discord user ID.
-- Authorization checks in mutations (e.g., only owner can ban, only current turn player can advance turn).
+- Authorization checks in mutations (e.g., only owner can ban).
 
 ## 3. Migration Phases
 
@@ -138,7 +126,7 @@
 
 **Next step**: Run `bunx convex dev` to create a Convex project and generate types.
 
-### Phase 2 — Move Common Room State (Owner/Health/Turn) ✅
+### Phase 2 — Move Common Room State (Owner/Health) ✅
 - ~~Create schemas.~~ → See `convex/schema.ts`.
 - ~~Implement mutations.~~ → See `convex/rooms.ts`, `convex/players.ts`, `convex/bans.ts`.
 - **TODO**: Update UI to read values from Convex queries instead of local state.
@@ -147,7 +135,7 @@
 **Files created**:
 - `convex/schema.ts` — Database schema with indexes
 - `convex/auth.ts` — Discord OAuth configuration
-- `convex/rooms.ts` — Room creation, state, turn management
+- `convex/rooms.ts` — Room creation, status, and stats
 - `convex/players.ts` — Player join/leave/presence/heartbeat
 - `convex/bans.ts` — Ban/kick functionality
 - `convex/signals.ts` — WebRTC signaling

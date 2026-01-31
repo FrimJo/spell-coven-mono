@@ -51,22 +51,6 @@ export default defineSchema({
     .index('by_ownerId_createdAt', ['ownerId', 'createdAt']),
 
   /**
-   * roomState - Game state for a room
-   *
-   * One-to-one with rooms. Tracks whose turn it is and turn number.
-   */
-  roomState: defineTable({
-    /** Reference to room */
-    roomId: v.string(),
-    /** Discord user ID of current turn player */
-    currentTurnUserId: v.string(),
-    /** Current turn number (starts at 1) */
-    turnNumber: v.number(),
-    /** Last update timestamp */
-    lastUpdatedAt: v.number(),
-  }).index('by_roomId', ['roomId']),
-
-  /**
    * roomPlayers - Players in a room (also used for presence)
    *
    * Supports multi-tab sessions via sessionId.

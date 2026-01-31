@@ -833,7 +833,7 @@ export function LandingPage({
                 </div>
                 <h3 className="mb-3 text-xl text-white">Game Management</h3>
                 <p className="text-slate-400">
-                  Life counters, turn tracking, and game state tools to keep
+                  Life counters, commander damage, and game state tools to keep
                   everything organized.
                 </p>
               </SpotlightCard>
