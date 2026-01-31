@@ -19,6 +19,7 @@ import { toast } from 'sonner'
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
 
+import { CommanderOverlay } from './CommanderOverlay'
 import { LocalVideoCard } from './LocalVideoCard'
 import { MediaPermissionGate } from './MediaPermissionGate'
 import { PlayerStatsOverlay } from './PlayerStatsOverlay'
@@ -55,6 +56,7 @@ interface RemotePlayerCardProps {
   roomId: string
   localParticipant: Participant | undefined
   gameRoomParticipants: Participant[]
+  gridIndex: number
 }
 
 const RemotePlayerCard = memo(function RemotePlayerCard({
@@ -73,6 +75,7 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
   roomId,
   localParticipant,
   gameRoomParticipants,
+  gridIndex,
 }: RemotePlayerCardProps) {
   // Remote players: use trackState which checks if track is 'live'
   const peerVideoEnabled = trackState?.videoEnabled ?? false
@@ -165,12 +168,20 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
         </PlayerNameBadge>
 
         {localParticipant && (
-          <PlayerStatsOverlay
-            roomId={roomId}
-            participant={participantData}
-            currentUser={localParticipant}
-            participants={gameRoomParticipants}
-          />
+          <>
+            <CommanderOverlay
+              participant={participantData}
+              currentUser={localParticipant}
+              roomId={roomId}
+              gridIndex={gridIndex}
+            />
+            <PlayerStatsOverlay
+              roomId={roomId}
+              participant={participantData}
+              currentUser={localParticipant}
+              participants={gameRoomParticipants}
+            />
+          </>
         )}
 
         <div className="absolute right-3 top-3 z-10 flex gap-2">
@@ -503,11 +514,12 @@ export function VideoStreamGrid({
           participant={localParticipant}
           currentUser={localParticipant}
           participants={gameRoomParticipants}
+          gridIndex={0}
         />
       )}
 
       {/* Render remote players */}
-      {players.map((player) => {
+      {players.map((player, index) => {
         const state = streamStates[player.id] || { video: true, audio: true }
         const remoteStream = remoteStreams.get(player.id)
         const connectionState = connectionStates.get(player.id)
@@ -531,6 +543,7 @@ export function VideoStreamGrid({
             roomId={roomId}
             localParticipant={localParticipant}
             gameRoomParticipants={gameRoomParticipants}
+            gridIndex={index + 1}
           />
         )
       })}
