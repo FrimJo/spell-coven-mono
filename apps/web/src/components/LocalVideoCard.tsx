@@ -144,7 +144,7 @@ export function LocalVideoCard({
               left: 0,
               width: '100%',
               height: '100%',
-              objectFit: 'contain',
+              objectFit: 'cover',
               zIndex: 0,
             }}
           />
@@ -165,7 +165,7 @@ export function LocalVideoCard({
       {/* Player Info Badge */}
       <PlayerNameBadge>
         <span className="text-white">{localPlayerName}</span>
-        <span className="rounded bg-brand/30 px-1.5 py-0.5 text-xs text-brand-muted-foreground">
+        <span className="bg-brand/30 text-brand-muted-foreground rounded px-1.5 py-0.5 text-xs">
           You
         </span>
       </PlayerNameBadge>
