@@ -17,7 +17,8 @@ import {
   DropdownMenuTrigger,
 } from '@repo/ui/components/dropdown-menu'
 
-import { type Theme, useTheme } from '../contexts/ThemeContext.js'
+import type { Theme } from '../contexts/ThemeContext.js'
+import { useTheme } from '../contexts/ThemeContext.js'
 
 interface ThemeToggleProps {
   /** Additional class names */
@@ -33,7 +34,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
         <Button
           variant="ghost"
           size="icon"
-          className={`relative text-text-muted transition-all duration-300 hover:text-white hover:shadow-[0_0_12px_rgba(124,58,237,0.3)] ${className ?? ''}`}
+          className={`text-text-muted relative transition-all duration-300 hover:text-white hover:shadow-[0_0_12px_rgba(124,58,237,0.3)] ${className ?? ''}`}
           title="Toggle theme"
           data-testid="theme-toggle-button"
         >
@@ -60,9 +61,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
         align="end"
         className="border-surface-3 bg-surface-1"
       >
-        <DropdownMenuLabel className="text-text-muted">
-          Theme
-        </DropdownMenuLabel>
+        <DropdownMenuLabel className="text-text-muted">Theme</DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-surface-3" />
         <DropdownMenuRadioGroup
           value={theme}
@@ -70,21 +69,21 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
         >
           <DropdownMenuRadioItem
             value="light"
-            className="cursor-pointer text-text-secondary focus:bg-surface-2 focus:text-white"
+            className="text-text-secondary focus:bg-surface-2 cursor-pointer focus:text-white"
           >
             <Sun className="mr-2 h-4 w-4" />
             Light
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem
             value="dark"
-            className="cursor-pointer text-text-secondary focus:bg-surface-2 focus:text-white"
+            className="text-text-secondary focus:bg-surface-2 cursor-pointer focus:text-white"
           >
             <Moon className="mr-2 h-4 w-4" />
             Dark
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem
             value="system"
-            className="cursor-pointer text-text-secondary focus:bg-surface-2 focus:text-white"
+            className="text-text-secondary focus:bg-surface-2 cursor-pointer focus:text-white"
           >
             <Monitor className="mr-2 h-4 w-4" />
             System

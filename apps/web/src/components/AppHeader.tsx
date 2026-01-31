@@ -101,7 +101,7 @@ function UserMenu() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="flex items-center gap-2 text-text-secondary hover:text-white"
+          className="text-text-secondary flex items-center gap-2 hover:text-white"
         >
           <Avatar className="h-8 w-8">
             <AvatarImage src={user.avatar || undefined} />
@@ -118,7 +118,7 @@ function UserMenu() {
       >
         <DropdownMenuItem
           onClick={signOut}
-          className="cursor-pointer text-text-secondary focus:bg-surface-2 focus:text-white"
+          className="text-text-secondary focus:bg-surface-2 cursor-pointer focus:text-white"
         >
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
@@ -148,9 +148,9 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
   }
 
   return (
-    <header className="border-b border-border-muted bg-surface-0/80 backdrop-blur-md">
+    <header className="border-border-muted bg-surface-0/80 border-b backdrop-blur-md">
       {/* Subtle gradient border effect */}
-      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-brand/30 to-transparent" />
+      <div className="via-brand/30 absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent to-transparent" />
 
       <div className="container relative mx-auto flex items-center justify-between px-4 py-4">
         <Logo />
@@ -172,7 +172,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
 
           {/* Auth section */}
           {isAuthLoading ? (
-            <div className="h-9 w-24 animate-pulse rounded-md bg-surface-2" />
+            <div className="bg-surface-2 h-9 w-24 animate-pulse rounded-md" />
           ) : isAuthenticated ? (
             <UserMenu />
           ) : (
@@ -180,7 +180,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
               variant="outline"
               size="sm"
               onClick={onSignIn}
-              className="gap-2 border-brand/50 text-brand-muted-foreground hover:bg-brand/20 hover:text-brand-muted-foreground"
+              className="border-brand/50 text-brand-muted-foreground hover:bg-brand/20 hover:text-brand-muted-foreground gap-2"
             >
               <LogIn className="h-4 w-4" />
               <span>Sign in with Discord</span>
@@ -202,9 +202,9 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
             </SheetTrigger>
             <SheetContent
               side="right"
-              className="flex w-full flex-col border-l border-border-muted bg-surface-0/95 p-0 backdrop-blur-xl sm:max-w-sm"
+              className="border-border-muted bg-surface-0/95 flex w-full flex-col border-l p-0 backdrop-blur-xl sm:max-w-sm"
             >
-              <SheetHeader className="border-b border-border-muted px-6 py-4">
+              <SheetHeader className="border-border-muted border-b px-6 py-4">
                 <div className="flex items-center gap-2">
                   <Logo size="small" />
                 </div>
@@ -217,7 +217,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                     key={item.targetId}
                     href={`#${item.targetId}`}
                     onClick={(e) => handleNavClick(e, item.targetId)}
-                    className="flex items-center rounded-lg px-4 py-3 text-lg font-medium text-text-secondary transition-colors hover:bg-surface-2 hover:text-white"
+                    className="text-text-secondary hover:bg-surface-2 flex items-center rounded-lg px-4 py-3 text-lg font-medium transition-colors hover:text-white"
                   >
                     {item.label}
                   </a>
@@ -225,20 +225,20 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
 
                 {/* Theme toggle in mobile menu */}
                 <div className="flex items-center justify-between rounded-lg px-4 py-3">
-                  <span className="text-lg font-medium text-text-secondary">
+                  <span className="text-text-secondary text-lg font-medium">
                     Theme
                   </span>
                   <ThemeToggle />
                 </div>
               </div>
 
-              <div className="border-t border-border-muted p-6">
+              <div className="border-border-muted border-t p-6">
                 {isAuthLoading ? (
-                  <div className="h-12 w-full animate-pulse rounded-lg bg-surface-2" />
+                  <div className="bg-surface-2 h-12 w-full animate-pulse rounded-lg" />
                 ) : isAuthenticated && user ? (
                   <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-3 rounded-xl border border-border-muted bg-surface-1/50 p-3">
-                      <Avatar className="h-10 w-10 border border-surface-3">
+                    <div className="border-border-muted bg-surface-1/50 flex items-center gap-3 rounded-xl border p-3">
+                      <Avatar className="border-surface-3 h-10 w-10 border">
                         <AvatarImage src={user.avatar || undefined} />
                         <AvatarFallback className="bg-brand text-white">
                           {user.username.slice(0, 2).toUpperCase()}
@@ -248,7 +248,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                         <span className="font-medium text-white">
                           {user.username}
                         </span>
-                        <span className="text-xs text-text-muted">
+                        <span className="text-text-muted text-xs">
                           Logged in
                         </span>
                       </div>
@@ -256,7 +256,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                     <Button
                       variant="outline"
                       onClick={signOut}
-                      className="h-12 w-full justify-center gap-2 border-surface-3 text-text-secondary hover:bg-surface-2 hover:text-white"
+                      className="border-surface-3 text-text-secondary hover:bg-surface-2 h-12 w-full justify-center gap-2 hover:text-white"
                     >
                       <LogOut className="h-4 w-4" />
                       Sign Out
@@ -301,9 +301,9 @@ function GameHeader({
   onOpenSettings,
 }: AppHeaderProps) {
   return (
-    <header className="shrink-0 border-b border-surface-2 bg-surface-1/80 backdrop-blur-md">
+    <header className="border-surface-2 bg-surface-1/80 shrink-0 border-b backdrop-blur-md">
       {/* Subtle gradient border effect */}
-      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-brand/20 to-transparent" />
+      <div className="via-brand/20 absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent to-transparent" />
 
       <div className="relative flex items-center justify-between px-4 py-3">
         {/* Left side */}
@@ -320,12 +320,12 @@ function GameHeader({
             Leave
           </Button>
 
-          <div className="h-6 w-px bg-surface-3" />
+          <div className="bg-surface-3 h-6 w-px" />
 
           <div className="hidden items-center gap-2 sm:flex">
-            <span className="text-sm text-text-muted">Share Link:</span>
+            <span className="text-text-muted text-sm">Share Link:</span>
             <code
-              className="cursor-pointer break-all rounded bg-surface-2 px-2 py-1 text-sm text-brand-muted-foreground transition-colors hover:bg-surface-3"
+              className="bg-surface-2 text-brand-muted-foreground hover:bg-surface-3 cursor-pointer break-all rounded px-2 py-1 text-sm transition-colors"
               data-testid="game-id-display"
               onClick={onCopyLink}
               title="Click to copy shareable link"
