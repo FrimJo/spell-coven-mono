@@ -225,3 +225,15 @@ export async function searchCommanderAndSidekicks(
   const cards = await searchCards(fullQuery, 20)
   return cards.map((card) => card.name)
 }
+
+/**
+ * Get Scryfall art crop image URL from a card ID
+ */
+export function getCommanderImageUrl(id: string): string | null {
+  if (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  ) {
+    return `https://api.scryfall.com/cards/${id}?format=image&version=art_crop`
+  }
+  return null
+}
