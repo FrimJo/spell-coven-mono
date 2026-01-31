@@ -7,10 +7,17 @@ import {
 } from '@/contexts/CardQueryContext'
 import { MediaStreamProvider } from '@/contexts/MediaStreamContext.js'
 import { PresenceProvider, usePresence } from '@/contexts/PresenceContext'
-import { ArrowLeft, Check, Copy, Settings } from 'lucide-react'
+import { ArrowLeft, Check, Copy, LogOut, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/components/avatar'
 import { Button } from '@repo/ui/components/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@repo/ui/components/dropdown-menu'
 import { Toaster } from '@repo/ui/components/sonner'
 
 import type { RejoinReason } from './RejoinGameDialog.js'
@@ -37,7 +44,7 @@ function GameRoomContent({
   usePerspectiveWarp = true,
 }: Omit<GameRoomProps, 'playerName'>) {
   // Get authenticated user from Convex Auth (Discord OAuth)
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
 
   // User should always be authenticated at this point (protected route)
   // But we provide safe defaults just in case
@@ -255,6 +262,38 @@ function GameRoomContent({
             >
               <Settings className="h-4 w-4" />
             </Button>
+
+            {/* User Menu */}
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-2 text-text-secondary hover:text-white"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.avatar || undefined} />
+                      <AvatarFallback className="bg-brand text-white">
+                        {user.username.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="inline">{user.username}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="border-surface-3 bg-surface-1"
+                >
+                  <DropdownMenuItem
+                    onClick={signOut}
+                    className="cursor-pointer text-text-secondary focus:bg-surface-2 focus:text-white"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       </header>
