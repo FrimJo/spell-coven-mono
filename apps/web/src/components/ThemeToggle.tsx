@@ -32,7 +32,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
         <Button
           variant="ghost"
           size="icon"
-          className={`text-text-muted relative transition-all duration-300 hover:text-white hover:shadow-[0_0_12px_rgba(124,58,237,0.3)] ${className ?? ''}`}
+          className={`text-text-muted hover:text-foreground relative transition-all duration-300 hover:shadow-[0_0_12px_rgba(124,58,237,0.3)] ${className ?? ''}`}
           title="Toggle theme"
           data-testid="theme-toggle-button"
         >
@@ -65,21 +65,21 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
         >
           <DropdownMenuRadioItem
             value="light"
-            className="text-text-secondary focus:bg-surface-2 cursor-pointer focus:text-white"
+            className="text-text-secondary focus:bg-surface-2 focus:text-foreground cursor-pointer"
           >
             <Sun className="mr-2 h-4 w-4" />
             Light
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem
             value="dark"
-            className="text-text-secondary focus:bg-surface-2 cursor-pointer focus:text-white"
+            className="text-text-secondary focus:bg-surface-2 focus:text-foreground cursor-pointer"
           >
             <Moon className="mr-2 h-4 w-4" />
             Dark
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem
             value="system"
-            className="text-text-secondary focus:bg-surface-2 cursor-pointer focus:text-white"
+            className="text-text-secondary focus:bg-surface-2 focus:text-foreground cursor-pointer"
           >
             <Monitor className="mr-2 h-4 w-4" />
             System

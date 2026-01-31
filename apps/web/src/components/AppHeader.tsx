@@ -86,7 +86,9 @@ function Logo({ size = 'default' }: { size?: 'default' | 'small' }) {
         alt="Spell Coven Logo"
         className={`${sizeClasses} ${roundedClasses} object-contain`}
       />
-      <span className={`${textClasses} font-bold text-white`}>Spell Coven</span>
+      <span className={`${textClasses} text-text-primary font-bold`}>
+        Spell Coven
+      </span>
     </div>
   )
 }
@@ -101,7 +103,7 @@ function UserMenu() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="text-text-secondary flex items-center gap-2 hover:text-white"
+          className="text-text-secondary hover:text-text-primary flex items-center gap-2"
         >
           <Avatar className="h-8 w-8">
             <AvatarImage src={user.avatar || undefined} />
@@ -118,7 +120,7 @@ function UserMenu() {
       >
         <DropdownMenuItem
           onClick={signOut}
-          className="text-text-secondary focus:bg-surface-2 cursor-pointer focus:text-white"
+          className="text-text-secondary focus:bg-surface-2 focus:text-text-primary cursor-pointer"
         >
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
@@ -162,7 +164,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
               key={item.targetId}
               href={`#${item.targetId}`}
               onClick={(e) => handleNavClick(e, item.targetId)}
-              className="text-text-secondary transition-colors hover:text-white"
+              className="text-text-secondary hover:text-text-primary transition-colors"
             >
               {item.label}
             </a>
@@ -195,7 +197,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-text-secondary hover:bg-surface-2 hover:text-white"
+                className="text-text-secondary hover:bg-surface-2 hover:text-text-primary"
               >
                 <Menu className="h-6 w-6" />
               </Button>
@@ -217,7 +219,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                     key={item.targetId}
                     href={`#${item.targetId}`}
                     onClick={(e) => handleNavClick(e, item.targetId)}
-                    className="text-text-secondary hover:bg-surface-2 flex items-center rounded-lg px-4 py-3 text-lg font-medium transition-colors hover:text-white"
+                    className="text-text-secondary hover:bg-surface-2 hover:text-text-primary flex items-center rounded-lg px-4 py-3 text-lg font-medium transition-colors"
                   >
                     {item.label}
                   </a>
@@ -245,7 +247,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
-                        <span className="font-medium text-white">
+                        <span className="text-text-primary font-medium">
                           {user.username}
                         </span>
                         <span className="text-text-muted text-xs">
@@ -256,7 +258,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                     <Button
                       variant="outline"
                       onClick={signOut}
-                      className="border-surface-3 text-text-secondary hover:bg-surface-2 h-12 w-full justify-center gap-2 hover:text-white"
+                      className="border-surface-3 text-text-secondary hover:bg-surface-2 hover:text-text-primary h-12 w-full justify-center gap-2"
                     >
                       <LogOut className="h-4 w-4" />
                       Sign Out
@@ -312,7 +314,7 @@ function GameHeader({
             variant="ghost"
             size="sm"
             onClick={onLeave}
-            className="text-text-muted hover:text-white"
+            className="text-text-muted hover:text-text-primary"
             title="Leave game room"
             data-testid="leave-game-button"
           >
@@ -336,7 +338,7 @@ function GameHeader({
               variant="ghost"
               size="sm"
               onClick={onCopyLink}
-              className="text-text-muted hover:text-white"
+              className="text-text-muted hover:text-text-primary"
               title="Copy shareable link"
               data-testid="copy-share-link-button"
             >
@@ -353,7 +355,7 @@ function GameHeader({
             variant="ghost"
             size="sm"
             onClick={onCopyLink}
-            className="text-text-muted hover:text-white sm:hidden"
+            className="text-text-muted hover:text-text-primary sm:hidden"
             title="Copy shareable link"
           >
             {copied ? (
@@ -375,7 +377,7 @@ function GameHeader({
             variant="ghost"
             size="sm"
             onClick={onOpenSettings}
-            className="text-text-muted hover:text-white"
+            className="text-text-muted hover:text-text-primary"
             title="Audio & video settings"
             data-testid="settings-button"
           >
