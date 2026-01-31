@@ -23,7 +23,7 @@ interface PlayerVideoCardProps {
  */
 export function PlayerVideoCard({ children }: PlayerVideoCardProps) {
   return (
-    <Card className="flex flex-col overflow-hidden border-surface-2 bg-surface-1">
+    <Card className="flex flex-col overflow-hidden border-slate-800 bg-slate-900">
       <div className="relative flex-1 bg-black">{children}</div>
     </Card>
   )

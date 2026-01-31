@@ -164,7 +164,7 @@ function GameRoomContent({
   }
 
   return (
-    <div className="flex h-screen flex-col bg-surface-0">
+    <div className="flex h-screen flex-col bg-slate-950">
       {/* Duplicate Session Dialog - shown when user is already connected from another tab */}
       <DuplicateSessionDialog
         open={showDuplicateDialog}
@@ -199,14 +199,14 @@ function GameRoomContent({
       <Toaster />
 
       {/* Header */}
-      <header className="shrink-0 border-b border-surface-2 bg-surface-1/50 backdrop-blur-sm">
+      <header className="shrink-0 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="sm"
               onClick={handleManualLeave}
-              className="text-muted hover:text-white"
+              className="text-slate-400 hover:text-white"
               title="Leave game room"
               data-testid="leave-game-button"
             >
@@ -214,12 +214,12 @@ function GameRoomContent({
               Leave
             </Button>
 
-            <div className="h-6 w-px bg-surface-3" />
+            <div className="h-6 w-px bg-slate-700" />
 
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted">Share Link:</span>
+              <span className="text-sm text-slate-400">Share Link:</span>
               <code
-                className="cursor-pointer break-all rounded bg-surface-2 px-2 py-1 text-sm text-brand-muted-foreground transition-colors hover:bg-surface-3"
+                className="cursor-pointer break-all rounded bg-slate-800 px-2 py-1 text-sm text-purple-400 transition-colors hover:bg-slate-700"
                 data-testid="game-id-display"
                 onClick={handleCopyShareLink}
                 title="Click to copy shareable link"
@@ -230,7 +230,7 @@ function GameRoomContent({
                 variant="ghost"
                 size="sm"
                 onClick={handleCopyShareLink}
-                className="text-muted hover:text-white"
+                className="text-slate-400 hover:text-white"
                 title="Copy shareable link"
                 data-testid="copy-share-link-button"
               >
@@ -249,7 +249,7 @@ function GameRoomContent({
               variant="ghost"
               size="sm"
               onClick={handleOpenSettings}
-              className="text-muted hover:text-white"
+              className="text-slate-400 hover:text-white"
               title="Audio & video settings"
               data-testid="settings-button"
             >
