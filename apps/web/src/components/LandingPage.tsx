@@ -1,4 +1,5 @@
 import type { AuthUser } from '@/contexts/AuthContext'
+import { env } from '@/env'
 import { useMemo, useState } from 'react'
 import { sessionStorage } from '@/lib/session-storage'
 import { useNavigate } from '@tanstack/react-router'
@@ -78,6 +79,7 @@ export function LandingPage({
   onSignOut,
 }: LandingPageProps) {
   const navigate = useNavigate()
+  const supportUrl = env.VITE_SUPPORT_URL
   const [joinGameId, setJoinGameId] = useState('')
   const [dialogs, setDialogs] = useState({
     join: false,
@@ -961,7 +963,11 @@ export function LandingPage({
         {/* Footer */}
         <footer className="border-t border-slate-800 bg-slate-950">
           <div className="container mx-auto px-4 py-12">
-            <div className="grid gap-8 md:grid-cols-4">
+            <div
+              className={`grid gap-8 ${
+                supportUrl ? 'md:grid-cols-5' : 'md:grid-cols-4'
+              }`}
+            >
               <div className="col-span-2 space-y-4">
                 <div className="flex items-center gap-2">
                   <img
@@ -1030,6 +1036,26 @@ export function LandingPage({
                   </li>
                 </ul>
               </div>
+
+              {supportUrl && (
+                <div>
+                  <h4 className="mb-4 text-sm font-semibold text-white">
+                    Support
+                  </h4>
+                  <p className="mb-4 text-sm text-slate-400">
+                    Enjoying Spell Coven? Support ongoing development.
+                  </p>
+                  <a
+                    href={supportUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-500/30 transition hover:bg-purple-500"
+                  >
+                    <Heart className="h-4 w-4" />
+                    Buy me a coffee
+                  </a>
+                </div>
+              )}
             </div>
 
             <div className="mt-12 border-t border-slate-800 pt-8 text-center text-sm text-slate-500">

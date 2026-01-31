@@ -36,6 +36,7 @@ export const env = createEnv({
       .string()
       .min(1, 'Embeddings version is required'),
     VITE_BLOB_STORAGE_URL: z.url().min(1, 'Blob storage URL is required'),
+    VITE_SUPPORT_URL: z.url().optional(),
   },
 
   /**
@@ -48,6 +49,7 @@ export const env = createEnv({
     VITE_BASE_URL: import.meta.env.VITE_BASE_URL,
     VITE_EMBEDDINGS_VERSION: import.meta.env.VITE_EMBEDDINGS_VERSION,
     VITE_BLOB_STORAGE_URL: import.meta.env.VITE_BLOB_STORAGE_URL,
+    VITE_SUPPORT_URL: import.meta.env.VITE_SUPPORT_URL,
   },
 
   /**
@@ -93,5 +95,6 @@ export function getClientEnv() {
     VITE_BASE_URL: env.VITE_BASE_URL,
     VITE_EMBEDDINGS_VERSION: env.VITE_EMBEDDINGS_VERSION,
     VITE_BLOB_STORAGE_URL: env.VITE_BLOB_STORAGE_URL,
+    VITE_SUPPORT_URL: env.VITE_SUPPORT_URL,
   }
 }
