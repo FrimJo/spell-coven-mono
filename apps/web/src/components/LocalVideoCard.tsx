@@ -1,6 +1,6 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { Participant } from '@/types/participant'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useCardDetector } from '@/hooks/useCardDetector'
 import { attachVideoStream } from '@/lib/video-stream-utils'
@@ -16,6 +16,17 @@ import {
   VideoDisabledPlaceholder,
 } from './PlayerVideoCardParts'
 
+// Extract inline style to prevent recreation
+const LOCAL_VIDEO_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  width: '100%',
+  height: '100%',
+  objectFit: 'contain',
+  zIndex: 0,
+}
+
 interface LocalVideoCardProps {
   localPlayerName: string
   stream?: MediaStream | null
@@ -29,7 +40,7 @@ interface LocalVideoCardProps {
   participants?: Participant[]
 }
 
-export function LocalVideoCard({
+export const LocalVideoCard = memo(function LocalVideoCard({
   localPlayerName,
   stream,
   enableCardDetection = true,
@@ -138,15 +149,7 @@ export function LocalVideoCard({
             autoPlay
             muted
             playsInline
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              zIndex: 0,
-            }}
+            style={LOCAL_VIDEO_STYLE}
           />
           {enableCardDetection && overlayRef && (
             <CardDetectionOverlay overlayRef={overlayRef} />
@@ -190,4 +193,4 @@ export function LocalVideoCard({
       />
     </PlayerVideoCard>
   )
-}
+})
