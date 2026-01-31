@@ -31,7 +31,7 @@ export function LocalVideo({ videoRef }: LocalVideoProps) {
         left: 0,
         width: '100%',
         height: '100%',
-        objectFit: 'contain',
+        objectFit: 'cover',
         zIndex: 0,
       }}
     />
@@ -108,9 +108,9 @@ export function FullResCanvas({ fullResRef }: FullResCanvasProps) {
  */
 export function VideoDisabledPlaceholder() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-surface-0">
+    <div className="bg-surface-0 absolute inset-0 flex items-center justify-center">
       <div className="space-y-2 text-center">
-        <VideoOff className="mx-auto h-12 w-12 text-text-muted" />
+        <VideoOff className="text-text-muted mx-auto h-12 w-12" />
         <p className="text-text-muted">Camera Off</p>
       </div>
     </div>
@@ -184,7 +184,7 @@ export function LocalMediaControls({
     }
   }
   return (
-    <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-surface-2 bg-surface-0/95 px-3 py-2 shadow-lg backdrop-blur-sm">
+    <div className="border-surface-2 bg-surface-0/95 absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-lg border px-3 py-2 shadow-lg backdrop-blur-sm">
       {/* Video toggle with camera selector - Discord style compound button */}
       <div className="flex items-center">
         <Button
@@ -197,8 +197,8 @@ export function LocalMediaControls({
           disabled={isTogglingVideo}
           className={`h-10 w-10 rounded-r-none border-r-0 p-0 ${
             videoEnabled
-              ? 'border-surface-3 text-white hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50'
-              : 'border-destructive bg-destructive text-white hover:bg-destructive disabled:cursor-not-allowed disabled:opacity-50'
+              ? 'border-surface-3 hover:bg-surface-2 text-white disabled:cursor-not-allowed disabled:opacity-50'
+              : 'border-destructive bg-destructive hover:bg-destructive text-white disabled:cursor-not-allowed disabled:opacity-50'
           }`}
         >
           {videoEnabled ? (
@@ -214,23 +214,23 @@ export function LocalMediaControls({
               variant={videoEnabled ? 'outline' : 'destructive'}
               className={`h-10 w-6 rounded-l-none p-0 ${
                 videoEnabled
-                  ? 'border-surface-3 text-white hover:bg-surface-2'
-                  : 'border-destructive bg-destructive text-white hover:bg-destructive'
+                  ? 'border-surface-3 hover:bg-surface-2 text-white'
+                  : 'border-destructive bg-destructive hover:bg-destructive text-white'
               }`}
             >
               <ChevronUp className="h-3 w-3" />
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-80 border-surface-2 bg-surface-0/95 p-0 backdrop-blur-sm"
+            className="border-surface-2 bg-surface-0/95 w-80 p-0 backdrop-blur-sm"
             align="center"
             sideOffset={8}
           >
-            <div className="border-b border-surface-2 px-4 py-3">
+            <div className="border-surface-2 border-b px-4 py-3">
               <h3 className="text-sm font-semibold text-white">
                 Select Camera
               </h3>
-              <p className="text-xs text-text-muted">
+              <p className="text-text-muted text-xs">
                 {videoDevices.length} camera
                 {videoDevices.length !== 1 ? 's' : ''} available
               </p>
@@ -240,7 +240,7 @@ export function LocalMediaControls({
                 <div
                   key={camera.deviceId}
                   onClick={() => void handleSelectCamera(camera.deviceId)}
-                  className={`flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-surface-2/50 ${
+                  className={`hover:bg-surface-2/50 flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
                     selectedVideoId === camera.deviceId
                       ? 'bg-brand/20 text-white'
                       : 'text-text-secondary'
@@ -267,8 +267,8 @@ export function LocalMediaControls({
           onClick={onToggleAudio}
           className={`h-10 w-10 rounded-r-none border-r-0 p-0 ${
             !isAudioMuted
-              ? 'border-surface-3 bg-surface-0/90 text-white hover:bg-surface-2'
-              : 'border-destructive bg-destructive text-white hover:bg-destructive'
+              ? 'border-surface-3 bg-surface-0/90 hover:bg-surface-2 text-white'
+              : 'border-destructive bg-destructive hover:bg-destructive text-white'
           }`}
         >
           {!isAudioMuted ? (
@@ -284,23 +284,23 @@ export function LocalMediaControls({
               variant={!isAudioMuted ? 'outline' : 'destructive'}
               className={`h-10 w-6 rounded-l-none p-0 ${
                 !isAudioMuted
-                  ? 'border-surface-3 text-white hover:bg-surface-2'
-                  : 'border-destructive bg-destructive text-white hover:bg-destructive'
+                  ? 'border-surface-3 hover:bg-surface-2 text-white'
+                  : 'border-destructive bg-destructive hover:bg-destructive text-white'
               }`}
             >
               <ChevronUp className="h-3 w-3" />
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-80 border-surface-2 bg-surface-0/95 p-0 backdrop-blur-sm"
+            className="border-surface-2 bg-surface-0/95 w-80 p-0 backdrop-blur-sm"
             align="center"
             sideOffset={8}
           >
-            <div className="border-b border-surface-2 px-4 py-3">
+            <div className="border-surface-2 border-b px-4 py-3">
               <h3 className="text-sm font-semibold text-white">
                 Select Microphone
               </h3>
-              <p className="text-xs text-text-muted">
+              <p className="text-text-muted text-xs">
                 {audioDevices.length} microphone
                 {audioDevices.length !== 1 ? 's' : ''} available
               </p>
@@ -310,7 +310,7 @@ export function LocalMediaControls({
                 <div
                   key={mic.deviceId}
                   onClick={() => void handleSelectMicrophone(mic.deviceId)}
-                  className={`flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-surface-2/50 ${
+                  className={`hover:bg-surface-2/50 flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
                     selectedAudioId === mic.deviceId
                       ? 'bg-brand/20 text-white'
                       : 'text-text-secondary'
@@ -332,7 +332,7 @@ export function LocalMediaControls({
 
 export function PlayerNameBadge(props: PropsWithChildren) {
   return (
-    <div className="absolute left-3 top-3 z-10 rounded-lg border border-surface-2 bg-surface-0/90 px-3 py-2 backdrop-blur-sm">
+    <div className="border-surface-2 bg-surface-0/90 absolute left-3 top-3 z-10 rounded-lg border px-3 py-2 backdrop-blur-sm">
       <div className="flex items-center gap-2">{props.children}</div>
     </div>
   )
