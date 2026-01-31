@@ -413,16 +413,16 @@ export function GameStatsPanel({
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         side="right"
-        className="w-[400px] border-l-slate-800 bg-slate-950 text-slate-100 sm:w-[540px]"
+        className="w-[400px] border-l-border-muted bg-surface-0 text-foreground sm:w-[540px]"
       >
         <SheetHeader className="pb-4">
-          <SheetTitle className="flex items-center gap-2 text-slate-100">
-            <UserCircle className="h-5 w-5 text-purple-400" />
+          <SheetTitle className="flex items-center gap-2 text-foreground">
+            <UserCircle className="h-5 w-5 text-brand" />
             {isViewingOwnStats
               ? 'Your Commander Damage'
               : `${viewedPlayer.username}'s Commander Damage`}
           </SheetTitle>
-          <SheetDescription className="text-slate-400">
+          <SheetDescription className="text-muted">
             {isViewingOwnStats
               ? 'Track damage dealt to you by each commander.'
               : `Viewing damage dealt to ${viewedPlayer.username} by each commander.`}
@@ -451,7 +451,7 @@ export function GameStatsPanel({
                 return (
                   <div
                     key={player.id}
-                    className="rounded-lg border border-slate-800 bg-slate-900/50 p-3"
+                    className="rounded-lg border border-border-muted bg-surface-1/50 p-3"
                   >
                     <div
                       role="button"
@@ -473,17 +473,17 @@ export function GameStatsPanel({
                           className="h-5 w-5 rounded-full"
                         />
                       ) : (
-                        <User className="h-4 w-4 text-slate-400" />
+                        <User className="h-4 w-4 text-muted" />
                       )}
-                      <span className="font-semibold text-slate-200">
+                      <span className="font-semibold text-secondary">
                         {player.username}
                         {isCurrentUser && (
-                          <span className="ml-1.5 text-xs font-normal text-slate-500">
+                          <span className="ml-1.5 text-xs font-normal text-placeholder">
                             (You)
                           </span>
                         )}
                       </span>
-                      <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-purple-300">
+                      <span className="rounded-full bg-brand-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand-muted-foreground">
                         Viewing
                       </span>
                       <span className="ml-auto flex items-center gap-1.5">
@@ -494,7 +494,7 @@ export function GameStatsPanel({
                               src={cmd1ImageUrl}
                               alt={commander1?.name}
                               title={commander1?.name}
-                              className="h-6 w-6 rounded-full border border-slate-600 object-cover"
+                              className="h-6 w-6 rounded-full border border-strong object-cover"
                             />
                           ) : (
                             <button
@@ -507,7 +507,7 @@ export function GameStatsPanel({
                                 })
                                 handleStartEditing(player)
                               }}
-                              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-slate-600 bg-slate-900/50 text-slate-500 transition-colors hover:border-purple-500 hover:bg-purple-500/10 hover:text-purple-400"
+                              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-strong bg-surface-1/50 text-placeholder transition-colors hover:border-brand hover:bg-brand-muted hover:text-brand"
                               title="Add Commander 1"
                             >
                               <Plus className="h-3 w-3" />
@@ -518,7 +518,7 @@ export function GameStatsPanel({
                               src={cmd2ImageUrl}
                               alt={commander2?.name}
                               title={commander2?.name}
-                              className="h-6 w-6 rounded-full border border-slate-600 object-cover"
+                              className="h-6 w-6 rounded-full border border-strong object-cover"
                             />
                           ) : (
                             <button
@@ -531,14 +531,14 @@ export function GameStatsPanel({
                                 })
                                 handleStartEditing(player)
                               }}
-                              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-slate-600 bg-slate-900/50 text-slate-500 transition-colors hover:border-purple-500 hover:bg-purple-500/10 hover:text-purple-400"
+                              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-strong bg-surface-1/50 text-placeholder transition-colors hover:border-brand hover:bg-brand-muted hover:text-brand"
                               title="Add Commander 2"
                             >
                               <Plus className="h-3 w-3" />
                             </button>
                           )}
                         </span>
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                        <ChevronDown className="h-4 w-4 text-muted" />
                       </span>
                     </div>
                   </div>
@@ -565,10 +565,10 @@ export function GameStatsPanel({
               return (
                 <div
                   key={player.id}
-                  className="rounded-lg border border-slate-800 bg-slate-900/50 p-4"
-                >
+                  className="rounded-lg border border-border-muted bg-surface-1/50 p-4"
+                  >
                   {/* Player header */}
-                  <div className="mb-3 flex items-center gap-2 border-b border-slate-800 pb-2">
+                  <div className="mb-3 flex items-center gap-2 border-b border-border-muted pb-2">
                     {player.avatar ? (
                       <img
                         src={player.avatar}
@@ -576,12 +576,12 @@ export function GameStatsPanel({
                         className="h-6 w-6 rounded-full"
                       />
                     ) : (
-                      <User className="h-5 w-5 text-slate-400" />
+                      <User className="h-5 w-5 text-muted" />
                     )}
-                    <span className="font-semibold text-slate-200">
+                    <span className="font-semibold text-secondary">
                       {player.username}
                       {isCurrentUser && (
-                        <span className="ml-1.5 text-xs font-normal text-slate-500">
+                        <span className="ml-1.5 text-xs font-normal text-placeholder">
                           (You)
                         </span>
                       )}
@@ -590,7 +590,7 @@ export function GameStatsPanel({
                     {/* Controls: Viewing Badge, Edit Button, Minimize Button */}
                     <div className="ml-auto flex items-center gap-1">
                       {isViewedPlayer && (
-                        <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-purple-300">
+                        <span className="rounded-full bg-brand-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand-muted-foreground">
                           Viewing
                         </span>
                       )}
@@ -599,7 +599,7 @@ export function GameStatsPanel({
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-slate-100"
+                          className="h-7 border-border-default bg-surface-2 text-secondary hover:bg-surface-3 hover:text-foreground"
                           onClick={() => send({ type: 'DONE_EDIT' })}
                         >
                           Done
@@ -609,7 +609,7 @@ export function GameStatsPanel({
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-7 w-7 text-slate-400 hover:bg-slate-800 hover:text-purple-300"
+                          className="h-7 w-7 text-muted hover:bg-surface-2 hover:text-brand-muted-foreground"
                           onClick={() => handleStartEditing(player)}
                           title="Edit commanders"
                         >
@@ -625,7 +625,7 @@ export function GameStatsPanel({
                             onClick={() =>
                               send({ type: 'SET_COLLAPSED', collapsed: true })
                             }
-                            className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                            className="rounded p-1 text-muted hover:bg-surface-2 hover:text-secondary"
                             title="Minimize"
                           >
                             <ChevronUp className="h-4 w-4" />
@@ -642,7 +642,7 @@ export function GameStatsPanel({
                         <button
                           type="button"
                           onClick={() => handleStartEditing(player)}
-                          className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-700 bg-slate-900/30 p-6 text-slate-500 transition-colors hover:border-slate-600 hover:bg-slate-900/50 hover:text-slate-400"
+                          className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-default bg-surface-1/30 p-6 text-placeholder transition-colors hover:border-strong hover:bg-surface-1/50 hover:text-muted"
                         >
                           <Plus className="h-5 w-5" />
                           <span className="text-sm font-medium">
@@ -734,13 +734,13 @@ export function GameStatsPanel({
             {vacantSlots.map((slot) => (
               <div
                 key={`vacant-${slot.index}`}
-                className="rounded-lg border border-dashed border-slate-700 bg-slate-900/30 p-4"
+                className="rounded-lg border border-dashed border-border-default bg-surface-1/30 p-4"
               >
-                <div className="flex items-center gap-2 text-slate-500">
+                <div className="flex items-center gap-2 text-placeholder">
                   <User className="h-5 w-5" />
                   <span className="font-medium">Empty Seat</span>
                 </div>
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-2 text-sm text-strong">
                   Waiting for player to join...
                 </p>
               </div>
@@ -827,9 +827,9 @@ function CommanderSlot({
   // Edit mode - show search input
   if (isEditing) {
     return (
-      <div className="rounded-md border border-slate-700 bg-slate-950/50 p-3">
+      <div className="rounded-md border border-border-default bg-surface-0/50 p-3">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs font-medium text-slate-400">
+          <span className="text-xs font-medium text-muted">
             Commander {slotNumber}
             {slotNumber === 2 &&
               allowsSecondCommander &&
@@ -838,7 +838,7 @@ function CommanderSlot({
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 px-2 text-xs text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
+            className="h-6 px-2 text-xs text-destructive hover:bg-destructive/20 hover:text-destructive disabled:opacity-50"
             onClick={onClear}
             disabled={!commander && !inputValue.trim()}
           >
@@ -856,7 +856,7 @@ function CommanderSlot({
                 ? `Search ${suggestionsLabel?.toLowerCase()}...`
                 : 'Search for a commander...'
             }
-            className="h-9 border-slate-700 bg-slate-900 pr-10 text-sm text-slate-100 transition-colors placeholder:text-slate-500 hover:border-slate-500 focus-visible:ring-purple-500"
+            className="h-9 border-border-default bg-surface-1 pr-10 text-sm text-foreground transition-colors placeholder:text-placeholder hover:border-placeholder focus-visible:ring-brand"
             suggestions={slotNumber === 2 ? suggestions : undefined}
             suggestionsLabel={slotNumber === 2 ? suggestionsLabel : undefined}
             hideLoadingIndicator
@@ -864,26 +864,26 @@ function CommanderSlot({
           />
           <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
             {isSearching ? (
-              <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
+              <Loader2 className="h-4 w-4 animate-spin text-placeholder" />
             ) : status === 'saving' ? (
-              <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+              <Loader2 className="h-4 w-4 animate-spin text-brand" />
             ) : status === 'saved' ? (
-              <Check className="h-4 w-4 text-green-400" />
+              <Check className="h-4 w-4 text-success" />
             ) : status === 'error' ? (
-              <AlertCircle className="h-4 w-4 text-red-400" />
+              <AlertCircle className="h-4 w-4 text-destructive" />
             ) : null}
           </div>
         </div>
         {/* Show partner suggestions for slot 1 */}
         {slotNumber === 1 && dualKeywords && dualKeywords.length > 0 && (
-          <div className="mt-2 text-xs text-purple-400">
+          <div className="mt-2 text-xs text-brand">
             {specificPartner ? (
               <p>
                 Partner with{' '}
                 <button
                   type="button"
                   onClick={() => onQuickFillCommander2?.(specificPartner)}
-                  className="cursor-pointer font-medium text-purple-300 underline decoration-purple-500/50 underline-offset-2 hover:text-purple-200 hover:decoration-purple-400"
+                  className="cursor-pointer font-medium text-brand-muted-foreground underline decoration-brand-muted underline-offset-2 hover:text-brand hover:decoration-brand"
                 >
                   {specificPartner}
                 </button>
@@ -898,7 +898,7 @@ function CommanderSlot({
                     <button
                       type="button"
                       onClick={() => onQuickFillCommander2?.(name)}
-                      className="cursor-pointer font-medium text-purple-300 underline decoration-purple-500/50 underline-offset-2 hover:text-purple-200 hover:decoration-purple-400"
+                      className="cursor-pointer font-medium text-brand-muted-foreground underline decoration-brand-muted underline-offset-2 hover:text-brand hover:decoration-brand"
                     >
                       {name}
                     </button>
@@ -920,7 +920,7 @@ function CommanderSlot({
   if (!commander) return null
 
   return (
-    <div className="group relative rounded-md border border-slate-800 bg-slate-950/50">
+    <div className="group relative rounded-md border border-border-muted bg-surface-0/50">
       {/* Commander Background Image */}
       {imageUrl && (
         <div className="absolute inset-0 z-0 overflow-hidden rounded-md">
@@ -936,12 +936,12 @@ function CommanderSlot({
       <div className="relative z-10 flex items-center justify-between p-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span className="text-shadow-sm text-sm font-medium text-slate-200 shadow-black">
+            <span className="text-shadow-sm text-sm font-medium text-secondary shadow-black">
               {commander.name}
             </span>
           </div>
           {isLethal && (
-            <span className="flex items-center gap-1.5 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-bold text-red-400 backdrop-blur-sm">
+            <span className="flex items-center gap-1.5 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-bold text-destructive backdrop-blur-sm">
               <Swords className="h-3 w-3" /> Lethal
             </span>
           )}
@@ -952,7 +952,7 @@ function CommanderSlot({
           <Button
             size="icon"
             variant="outline"
-            className="h-8 w-8 border-slate-700 bg-slate-900/80 text-slate-200 backdrop-blur-sm hover:bg-slate-800 hover:text-white"
+            className="h-8 w-8 border-border-default bg-surface-1/80 text-secondary backdrop-blur-sm hover:bg-surface-2 hover:text-foreground"
             onMouseDown={damageMinus.handleStart}
             onMouseUp={damageMinus.handleStop}
             onMouseLeave={damageMinus.handleStop}
@@ -964,7 +964,7 @@ function CommanderSlot({
           </Button>
           <span
             className={`text-shadow-sm min-w-[2rem] text-center font-mono text-lg font-bold shadow-black ${
-              isLethal ? 'text-red-400' : 'text-slate-200'
+              isLethal ? 'text-destructive' : 'text-secondary'
             }`}
           >
             {damage}
@@ -972,7 +972,7 @@ function CommanderSlot({
           <Button
             size="icon"
             variant="outline"
-            className="h-8 w-8 border-slate-700 bg-slate-900/80 text-slate-200 backdrop-blur-sm hover:bg-slate-800 hover:text-white"
+            className="h-8 w-8 border-border-default bg-surface-1/80 text-secondary backdrop-blur-sm hover:bg-surface-2 hover:text-foreground"
             onMouseDown={damagePlus.handleStart}
             onMouseUp={damagePlus.handleStop}
             onMouseLeave={damagePlus.handleStop}

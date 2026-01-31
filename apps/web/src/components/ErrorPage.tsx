@@ -18,7 +18,7 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950">
+    <div className="relative min-h-screen overflow-hidden bg-surface-0">
       <style>{`
         @keyframes float {
           0% { transform: translateY(0px); }
@@ -45,21 +45,21 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
 
       {/* Animated background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-20 top-20 h-64 w-64 animate-pulse rounded-full bg-red-500/10 blur-3xl" />
-        <div className="absolute bottom-20 right-20 h-96 w-96 animate-pulse rounded-full bg-purple-500/10 blur-3xl delay-1000" />
+        <div className="absolute left-20 top-20 h-64 w-64 animate-pulse rounded-full bg-destructive/10 blur-3xl" />
+        <div className="absolute bottom-20 right-20 h-96 w-96 animate-pulse rounded-full bg-brand/10 blur-3xl delay-1000" />
       </div>
 
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 text-center">
         {/* Logo/Icon Area */}
         <div className="animate-float relative mb-8">
-          <div className="absolute inset-0 animate-pulse rounded-full bg-red-500/20 blur-3xl" />
-          <div className="relative z-10 flex h-32 w-32 items-center justify-center rounded-3xl border border-slate-800 bg-slate-950/50 backdrop-blur-sm">
-            <AlertTriangle className="h-16 w-16 text-red-400" />
+          <div className="absolute inset-0 animate-pulse rounded-full bg-destructive/20 blur-3xl" />
+          <div className="relative z-10 flex h-32 w-32 items-center justify-center rounded-3xl border border-muted bg-surface-0/50 backdrop-blur-sm">
+            <AlertTriangle className="h-16 w-16 text-destructive" />
           </div>
 
           {/* Decorative sparkles */}
-          <Sparkles className="animate-sparkle absolute -left-6 top-0 h-6 w-6 text-orange-200 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
-          <Sparkles className="animate-sparkle absolute -right-4 bottom-4 h-5 w-5 text-red-300 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)] delay-700" />
+          <Sparkles className="animate-sparkle absolute -left-6 top-0 h-6 w-6 text-warning drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
+          <Sparkles className="animate-sparkle absolute -right-4 bottom-4 h-5 w-5 text-destructive drop-shadow-[0_0_8px_rgba(248,113,113,0.8)] delay-700" />
         </div>
 
         {/* Text Content */}
@@ -74,7 +74,7 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
                 Fizzled
               </span>
             </h2>
-            <p className="mx-auto max-w-md text-lg text-slate-400">
+            <p className="mx-auto max-w-md text-lg text-muted">
               {error?.message ||
                 'Something went wrong while casting that spell. The mana pool has been drained.'}
             </p>
@@ -85,7 +85,7 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
             {reset && (
               <Button
                 size="lg"
-                className="h-12 min-w-[160px] gap-2 bg-red-600 font-medium text-white shadow-lg shadow-red-500/25 hover:bg-red-700"
+                className="h-12 min-w-[160px] gap-2 bg-destructive font-medium text-white shadow-lg shadow-destructive/25 hover:bg-destructive"
                 onClick={reset}
               >
                 <RefreshCw className="h-4 w-4" />
@@ -95,7 +95,7 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
             <Button
               variant="outline"
               size="lg"
-              className="h-12 min-w-[160px] gap-2 border-slate-700 bg-slate-900/50 font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
+              className="h-12 min-w-[160px] gap-2 border-default bg-surface-1/50 font-medium text-secondary hover:bg-surface-2 hover:text-white"
               onClick={handleReturnHome}
             >
               <Home className="h-4 w-4" />
@@ -105,7 +105,7 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
         </div>
 
         {/* Footer Text */}
-        <div className="absolute bottom-8 text-sm text-slate-600">
+        <div className="absolute bottom-8 text-sm text-muted">
           Spell Coven
         </div>
       </div>

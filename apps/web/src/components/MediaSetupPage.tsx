@@ -44,15 +44,15 @@ export function MediaSetupPage({ onComplete, onCancel }: MediaSetupPageProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950">
+    <div className="flex min-h-screen items-center justify-center bg-surface-0">
       {/* Background gradient */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-1/4 -top-1/4 h-1/2 w-1/2 rounded-full bg-purple-500/10 blur-3xl" />
-        <div className="absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="absolute -left-1/4 -top-1/4 h-1/2 w-1/2 rounded-full bg-brand-muted blur-3xl" />
+        <div className="absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full bg-info-muted blur-3xl" />
       </div>
 
       {/* Media Setup Panel - centered card */}
-      <div className="relative z-10 w-full max-w-[700px] rounded-lg border border-slate-800 bg-slate-900 p-6 shadow-xl">
+      <div className="relative z-10 w-full max-w-[700px] rounded-lg border border-muted bg-surface-1 p-6 shadow-xl">
         <MediaSetupPanel
           onComplete={onComplete}
           onCancel={handlePanelCancel}
@@ -64,15 +64,15 @@ export function MediaSetupPage({ onComplete, onCancel }: MediaSetupPageProps) {
 
       {/* Cancel Warning Dialog */}
       <AlertDialog open={showCancelWarning} onOpenChange={setShowCancelWarning}>
-        <AlertDialogContent className="border-slate-800 bg-slate-900">
+        <AlertDialogContent className="border-muted bg-surface-1">
           <AlertDialogHeader>
-            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20">
-              <AlertTriangle className="h-6 w-6 text-amber-400" />
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-warning-muted">
+              <AlertTriangle className="h-6 w-6 text-warning-muted-foreground" />
             </div>
-            <AlertDialogTitle className="text-center text-slate-100">
+            <AlertDialogTitle className="text-center text-secondary">
               Leave Without Saving?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-slate-400">
+            <AlertDialogDescription className="text-center text-muted">
               Your settings will not be saved and you&apos;ll be redirected to
               the home page. You must complete audio & video setup before
               joining a game room.
@@ -81,13 +81,13 @@ export function MediaSetupPage({ onComplete, onCancel }: MediaSetupPageProps) {
           <AlertDialogFooter className="flex-row justify-center gap-3 sm:justify-center">
             <AlertDialogCancel
               onClick={handleDismissWarning}
-              className="border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-slate-100"
+              className="border-default bg-surface-2 text-secondary hover:bg-surface-3 hover:text-secondary"
             >
               Continue Setup
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmCancel}
-              className="bg-amber-600 text-white hover:bg-amber-700"
+              className="bg-warning text-warning-foreground hover:bg-warning/90"
             >
               Leave Anyway
             </AlertDialogAction>

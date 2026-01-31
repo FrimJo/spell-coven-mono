@@ -44,7 +44,7 @@ export function MediaSetupDialog({
   return (
     <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent
-        className="border-slate-800 bg-slate-900 sm:max-w-[700px] [&>button]:hidden"
+        className="border-muted bg-surface-1 sm:max-w-[700px] [&>button]:hidden"
         data-testid="media-setup-dialog"
       >
         {/* Hidden header for accessibility - visual header is in MediaSetupPanel */}

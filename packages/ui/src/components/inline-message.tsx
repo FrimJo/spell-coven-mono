@@ -6,14 +6,14 @@ import { AlertCircle, AlertTriangle, Info } from "lucide-react";
 const inlineMessageVariants = cva(
   "flex items-start gap-3 rounded-lg border p-4 text-sm",
   {
-    variants: {
-      variant: {
-        error: "border-destructive/50 bg-destructive/10 text-destructive",
-        warning:
-          "border-yellow-500/50 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-        info: "border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+      variants: {
+        variant: {
+          error: "border-destructive/50 bg-destructive/10 text-destructive",
+          warning:
+            "border-warning/50 bg-warning/10 text-warning",
+          info: "border-info/50 bg-info/10 text-info",
+        },
       },
-    },
     defaultVariants: {
       variant: "info",
     },
