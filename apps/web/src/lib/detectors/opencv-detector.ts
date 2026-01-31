@@ -564,7 +564,9 @@ export class OpenCVDetector implements CardDetector {
     this.hierarchy = null
   }
 
-  private calculateAspectRatio(points: Array<{ x: number; y: number }>): number {
+  private calculateAspectRatio(
+    points: Array<{ x: number; y: number }>,
+  ): number {
     if (points.length !== 4) {
       return 0
     }

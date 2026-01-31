@@ -9,8 +9,8 @@ import type { Participant } from '@/types/participant'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 
-import type { Doc } from '../../../../convex/_generated/dataModel'
-import { api } from '../../../../convex/_generated/api'
+import type { Doc } from '../../../convex/_generated/dataModel'
+import { api } from '../../../convex/_generated/api'
 
 type RoomPlayer = Doc<'roomPlayers'>
 
@@ -204,6 +204,7 @@ export function useConvexPresence({
 
     // If we had joined but our session no longer exists, we were removed
     if (hasJoined && mySession === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing internal state with external Convex query state
       setHasJoined(false)
 
       // Check why we were removed:
@@ -288,6 +289,7 @@ export function useConvexPresence({
           .catch((err) => {
             console.error('[ConvexPresence] Failed to leave room:', err)
           })
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when hook becomes disabled
         setHasJoined(false)
       }
       return

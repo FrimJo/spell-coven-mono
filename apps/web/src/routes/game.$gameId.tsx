@@ -18,7 +18,7 @@ import { Loader2 } from 'lucide-react'
 import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
 
-import { api } from '../../../../convex/_generated/api'
+import { api } from '../../../convex/_generated/api'
 
 const defaultValues = {
   detector: 'opencv' as const,

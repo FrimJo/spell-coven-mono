@@ -4,12 +4,9 @@
  * Handles: popover open/close, search query, autocomplete results, loading, selection
  */
 
-import { assign, setup, fromPromise } from 'xstate'
-import {
-  searchCommanderAndSidekicks,
-  getCardByName,
-} from '@/lib/scryfall'
 import type { ScryfallCard } from '@/lib/scryfall'
+import { getCardByName, searchCommanderAndSidekicks } from '@/lib/scryfall'
+import { assign, fromPromise, setup } from 'xstate'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -43,12 +40,14 @@ export type CommanderSearchEvent =
 // Actors (async services)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const searchActor = fromPromise<string[], { query: string }>(async ({ input }) => {
-  if (input.query.length < 2) {
-    return []
-  }
-  return searchCommanderAndSidekicks(input.query)
-})
+const searchActor = fromPromise<string[], { query: string }>(
+  async ({ input }) => {
+    if (input.query.length < 2) {
+      return []
+    }
+    return searchCommanderAndSidekicks(input.query)
+  },
+)
 
 const resolveCardActor = fromPromise<ScryfallCard | null, { name: string }>(
   async ({ input }) => {

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 
 interface UseHoldToRepeatOptions {
   /**
@@ -22,12 +22,12 @@ interface UseHoldToRepeatOptions {
 /**
  * Hook that provides hold-to-repeat functionality for increment/decrement buttons.
  * On press: immediately applies immediateDelta, then repeats repeatDelta every repeatInterval.
- * 
+ *
  * @example
  * const { handleStart, handleStop } = useHoldToRepeat({
  *   onChange: (delta) => handleHealthChange(delta),
  * })
- * 
+ *
  * <Button
  *   onMouseDown={handleStart}
  *   onMouseUp={handleStop}

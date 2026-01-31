@@ -9,16 +9,13 @@
   "scripts": {
     "build": "bunx turbo run build",
     "dev": "bunx turbo run dev",
-    "dev:convex": "bunx convex dev",
     "test": "bunx turbo run test",
-    "lint": "bunx turbo run lint && bun run lint:convex",
-    "lint:convex": "bunx eslint --config convex/eslint.config.mjs convex/ --max-warnings 0",
-    "lint:fix": "bunx turbo run lint -- --fix && bunx eslint --config convex/eslint.config.mjs convex/ --max-warnings 0 --fix",
-    "format": "bunx turbo run format --continue -- --cache --cache-location .cache/.prettiercache && bun run format:convex",
-    "format:convex": "bunx prettier --check convex/",
-    "format:fix": "bunx turbo run format -- --write && bun run format:convex --write",
-    "typecheck": "bunx turbo run typecheck && bun run typecheck:convex",
-    "typecheck:convex": "bunx tsc --noEmit -p convex/tsconfig.json"
+    "lint": "bunx turbo run lint",
+    "lint:fix": "bunx turbo run lint -- --fix",
+    "format": "bunx turbo run format --continue -- --cache --cache-location .cache/.prettiercache",
+    "format:fix": "bunx turbo run format -- --write",
+    "typecheck": "bunx turbo run typecheck",
+    "preflight": "bunx turbo run typecheck && bunx turbo run lint && bunx turbo run format"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",

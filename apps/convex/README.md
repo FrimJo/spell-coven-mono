@@ -47,7 +47,7 @@ VITE_CONVEX_URL=https://<your-deployment>.convex.cloud
 ## Directory Structure
 
 ```
-convex/
+apps/convex/
 ├── _generated/     # Auto-generated types (do not edit)
 ├── auth.ts         # Discord OAuth configuration
 ├── bans.ts         # Player ban mutations/queries
@@ -72,24 +72,26 @@ See `SUPABASE_TO_CONVEX_PLAN.md` for the full data model.
 
 ## Development
 
-```bash
-# Start Convex dev server (watches for changes)
-bunx convex dev
+This package is integrated with the turbo monorepo. Running `bun run dev` from the repository root will start both the Convex dev server and the web app in parallel.
 
-# Run in separate terminal
+```bash
+# From repository root - starts both Convex and web dev servers
 bun run dev
+
+# Or run just the Convex dev server
+cd apps/convex && bun run dev
 ```
 
 ## Migration Status (Phase 3)
 
 The Convex backend is currently in **Phase 3** of the Supabase → Convex migration:
 
-| Feature   | Status     | Notes                       |
-| --------- | ---------- | --------------------------- |
-| Schema    | ✅ Done    | All tables defined          |
-| Presence  | ✅ Done    | `useConvexPresence` hook    |
-| Signaling | ⏳ Phase 4 | Using Supabase broadcast    |
-| Auth      | ⏳ Phase 5 | Using Supabase Auth         |
+| Feature   | Status     | Notes                    |
+| --------- | ---------- | ------------------------ |
+| Schema    | ✅ Done    | All tables defined       |
+| Presence  | ✅ Done    | `useConvexPresence` hook |
+| Signaling | ⏳ Phase 4 | Using Supabase broadcast |
+| Auth      | ⏳ Phase 5 | Using Supabase Auth      |
 
 ### Phase 3 Notes
 

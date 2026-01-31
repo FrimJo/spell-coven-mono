@@ -18,12 +18,12 @@ Convex tables involved in room management:
 - `roomBans`: persistent bans
 - `counters`: sequential counters for room ID generation
 
-See `convex/schema.ts` for definitions and indexes.
+See `apps/convex/schema.ts` for definitions and indexes.
 
 ## Room IDs
 
 Room IDs are server-generated 6-character base-32 codes. The ID is created in
-`convex/rooms.ts` using a monotonically increasing counter and a custom base-32
+`apps/convex/rooms.ts` using a monotonically increasing counter and a custom base-32
 alphabet that avoids ambiguous characters.
 
 ## Room Lifecycle
@@ -99,8 +99,8 @@ Validation enforces a 6-character uppercase code and a 24-hour max age.
 
 ## Key Files
 
-- `convex/rooms.ts`: create room, access checks, live stats
-- `convex/schema.ts`: room tables and indexes
+- `apps/convex/rooms.ts`: create room, access checks, live stats
+- `apps/convex/schema.ts`: room tables and indexes
 - `apps/web/src/hooks/useConvexPresence.ts`: presence + heartbeat
 - `apps/web/src/hooks/useConvexSignaling.ts`: WebRTC signaling
 - `apps/web/src/routes/game.$gameId.tsx`: access validation + auth gating

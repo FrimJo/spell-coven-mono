@@ -201,7 +201,7 @@ export function useConvexWebRTC({
         pendingSignalsRef.current = []
 
         for (const signal of signalsToReplay) {
-          webrtcManagerRef.current!.handleSignal(signal).catch((err) => {
+          webrtcManagerRef.current?.handleSignal(signal).catch((err) => {
             const error = err instanceof Error ? err : new Error(String(err))
             console.error('[ConvexWebRTC:Hook] Error replaying signal:', error)
             setWebrtcError(error)

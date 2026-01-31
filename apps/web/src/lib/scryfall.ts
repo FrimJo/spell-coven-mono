@@ -208,7 +208,7 @@ export async function searchCommanderAndSidekicks(
   query: string,
 ): Promise<string[]> {
   if (query.length < 2) return []
-  
+
   // Build query: user text + (is:commander OR sidekick keywords)
   // Sidekick keywords: Background, Partner, Partner with, Friends forever, Doctor's companion, Choose a Background
   const sidekickQuery = [
@@ -220,7 +220,7 @@ export async function searchCommanderAndSidekicks(
     'keyword:"Doctor\'s companion"',
     'keyword:"Choose a background"',
   ].join(' OR ')
-  
+
   const fullQuery = `${query} (${sidekickQuery})`
   const cards = await searchCards(fullQuery, 20)
   return cards.map((card) => card.name)

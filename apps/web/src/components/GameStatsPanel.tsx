@@ -30,8 +30,8 @@ import {
   SheetTitle,
 } from '@repo/ui/components/sheet'
 
-import type { Doc } from '../../../../convex/_generated/dataModel'
-import { api } from '../../../../convex/_generated/api'
+import type { Doc } from '../../../convex/_generated/dataModel'
+import { api } from '../../../convex/_generated/api'
 import { CommanderSearchInput } from './CommanderSearchInput'
 
 /** Maximum players in a Commander game */

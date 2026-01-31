@@ -4,7 +4,6 @@
  * Handles: editing mode, commander pair state, suggestions, and save lifecycle
  */
 
-import { assign, setup, fromPromise } from 'xstate'
 import type { DualCommanderKeyword, ScryfallCard } from '@/lib/scryfall'
 import {
   detectDualCommanderKeywords,
@@ -12,6 +11,7 @@ import {
   searchBackgrounds,
   searchByKeyword,
 } from '@/lib/scryfall'
+import { assign, fromPromise, setup } from 'xstate'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -46,7 +46,12 @@ export interface CommanderPanelContext {
 export type CommanderPanelEvent =
   | { type: 'OPEN_PANEL'; viewedPlayerHasCommanders: boolean }
   | { type: 'CLOSE_PANEL' }
-  | { type: 'START_EDIT'; playerId: string; commander1Name: string; commander2Name: string }
+  | {
+      type: 'START_EDIT'
+      playerId: string
+      commander1Name: string
+      commander2Name: string
+    }
   | { type: 'DONE_EDIT' }
   | { type: 'SET_CMD1_NAME'; name: string }
   | { type: 'SET_CMD2_NAME'; name: string }
@@ -66,7 +71,11 @@ export type CommanderPanelEvent =
 
 const fetchSuggestionsActor = fromPromise<
   { suggestions: string[]; label: string },
-  { card: ScryfallCard; dualKeywords: DualCommanderKeyword[]; specificPartner: string | null }
+  {
+    card: ScryfallCard
+    dualKeywords: DualCommanderKeyword[]
+    specificPartner: string | null
+  }
 >(async ({ input }) => {
   const { card, dualKeywords, specificPartner } = input
 
@@ -190,7 +199,8 @@ export const commanderPanelMachine = setup({
         OPEN_PANEL: {
           target: 'viewing',
           actions: assign({
-            viewedPlayerSlotCollapsed: ({ event }) => event.viewedPlayerHasCommanders,
+            viewedPlayerSlotCollapsed: ({ event }) =>
+              event.viewedPlayerHasCommanders,
           }),
         },
       },
@@ -218,7 +228,8 @@ export const commanderPanelMachine = setup({
         },
         TOGGLE_COLLAPSED: {
           actions: assign({
-            viewedPlayerSlotCollapsed: ({ context }) => !context.viewedPlayerSlotCollapsed,
+            viewedPlayerSlotCollapsed: ({ context }) =>
+              !context.viewedPlayerSlotCollapsed,
           }),
         },
         SET_COLLAPSED: {
@@ -264,7 +275,7 @@ export const commanderPanelMachine = setup({
           }),
         },
         CLEAR_CMD: {
-          actions: assign(({ context, event }) => {
+          actions: assign(({ event }) => {
             if (event.slot === 1) {
               return {
                 commander1Name: '',
@@ -284,7 +295,8 @@ export const commanderPanelMachine = setup({
         },
         TOGGLE_COLLAPSED: {
           actions: assign({
-            viewedPlayerSlotCollapsed: ({ context }) => !context.viewedPlayerSlotCollapsed,
+            viewedPlayerSlotCollapsed: ({ context }) =>
+              !context.viewedPlayerSlotCollapsed,
           }),
         },
         SET_COLLAPSED: {
@@ -334,6 +346,7 @@ export const commanderPanelMachine = setup({
             id: 'fetchSuggestions',
             src: 'fetchSuggestions',
             input: ({ context }) => ({
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed by machine flow (only called from states where commander1Card exists)
               card: context.commander1Card!,
               dualKeywords: context.dualKeywords,
               specificPartner: context.specificPartner,

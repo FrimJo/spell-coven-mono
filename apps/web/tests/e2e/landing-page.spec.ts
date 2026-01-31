@@ -121,7 +121,9 @@ test.describe('Landing Page', () => {
       await setDesktopViewport(page)
 
       // Create Game and Join Game buttons should not be visible
-      const createGameButton = page.getByRole('button', { name: /Create Game/i })
+      const createGameButton = page.getByRole('button', {
+        name: /Create Game/i,
+      })
       const joinGameButton = page.getByRole('button', { name: /Join Game/i })
 
       await expect(createGameButton).not.toBeVisible()
@@ -156,9 +158,7 @@ test.describe('Landing Page', () => {
       await page.waitForTimeout(300)
 
       // Navigation links should be visible in the sheet
-      await expect(
-        page.getByRole('dialog').getByText('Features'),
-      ).toBeVisible()
+      await expect(page.getByRole('dialog').getByText('Features')).toBeVisible()
       await expect(
         page.getByRole('dialog').getByText('How It Works'),
       ).toBeVisible()
