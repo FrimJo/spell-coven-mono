@@ -162,12 +162,12 @@ export function PlayerStatsOverlay({
 
   return (
     <>
-      <div className="absolute left-3 top-16 z-10 flex flex-col gap-1.5 rounded-lg border border-slate-800 bg-slate-950/90 p-2 opacity-80 backdrop-blur-sm transition-opacity hover:bg-slate-950 hover:opacity-100">
+      <div className="absolute left-3 top-16 z-10 flex flex-col gap-1.5 rounded-lg border border-surface-2 bg-surface-0/90 p-2 opacity-80 backdrop-blur-sm transition-opacity hover:bg-surface-0 hover:opacity-100">
         {/* Life */}
         <div className="flex items-center justify-between gap-3">
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="flex cursor-help items-center gap-1.5 text-red-400">
+              <div className="flex cursor-help items-center gap-1.5 text-destructive">
                 <Heart className="h-4 w-4" />
                 <span className="min-w-[2ch] text-center font-mono font-bold text-white">
                   {displayHealth}
@@ -181,7 +181,7 @@ export function PlayerStatsOverlay({
             <Button
               size="icon"
               variant="ghost"
-              className="h-6 w-6 rounded-md text-slate-400 hover:bg-red-900/20 hover:text-red-400"
+              className="h-6 w-6 rounded-md text-muted hover:bg-destructive/20 hover:text-destructive"
               onMouseDown={healthMinus.handleStart}
               onMouseUp={healthMinus.handleStop}
               onMouseLeave={healthMinus.handleStop}
@@ -194,7 +194,7 @@ export function PlayerStatsOverlay({
             <Button
               size="icon"
               variant="ghost"
-              className="h-6 w-6 rounded-md text-slate-400 hover:bg-green-900/20 hover:text-green-400"
+              className="h-6 w-6 rounded-md text-muted hover:bg-success/20 hover:text-success"
               onMouseDown={healthPlus.handleStart}
               onMouseUp={healthPlus.handleStop}
               onMouseLeave={healthPlus.handleStop}
@@ -210,7 +210,7 @@ export function PlayerStatsOverlay({
         <div className="flex items-center justify-between gap-3">
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="flex cursor-help items-center gap-1.5 text-green-400">
+              <div className="flex cursor-help items-center gap-1.5 text-success">
                 <Skull className="h-4 w-4" />
                 <span className="min-w-[2ch] text-center font-mono font-bold text-white">
                   {displayPoison}
@@ -224,7 +224,7 @@ export function PlayerStatsOverlay({
             <Button
               size="icon"
               variant="ghost"
-              className="h-6 w-6 rounded-md text-slate-400 hover:bg-red-900/20 hover:text-red-400"
+              className="h-6 w-6 rounded-md text-muted hover:bg-destructive/20 hover:text-destructive"
               onMouseDown={poisonMinus.handleStart}
               onMouseUp={poisonMinus.handleStop}
               onMouseLeave={poisonMinus.handleStop}
@@ -237,7 +237,7 @@ export function PlayerStatsOverlay({
             <Button
               size="icon"
               variant="ghost"
-              className="h-6 w-6 rounded-md text-slate-400 hover:bg-green-900/20 hover:text-green-400"
+              className="h-6 w-6 rounded-md text-muted hover:bg-success/20 hover:text-success"
               onMouseDown={poisonPlus.handleStart}
               onMouseUp={poisonPlus.handleStop}
               onMouseLeave={poisonPlus.handleStop}
@@ -251,10 +251,10 @@ export function PlayerStatsOverlay({
 
         {/* Commander Damage */}
         {totalCommanderDamage > 0 && (
-          <div className="flex items-center justify-between gap-3 border-t border-slate-800 pt-1.5">
+          <div className="flex items-center justify-between gap-3 border-t border-surface-2 pt-1.5">
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex cursor-help items-center gap-1.5 text-purple-400">
+                <div className="flex cursor-help items-center gap-1.5 text-brand-muted-foreground">
                   <span className="text-[10px] font-medium uppercase tracking-wide">
                     CMD
                   </span>
@@ -278,7 +278,7 @@ export function PlayerStatsOverlay({
         <Button
           variant="ghost"
           size="sm"
-          className="mt-1 h-6 w-full text-[10px] text-slate-400 hover:bg-purple-900/20 hover:text-purple-300"
+          className="mt-1 h-6 w-full text-[10px] text-muted hover:bg-brand/20 hover:text-brand-muted-foreground"
           onClick={() => setPanelOpen(true)}
         >
           COMMANDERS

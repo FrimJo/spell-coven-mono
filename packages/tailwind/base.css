@@ -163,11 +163,11 @@
      Semantic Colors - Dark Theme
      ---------------------------------------- */
 
-  /* Brand (Purple) - dark mode values */
-  --brand: #a78bfa;
-  --brand-foreground: #1e1b4b;
+  /* Brand (Purple) - dark mode values - keep same as light for consistent branding */
+  --brand: #7c3aed;
+  --brand-foreground: #ffffff;
   --brand-muted: rgba(139, 92, 246, 0.2);
-  --brand-muted-foreground: #c4b5fd;
+  --brand-muted-foreground: #a78bfa;
 
   /* Success (Green) - dark mode values */
   --success: #4ade80;
