@@ -7,22 +7,13 @@ import {
 } from '@/contexts/CardQueryContext'
 import { MediaStreamProvider } from '@/contexts/MediaStreamContext.js'
 import { PresenceProvider, usePresence } from '@/contexts/PresenceContext'
-import { ArrowLeft, Check, Copy, LogOut, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/components/avatar'
-import { Button } from '@repo/ui/components/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@repo/ui/components/dropdown-menu'
 import { Toaster } from '@repo/ui/components/sonner'
 
 import type { RejoinReason } from './RejoinGameDialog.js'
+import { AppHeader } from './AppHeader.js'
 import { DuplicateSessionDialog } from './DuplicateSessionDialog.js'
-import { GameRoomPlayerCount } from './GameRoomPlayerCount.js'
 import { GameRoomSidebar } from './GameRoomSidebar.js'
 import { LeaveGameDialog } from './LeaveGameDialog.js'
 import { MediaSetupDialog } from './MediaSetupDialog.js'
@@ -44,7 +35,7 @@ function GameRoomContent({
   usePerspectiveWarp = true,
 }: Omit<GameRoomProps, 'playerName'>) {
   // Get authenticated user from Convex Auth (Discord OAuth)
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
 
   // User should always be authenticated at this point (protected route)
   // But we provide safe defaults just in case
@@ -206,97 +197,15 @@ function GameRoomContent({
       <Toaster />
 
       {/* Header */}
-      <header className="shrink-0 border-b border-surface-2 bg-surface-1/50 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleManualLeave}
-              className="text-text-muted hover:text-white"
-              title="Leave game room"
-              data-testid="leave-game-button"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Leave
-            </Button>
-
-            <div className="h-6 w-px bg-surface-3" />
-
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-text-muted">Share Link:</span>
-              <code
-                className="cursor-pointer break-all rounded bg-surface-2 px-2 py-1 text-sm text-brand-muted-foreground transition-colors hover:bg-surface-3"
-                data-testid="game-id-display"
-                onClick={handleCopyShareLink}
-                title="Click to copy shareable link"
-              >
-                {shareLink}
-              </code>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopyShareLink}
-                className="text-text-muted hover:text-white"
-                title="Copy shareable link"
-                data-testid="copy-share-link-button"
-              >
-                {copied ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <GameRoomPlayerCount roomId={roomId} maxPlayers={4} />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleOpenSettings}
-              className="text-text-muted hover:text-white"
-              title="Audio & video settings"
-              data-testid="settings-button"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-
-            {/* User Menu */}
-            {user && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="flex items-center gap-2 text-text-secondary hover:text-white"
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatar || undefined} />
-                      <AvatarFallback className="bg-brand text-white">
-                        {user.username.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="inline">{user.username}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="border-surface-3 bg-surface-1"
-                >
-                  <DropdownMenuItem
-                    onClick={signOut}
-                    className="cursor-pointer text-text-secondary focus:bg-surface-2 focus:text-white"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        variant="game"
+        roomId={roomId}
+        shareLink={shareLink}
+        copied={copied}
+        onLeave={handleManualLeave}
+        onCopyLink={handleCopyShareLink}
+        onOpenSettings={handleOpenSettings}
+      />
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
