@@ -227,3 +227,40 @@ export async function isElementInViewport(
     )
   }, selector)
 }
+
+/**
+ * Wait for the page to be visually stable for screenshots.
+ * This waits for network idle, fonts to load, and animations to settle.
+ */
+export async function waitForVisualStability(
+  page: Page,
+  options?: { timeout?: number },
+): Promise<void> {
+  const timeout = options?.timeout ?? 1000
+
+  // Wait for network idle
+  await page.waitForLoadState('networkidle')
+
+  // Wait for fonts to load
+  await page.evaluate(() => document.fonts.ready)
+
+  // Additional settling time for animations
+  await page.waitForTimeout(timeout)
+}
+
+/**
+ * Disable CSS animations and transitions for stable screenshots.
+ * Call this before taking screenshots to ensure consistent visuals.
+ */
+export async function disableAnimations(page: Page): Promise<void> {
+  await page.addStyleTag({
+    content: `
+      *, *::before, *::after {
+        animation-duration: 0s !important;
+        animation-delay: 0s !important;
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+      }
+    `,
+  })
+}
