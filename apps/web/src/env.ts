@@ -37,6 +37,7 @@ export const env = createEnv({
       .min(1, 'Embeddings version is required'),
     VITE_BLOB_STORAGE_URL: z.url().min(1, 'Blob storage URL is required'),
     VITE_SUPPORT_URL: z.url().optional(),
+    VITE_THEME_TOGGLE_ENABLED: z.coerce.boolean().default(false),
   },
 
   /**
@@ -50,6 +51,7 @@ export const env = createEnv({
     VITE_EMBEDDINGS_VERSION: import.meta.env.VITE_EMBEDDINGS_VERSION,
     VITE_BLOB_STORAGE_URL: import.meta.env.VITE_BLOB_STORAGE_URL,
     VITE_SUPPORT_URL: import.meta.env.VITE_SUPPORT_URL,
+    VITE_THEME_TOGGLE_ENABLED: import.meta.env.VITE_THEME_TOGGLE_ENABLED,
   },
 
   /**
@@ -96,5 +98,11 @@ export function getClientEnv() {
     VITE_EMBEDDINGS_VERSION: env.VITE_EMBEDDINGS_VERSION,
     VITE_BLOB_STORAGE_URL: env.VITE_BLOB_STORAGE_URL,
     VITE_SUPPORT_URL: env.VITE_SUPPORT_URL,
+    VITE_THEME_TOGGLE_ENABLED: env.VITE_THEME_TOGGLE_ENABLED,
   }
 }
+
+/**
+ * Feature flags
+ */
+export const isThemeToggleEnabled = env.VITE_THEME_TOGGLE_ENABLED

@@ -11,8 +11,10 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react'
+import { isThemeToggleEnabled } from '@/env'
 
 // ============================================================================
 // Types
@@ -57,16 +59,6 @@ function getSystemTheme(): ResolvedTheme {
 }
 
 /**
- * Resolve the theme value to either light or dark
- */
-function resolveTheme(theme: Theme): ResolvedTheme {
-  if (theme === 'system') {
-    return getSystemTheme()
-  }
-  return theme
-}
-
-/**
  * Apply the theme class to the document
  */
 function applyThemeToDocument(resolvedTheme: ResolvedTheme) {
@@ -86,6 +78,7 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   // Initialize theme from localStorage or default
   const [theme, setThemeState] = useState<Theme>(() => {
+    if (!isThemeToggleEnabled) return 'dark'
     if (typeof window === 'undefined') return defaultTheme
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
@@ -94,27 +87,42 @@ export function ThemeProvider({
     return defaultTheme
   })
 
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
-    resolveTheme(theme),
+  // Compute effective theme - when flag is disabled, always use 'dark'
+  const effectiveTheme = useMemo<Theme>(() => {
+    if (!isThemeToggleEnabled) return 'dark'
+    return theme
+  }, [theme])
+
+  // Track system theme separately for 'system' theme mode
+  const [systemResolvedTheme, setSystemResolvedTheme] = useState<ResolvedTheme>(
+    () => getSystemTheme(),
   )
 
-  // Apply theme on mount and when it changes
+  // Compute resolved theme - use memo for most cases, state for system theme updates
+  const resolvedTheme = useMemo<ResolvedTheme>(() => {
+    if (!isThemeToggleEnabled) return 'dark'
+    if (theme === 'system') {
+      return systemResolvedTheme
+    }
+    return theme
+  }, [theme, systemResolvedTheme])
+
+  // Apply theme to document whenever resolvedTheme changes
   useEffect(() => {
-    const resolved = resolveTheme(theme)
-    setResolvedTheme(resolved)
-    applyThemeToDocument(resolved)
-  }, [theme])
+    applyThemeToDocument(resolvedTheme)
+  }, [resolvedTheme])
 
   // Listen for system theme changes when theme is set to 'system'
   useEffect(() => {
+    if (!isThemeToggleEnabled) return
     if (theme !== 'system') return
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 
     const handleChange = (e: MediaQueryListEvent) => {
+      // This is an external system callback, so setState here is acceptable
       const resolved = e.matches ? 'dark' : 'light'
-      setResolvedTheme(resolved)
-      applyThemeToDocument(resolved)
+      setSystemResolvedTheme(resolved)
     }
 
     mediaQuery.addEventListener('change', handleChange)
@@ -122,18 +130,26 @@ export function ThemeProvider({
   }, [theme])
 
   const setTheme = useCallback((newTheme: Theme) => {
+    if (!isThemeToggleEnabled) {
+      setThemeState('dark')
+      return
+    }
     setThemeState(newTheme)
     localStorage.setItem(STORAGE_KEY, newTheme)
   }, [])
 
   const toggleTheme = useCallback(() => {
+    if (!isThemeToggleEnabled) {
+      setTheme('dark')
+      return
+    }
     // Toggle between light and dark only (not system)
     const newTheme: Theme = resolvedTheme === 'dark' ? 'light' : 'dark'
     setTheme(newTheme)
   }, [resolvedTheme, setTheme])
 
   const value: ThemeContextValue = {
-    theme,
+    theme: effectiveTheme,
     resolvedTheme,
     setTheme,
     toggleTheme,
