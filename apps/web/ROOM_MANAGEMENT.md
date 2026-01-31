@@ -4,16 +4,15 @@ This document describes how game rooms are created, validated, and maintained.
 
 ## Overview
 
-Rooms are first-class Convex records. Creating a room writes to `rooms` and
-`roomState`, and presence is tracked in `roomPlayers`. WebRTC signaling moves
-through `roomSignals`.
+Rooms are first-class Convex records. Creating a room writes to `rooms`,
+presence is tracked in `roomPlayers`, and WebRTC signaling moves through
+`roomSignals`.
 
 ## Data Model
 
 Convex tables involved in room management:
 
 - `rooms`: metadata for each room (owner, status, createdAt)
-- `roomState`: per-room turn and state
 - `roomPlayers`: presence, sessions, and player stats
 - `roomSignals`: WebRTC signaling messages
 - `roomBans`: persistent bans
@@ -37,7 +36,7 @@ The landing page calls `api.rooms.createRoom`. The server:
 2. Enforces a per-user throttle (5s cooldown)
 3. Increments the `counters` record
 4. Generates a new room ID
-5. Inserts `rooms` and `roomState`
+5. Inserts `rooms`
 
 Room ID creation happens server-side; the client only receives the final code.
 

@@ -14,13 +14,9 @@ import { mutation, query } from './_generated/server'
 import {
   AuthMismatchError,
   AuthRequiredError,
-  NoActivePlayersError,
-  NotCurrentTurnError,
   NotRoomOwnerError,
   PlayerNotFoundError,
   RoomNotFoundError,
-  RoomStateNotFoundError,
-  TurnAdvanceFailedError,
 } from './errors'
 
 /**
@@ -85,7 +81,7 @@ function toBase32Code(num: number, minLength = 6): string {
 /**
  * Create a new room
  *
- * Creates the room, initial room state, and adds the creator as the first player.
+ * Creates the room and adds the creator as the first player.
  * Room ID is generated server-side.
  *
  * @param ownerId - The user ID of the room creator (must match authenticated user)
@@ -155,14 +151,6 @@ export const createRoom = mutation({
       createdAt: now,
     })
 
-    // Create initial room state
-    await ctx.db.insert('roomState', {
-      roomId,
-      currentTurnUserId: userId,
-      turnNumber: 1,
-      lastUpdatedAt: now,
-    })
-
     return { roomId, waitMs: null }
   },
 })
@@ -182,14 +170,8 @@ export const getRoom = query({
       return null
     }
 
-    const state = await ctx.db
-      .query('roomState')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .first()
-
     return {
       ...room,
-      state,
     }
   },
 })
@@ -311,119 +293,6 @@ export const getLiveStats = query({
   },
 })
 
-/**
- * Set the current turn to a specific player
- *
- * NOTE: callerId is used for Phase 3. Phase 5 will use getAuthUserId.
- */
-export const setTurn = mutation({
-  args: {
-    roomId: v.string(),
-    userId: v.string(),
-    callerId: v.optional(v.string()),
-  },
-  handler: async (ctx, { roomId, userId, callerId }) => {
-    const room = await ctx.db
-      .query('rooms')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .first()
-
-    if (!room) {
-      throw new RoomNotFoundError()
-    }
-
-    // Only owner can set turn arbitrarily
-    if (callerId && room.ownerId !== callerId) {
-      throw new NotRoomOwnerError('set turn')
-    }
-
-    const state = await ctx.db
-      .query('roomState')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .first()
-
-    if (!state) {
-      throw new RoomStateNotFoundError()
-    }
-
-    await ctx.db.patch(state._id, {
-      currentTurnUserId: userId,
-      lastUpdatedAt: Date.now(),
-    })
-  },
-})
-
-/**
- * Advance turn to the next player
- *
- * Cycles through active players in join order.
- *
- * NOTE: callerId is used for Phase 3. Phase 5 will use getAuthUserId.
- */
-export const advanceTurn = mutation({
-  args: {
-    roomId: v.string(),
-    callerId: v.optional(v.string()),
-  },
-  handler: async (ctx, { roomId, callerId }) => {
-    const state = await ctx.db
-      .query('roomState')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .first()
-
-    if (!state) {
-      throw new RoomStateNotFoundError()
-    }
-
-    // Only current turn player can advance
-    if (callerId && state.currentTurnUserId !== callerId) {
-      throw new NotCurrentTurnError()
-    }
-
-    // Get active players sorted by join time
-    const presenceThreshold = Date.now() - 30_000 // 30s
-    const players = await ctx.db
-      .query('roomPlayers')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field('status'), 'active'),
-          q.gt(q.field('lastSeenAt'), presenceThreshold),
-        ),
-      )
-      .collect()
-
-    // Sort by joinedAt to get consistent order
-    players.sort((a, b) => a.joinedAt - b.joinedAt)
-
-    // Deduplicate by userId (keep first session per user)
-    const uniquePlayers = players.filter(
-      (p, i, arr) => arr.findIndex((x) => x.userId === p.userId) === i,
-    )
-
-    if (uniquePlayers.length === 0) {
-      throw new NoActivePlayersError()
-    }
-
-    // Find current player index and advance
-    const currentIndex = uniquePlayers.findIndex(
-      (p) => p.userId === state.currentTurnUserId,
-    )
-    const nextIndex =
-      currentIndex === -1 ? 0 : (currentIndex + 1) % uniquePlayers.length
-    const nextPlayer = uniquePlayers[nextIndex]
-
-    if (!nextPlayer) {
-      throw new TurnAdvanceFailedError()
-    }
-
-    await ctx.db.patch(state._id, {
-      currentTurnUserId: nextPlayer.userId,
-      turnNumber: state.turnNumber + 1,
-      lastUpdatedAt: Date.now(),
-    })
-  },
-})
 
 /**
  * Update a player's health

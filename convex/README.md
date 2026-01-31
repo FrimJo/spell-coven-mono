@@ -64,7 +64,6 @@ convex/
 | Table         | Purpose                                   |
 | ------------- | ----------------------------------------- |
 | `rooms`       | Room metadata (owner, status)             |
-| `roomState`   | Game state (current turn, turn number)    |
 | `roomPlayers` | Players in rooms (also used for presence) |
 | `roomSignals` | WebRTC signaling messages                 |
 | `roomBans`    | Persistent ban records                    |
@@ -85,13 +84,12 @@ bun run dev
 
 The Convex backend is currently in **Phase 3** of the Supabase → Convex migration:
 
-| Feature    | Status     | Notes                       |
-| ---------- | ---------- | --------------------------- |
-| Schema     | ✅ Done    | All tables defined          |
-| Room State | ✅ Done    | Mutations work without auth |
-| Presence   | ✅ Done    | `useConvexPresence` hook    |
-| Signaling  | ⏳ Phase 4 | Using Supabase broadcast    |
-| Auth       | ⏳ Phase 5 | Using Supabase Auth         |
+| Feature   | Status     | Notes                       |
+| --------- | ---------- | --------------------------- |
+| Schema    | ✅ Done    | All tables defined          |
+| Presence  | ✅ Done    | `useConvexPresence` hook    |
+| Signaling | ⏳ Phase 4 | Using Supabase broadcast    |
+| Auth      | ⏳ Phase 5 | Using Supabase Auth         |
 
 ### Phase 3 Notes
 
