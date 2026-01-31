@@ -6,11 +6,6 @@ import { Heart, Minus, Plus, Skull } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@repo/ui/components/tooltip'
 
 import type { Doc } from '../../../convex/_generated/dataModel'
 import { api } from '../../../convex/_generated/api'
@@ -176,22 +171,17 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
 
   return (
     <>
-      <div className="border-surface-2 bg-surface-0/90 hover:bg-surface-0 absolute left-3 top-3 z-10 flex flex-col gap-1.5 rounded-lg border p-2 opacity-80 backdrop-blur-sm transition-opacity hover:opacity-100">
+      <div className="hover:border-surface-2 hover:bg-surface-0/90 group absolute left-3 top-3 z-10 flex flex-col gap-1.5 rounded-lg border border-transparent bg-transparent p-2 transition-all hover:backdrop-blur-sm">
         {/* Life */}
         <div className="flex items-center justify-between gap-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="text-destructive flex cursor-help items-center gap-1.5">
-                <Heart className="h-4 w-4" />
-                <span className="min-w-[2ch] text-center font-mono font-bold text-white">
-                  {displayHealth}
-                </span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right">Life Total</TooltipContent>
-          </Tooltip>
+          <div className="text-destructive flex items-center gap-1.5">
+            <Heart className="h-4 w-4" />
+            <span className="min-w-[2ch] text-center font-mono font-bold text-white">
+              {displayHealth}
+            </span>
+          </div>
 
-          <div className="flex gap-0.5">
+          <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
             <Button
               size="icon"
               variant="ghost"
@@ -222,19 +212,14 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
 
         {/* Poison */}
         <div className="flex items-center justify-between gap-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="text-success flex cursor-help items-center gap-1.5">
-                <Skull className="h-4 w-4" />
-                <span className="min-w-[2ch] text-center font-mono font-bold text-white">
-                  {displayPoison}
-                </span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right">Poison Counters</TooltipContent>
-          </Tooltip>
+          <div className="text-success flex items-center gap-1.5">
+            <Skull className="h-4 w-4" />
+            <span className="min-w-[2ch] text-center font-mono font-bold text-white">
+              {displayPoison}
+            </span>
+          </div>
 
-          <div className="flex gap-0.5">
+          <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
             <Button
               size="icon"
               variant="ghost"
@@ -267,7 +252,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
         <Button
           variant="ghost"
           size="sm"
-          className={`mt-1 flex h-7 w-full items-center justify-between gap-2 rounded-md border px-2 text-[10px] transition-all ${
+          className={`mt-1 flex h-7 w-full items-center justify-between gap-2 rounded-md border px-2 text-[10px] opacity-0 transition-all group-hover:opacity-100 ${
             totalCommanderDamage > 0
               ? 'border-brand/30 bg-brand/10 text-brand-muted-foreground hover:bg-brand/20'
               : 'text-text-muted hover:bg-brand/20 hover:text-brand-muted-foreground border-transparent'

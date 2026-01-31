@@ -27,8 +27,8 @@ export const PlayerVideoCard = memo(function PlayerVideoCard({
   children,
 }: PlayerVideoCardProps) {
   return (
-    <Card className="border-surface-2 bg-surface-1 flex flex-col overflow-hidden">
-      <div className="relative flex-1 bg-black">{children}</div>
+    <Card className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden">
+      <div className="relative min-h-0 flex-1 bg-black">{children}</div>
     </Card>
   )
 })
