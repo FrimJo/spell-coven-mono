@@ -18,7 +18,7 @@
  * - No errors are thrown - graceful degradation
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
 
 export type AudioOutputDevice = Pick<
   globalThis.MediaDeviceInfo,
@@ -109,16 +109,16 @@ export function useAudioOutput(
   const [error, setError] = useState<Error | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  const onDeviceChangedRef = useRef(onDeviceChanged)
-  const onErrorRef = useRef(onError)
   const audioElementRef = useRef<HTMLAudioElement | null>(null)
   const isEnumeratingRef = useRef(false)
 
-  // Keep callback refs up to date
-  useEffect(() => {
-    onDeviceChangedRef.current = onDeviceChanged
-    onErrorRef.current = onError
-  }, [onDeviceChanged, onError])
+  const handleDeviceChanged = useEffectEvent((deviceId: string) => {
+    onDeviceChanged?.(deviceId)
+  })
+
+  const handleError = useEffectEvent((error: Error) => {
+    onError?.(error)
+  })
 
   // Check for setSinkId support
   useEffect(() => {
@@ -215,7 +215,7 @@ export function useAudioOutput(
       const error = err instanceof Error ? err : new Error(String(err))
       console.error('[useAudioOutput] Failed to enumerate devices:', error)
       setError(error)
-      onErrorRef.current?.(error)
+      handleError(error)
     } finally {
       isEnumeratingRef.current = false
       setIsLoading(false)
@@ -239,7 +239,7 @@ export function useAudioOutput(
         )
         setCurrentDeviceId(deviceId)
         // Still call the callback so UI can update, but note it's using default
-        onDeviceChangedRef.current?.(deviceId)
+        handleDeviceChanged(deviceId)
         return
       }
 
@@ -252,7 +252,7 @@ export function useAudioOutput(
         }
 
         setCurrentDeviceId(deviceId)
-        onDeviceChangedRef.current?.(deviceId)
+        handleDeviceChanged(deviceId)
 
         console.log(
           '[useAudioOutput] Audio output device changed to:',
@@ -265,7 +265,7 @@ export function useAudioOutput(
           error,
         )
         setError(error)
-        onErrorRef.current?.(error)
+        handleError(error)
         throw error
       }
     },
@@ -281,7 +281,7 @@ export function useAudioOutput(
     if (!audioElementRef.current) {
       const err = new Error('Audio element not initialized')
       setError(err)
-      onErrorRef.current?.(err)
+      handleError(err)
       throw err
     }
 
@@ -340,7 +340,7 @@ export function useAudioOutput(
       const error = err instanceof Error ? err : new Error(String(err))
       console.error('[useAudioOutput] Failed to test audio output:', error)
       setError(error)
-      onErrorRef.current?.(error)
+      handleError(error)
       throw error
     } finally {
       setIsTesting(false)
