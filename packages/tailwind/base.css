@@ -188,22 +188,22 @@
   --info-muted-foreground: #93c5fd;
 
   /* Surface levels (for layered backgrounds) - slate palette */
-  --surface-0: #020617;  /* slate-950 */
-  --surface-1: #0f172a;  /* slate-900 */
-  --surface-2: #1e293b;  /* slate-800 */
-  --surface-3: #334155;  /* slate-700 */
+  --surface-0: #020617; /* slate-950 */
+  --surface-1: #0f172a; /* slate-900 */
+  --surface-2: #1e293b; /* slate-800 */
+  --surface-3: #334155; /* slate-700 */
 
   /* Text levels - slate palette */
-  --text-primary: #f8fafc;   /* slate-50 */
+  --text-primary: #f8fafc; /* slate-50 */
   --text-secondary: #e2e8f0; /* slate-200 */
-  --text-tertiary: #cbd5e1;  /* slate-300 */
-  --text-muted: #94a3b8;     /* slate-400 */
+  --text-tertiary: #cbd5e1; /* slate-300 */
+  --text-muted: #94a3b8; /* slate-400 */
   --text-placeholder: #64748b; /* slate-500 */
 
   /* Border levels - slate palette */
-  --border-default: #334155;  /* slate-700 */
-  --border-muted: #1e293b;    /* slate-800 */
-  --border-strong: #475569;   /* slate-600 */
+  --border-default: #334155; /* slate-700 */
+  --border-muted: #1e293b; /* slate-800 */
+  --border-strong: #475569; /* slate-600 */
 
   /* Online/Active indicator */
   --online: #34d399;
