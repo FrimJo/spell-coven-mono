@@ -2,11 +2,9 @@
 
 import type { ScryfallCard } from '@/lib/scryfall'
 import { useEffect, useEffectEvent, useRef } from 'react'
+import { detectDualCommanderKeywords, getSpecificPartner } from '@/lib/scryfall'
+import { commanderSearchMachine } from '@/state/commanderSearchMachine'
 import { useMachine } from '@xstate/react'
-import {
-  detectDualCommanderKeywords,
-  getSpecificPartner,
-} from '@/lib/scryfall'
 import { Loader2 } from 'lucide-react'
 
 import {
@@ -22,7 +20,6 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from '@repo/ui/components/popover'
-import { commanderSearchMachine } from '@/state/commanderSearchMachine'
 
 // Stable empty array to prevent infinite re-render loops
 const EMPTY_SUGGESTIONS: string[] = []
@@ -88,7 +85,11 @@ export function CommanderSearchInput({
   })
 
   const syncSuggestions = useEffectEvent(() => {
-    send({ type: 'SET_SUGGESTIONS', suggestions: effectiveSuggestions, label: suggestionsLabel })
+    send({
+      type: 'SET_SUGGESTIONS',
+      suggestions: effectiveSuggestions,
+      label: suggestionsLabel,
+    })
   })
 
   // Sync external value changes
@@ -141,7 +142,8 @@ export function CommanderSearchInput({
     send({ type: 'BLUR' })
   }
 
-  const showResults = results.length > 0 || effectiveSuggestions.length > 0 || loading
+  const showResults =
+    results.length > 0 || effectiveSuggestions.length > 0 || loading
 
   const handleOpenChange = (newOpen: boolean) => {
     // Ignore close requests when the input is focused (prevents Radix from closing on anchor click)

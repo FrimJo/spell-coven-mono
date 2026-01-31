@@ -71,7 +71,7 @@ export function NotFoundPage() {
             </h2>
             <p className="mx-auto max-w-md text-lg text-slate-400">
               The page you are looking for has been exiled or never existed.
-              Let's planeswalk you back to safety.
+              Let&apos;s planeswalk you back to safety.
             </p>
           </div>
 

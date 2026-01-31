@@ -86,7 +86,7 @@ async function signInWithPassword(
     if (signInResult.tokens) {
       return signInResult.tokens
     }
-  } catch (error: any) {
+  } catch (_error: unknown) {
     // Account might not exist, try signUp
     console.log('Sign-in failed, attempting sign-up...')
   }

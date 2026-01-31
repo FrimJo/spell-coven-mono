@@ -48,7 +48,7 @@ import {
 import { Toaster } from '@repo/ui/components/sonner'
 
 import type { CreatorInviteState } from '../lib/session-storage.js'
-import { api } from '../../../../convex/_generated/api'
+import { api } from '../../../convex/_generated/api'
 import logo from '../assets/logo_1024x1024.png'
 import { CreateGameDialog } from './CreateGameDialog.js'
 import { RoomNotFoundDialog } from './RoomNotFoundDialog.js'
@@ -99,30 +99,26 @@ export function LandingPage({
   })
   const liveStatsQuery = useQuery(api.rooms.getLiveStats)
   const createRoom = useMutation(api.rooms.createRoom)
+  const onlineUsers = liveStatsQuery?.onlineUsers
+  const activeRooms = liveStatsQuery?.activeRooms
   const liveStats = useMemo(
     () => [
       {
         label: 'Online Users',
-        value:
-          liveStatsQuery?.onlineUsers !== undefined
-            ? liveStatsQuery.onlineUsers.toLocaleString()
-            : '—',
+        value: onlineUsers !== undefined ? onlineUsers.toLocaleString() : '—',
         icon: Users,
         accent: 'text-purple-300',
         badge: 'Live now',
       },
       {
         label: 'Active Game Rooms',
-        value:
-          liveStatsQuery?.activeRooms !== undefined
-            ? liveStatsQuery.activeRooms.toLocaleString()
-            : '—',
+        value: activeRooms !== undefined ? activeRooms.toLocaleString() : '—',
         icon: Gamepad2,
         accent: 'text-blue-300',
         badge: 'Playing',
       },
     ],
-    [liveStatsQuery],
+    [onlineUsers, activeRooms],
   )
   const isAuthenticated = !!user
 

@@ -189,10 +189,10 @@ export function CreateGameDialog({
                 }`}
                 onClick={isReady ? handleCopy : undefined}
               >
-                <div className="text-left flex-1 min-w-0">
+                <div className="min-w-0 flex-1 text-left">
                   <p className="text-sm text-slate-400">Share Link</p>
                   {isReady ? (
-                    <p className="font-mono text-sm text-purple-400 break-all">
+                    <p className="break-all font-mono text-sm text-purple-400">
                       {shareLink}
                     </p>
                   ) : (
@@ -207,10 +207,10 @@ export function CreateGameDialog({
                 <Button
                   size="icon"
                   variant="ghost"
-                  className={`h-8 w-8 shrink-0 ml-2 ${
+                  className={`ml-2 h-8 w-8 shrink-0 ${
                     isReady
                       ? 'text-slate-400 group-hover:text-white'
-                      : 'text-slate-600 cursor-default'
+                      : 'cursor-default text-slate-600'
                   }`}
                   disabled={!isReady}
                 >
@@ -237,7 +237,7 @@ export function CreateGameDialog({
                 className={`w-full transition-all ${
                   isReady
                     ? 'bg-purple-600 text-white hover:scale-[1.02] hover:bg-purple-700'
-                    : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                    : 'cursor-not-allowed bg-slate-700 text-slate-400'
                 }`}
                 size="lg"
               >

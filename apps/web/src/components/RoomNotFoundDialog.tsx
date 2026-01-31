@@ -37,9 +37,9 @@ export function RoomNotFoundDialog({ open, onClose }: RoomNotFoundDialogProps) {
             Room Not Found
           </DialogTitle>
           <DialogDescription className="text-center text-slate-400">
-            The game room you're trying to join doesn't exist or is no longer
-            available. Please check the room ID and try again, or create a new
-            game.
+            The game room you&apos;re trying to join doesn&apos;t exist or is no
+            longer available. Please check the room ID and try again, or create
+            a new game.
           </DialogDescription>
         </DialogHeader>
 

@@ -12,8 +12,8 @@ import {
   TooltipTrigger,
 } from '@repo/ui/components/tooltip'
 
-import type { Doc } from '../../../../convex/_generated/dataModel'
-import { api } from '../../../../convex/_generated/api'
+import type { Doc } from '../../../convex/_generated/dataModel'
+import { api } from '../../../convex/_generated/api'
 import { GameStatsPanel } from './GameStatsPanel'
 
 interface PlayerStatsOverlayProps {

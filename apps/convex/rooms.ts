@@ -66,16 +66,16 @@ function toBase32Code(num: number, minLength = 6): string {
   let scrambled = scrambleId(num)
 
   if (scrambled === 0) {
-    return BASE32_CHARS[0].repeat(minLength)
+    return BASE32_CHARS[0]!.repeat(minLength)
   }
 
   let result = ''
   while (scrambled > 0) {
-    result = BASE32_CHARS[scrambled % 32] + result
+    result = BASE32_CHARS[scrambled % 32]! + result
     scrambled = Math.floor(scrambled / 32)
   }
 
-  return result.padStart(minLength, BASE32_CHARS[0])
+  return result.padStart(minLength, BASE32_CHARS[0]!)
 }
 
 /**
@@ -292,7 +292,6 @@ export const getLiveStats = query({
     }
   },
 })
-
 
 /**
  * Update a player's health

@@ -21,7 +21,7 @@ export const useEnumeratedMediaDevices = () => {
       // Before permission is granted, enumerateDevices() returns devices with empty deviceId
       // values for privacy reasons. After MediaPermissionGate grants access, invalidate
       // this query to get real device IDs.
-      
+
       const devices = await navigator.mediaDevices.enumerateDevices()
 
       // Filter out devices with empty deviceId (may still happen if permission was denied)

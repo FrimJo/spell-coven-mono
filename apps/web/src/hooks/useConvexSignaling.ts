@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { validateWebRTCSignal } from '@/types/webrtc-signal'
 import { useMutation, useQuery } from 'convex/react'
 
-import { api } from '../../../../convex/_generated/api'
+import { api } from '../../../convex/_generated/api'
 
 interface UseConvexSignalingProps {
   roomId: string
@@ -132,6 +132,7 @@ export function useConvexSignaling({
       )
       onSignalRef.current?.(validation.data)
     }
+    // eslint-disable-next-line @tanstack/query/no-unstable-deps -- signalsQuery is from Convex, not TanStack Query
   }, [signalsQuery, enabled, localPeerId, convexRoomId])
 
   // Mark as initialized once we have a successful query (even if empty)
@@ -139,15 +140,18 @@ export function useConvexSignaling({
     if (enabled && localPeerId && signalsQuery !== undefined) {
       if (!isInitialized) {
         console.log('[ConvexSignaling] Initialized for room:', convexRoomId)
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing internal state with external Convex query state
         setIsInitialized(true)
         setError(null)
       }
     }
+    // eslint-disable-next-line @tanstack/query/no-unstable-deps -- signalsQuery is from Convex, not TanStack Query
   }, [enabled, localPeerId, signalsQuery, convexRoomId, isInitialized])
 
   // Reset state when disabled or room changes
   useEffect(() => {
     if (!enabled) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when hook becomes disabled
       setIsInitialized(false)
       processedSignalsRef.current.clear()
       lastSignalTimestampRef.current = 0
