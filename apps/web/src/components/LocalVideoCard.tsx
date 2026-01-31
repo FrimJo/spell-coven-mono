@@ -23,7 +23,7 @@ const LOCAL_VIDEO_STYLE: React.CSSProperties = {
   left: 0,
   width: '100%',
   height: '100%',
-  objectFit: 'contain',
+  objectFit: 'cover',
   zIndex: 0,
 }
 
