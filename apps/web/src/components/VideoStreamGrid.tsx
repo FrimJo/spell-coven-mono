@@ -1,5 +1,6 @@
 import type { DetectorType } from '@/lib/detectors'
-import { Suspense, useMemo, useRef, useState } from 'react'
+import type { Participant } from '@/types/participant'
+import { memo, Suspense, useCallback, useMemo, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { usePresence } from '@/contexts/PresenceContext'
 import { useConvexWebRTC } from '@/hooks/useConvexWebRTC'
@@ -25,6 +26,206 @@ import {
   PlayerNameBadge,
   VideoDisabledPlaceholder,
 } from './PlayerVideoCardParts'
+
+// Extract inline styles to prevent recreation on every render
+const VIDEO_ELEMENT_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  width: '100%',
+  height: '100%',
+  objectFit: 'contain',
+  zIndex: 0,
+}
+
+// Memoized remote player component to prevent unnecessary re-renders
+interface RemotePlayerCardProps {
+  playerId: string
+  playerName: string
+  participantData: Participant
+  remoteStream: MediaStream | undefined
+  connectionState: string | undefined
+  trackState: { videoEnabled: boolean; audioEnabled: boolean } | undefined
+  streamState: { video: boolean; audio: boolean }
+  remoteVideoRefs: React.MutableRefObject<Map<string, HTMLVideoElement>>
+  attachedStreamsRef: React.MutableRefObject<Map<string, MediaStream | null>>
+  trackStates: Map<string, { videoEnabled: boolean; audioEnabled: boolean }>
+  streamStates: Record<string, { video: boolean; audio: boolean }>
+  onToggleAudio: (playerId: string) => void
+  roomId: string
+  localParticipant: Participant | undefined
+  gameRoomParticipants: Participant[]
+}
+
+const RemotePlayerCard = memo(function RemotePlayerCard({
+  playerId,
+  playerName,
+  participantData,
+  remoteStream,
+  connectionState,
+  trackState,
+  streamState,
+  remoteVideoRefs,
+  attachedStreamsRef,
+  trackStates,
+  streamStates,
+  onToggleAudio,
+  roomId,
+  localParticipant,
+  gameRoomParticipants,
+}: RemotePlayerCardProps) {
+  // Remote players: use trackState which checks if track is 'live'
+  const peerVideoEnabled = trackState?.videoEnabled ?? false
+  const peerAudioEnabled = trackState?.audioEnabled ?? streamState.audio
+
+  // These handlers use refs which are stable, so no need to memoize
+  const handleVideoRef = (element: HTMLVideoElement | null) => {
+    if (element) {
+      remoteVideoRefs.current.set(playerId, element)
+    } else {
+      remoteVideoRefs.current.delete(playerId)
+      attachedStreamsRef.current.delete(playerId)
+    }
+  }
+
+  const handleLoadedMetadata = () => {
+    const videoElement = remoteVideoRefs.current.get(playerId)
+    const trackState = trackStates.get(playerId)
+    const state = streamStates[playerId] || { video: true, audio: true }
+    const videoEnabled =
+      (trackState?.videoEnabled ?? state.video) && !!remoteStream
+
+    if (videoElement && remoteStream && videoElement.paused && videoEnabled) {
+      requestAnimationFrame(() => {
+        videoElement.play().catch((error) => {
+          if (error.name !== 'AbortError') {
+            console.error(
+              `[VideoStreamGrid] Failed to play after metadata loaded for ${playerId}:`,
+              error,
+            )
+          }
+        })
+      })
+    }
+  }
+
+  const handleCanPlay = () => {
+    const videoElement = remoteVideoRefs.current.get(playerId)
+    const trackState = trackStates.get(playerId)
+    const state = streamStates[playerId] || { video: true, audio: true }
+    const videoEnabled =
+      (trackState?.videoEnabled ?? state.video) && !!remoteStream
+
+    if (videoElement && remoteStream && videoElement.paused && videoEnabled) {
+      requestAnimationFrame(() => {
+        videoElement.play().catch((error) => {
+          if (error.name !== 'AbortError') {
+            console.error(
+              `[VideoStreamGrid] Failed to play on canPlay for ${playerId}:`,
+              error,
+            )
+          }
+        })
+      })
+    }
+  }
+
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    console.error(`[VideoStreamGrid] Video error for ${playerId}:`, e)
+  }
+
+  const handleToggleAudioClick = useCallback(() => {
+    onToggleAudio(playerId)
+  }, [playerId, onToggleAudio])
+
+  return (
+    <Card className="border-surface-2 bg-surface-1 flex flex-col overflow-hidden">
+      <div className="relative flex-1 bg-black">
+        {peerVideoEnabled ? (
+          <>
+            {remoteStream && (
+              <video
+                ref={handleVideoRef}
+                autoPlay
+                playsInline
+                muted={true}
+                style={VIDEO_ELEMENT_STYLE}
+                onLoadedMetadata={handleLoadedMetadata}
+                onCanPlay={handleCanPlay}
+                onError={handleVideoError}
+              />
+            )}
+          </>
+        ) : (
+          <VideoDisabledPlaceholder />
+        )}
+
+        <PlayerNameBadge>
+          <span className="text-white">{playerName}</span>
+        </PlayerNameBadge>
+
+        {localParticipant && (
+          <PlayerStatsOverlay
+            roomId={roomId}
+            participant={participantData}
+            currentUser={localParticipant}
+            participants={gameRoomParticipants}
+          />
+        )}
+
+        <div className="absolute right-3 top-3 z-10 flex gap-2">
+          {!peerAudioEnabled && (
+            <div className="border-destructive/30 bg-destructive/20 flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur-sm">
+              <MicOff className="text-destructive h-4 w-4" />
+            </div>
+          )}
+          {connectionState && (
+            <div
+              className={`flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur-sm ${
+                connectionState === 'connected'
+                  ? 'border-success/30 bg-success/20'
+                  : connectionState === 'connecting' ||
+                      connectionState === 'reconnecting'
+                    ? 'border-warning/30 bg-warning/20'
+                    : connectionState === 'failed'
+                      ? 'border-destructive/30 bg-destructive/20'
+                      : 'border-default/30 bg-surface-3/20'
+              }`}
+              title={`Connection: ${connectionState}`}
+            >
+              {connectionState === 'connected' ? (
+                <Wifi className="text-success h-4 w-4" />
+              ) : connectionState === 'failed' ? (
+                <WifiOff className="text-destructive h-4 w-4" />
+              ) : (
+                <Wifi className="text-warning h-4 w-4" />
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="absolute bottom-4 right-4 z-10">
+          <Button
+            size="sm"
+            variant={peerAudioEnabled ? 'outline' : 'destructive'}
+            onClick={handleToggleAudioClick}
+            className={`h-10 w-10 p-0 backdrop-blur-sm ${
+              peerAudioEnabled
+                ? 'border-default bg-surface-0/90 hover:bg-surface-2 text-white'
+                : 'border-destructive bg-destructive hover:bg-destructive text-white'
+            }`}
+          >
+            {peerAudioEnabled ? (
+              <Volume2 className="h-5 w-5" />
+            ) : (
+              <VolumeX className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
+      </div>
+    </Card>
+  )
+})
 
 interface VideoStreamGridProps {
   // Room and user identification (for fetching participants)
@@ -168,7 +369,7 @@ export function VideoStreamGrid({
   // Find local player (not currently used but may be needed for future features)
   // const localPlayer = players.find((p) => p.name === localPlayerName)
 
-  const toggleAudio = (playerId: string) => {
+  const toggleAudio = useCallback((playerId: string) => {
     // For remote players, just update UI state
     setStreamStates((prev) => {
       const currentState = prev[playerId]
@@ -178,7 +379,7 @@ export function VideoStreamGrid({
         [playerId]: { ...currentState, audio: !currentState.audio },
       }
     })
-  }
+  }, [])
 
   // Always show 2x2 grid for 4 player slots
   const getGridClass = () => {
@@ -312,190 +513,25 @@ export function VideoStreamGrid({
         const connectionState = connectionStates.get(player.id)
         const trackState = trackStates.get(player.id)
 
-        // Remote players: use trackState which checks if track is 'live'
-        const peerVideoEnabled = trackState?.videoEnabled ?? false
-        const peerAudioEnabled = trackState?.audioEnabled ?? state.audio
-
         return (
-          <Card
+          <RemotePlayerCard
             key={player.id}
-            className="border-surface-2 bg-surface-1 flex flex-col overflow-hidden"
-          >
-            <div className="relative flex-1 bg-black">
-              {/* Render video elements when enabled, placeholder when disabled */}
-              {peerVideoEnabled ? (
-                <>
-                  {/* Remote player video element */}
-                  {remoteStream && (
-                    <video
-                      ref={(element) => {
-                        if (element) {
-                          remoteVideoRefs.current.set(player.id, element)
-                        } else {
-                          remoteVideoRefs.current.delete(player.id)
-                          attachedStreamsRef.current.delete(player.id)
-                        }
-                      }}
-                      autoPlay
-                      playsInline
-                      muted={true}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        zIndex: 0,
-                      }}
-                      onLoadedMetadata={() => {
-                        const videoElement = remoteVideoRefs.current.get(
-                          player.id,
-                        )
-                        const trackState = trackStates.get(player.id)
-                        const state = streamStates[player.id] || {
-                          video: true,
-                          audio: true,
-                        }
-                        const videoEnabled =
-                          (trackState?.videoEnabled ?? state.video) &&
-                          !!remoteStream
-
-                        if (
-                          videoElement &&
-                          remoteStream &&
-                          videoElement.paused &&
-                          videoEnabled
-                        ) {
-                          // Use requestAnimationFrame to ensure element is ready
-                          requestAnimationFrame(() => {
-                            videoElement.play().catch((error) => {
-                              // AbortError is expected if srcObject changes during play, ignore it
-                              if (error.name !== 'AbortError') {
-                                console.error(
-                                  `[VideoStreamGrid] Failed to play after metadata loaded for ${player.id}:`,
-                                  error,
-                                )
-                              }
-                            })
-                          })
-                        }
-                      }}
-                      onCanPlay={() => {
-                        // Fallback: ensure play when video can start playing
-                        const videoElement = remoteVideoRefs.current.get(
-                          player.id,
-                        )
-                        const trackState = trackStates.get(player.id)
-                        const state = streamStates[player.id] || {
-                          video: true,
-                          audio: true,
-                        }
-                        const videoEnabled =
-                          (trackState?.videoEnabled ?? state.video) &&
-                          !!remoteStream
-
-                        if (
-                          videoElement &&
-                          remoteStream &&
-                          videoElement.paused &&
-                          videoEnabled
-                        ) {
-                          requestAnimationFrame(() => {
-                            videoElement.play().catch((error) => {
-                              if (error.name !== 'AbortError') {
-                                console.error(
-                                  `[VideoStreamGrid] Failed to play on canPlay for ${player.id}:`,
-                                  error,
-                                )
-                              }
-                            })
-                          })
-                        }
-                      }}
-                      onError={(e) => {
-                        console.error(
-                          `[VideoStreamGrid] Video error for ${player.id}:`,
-                          e,
-                        )
-                      }}
-                    />
-                  )}
-                </>
-              ) : (
-                // Placeholder UI - Renders instead of video when disabled
-                <VideoDisabledPlaceholder />
-              )}
-
-              {/* Player Info Badge */}
-              <PlayerNameBadge>
-                <span className="text-white">{player.name}</span>
-              </PlayerNameBadge>
-
-              {/* Stats Overlay */}
-              {localParticipant && (
-                <PlayerStatsOverlay
-                  roomId={roomId}
-                  participant={player.participantData}
-                  currentUser={localParticipant}
-                  participants={gameRoomParticipants}
-                />
-              )}
-
-              {/* Audio/Video Status Indicators */}
-              <div className="absolute right-3 top-3 z-10 flex gap-2">
-                {!peerAudioEnabled && (
-                  <div className="border-destructive/30 bg-destructive/20 flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur-sm">
-                    <MicOff className="text-destructive h-4 w-4" />
-                  </div>
-                )}
-                {/* Connection status indicator for remote players */}
-                {connectionState && (
-                  <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur-sm ${
-                      connectionState === 'connected'
-                        ? 'border-success/30 bg-success/20'
-                        : connectionState === 'connecting' ||
-                            connectionState === 'reconnecting'
-                          ? 'border-warning/30 bg-warning/20'
-                          : connectionState === 'failed'
-                            ? 'border-destructive/30 bg-destructive/20'
-                            : 'border-default/30 bg-surface-3/20'
-                    }`}
-                    title={`Connection: ${connectionState}`}
-                  >
-                    {connectionState === 'connected' ? (
-                      <Wifi className="text-success h-4 w-4" />
-                    ) : connectionState === 'failed' ? (
-                      <WifiOff className="text-destructive h-4 w-4" />
-                    ) : (
-                      <Wifi className="text-warning h-4 w-4" />
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Remote Audio Control */}
-              <div className="absolute bottom-4 right-4 z-10">
-                <Button
-                  size="sm"
-                  variant={peerAudioEnabled ? 'outline' : 'destructive'}
-                  onClick={() => toggleAudio(player.id)}
-                  className={`h-10 w-10 p-0 backdrop-blur-sm ${
-                    peerAudioEnabled
-                      ? 'border-default bg-surface-0/90 hover:bg-surface-2 text-white'
-                      : 'border-destructive bg-destructive hover:bg-destructive text-white'
-                  }`}
-                >
-                  {peerAudioEnabled ? (
-                    <Volume2 className="h-5 w-5" />
-                  ) : (
-                    <VolumeX className="h-5 w-5" />
-                  )}
-                </Button>
-              </div>
-            </div>
-          </Card>
+            playerId={player.id}
+            playerName={player.name}
+            participantData={player.participantData}
+            remoteStream={remoteStream}
+            connectionState={connectionState}
+            trackState={trackState}
+            streamState={state}
+            remoteVideoRefs={remoteVideoRefs}
+            attachedStreamsRef={attachedStreamsRef}
+            trackStates={trackStates}
+            streamStates={streamStates}
+            onToggleAudio={toggleAudio}
+            roomId={roomId}
+            localParticipant={localParticipant}
+            gameRoomParticipants={gameRoomParticipants}
+          />
         )
       })}
 

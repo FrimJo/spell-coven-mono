@@ -141,6 +141,16 @@ export function PresenceProvider({
     setIsConnected(false)
   }, [])
 
+  // Memoize actions separately to prevent recreation
+  const actions = useMemo(
+    () => ({
+      kickPlayer: presence.kickPlayer,
+      banPlayer: presence.banPlayer,
+      transferSession: presence.transferSession,
+    }),
+    [presence.kickPlayer, presence.banPlayer, presence.transferSession],
+  )
+
   const value = useMemo<PresenceContextValue>(
     () => ({
       participants: presence.participants,
@@ -155,9 +165,7 @@ export function PresenceProvider({
       disconnectReason,
       connect,
       disconnect,
-      kickPlayer: presence.kickPlayer,
-      banPlayer: presence.banPlayer,
-      transferSession: presence.transferSession,
+      ...actions,
     }),
     [
       presence.participants,
@@ -168,13 +176,11 @@ export function PresenceProvider({
       presence.isOwner,
       presence.sessionId,
       presence.hasDuplicateSession,
-      presence.kickPlayer,
-      presence.banPlayer,
-      presence.transferSession,
       isConnected,
       disconnectReason,
       connect,
       disconnect,
+      actions,
     ],
   )
 

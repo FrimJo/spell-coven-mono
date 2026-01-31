@@ -1,3 +1,5 @@
+import { memo } from 'react'
+
 import { Card } from '@repo/ui/components/card'
 
 interface PlayerVideoCardProps {
@@ -21,10 +23,12 @@ interface PlayerVideoCardProps {
  * </PlayerVideoCard>
  * ```
  */
-export function PlayerVideoCard({ children }: PlayerVideoCardProps) {
+export const PlayerVideoCard = memo(function PlayerVideoCard({
+  children,
+}: PlayerVideoCardProps) {
   return (
-    <Card className="flex flex-col overflow-hidden border-surface-2 bg-surface-1">
+    <Card className="border-surface-2 bg-surface-1 flex flex-col overflow-hidden">
       <div className="relative flex-1 bg-black">{children}</div>
     </Card>
   )
-}
+})
