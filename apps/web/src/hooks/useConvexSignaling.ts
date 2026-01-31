@@ -132,7 +132,6 @@ export function useConvexSignaling({
       )
       onSignalRef.current?.(validation.data)
     }
-    // eslint-disable-next-line @tanstack/query/no-unstable-deps -- signalsQuery is from Convex, not TanStack Query
   }, [signalsQuery, enabled, localPeerId, convexRoomId])
 
   // Mark as initialized once we have a successful query (even if empty)
@@ -145,7 +144,6 @@ export function useConvexSignaling({
         setError(null)
       }
     }
-    // eslint-disable-next-line @tanstack/query/no-unstable-deps -- signalsQuery is from Convex, not TanStack Query
   }, [enabled, localPeerId, signalsQuery, convexRoomId, isInitialized])
 
   // Reset state when disabled or room changes

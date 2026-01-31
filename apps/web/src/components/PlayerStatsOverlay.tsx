@@ -1,5 +1,5 @@
 import type { Participant } from '@/types/participant'
-import { useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
 import { useMutation } from 'convex/react'
 import { Heart, Minus, Plus, Skull } from 'lucide-react'
@@ -23,7 +23,7 @@ interface PlayerStatsOverlayProps {
   participants: Participant[]
 }
 
-export function PlayerStatsOverlay({
+export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
   roomId,
   participant,
   currentUser,
@@ -103,7 +103,7 @@ export function PlayerStatsOverlay({
     )
   })
 
-  const handleHealthChange = (delta: number) => {
+  const handleHealthChange = useCallback((delta: number) => {
     updateHealth({
       roomId: convexRoomId,
       userId: participant.id,
@@ -111,9 +111,9 @@ export function PlayerStatsOverlay({
     }).catch(() => {
       toast.error('Failed to update health')
     })
-  }
+  }, [updateHealth, convexRoomId, participant.id])
 
-  const handlePoisonChange = (delta: number) => {
+  const handlePoisonChange = useCallback((delta: number) => {
     updatePoison({
       roomId: convexRoomId,
       userId: participant.id,
@@ -121,7 +121,7 @@ export function PlayerStatsOverlay({
     }).catch(() => {
       toast.error('Failed to update poison')
     })
-  }
+  }, [updatePoison, convexRoomId, participant.id])
 
   // Hold-to-repeat hooks for each button
   const healthMinus = useHoldToRepeat({
@@ -151,14 +151,18 @@ export function PlayerStatsOverlay({
   // Determine if this is the current user (affects UI emphasis or layout, though controls are available for all)
   const isMe = participant.id === currentUser.id
 
-  // Calculate total commander damage
-  const totalCommanderDamage = Object.values(
-    participant.commanderDamage ?? {},
-  ).reduce((sum, damage) => sum + damage, 0)
+  // Calculate total commander damage - memoized to avoid recalculation
+  const totalCommanderDamage = useMemo(() => 
+    Object.values(participant.commanderDamage ?? {}).reduce((sum, damage) => sum + damage, 0),
+    [participant.commanderDamage]
+  )
 
   // Clamp health and poison to 0 minimum for display
   const displayHealth = Math.max(0, participant.health ?? 0)
   const displayPoison = Math.max(0, participant.poison ?? 0)
+
+  const handleOpenPanel = useCallback(() => setPanelOpen(true), [])
+  const handleClosePanel = useCallback(() => setPanelOpen(false), [])
 
   return (
     <>
@@ -279,7 +283,7 @@ export function PlayerStatsOverlay({
           variant="ghost"
           size="sm"
           className="mt-1 h-6 w-full text-[10px] text-slate-400 hover:bg-purple-900/20 hover:text-purple-300"
-          onClick={() => setPanelOpen(true)}
+          onClick={handleOpenPanel}
         >
           COMMANDERS
         </Button>
@@ -287,7 +291,7 @@ export function PlayerStatsOverlay({
 
       <GameStatsPanel
         isOpen={panelOpen}
-        onClose={() => setPanelOpen(false)}
+        onClose={handleClosePanel}
         roomId={roomId}
         currentUser={currentUser}
         participants={participants}
@@ -296,4 +300,4 @@ export function PlayerStatsOverlay({
       />
     </>
   )
-}
+})
