@@ -33,7 +33,6 @@ import {
 } from '@repo/ui/components/sheet'
 
 import logo from '../assets/logo_1024x1024.png'
-import { GameRoomPlayerCount } from './GameRoomPlayerCount.js'
 import { ThemeToggle } from './ThemeToggle.js'
 
 // ============================================================================
@@ -369,8 +368,6 @@ function GameHeader({
 
         {/* Right side */}
         <div className="flex items-center gap-3">
-          {roomId && <GameRoomPlayerCount roomId={roomId} maxPlayers={4} />}
-
           <ThemeToggle />
 
           <Button

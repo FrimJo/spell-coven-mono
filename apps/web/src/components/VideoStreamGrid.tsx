@@ -137,8 +137,8 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
   }
 
   return (
-    <Card className="border-surface-2 bg-surface-1 flex flex-col overflow-hidden">
-      <div className="relative flex-1 bg-black">
+    <Card className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden">
+      <div className="relative min-h-0 flex-1 bg-black">
         {peerVideoEnabled ? (
           <>
             {remoteStream && (
@@ -357,7 +357,7 @@ export function VideoStreamGrid({
 
   // Always show 2x2 grid for 4 player slots
   const getGridClass = () => {
-    return 'grid-cols-1 lg:grid-cols-2'
+    return 'grid-cols-1 grid-rows-2 lg:grid-cols-2 lg:grid-rows-2'
   }
 
   // Calculate empty slots needed (total 4 slots: 1 local + up to 3 remote)
@@ -380,7 +380,7 @@ export function VideoStreamGrid({
   })
 
   return (
-    <div className={`grid ${getGridClass()} h-full gap-4`}>
+    <div className={`grid ${getGridClass()} h-full items-stretch gap-4`}>
       {/* Render local player with permission gate, loading state, or video */}
       {isCheckingPermissions ? (
         <div className="border-default bg-surface-2/50 flex h-full items-center justify-center rounded-lg border">
@@ -516,9 +516,9 @@ export function VideoStreamGrid({
       {Array.from({ length: emptySlots }).map((_, index) => (
         <Card
           key={`empty-slot-${index}`}
-          className="border-default bg-surface-1/50 flex flex-col overflow-hidden border-dashed"
+          className="border-default bg-surface-1/50 flex h-full flex-col overflow-hidden border-dashed"
         >
-          <div className="bg-surface-0/50 relative flex flex-1 items-center justify-center">
+          <div className="bg-surface-0/50 relative flex min-h-0 flex-1 items-center justify-center">
             <div className="space-y-4 text-center">
               <motion.div className="bg-brand/10 relative mx-auto flex h-16 w-16 items-center justify-center rounded-full">
                 <motion.div
