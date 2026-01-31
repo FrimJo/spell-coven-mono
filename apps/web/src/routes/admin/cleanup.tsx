@@ -17,7 +17,6 @@ type ChannelsResult = {
 function AdminCleanup() {
   const [secret, setSecret] = useState('')
   const [result, setResult] = useState<ChannelsResult | null>(null)
-  const loading = false
 
   const handleList = async () => {
     setResult({
@@ -66,21 +65,15 @@ function AdminCleanup() {
           <div className="mb-6 flex gap-4">
             <button
               onClick={handleList}
-              disabled={loading}
-              className="flex-1 rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:bg-gray-400"
+              className="flex-1 rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
             >
-              {loading && result?.type === 'list'
-                ? 'Loading...'
-                : 'List Channels'}
+              List Channels
             </button>
             <button
               onClick={handleCleanup}
-              disabled={loading}
-              className="flex-1 rounded bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700 disabled:bg-gray-400"
+              className="flex-1 rounded bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700"
             >
-              {loading && result?.type === 'cleanup'
-                ? 'Deleting...'
-                : 'Delete All Channels'}
+              Delete All Channels
             </button>
           </div>
 
