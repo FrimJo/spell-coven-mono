@@ -69,11 +69,11 @@ export const AudioLevelIndicator = ({
 
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs text-muted">
+      <div className="flex items-center justify-between text-xs text-slate-400">
         <span>Input Level</span>
         <span>{Math.round(audioLevel)}%</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-surface-2">
+      <div className="h-2 overflow-hidden rounded-full bg-slate-800">
         <div
           className="h-full rounded-full transition-all duration-100"
           style={{
@@ -87,7 +87,7 @@ export const AudioLevelIndicator = ({
           }}
         />
       </div>
-      <p className="text-xs text-muted">
+      <p className="text-xs text-slate-500">
         Speak into your microphone to test
       </p>
     </div>

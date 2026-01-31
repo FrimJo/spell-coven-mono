@@ -789,10 +789,10 @@ export function MediaSetupPanel({
       {showHeader && (
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-default">
+            <h2 className="text-lg font-semibold text-slate-100">
               Setup Audio & Video
             </h2>
-            <p className="text-sm text-muted">
+            <p className="text-sm text-slate-400">
               {hasPermissions
                 ? 'Configure your camera and audio devices before joining the game'
                 : 'Grant camera and microphone access for the best experience'}
@@ -800,7 +800,7 @@ export function MediaSetupPanel({
           </div>
           <button
             onClick={handleCancel}
-            className="rounded-sm text-muted opacity-70 ring-offset-surface-1 transition-opacity hover:text-secondary hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-muted focus:ring-offset-2"
+            className="rounded-sm text-slate-400 opacity-70 ring-offset-slate-900 transition-opacity hover:text-slate-300 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -810,9 +810,9 @@ export function MediaSetupPanel({
 
       <div className="space-y-6">
         {permissionError && hasPermissions && (
-          <Alert className="border-destructive/30 bg-destructive/50 text-destructive-foreground">
-            <AlertCircle className="h-4 w-4 text-destructive" />
-            <AlertDescription className="text-destructive-foreground/90">
+          <Alert className="border-red-500/30 bg-red-950/50 text-red-200">
+            <AlertCircle className="h-4 w-4 text-red-400" />
+            <AlertDescription className="text-red-200/90">
               {permissionError}
             </AlertDescription>
           </Alert>
@@ -825,26 +825,26 @@ export function MediaSetupPanel({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {videoEnabled ? (
-                    <Camera className="h-4 w-4 text-brand" />
+                    <Camera className="h-4 w-4 text-purple-400" />
                   ) : (
-                    <CameraOff className="h-4 w-4 text-placeholder" />
+                    <CameraOff className="h-4 w-4 text-slate-500" />
                   )}
                   <Label
                     className={
-                      videoEnabled ? 'text-secondary' : 'text-placeholder'
+                      videoEnabled ? 'text-slate-200' : 'text-slate-500'
                     }
                   >
                     Camera Source
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted">
+                  <span className="text-xs text-slate-400">
                     {videoEnabled ? 'On' : 'Off'}
                   </span>
                   <Switch
                     checked={videoEnabled}
                     onCheckedChange={handleVideoToggle}
-                    className="data-[state=checked]:bg-brand"
+                    className="data-[state=checked]:bg-purple-600"
                   />
                 </div>
               </div>
@@ -855,7 +855,7 @@ export function MediaSetupPanel({
                     onValueChange={handleVideoDeviceChange}
                     disabled={noVideoDevicesAvailable}
                   >
-                    <SelectTrigger className="border-default bg-surface-2 text-secondary">
+                    <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200">
                       <SelectValue
                         placeholder={
                           noVideoDevicesAvailable
@@ -864,14 +864,14 @@ export function MediaSetupPanel({
                         }
                       />
                     </SelectTrigger>
-                    <SelectContent className="border-default bg-surface-2">
+                    <SelectContent className="border-slate-700 bg-slate-800">
                       {videoDevices
                         .filter((device) => device.deviceId !== '')
                         .map((device) => (
                           <SelectItem
                             key={device.deviceId}
                             value={device.deviceId}
-                            className="text-secondary focus:bg-surface-3"
+                            className="text-slate-200 focus:bg-slate-700"
                           >
                             {device.label}
                           </SelectItem>
@@ -880,7 +880,7 @@ export function MediaSetupPanel({
                   </Select>
 
                   {/* Video Preview */}
-                  <div className="relative aspect-video overflow-hidden rounded-lg border border-default bg-surface-0">
+                  <div className="relative aspect-video overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
                     <video
                       ref={videoRefCallback}
                       playsInline
@@ -888,28 +888,28 @@ export function MediaSetupPanel({
                       className="h-full w-full object-cover"
                     />
                     {noVideoDevicesAvailable ? (
-                      <div className="absolute inset-0 flex items-center justify-center bg-surface-1/95">
+                      <div className="absolute inset-0 flex items-center justify-center bg-slate-900/95">
                         <div className="mx-auto max-w-sm space-y-4 p-4">
-                          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-warning/20">
-                            <AlertCircle className="h-6 w-6 text-warning" />
+                          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20">
+                            <AlertCircle className="h-6 w-6 text-amber-400" />
                           </div>
 
                           <div className="text-center">
-                            <h3 className="text-lg font-semibold text-default">
+                            <h3 className="text-lg font-semibold text-slate-100">
                               No Camera Detected
                             </h3>
-                            <p className="mt-1 text-sm text-muted">
+                            <p className="mt-1 text-sm text-slate-400">
                               Your camera may be blocked at the system level
                             </p>
                           </div>
 
-                          <div className="rounded-lg border border-default bg-surface-2/50 p-3">
-                            <h4 className="mb-2 text-xs font-medium text-secondary">
+                          <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-3">
+                            <h4 className="mb-2 text-xs font-medium text-slate-200">
                               To enable camera access:
                             </h4>
-                            <ol className="space-y-1.5 text-xs text-muted">
+                            <ol className="space-y-1.5 text-xs text-slate-400">
                               <li className="flex items-start gap-2">
-                                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-surface-3 text-[10px] text-secondary">
+                                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
                                   1
                                 </span>
                                 <span>
@@ -917,13 +917,13 @@ export function MediaSetupPanel({
                                 </span>
                               </li>
                               <li className="flex items-start gap-2">
-                                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-surface-3 text-[10px] text-secondary">
+                                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
                                   2
                                 </span>
                                 <span>Click Camera in the sidebar</span>
                               </li>
                               <li className="flex items-start gap-2">
-                                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-surface-3 text-[10px] text-secondary">
+                                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
                                   3
                                 </span>
                                 <span>Enable access for your browser</span>
@@ -933,10 +933,10 @@ export function MediaSetupPanel({
                         </div>
                       </div>
                     ) : isVideoPending ? (
-                      <div className="absolute inset-0 flex items-center justify-center bg-surface-2/50">
+                      <div className="absolute inset-0 flex items-center justify-center bg-slate-800/50">
                         <div className="flex flex-col items-center space-y-3">
-                          <Loader2 className="h-8 w-8 animate-spin text-brand" />
-                          <p className="text-sm text-secondary">
+                          <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+                          <p className="text-sm text-slate-200">
                             Initializing Camera
                           </p>
                         </div>
@@ -946,15 +946,15 @@ export function MediaSetupPanel({
                 </>
               ) : (
                 /* Camera Off state */
-                <div className="relative aspect-video overflow-hidden rounded-lg border border-default bg-surface-1">
+                <div className="relative aspect-video overflow-hidden rounded-lg border border-slate-700 bg-slate-900">
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-2">
-                      <CameraOff className="h-8 w-8 text-placeholder" />
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-800">
+                      <CameraOff className="h-8 w-8 text-slate-500" />
                     </div>
-                    <p className="mt-4 text-sm text-muted">
+                    <p className="mt-4 text-sm text-slate-400">
                       Camera is turned off
                     </p>
-                    <p className="mt-1 text-xs text-placeholder">
+                    <p className="mt-1 text-xs text-slate-500">
                       You can join the game without sharing video
                     </p>
                   </div>
@@ -963,10 +963,10 @@ export function MediaSetupPanel({
             </>
           ) : (
             /* Show inline permission UI in video preview area */
-            <div className="aspect-video overflow-hidden rounded-lg border border-default bg-surface-0">
+            <div className="aspect-video overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
               {isCheckingPermissions ? (
                 <div className="flex h-full items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-brand" />
+                  <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
                 </div>
               ) : (
                 <MediaPermissionInline
@@ -986,23 +986,23 @@ export function MediaSetupPanel({
           {/* Focus Control - only show when permissions granted and video enabled */}
           {hasPermissions && videoEnabled && (
             <div
-              className={`mt-3 space-y-3 rounded-lg border border-default bg-surface-2/50 p-3 ${
+              className={`mt-3 space-y-3 rounded-lg border border-slate-700 bg-slate-800/50 p-3 ${
                 !focusCapabilities?.supportsFocus ? 'opacity-50' : ''
               }`}
             >
               <div className="flex items-center gap-2">
-                <Focus className="h-4 w-4 text-brand" />
-                <Label className="text-sm text-secondary">Camera Focus</Label>
+                <Focus className="h-4 w-4 text-purple-400" />
+                <Label className="text-sm text-slate-200">Camera Focus</Label>
                 {!focusCapabilities?.supportsFocus && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="cursor-help rounded bg-surface-3 px-1.5 py-0.5 text-xs text-muted">
+                      <span className="cursor-help rounded bg-slate-700 px-1.5 py-0.5 text-xs text-slate-400">
                         Not supported
                       </span>
                     </TooltipTrigger>
                     <TooltipContent
                       side="top"
-                      className="max-w-[200px] border border-strong bg-surface-2 text-secondary"
+                      className="max-w-[200px] border border-slate-600 bg-slate-800 text-slate-200"
                     >
                       This camera doesn&apos;t support focus control. Try using
                       an external webcam like Logitech C920/C922.
@@ -1021,7 +1021,7 @@ export function MediaSetupPanel({
                         disabled={!focusCapabilities?.supportsFocus}
                       >
                         <SelectTrigger
-                          className={`w-[140px] border-strong bg-surface-3 text-sm text-secondary ${
+                          className={`w-[140px] border-slate-600 bg-slate-700 text-sm text-slate-200 ${
                             !focusCapabilities?.supportsFocus
                               ? 'cursor-not-allowed'
                               : ''
@@ -1029,13 +1029,13 @@ export function MediaSetupPanel({
                         >
                           <SelectValue placeholder="Focus mode" />
                         </SelectTrigger>
-                        <SelectContent className="border-default bg-surface-2">
+                        <SelectContent className="border-slate-700 bg-slate-800">
                           {focusCapabilities?.focusModes.includes(
                             'continuous',
                           ) && (
                             <SelectItem
                               value="continuous"
-                              className="text-secondary focus:bg-surface-3"
+                              className="text-slate-200 focus:bg-slate-700"
                             >
                               Auto (Continuous)
                             </SelectItem>
@@ -1045,7 +1045,7 @@ export function MediaSetupPanel({
                           ) && (
                             <SelectItem
                               value="single-shot"
-                              className="text-secondary focus:bg-surface-3"
+                              className="text-slate-200 focus:bg-slate-700"
                             >
                               Auto (Single)
                             </SelectItem>
@@ -1053,7 +1053,7 @@ export function MediaSetupPanel({
                           {focusCapabilities?.focusModes.includes('manual') && (
                             <SelectItem
                               value="manual"
-                              className="text-secondary focus:bg-surface-3"
+                              className="text-slate-200 focus:bg-slate-700"
                             >
                               Manual
                             </SelectItem>
@@ -1063,13 +1063,13 @@ export function MediaSetupPanel({
                             <>
                               <SelectItem
                                 value="continuous"
-                                className="text-secondary focus:bg-surface-3"
+                                className="text-slate-200 focus:bg-slate-700"
                               >
                                 Auto (Continuous)
                               </SelectItem>
                               <SelectItem
                                 value="manual"
-                                className="text-secondary focus:bg-surface-3"
+                                className="text-slate-200 focus:bg-slate-700"
                               >
                                 Manual
                               </SelectItem>
@@ -1082,7 +1082,7 @@ export function MediaSetupPanel({
                   {!focusCapabilities?.supportsFocus && (
                     <TooltipContent
                       side="bottom"
-                      className="border border-strong bg-surface-2 text-secondary"
+                      className="border border-slate-600 bg-slate-800 text-slate-200"
                     >
                       Focus control not supported by this camera
                     </TooltipContent>
@@ -1094,21 +1094,21 @@ export function MediaSetupPanel({
                   focusMode === 'manual' &&
                   focusCapabilities.focusDistance && (
                     <div className="flex flex-1 items-center gap-3">
-                      <span className="text-xs text-muted">Near</span>
+                      <span className="text-xs text-slate-400">Near</span>
                       <Slider
                         value={[focusDistance]}
                         onValueChange={handleFocusDistanceChange}
                         min={focusCapabilities.focusDistance.min}
                         max={focusCapabilities.focusDistance.max}
                         step={focusCapabilities.focusDistance.step}
-                        className="flex-1 [&_[data-slot=slider-range]]:bg-brand [&_[data-slot=slider-thumb]]:border-brand [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-border-strong"
+                        className="flex-1 [&_[data-slot=slider-range]]:bg-purple-500 [&_[data-slot=slider-thumb]]:border-purple-500 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-slate-600"
                       />
-                      <span className="text-xs text-muted">Far</span>
+                      <span className="text-xs text-slate-400">Far</span>
                     </div>
                   )}
               </div>
 
-              <p className="text-xs text-placeholder">
+              <p className="text-xs text-slate-500">
                 {!focusCapabilities?.supportsFocus
                   ? 'Focus control is not available for this camera'
                   : focusMode === 'manual'
@@ -1116,7 +1116,7 @@ export function MediaSetupPanel({
                     : 'Camera will automatically adjust focus'}
               </p>
               {isFocusSupportForced && (
-                <p className="text-xs text-warning">
+                <p className="text-xs text-amber-300">
                   Browser didn&apos;t report focus support for this camera.
                   Trying focus controls anyway.
                 </p>
@@ -1131,24 +1131,24 @@ export function MediaSetupPanel({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {audioEnabled ? (
-                  <Mic className="h-4 w-4 text-brand" />
+                  <Mic className="h-4 w-4 text-purple-400" />
                 ) : (
-                  <MicOff className="h-4 w-4 text-placeholder" />
+                  <MicOff className="h-4 w-4 text-slate-500" />
                 )}
                 <Label
-                  className={audioEnabled ? 'text-secondary' : 'text-placeholder'}
+                  className={audioEnabled ? 'text-slate-200' : 'text-slate-500'}
                 >
                   Microphone
                 </Label>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted">
+                <span className="text-xs text-slate-400">
                   {audioEnabled ? 'On' : 'Off'}
                 </span>
                 <Switch
                   checked={audioEnabled}
                   onCheckedChange={handleAudioToggle}
-                  className="data-[state=checked]:bg-brand"
+                  className="data-[state=checked]:bg-purple-600"
                 />
               </div>
             </div>
@@ -1161,17 +1161,17 @@ export function MediaSetupPanel({
                     onValueChange={handleAudioInputChange}
                     disabled={isAudioInputPending}
                   >
-                    <SelectTrigger className="border-default bg-surface-2 text-secondary">
+                    <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200">
                       <SelectValue placeholder="Select microphone" />
                     </SelectTrigger>
-                    <SelectContent className="border-default bg-surface-2">
+                    <SelectContent className="border-slate-700 bg-slate-800">
                       {audioInputDevices
                         .filter((device) => device.deviceId !== '')
                         .map((device) => (
                           <SelectItem
                             key={device.deviceId}
                             value={device.deviceId}
-                            className="text-secondary focus:bg-surface-3"
+                            className="text-slate-200 focus:bg-slate-700"
                           >
                             {device.label}
                           </SelectItem>
@@ -1180,7 +1180,7 @@ export function MediaSetupPanel({
                   </Select>
                   {isAudioInputPending && (
                     <div className="absolute right-10 top-1/2 -translate-y-1/2">
-                      <Loader2 className="h-4 w-4 animate-spin text-brand" />
+                      <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
                     </div>
                   )}
                 </div>
@@ -1190,16 +1190,16 @@ export function MediaSetupPanel({
               </>
             ) : (
               /* Microphone Off state */
-              <div className="rounded-lg border border-default bg-surface-1 p-4">
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-2">
-                    <MicOff className="h-5 w-5 text-placeholder" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800">
+                    <MicOff className="h-5 w-5 text-slate-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted">
+                    <p className="text-sm text-slate-400">
                       Microphone is turned off
                     </p>
-                    <p className="text-xs text-placeholder">
+                    <p className="text-xs text-slate-500">
                       You can join the game without sending audio
                     </p>
                   </div>
@@ -1212,8 +1212,8 @@ export function MediaSetupPanel({
         {/* Audio Output Section - only show if has permissions */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Volume2 className="h-4 w-4 text-brand" />
-            <Label className="text-secondary">Speaker / Headphones</Label>
+            <Volume2 className="h-4 w-4 text-purple-400" />
+            <Label className="text-slate-200">Speaker / Headphones</Label>
           </div>
 
           <div className="flex gap-2">
@@ -1222,7 +1222,7 @@ export function MediaSetupPanel({
               onValueChange={handleAudioOutputChange}
               disabled={!isAudioOutputSupported}
             >
-              <SelectTrigger className="flex-1 border-default bg-surface-2 text-secondary">
+              <SelectTrigger className="flex-1 border-slate-700 bg-slate-800 text-slate-200">
                 <SelectValue
                   placeholder={
                     isAudioOutputSupported
@@ -1231,14 +1231,14 @@ export function MediaSetupPanel({
                   }
                 />
               </SelectTrigger>
-              <SelectContent className="border-default bg-surface-2">
+              <SelectContent className="border-slate-700 bg-slate-800">
                 {audioOutputDevices
                   .filter((device) => device.deviceId !== '')
                   .map((device) => (
                     <SelectItem
                       key={device.deviceId}
                       value={device.deviceId}
-                      className="text-secondary focus:bg-surface-3"
+                      className="text-slate-200 focus:bg-slate-700"
                     >
                       {device.label}
                     </SelectItem>
@@ -1254,12 +1254,12 @@ export function MediaSetupPanel({
                 !selectedAudioOutputId ||
                 !isAudioOutputSupported
               }
-              className="border-default bg-surface-2 hover:bg-surface-3"
+              className="border-slate-700 bg-slate-800 hover:bg-slate-700"
             >
               {isTestingOutput ? 'Playing...' : 'Test'}
             </Button>
           </div>
-          <p className="text-xs text-placeholder">
+          <p className="text-xs text-slate-500">
             Click &quot;Test&quot; to play a short sound
           </p>
         </div>
@@ -1270,7 +1270,7 @@ export function MediaSetupPanel({
           <Button
             variant="ghost"
             onClick={handleCancel}
-            className="text-muted hover:text-secondary"
+            className="text-slate-400 hover:text-slate-300"
             data-testid="media-setup-cancel-button"
           >
             <X className="mr-2 h-4 w-4" />
@@ -1280,7 +1280,7 @@ export function MediaSetupPanel({
           <Button
             onClick={handleComplete}
             disabled={!canComplete}
-            className="bg-brand text-white hover:bg-brand-muted"
+            className="bg-purple-600 text-white hover:bg-purple-700"
             data-testid="media-setup-complete-button"
           >
             <Check className="mr-2 h-4 w-4" />

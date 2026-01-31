@@ -50,12 +50,12 @@ function SidebarLoading() {
   return (
     <div className="w-64 flex-shrink-0 space-y-4">
       {/* Player List Skeleton */}
-      <Card className="border-surface-2 bg-surface-1 p-4">
+      <Card className="border-slate-800 bg-slate-900 p-4">
         <div className="space-y-3">
           {/* Header with "Players" and count */}
           <div className="mb-2 flex items-center justify-between">
-            <Skeleton className="h-4 w-16 bg-surface-3/50" />
-            <Skeleton className="h-3 w-8 bg-surface-3/50" />
+            <Skeleton className="h-4 w-16 bg-slate-700/50" />
+            <Skeleton className="h-3 w-8 bg-slate-700/50" />
           </div>
 
           {/* Player items - show generic loading state */}
@@ -63,11 +63,11 @@ function SidebarLoading() {
             {[1, 2].map((i) => (
               <div
                 key={i}
-                className="flex items-center justify-between rounded-lg border border-surface-2 bg-surface-2/50 p-2"
+                className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-800/50 p-2"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <Skeleton className="h-2 w-2 rounded-full bg-surface-3/50" />
-                  <Skeleton className="h-4 w-24 bg-surface-3/50" />
+                  <Skeleton className="h-2 w-2 rounded-full bg-slate-700/50" />
+                  <Skeleton className="h-4 w-24 bg-slate-700/50" />
                 </div>
               </div>
             ))}

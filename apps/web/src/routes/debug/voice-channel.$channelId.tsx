@@ -35,24 +35,24 @@ function DebugVoiceChannel() {
   }, [channelId, handleFetch])
 
   return (
-    <div className="min-h-screen bg-surface-0 p-8 text-white">
+    <div className="min-h-screen bg-slate-950 p-8 text-white">
       <h1 className="mb-4 text-3xl font-bold">Debug: Voice Channel Members</h1>
-      <p className="mb-4 text-muted">Channel ID: {channelId}</p>
+      <p className="mb-4 text-slate-400">Channel ID: {channelId}</p>
 
       <Button onClick={handleFetch} disabled={loading} className="mb-4">
         {loading ? 'Loading...' : 'Fetch Members'}
       </Button>
 
       {error && (
-        <div className="mb-4 rounded bg-destructive p-4 text-destructive-foreground">
+        <div className="mb-4 rounded bg-red-900 p-4 text-red-100">
           <p className="font-bold">Error:</p>
           <p>{error}</p>
         </div>
       )}
 
-      <div className="rounded bg-surface-2 p-4">
+      <div className="rounded bg-slate-800 p-4">
         <h2 className="mb-4 text-xl font-bold">Members</h2>
-        <p className="text-muted">
+        <p className="text-slate-400">
           Not implemented - server function needs to be created
         </p>
       </div>
