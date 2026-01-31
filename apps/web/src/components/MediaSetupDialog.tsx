@@ -41,8 +41,15 @@ export function MediaSetupDialog({
     }
   }
 
+  const handleOpenChange = (newOpen: boolean) => {
+    // When dialog is closed (clicking outside or pressing Escape), cancel without saving
+    if (!newOpen) {
+      handleCancel()
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="border-surface-2 bg-surface-1 sm:max-w-[700px] [&>button]:hidden"
         data-testid="media-setup-dialog"

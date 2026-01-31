@@ -10,10 +10,8 @@ import { Button } from '@repo/ui/components/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@repo/ui/components/dropdown-menu'
 
@@ -61,8 +59,6 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
         align="end"
         className="border-surface-3 bg-surface-1"
       >
-        <DropdownMenuLabel className="text-text-muted">Theme</DropdownMenuLabel>
-        <DropdownMenuSeparator className="bg-surface-3" />
         <DropdownMenuRadioGroup
           value={theme}
           onValueChange={(value) => setTheme(value as Theme)}
