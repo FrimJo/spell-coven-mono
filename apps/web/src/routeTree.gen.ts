@@ -13,7 +13,6 @@ import { Route as SetupRouteImport } from './routes/setup'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GameGameIdRouteImport } from './routes/game.$gameId'
 import { Route as DebugSessionStorageRouteImport } from './routes/debug/session-storage'
-import { Route as AdminCleanupRouteImport } from './routes/admin/cleanup'
 import { Route as DebugVoiceChannelChannelIdRouteImport } from './routes/debug/voice-channel.$channelId'
 
 const SetupRoute = SetupRouteImport.update({
@@ -36,11 +35,6 @@ const DebugSessionStorageRoute = DebugSessionStorageRouteImport.update({
   path: '/debug/session-storage',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminCleanupRoute = AdminCleanupRouteImport.update({
-  id: '/admin/cleanup',
-  path: '/admin/cleanup',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DebugVoiceChannelChannelIdRoute =
   DebugVoiceChannelChannelIdRouteImport.update({
     id: '/debug/voice-channel/$channelId',
@@ -51,7 +45,6 @@ const DebugVoiceChannelChannelIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/setup': typeof SetupRoute
-  '/admin/cleanup': typeof AdminCleanupRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
@@ -59,7 +52,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/setup': typeof SetupRoute
-  '/admin/cleanup': typeof AdminCleanupRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
@@ -68,7 +60,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/setup': typeof SetupRoute
-  '/admin/cleanup': typeof AdminCleanupRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
@@ -78,7 +69,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/setup'
-    | '/admin/cleanup'
     | '/debug/session-storage'
     | '/game/$gameId'
     | '/debug/voice-channel/$channelId'
@@ -86,7 +76,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/setup'
-    | '/admin/cleanup'
     | '/debug/session-storage'
     | '/game/$gameId'
     | '/debug/voice-channel/$channelId'
@@ -94,7 +83,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/setup'
-    | '/admin/cleanup'
     | '/debug/session-storage'
     | '/game/$gameId'
     | '/debug/voice-channel/$channelId'
@@ -103,7 +91,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SetupRoute: typeof SetupRoute
-  AdminCleanupRoute: typeof AdminCleanupRoute
   DebugSessionStorageRoute: typeof DebugSessionStorageRoute
   GameGameIdRoute: typeof GameGameIdRoute
   DebugVoiceChannelChannelIdRoute: typeof DebugVoiceChannelChannelIdRoute
@@ -139,13 +126,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DebugSessionStorageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/cleanup': {
-      id: '/admin/cleanup'
-      path: '/admin/cleanup'
-      fullPath: '/admin/cleanup'
-      preLoaderRoute: typeof AdminCleanupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/debug/voice-channel/$channelId': {
       id: '/debug/voice-channel/$channelId'
       path: '/debug/voice-channel/$channelId'
@@ -159,7 +139,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SetupRoute: SetupRoute,
-  AdminCleanupRoute: AdminCleanupRoute,
   DebugSessionStorageRoute: DebugSessionStorageRoute,
   GameGameIdRoute: GameGameIdRoute,
   DebugVoiceChannelChannelIdRoute: DebugVoiceChannelChannelIdRoute,

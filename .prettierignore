@@ -1,0 +1,13 @@
+# Generated files
+**/*.gen.ts
+
+# Build outputs
+**/dist/
+**/build/
+**/.next/
+
+# Dependencies
+**/node_modules/
+
+# Public assets that shouldn't be formatted
+apps/web/public/
