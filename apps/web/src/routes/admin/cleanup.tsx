@@ -58,7 +58,7 @@ function AdminCleanup() {
               value={secret}
               onChange={(e) => setSecret(e.target.value)}
               placeholder="Enter ADMIN_CLEANUP_SECRET"
-              className="mt-2 w-full rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+              className="mt-2 w-full rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-info focus:outline-none"
             />
           </div>
 
@@ -67,7 +67,7 @@ function AdminCleanup() {
             <button
               onClick={handleList}
               disabled={loading}
-              className="flex-1 rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:bg-gray-400"
+              className="flex-1 rounded bg-info px-4 py-2 font-medium text-white hover:bg-info disabled:bg-gray-400"
             >
               {loading && result?.type === 'list'
                 ? 'Loading...'
@@ -76,7 +76,7 @@ function AdminCleanup() {
             <button
               onClick={handleCleanup}
               disabled={loading}
-              className="flex-1 rounded bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700 disabled:bg-gray-400"
+              className="flex-1 rounded bg-destructive px-4 py-2 font-medium text-white hover:bg-destructive disabled:bg-gray-400"
             >
               {loading && result?.type === 'cleanup'
                 ? 'Deleting...'

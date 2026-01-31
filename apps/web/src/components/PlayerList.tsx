@@ -67,11 +67,11 @@ export function PlayerList({
     setConfirmDialog({ open: true, player, action })
   }
   return (
-    <Card className="border-slate-800 bg-slate-900 p-4">
+    <Card className="border-surface-2 bg-surface-1 p-4">
       <div className="space-y-3">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-sm text-slate-400">Players</span>
-          <span className="text-xs text-slate-500">{players.length}/4</span>
+          <span className="text-sm text-text-muted">Players</span>
+          <span className="text-xs text-text-muted">{players.length}/4</span>
         </div>
 
         <div className="space-y-2">
@@ -83,11 +83,11 @@ export function PlayerList({
               return (
                 <div
                   key={`empty-${index}`}
-                  className="flex items-center justify-between rounded-lg border border-dashed border-slate-700 bg-slate-800/20 p-2 transition-colors"
+                  className="flex items-center justify-between rounded-lg border border-dashed border-surface-3 bg-surface-2/20 p-2 transition-colors"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <div className="h-2 w-2 flex-shrink-0 rounded-full bg-slate-700" />
-                    <span className="truncate text-sm text-slate-600">
+                    <div className="h-2 w-2 flex-shrink-0 rounded-full bg-surface-3" />
+                    <span className="truncate text-sm text-text-muted">
                       Open slot
                     </span>
                   </div>
@@ -102,14 +102,14 @@ export function PlayerList({
             return (
               <div
                 key={player.id}
-                className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-800/50 p-2 transition-colors"
+                className="flex items-center justify-between rounded-lg border border-surface-2 bg-surface-2/50 p-2 transition-colors"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <div
                     className={`h-2 w-2 flex-shrink-0 rounded-full ${
                       player.isOnline !== false
-                        ? 'animate-pulse bg-green-400'
-                        : 'bg-slate-600'
+                        ? 'animate-pulse bg-online'
+                        : 'bg-surface-3'
                     }`}
                     title={
                       player.isOnline !== false
@@ -121,10 +121,10 @@ export function PlayerList({
                     {player.name}
                   </span>
                   {isOwner && (
-                    <Crown className="h-3 w-3 flex-shrink-0 text-yellow-500" />
+                    <Crown className="h-3 w-3 flex-shrink-0 text-warning" />
                   )}
                   {isLocal && (
-                    <span className="flex-shrink-0 rounded bg-purple-500/30 px-1.5 py-0.5 text-xs text-purple-300">
+                    <span className="flex-shrink-0 rounded bg-brand/30 px-1.5 py-0.5 text-xs text-brand-muted-foreground">
                       You
                     </span>
                   )}
@@ -137,25 +137,25 @@ export function PlayerList({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0 text-slate-500 hover:bg-slate-700 hover:text-slate-300"
+                          className="h-6 w-6 p-0 text-text-muted hover:bg-surface-3 hover:text-text-secondary"
                         >
                           <MoreVertical className="h-3 w-3" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent
                         align="end"
-                        className="border-slate-700 bg-slate-800"
+                        className="border-surface-3 bg-surface-2"
                       >
                         <DropdownMenuItem
                           onClick={() => openConfirmDialog(player, 'kick')}
-                          className="text-orange-400 focus:bg-orange-500/10 focus:text-orange-400"
+                          className="text-warning focus:bg-warning/10 focus:text-warning"
                         >
                           <UserX className="mr-2 h-4 w-4" />
                           Kick (can rejoin)
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => openConfirmDialog(player, 'ban')}
-                          className="text-red-400 focus:bg-red-500/10 focus:text-red-400"
+                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                         >
                           <Ban className="mr-2 h-4 w-4" />
                           Ban (permanent)
@@ -178,12 +178,12 @@ export function PlayerList({
           setConfirmDialog({ open: false, player: null, action: 'kick' })
         }
       >
-        <AlertDialogContent className="border-slate-800 bg-slate-900">
+        <AlertDialogContent className="border-surface-2 bg-surface-1">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">
               {confirmDialog.action === 'kick' ? 'Kick Player' : 'Ban Player'}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400">
+            <AlertDialogDescription className="text-text-muted">
               {confirmDialog.action === 'kick' ? (
                 <>
                   Are you sure you want to kick{' '}
@@ -199,7 +199,7 @@ export function PlayerList({
                     {confirmDialog.player?.name}
                   </span>
                   ?{' '}
-                  <span className="font-medium text-red-400">
+                  <span className="font-medium text-destructive">
                     This cannot be undone.
                   </span>{' '}
                   They will be permanently blocked from this room. To play
@@ -209,15 +209,15 @@ export function PlayerList({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-slate-700 bg-slate-800 text-slate-300">
+            <AlertDialogCancel className="border-surface-3 bg-surface-2 text-text-secondary">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirm}
               className={
                 confirmDialog.action === 'kick'
-                  ? 'bg-orange-600 text-white hover:bg-orange-700'
-                  : 'bg-red-600 text-white hover:bg-red-700'
+                  ? 'bg-warning text-white hover:bg-warning'
+                  : 'bg-destructive text-white hover:bg-destructive'
               }
             >
               {confirmDialog.action === 'kick' ? 'Kick' : 'Ban'}

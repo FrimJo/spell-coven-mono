@@ -79,15 +79,15 @@ export function MediaPermissionInline({
     return (
       <div className="flex h-full flex-col items-center justify-center p-4">
         <div className="mx-auto max-w-sm space-y-4">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20">
-            <AlertTriangle className="h-6 w-6 text-amber-400" />
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-warning/20">
+            <AlertTriangle className="h-6 w-6 text-warning-muted-foreground" />
           </div>
 
           <div className="text-center">
-            <h3 className="text-lg font-semibold text-slate-100">
+            <h3 className="text-lg font-semibold text-text-primary">
               Permission Blocked
             </h3>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-text-muted">
               {blocked.camera && blocked.microphone
                 ? 'Camera and microphone access has been blocked.'
                 : blocked.camera
@@ -97,19 +97,19 @@ export function MediaPermissionInline({
           </div>
 
           {!compact && (
-            <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-3">
-              <h4 className="mb-2 text-xs font-medium text-slate-200">
+            <div className="rounded-lg border border-border-default bg-surface-2/50 p-3">
+              <h4 className="mb-2 text-xs font-medium text-text-secondary">
                 To enable access:
               </h4>
-              <ol className="space-y-1.5 text-xs text-slate-400">
+              <ol className="space-y-1.5 text-xs text-text-muted">
                 <li className="flex items-start gap-2">
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-surface-3 text-[10px] text-text-secondary">
                     1
                   </span>
                   <span>Click the lock/info icon in browser address bar</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-surface-3 text-[10px] text-text-secondary">
                     2
                   </span>
                   <span>
@@ -117,7 +117,7 @@ export function MediaPermissionInline({
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] text-slate-300">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-surface-3 text-[10px] text-text-secondary">
                     3
                   </span>
                   <span>
@@ -132,7 +132,7 @@ export function MediaPermissionInline({
             variant="outline"
             size="sm"
             onClick={() => window.location.reload()}
-            className="w-full border-slate-700 text-slate-300 hover:bg-slate-800"
+            className="w-full border-border-default text-text-secondary hover:bg-surface-2"
           >
             Refresh Page
           </Button>
@@ -148,49 +148,49 @@ export function MediaPermissionInline({
         {/* Icon cluster */}
         <div className="flex items-center justify-center gap-2">
           {permissions.camera && (
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/20 ring-2 ring-purple-500/30">
-              <Camera className="h-5 w-5 text-purple-400" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand/20 ring-2 ring-brand/30">
+              <Camera className="h-5 w-5 text-brand-muted-foreground" />
             </div>
           )}
           {permissions.microphone && (
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20 ring-2 ring-blue-500/30">
-              <Mic className="h-5 w-5 text-blue-400" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-info/20 ring-2 ring-info/30">
+              <Mic className="h-5 w-5 text-info-muted-foreground" />
             </div>
           )}
         </div>
 
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-slate-100">
+          <h3 className="text-lg font-semibold text-text-primary">
             Enable {permissionLabel}
           </h3>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-text-muted">
             Required to connect with other players
           </p>
         </div>
 
         {!compact && (
           <div className="space-y-2">
-            <div className="flex items-start gap-2 rounded-lg border border-slate-700/50 bg-slate-800/30 p-2">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-purple-500/20">
-                <Video className="h-3 w-3 text-purple-400" />
+            <div className="flex items-start gap-2 rounded-lg border border-border-default/50 bg-surface-2/30 p-2">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-brand/20">
+                <Video className="h-3 w-3 text-brand-muted-foreground" />
               </div>
               <div>
-                <h4 className="text-xs font-medium text-slate-200">
+                <h4 className="text-xs font-medium text-text-secondary">
                   Video Chat
                 </h4>
-                <p className="text-[10px] text-slate-400">
+                <p className="text-[10px] text-text-muted">
                   See and be seen by other players
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-2 rounded-lg border border-slate-700/50 bg-slate-800/30 p-2">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-green-500/20">
-                <Shield className="h-3 w-3 text-green-400" />
+            <div className="flex items-start gap-2 rounded-lg border border-border-default/50 bg-surface-2/30 p-2">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-success/20">
+                <Shield className="h-3 w-3 text-success-muted-foreground" />
               </div>
               <div>
-                <h4 className="text-xs font-medium text-slate-200">Privacy</h4>
-                <p className="text-[10px] text-slate-400">
+                <h4 className="text-xs font-medium text-text-secondary">Privacy</h4>
+                <p className="text-[10px] text-text-muted">
                   Video stays between players only
                 </p>
               </div>
@@ -208,7 +208,7 @@ export function MediaPermissionInline({
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800"
+                className="flex-1 border-border-default text-text-secondary hover:bg-surface-2"
                 disabled={isRequesting}
               >
                 Not Now
@@ -217,17 +217,17 @@ export function MediaPermissionInline({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
-              className="w-48 border-slate-700 bg-slate-800"
+              className="w-48 border-border-default bg-surface-2"
             >
               <DropdownMenuItem
                 onClick={() => handleDecline('remind-later')}
-                className="cursor-pointer text-sm text-slate-300 focus:bg-slate-700 focus:text-white"
+                className="cursor-pointer text-sm text-text-secondary focus:bg-surface-3 focus:text-text-primary"
               >
                 Remind me later
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => handleDecline('dont-ask')}
-                className="cursor-pointer text-sm text-slate-400 focus:bg-slate-700 focus:text-slate-300"
+                className="cursor-pointer text-sm text-text-muted focus:bg-surface-3 focus:text-text-secondary"
               >
                 Don&apos;t ask again
               </DropdownMenuItem>
@@ -238,7 +238,7 @@ export function MediaPermissionInline({
             onClick={handleAccept}
             size="sm"
             disabled={isRequesting}
-            className="flex-1 bg-purple-600 text-white hover:bg-purple-700"
+            className="flex-1 bg-brand text-brand-foreground hover:bg-brand/90"
           >
             {isRequesting ? (
               <>
@@ -251,7 +251,7 @@ export function MediaPermissionInline({
           </Button>
         </div>
 
-        <p className="text-center text-[10px] text-slate-500">
+        <p className="text-center text-[10px] text-text-placeholder">
           Your browser will ask for permission
         </p>
       </div>

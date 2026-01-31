@@ -58,7 +58,7 @@ export function CreateGameDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden border-slate-800 bg-slate-900 sm:max-w-md">
+      <DialogContent className="overflow-hidden border-surface-2 bg-surface-1 sm:max-w-md">
         {isReady && (
           <Confetti
             width={width}
@@ -107,7 +107,7 @@ export function CreateGameDialog({
                     }}
                     className="flex items-center justify-center"
                   >
-                    <CheckCircle2 className="h-8 w-8 text-green-400" />
+                    <CheckCircle2 className="h-8 w-8 text-success" />
                   </motion.div>
                 ) : (
                   <motion.div
@@ -133,7 +133,7 @@ export function CreateGameDialog({
                         ease: 'easeInOut',
                       }}
                     >
-                      <Gamepad2 className="h-8 w-8 text-purple-400" />
+                      <Gamepad2 className="h-8 w-8 text-brand-muted-foreground" />
                     </motion.div>
                   </motion.div>
                 )}
@@ -143,7 +143,7 @@ export function CreateGameDialog({
                 {!isReady && (
                   <motion.div
                     key="pulse-ring"
-                    className="absolute inset-0 rounded-full bg-purple-500/20"
+                    className="absolute inset-0 rounded-full bg-brand/20"
                     initial={{ scale: 1, opacity: 0.5 }}
                     animate={{
                       scale: [1, 1.4, 1],
@@ -163,7 +163,7 @@ export function CreateGameDialog({
                 {isReady && (
                   <motion.div
                     key="success-burst"
-                    className="absolute inset-0 rounded-full bg-green-500/30"
+                    className="absolute inset-0 rounded-full bg-success/30"
                     initial={{ scale: 0.8, opacity: 1 }}
                     animate={{ scale: 2, opacity: 0 }}
                     exit={{ opacity: 0 }}
@@ -174,7 +174,7 @@ export function CreateGameDialog({
             </motion.div>
 
             <div className="w-full space-y-2 text-center">
-              <p className="text-lg font-medium text-slate-200">
+              <p className="text-lg font-medium text-text-secondary">
                 {isReady
                   ? 'Game room created successfully!'
                   : 'Setting up your game room...'}
@@ -184,21 +184,21 @@ export function CreateGameDialog({
               <div
                 className={`group flex items-center justify-between rounded-lg border p-3 transition-colors ${
                   isReady
-                    ? 'cursor-pointer border-slate-700 bg-slate-950 hover:border-purple-500/50'
-                    : 'cursor-default border-slate-800 bg-slate-950/50'
+                    ? 'cursor-pointer border-surface-3 bg-surface-0 hover:border-brand/50'
+                    : 'cursor-default border-surface-2 bg-surface-0/50'
                 }`}
                 onClick={isReady ? handleCopy : undefined}
               >
                 <div className="min-w-0 flex-1 text-left">
-                  <p className="text-sm text-slate-400">Share Link</p>
+                  <p className="text-sm text-text-muted">Share Link</p>
                   {isReady ? (
-                    <p className="break-all font-mono text-sm text-purple-400">
+                    <p className="break-all font-mono text-sm text-brand-muted-foreground">
                       {shareLink}
                     </p>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 animate-pulse rounded bg-slate-700" />
-                      <p className="font-mono text-sm text-slate-500">
+                      <div className="h-4 w-4 animate-pulse rounded bg-surface-3" />
+                      <p className="font-mono text-sm text-text-muted">
                         Generating link...
                       </p>
                     </div>
@@ -209,8 +209,8 @@ export function CreateGameDialog({
                   variant="ghost"
                   className={`ml-2 h-8 w-8 shrink-0 ${
                     isReady
-                      ? 'text-slate-400 group-hover:text-white'
-                      : 'cursor-default text-slate-600'
+                      ? 'text-text-muted group-hover:text-white'
+                      : 'cursor-default text-text-muted'
                   }`}
                   disabled={!isReady}
                 >
@@ -222,7 +222,7 @@ export function CreateGameDialog({
                 </Button>
               </div>
 
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-text-muted">
                 {isReady
                   ? 'Share this link with your friends to let them join'
                   : 'This will only take a moment...'}
@@ -236,8 +236,8 @@ export function CreateGameDialog({
                 disabled={!isReady}
                 className={`w-full transition-all ${
                   isReady
-                    ? 'bg-purple-600 text-white hover:scale-[1.02] hover:bg-purple-700'
-                    : 'cursor-not-allowed bg-slate-700 text-slate-400'
+                    ? 'bg-brand text-white hover:scale-[1.02] hover:bg-brand'
+                    : 'cursor-not-allowed bg-surface-3 text-text-muted'
                 }`}
                 size="lg"
               >

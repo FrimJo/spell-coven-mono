@@ -11,11 +11,11 @@ interface PlayerStatsProps {
 
 export function PlayerStats({ player }: PlayerStatsProps) {
   return (
-    <Card className="border-slate-800 bg-slate-900 p-4">
+    <Card className="border-surface-2 bg-surface-1 p-4">
       <div className="space-y-3">
         {/* Player Name */}
         <div className="flex items-center justify-between">
-          <span className="text-sm text-slate-400">{player.name}</span>
+          <span className="text-sm text-muted">{player.name}</span>
         </div>
       </div>
     </Card>

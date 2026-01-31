@@ -165,7 +165,7 @@ export function LocalVideoCard({
       {/* Player Info Badge */}
       <PlayerNameBadge>
         <span className="text-white">{localPlayerName}</span>
-        <span className="rounded bg-purple-500/30 px-1.5 py-0.5 text-xs text-purple-300">
+        <span className="rounded bg-brand/30 px-1.5 py-0.5 text-xs text-brand-muted-foreground">
           You
         </span>
       </PlayerNameBadge>

@@ -32,17 +32,17 @@ export function AuthRequiredDialog({
 }: AuthRequiredDialogProps) {
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="border-amber-900/50 bg-slate-900 sm:max-w-[450px] [&>button]:hidden">
+      <DialogContent className="border-warning/50 bg-surface-1 sm:max-w-[450px] [&>button]:hidden">
         <DialogHeader>
           <div className="mb-2 flex justify-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20">
-              <ShieldAlert className="h-6 w-6 text-amber-400" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning/20">
+              <ShieldAlert className="h-6 w-6 text-warning" />
             </div>
           </div>
-          <DialogTitle className="text-center text-slate-100">
+          <DialogTitle className="text-center text-white">
             Sign In Required
           </DialogTitle>
-          <DialogDescription className="text-center text-slate-400">
+          <DialogDescription className="text-center text-text-muted">
             {message}
           </DialogDescription>
         </DialogHeader>
@@ -50,17 +50,17 @@ export function AuthRequiredDialog({
         <div className="space-y-3 py-4">
           <button
             onClick={onSignIn}
-            className="group w-full cursor-pointer rounded-lg border border-purple-500/30 bg-purple-950/30 p-4 text-left transition-all hover:border-purple-500/60 hover:bg-purple-900/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            className="group w-full cursor-pointer rounded-lg border border-brand/30 bg-brand/30 p-4 text-left transition-all hover:border-brand/60 hover:bg-brand/40 focus:outline-none focus:ring-2 focus:ring-brand/50"
           >
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/20 transition-colors group-hover:bg-purple-500/30">
-                <LogIn className="h-5 w-5 text-purple-400" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/20 transition-colors group-hover:bg-brand/30">
+                <LogIn className="h-5 w-5 text-brand-muted-foreground" />
               </div>
               <div>
-                <p className="font-medium text-purple-200">
+                <p className="font-medium text-brand-muted-foreground">
                   Sign in with Discord
                 </p>
-                <p className="mt-0.5 text-sm text-slate-400">
+                <p className="mt-0.5 text-sm text-text-muted">
                   Connect your Discord account to join the game.
                 </p>
               </div>
@@ -69,15 +69,15 @@ export function AuthRequiredDialog({
 
           <button
             onClick={onClose}
-            className="group w-full cursor-pointer rounded-lg border border-slate-700 bg-slate-800/50 p-4 text-left transition-all hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500/50"
+            className="group w-full cursor-pointer rounded-lg border border-surface-3 bg-surface-2/50 p-4 text-left transition-all hover:border-surface-3 hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-surface-3/50"
           >
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-700/50 transition-colors group-hover:bg-slate-700">
-                <Home className="h-5 w-5 text-slate-400" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-3/50 transition-colors group-hover:bg-surface-3">
+                <Home className="h-5 w-5 text-text-muted" />
               </div>
               <div>
-                <p className="font-medium text-slate-200">Return to Home</p>
-                <p className="mt-0.5 text-sm text-slate-400">
+                <p className="font-medium text-text-secondary">Return to Home</p>
+                <p className="mt-0.5 text-sm text-text-muted">
                   Go back without signing in.
                 </p>
               </div>

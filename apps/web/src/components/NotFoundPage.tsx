@@ -13,7 +13,7 @@ export function NotFoundPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950">
+    <div className="relative min-h-screen overflow-hidden bg-surface-0">
       <style>{`
         @keyframes float {
           0% { transform: translateY(0px); }
@@ -40,21 +40,21 @@ export function NotFoundPage() {
 
       {/* Animated background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-20 top-20 h-64 w-64 animate-pulse rounded-full bg-purple-500/10 blur-3xl" />
-        <div className="absolute bottom-20 right-20 h-96 w-96 animate-pulse rounded-full bg-blue-500/10 blur-3xl delay-1000" />
+        <div className="absolute left-20 top-20 h-64 w-64 animate-pulse rounded-full bg-brand/10 blur-3xl" />
+        <div className="absolute bottom-20 right-20 h-96 w-96 animate-pulse rounded-full bg-info/10 blur-3xl delay-1000" />
       </div>
 
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 text-center">
         {/* Logo/Icon Area */}
         <div className="animate-float relative mb-8">
-          <div className="absolute inset-0 animate-pulse rounded-full bg-purple-500/20 blur-3xl" />
-          <div className="relative z-10 flex h-32 w-32 items-center justify-center rounded-3xl border border-slate-800 bg-slate-950/50 backdrop-blur-sm">
-            <Ghost className="h-16 w-16 text-purple-400" />
+          <div className="absolute inset-0 animate-pulse rounded-full bg-brand/20 blur-3xl" />
+          <div className="relative z-10 flex h-32 w-32 items-center justify-center rounded-3xl border border-surface-2 bg-surface-0/50 backdrop-blur-sm">
+            <Ghost className="h-16 w-16 text-brand-muted-foreground" />
           </div>
 
           {/* Decorative sparkles */}
-          <Sparkles className="animate-sparkle absolute -left-6 top-0 h-6 w-6 text-yellow-200 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
-          <Sparkles className="animate-sparkle absolute -right-4 bottom-4 h-5 w-5 text-blue-300 drop-shadow-[0_0_8px_rgba(147,197,253,0.8)] delay-700" />
+          <Sparkles className="animate-sparkle absolute -left-6 top-0 h-6 w-6 text-warning drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
+          <Sparkles className="animate-sparkle absolute -right-4 bottom-4 h-5 w-5 text-info drop-shadow-[0_0_8px_rgba(147,197,253,0.8)] delay-700" />
         </div>
 
         {/* Text Content */}
@@ -69,7 +69,7 @@ export function NotFoundPage() {
                 Blind Eternities
               </span>
             </h2>
-            <p className="mx-auto max-w-md text-lg text-slate-400">
+            <p className="mx-auto max-w-md text-lg text-text-muted">
               The page you are looking for has been exiled or never existed.
               Let&apos;s planeswalk you back to safety.
             </p>
@@ -79,7 +79,7 @@ export function NotFoundPage() {
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button
               size="lg"
-              className="h-12 min-w-[160px] gap-2 bg-purple-600 font-medium text-white shadow-lg shadow-purple-500/25 hover:bg-purple-700"
+              className="h-12 min-w-[160px] gap-2 bg-brand font-medium text-white shadow-lg shadow-brand/25 hover:bg-brand"
               onClick={handleReturnHome}
             >
               <Home className="h-4 w-4" />
@@ -88,7 +88,7 @@ export function NotFoundPage() {
             <Button
               variant="outline"
               size="lg"
-              className="h-12 min-w-[160px] gap-2 border-slate-700 bg-slate-900/50 font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
+              className="h-12 min-w-[160px] gap-2 border-surface-3 bg-surface-1/50 font-medium text-text-secondary hover:bg-surface-2 hover:text-white"
               onClick={() => window.history.back()}
             >
               <MoveLeft className="h-4 w-4" />
@@ -98,7 +98,7 @@ export function NotFoundPage() {
         </div>
 
         {/* Footer Text */}
-        <div className="absolute bottom-8 text-sm text-slate-600">
+        <div className="absolute bottom-8 text-sm text-text-muted">
           Spell Coven
         </div>
       </div>
