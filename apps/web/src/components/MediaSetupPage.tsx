@@ -72,7 +72,7 @@ export function MediaSetupPage({ onComplete, onCancel }: MediaSetupPageProps) {
             <AlertDialogTitle className="text-center text-white">
               Leave Without Saving?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-muted">
+            <AlertDialogDescription className="text-center text-text-muted">
               Your settings will not be saved and you&apos;ll be redirected to
               the home page. You must complete audio & video setup before
               joining a game room.
@@ -81,7 +81,7 @@ export function MediaSetupPage({ onComplete, onCancel }: MediaSetupPageProps) {
           <AlertDialogFooter className="flex-row justify-center gap-3 sm:justify-center">
             <AlertDialogCancel
               onClick={handleDismissWarning}
-              className="border-surface-3 bg-surface-2 text-secondary hover:bg-surface-3 hover:text-white"
+              className="border-surface-3 bg-surface-2 text-text-secondary hover:bg-surface-3 hover:text-white"
             >
               Continue Setup
             </AlertDialogCancel>

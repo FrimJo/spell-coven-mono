@@ -169,7 +169,7 @@ export function CommanderSearchInput({
             autoComplete="off"
           />
           {loading && !hideLoadingIndicator && (
-            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted" />
+            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-text-muted" />
           )}
         </div>
       </PopoverAnchor>
@@ -183,7 +183,7 @@ export function CommanderSearchInput({
             {effectiveSuggestions.length > 0 && (
               <CommandGroup
                 heading={suggestionsLabel}
-                className="text-muted"
+                className="text-text-muted"
               >
                 {effectiveSuggestions.map((name) => (
                   <CommandItem
@@ -198,7 +198,7 @@ export function CommanderSearchInput({
               </CommandGroup>
             )}
             {results.length > 0 && (
-              <CommandGroup heading="Search Results" className="text-muted">
+              <CommandGroup heading="Search Results" className="text-text-muted">
                 {results.slice(0, 10).map((name) => (
                   <CommandItem
                     key={name}
@@ -215,7 +215,7 @@ export function CommanderSearchInput({
               results.length === 0 &&
               effectiveSuggestions.length === 0 &&
               query.length >= 2 && (
-                <CommandEmpty className="text-muted">
+                <CommandEmpty className="text-text-muted">
                   No cards found
                 </CommandEmpty>
               )}

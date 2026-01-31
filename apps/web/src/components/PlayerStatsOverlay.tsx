@@ -181,7 +181,7 @@ export function PlayerStatsOverlay({
             <Button
               size="icon"
               variant="ghost"
-              className="h-6 w-6 rounded-md text-muted hover:bg-destructive/20 hover:text-destructive"
+              className="h-6 w-6 rounded-md text-text-muted hover:bg-destructive/20 hover:text-destructive"
               onMouseDown={healthMinus.handleStart}
               onMouseUp={healthMinus.handleStop}
               onMouseLeave={healthMinus.handleStop}
@@ -194,7 +194,7 @@ export function PlayerStatsOverlay({
             <Button
               size="icon"
               variant="ghost"
-              className="h-6 w-6 rounded-md text-muted hover:bg-success/20 hover:text-success"
+              className="h-6 w-6 rounded-md text-text-muted hover:bg-success/20 hover:text-success"
               onMouseDown={healthPlus.handleStart}
               onMouseUp={healthPlus.handleStop}
               onMouseLeave={healthPlus.handleStop}
@@ -224,7 +224,7 @@ export function PlayerStatsOverlay({
             <Button
               size="icon"
               variant="ghost"
-              className="h-6 w-6 rounded-md text-muted hover:bg-destructive/20 hover:text-destructive"
+              className="h-6 w-6 rounded-md text-text-muted hover:bg-destructive/20 hover:text-destructive"
               onMouseDown={poisonMinus.handleStart}
               onMouseUp={poisonMinus.handleStop}
               onMouseLeave={poisonMinus.handleStop}
@@ -237,7 +237,7 @@ export function PlayerStatsOverlay({
             <Button
               size="icon"
               variant="ghost"
-              className="h-6 w-6 rounded-md text-muted hover:bg-success/20 hover:text-success"
+              className="h-6 w-6 rounded-md text-text-muted hover:bg-success/20 hover:text-success"
               onMouseDown={poisonPlus.handleStart}
               onMouseUp={poisonPlus.handleStop}
               onMouseLeave={poisonPlus.handleStop}
@@ -278,7 +278,7 @@ export function PlayerStatsOverlay({
         <Button
           variant="ghost"
           size="sm"
-          className="mt-1 h-6 w-full text-[10px] text-muted hover:bg-brand/20 hover:text-brand-muted-foreground"
+          className="mt-1 h-6 w-full text-[10px] text-text-muted hover:bg-brand/20 hover:text-brand-muted-foreground"
           onClick={() => setPanelOpen(true)}
         >
           COMMANDERS

@@ -15,7 +15,7 @@ export function PlayerStats({ player }: PlayerStatsProps) {
       <div className="space-y-3">
         {/* Player Name */}
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted">{player.name}</span>
+          <span className="text-sm text-text-muted">{player.name}</span>
         </div>
       </div>
     </Card>

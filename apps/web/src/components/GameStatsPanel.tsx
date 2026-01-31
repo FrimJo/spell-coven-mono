@@ -422,7 +422,7 @@ export function GameStatsPanel({
               ? 'Your Commander Damage'
               : `${viewedPlayer.username}'s Commander Damage`}
           </SheetTitle>
-          <SheetDescription className="text-muted">
+          <SheetDescription className="text-text-muted">
             {isViewingOwnStats
               ? 'Track damage dealt to you by each commander.'
               : `Viewing damage dealt to ${viewedPlayer.username} by each commander.`}
@@ -473,12 +473,12 @@ export function GameStatsPanel({
                           className="h-5 w-5 rounded-full"
                         />
                       ) : (
-                        <User className="h-4 w-4 text-muted" />
+                        <User className="h-4 w-4 text-text-muted" />
                       )}
-                      <span className="font-semibold text-secondary">
+                      <span className="font-semibold text-text-secondary">
                         {player.username}
                         {isCurrentUser && (
-                          <span className="ml-1.5 text-xs font-normal text-muted">
+                          <span className="ml-1.5 text-xs font-normal text-text-muted">
                             (You)
                           </span>
                         )}
@@ -507,7 +507,7 @@ export function GameStatsPanel({
                                 })
                                 handleStartEditing(player)
                               }}
-                              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-border-default bg-surface-1/50 text-muted transition-colors hover:border-brand hover:bg-brand/10 hover:text-brand-muted-foreground"
+                              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-border-default bg-surface-1/50 text-text-muted transition-colors hover:border-brand hover:bg-brand/10 hover:text-brand-muted-foreground"
                               title="Add Commander 1"
                             >
                               <Plus className="h-3 w-3" />
@@ -531,14 +531,14 @@ export function GameStatsPanel({
                                 })
                                 handleStartEditing(player)
                               }}
-                              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-border-default bg-surface-1/50 text-muted transition-colors hover:border-brand hover:bg-brand/10 hover:text-brand-muted-foreground"
+                              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed border-border-default bg-surface-1/50 text-text-muted transition-colors hover:border-brand hover:bg-brand/10 hover:text-brand-muted-foreground"
                               title="Add Commander 2"
                             >
                               <Plus className="h-3 w-3" />
                             </button>
                           )}
                         </span>
-                        <ChevronDown className="h-4 w-4 text-muted" />
+                        <ChevronDown className="h-4 w-4 text-text-muted" />
                       </span>
                     </div>
                   </div>
@@ -576,12 +576,12 @@ export function GameStatsPanel({
                         className="h-6 w-6 rounded-full"
                       />
                     ) : (
-                      <User className="h-5 w-5 text-muted" />
+                      <User className="h-5 w-5 text-text-muted" />
                     )}
-                    <span className="font-semibold text-secondary">
+                    <span className="font-semibold text-text-secondary">
                       {player.username}
                       {isCurrentUser && (
-                        <span className="ml-1.5 text-xs font-normal text-muted">
+                        <span className="ml-1.5 text-xs font-normal text-text-muted">
                           (You)
                         </span>
                       )}
@@ -599,7 +599,7 @@ export function GameStatsPanel({
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 border-border-default bg-surface-2 text-secondary hover:bg-surface-3 hover:text-white"
+                          className="h-7 border-border-default bg-surface-2 text-text-secondary hover:bg-surface-3 hover:text-white"
                           onClick={() => send({ type: 'DONE_EDIT' })}
                         >
                           Done
@@ -609,7 +609,7 @@ export function GameStatsPanel({
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-7 w-7 text-muted hover:bg-surface-2 hover:text-brand-muted-foreground"
+                          className="h-7 w-7 text-text-muted hover:bg-surface-2 hover:text-brand-muted-foreground"
                           onClick={() => handleStartEditing(player)}
                           title="Edit commanders"
                         >
@@ -625,7 +625,7 @@ export function GameStatsPanel({
                             onClick={() =>
                               send({ type: 'SET_COLLAPSED', collapsed: true })
                             }
-                            className="rounded p-1 text-muted hover:bg-surface-2 hover:text-secondary"
+                            className="rounded p-1 text-text-muted hover:bg-surface-2 hover:text-text-secondary"
                             title="Minimize"
                           >
                             <ChevronUp className="h-4 w-4" />
@@ -642,7 +642,7 @@ export function GameStatsPanel({
                         <button
                           type="button"
                           onClick={() => handleStartEditing(player)}
-                          className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-default bg-surface-1/30 p-6 text-muted transition-colors hover:border-border-default hover:bg-surface-1/50 hover:text-muted"
+                          className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border-default bg-surface-1/30 p-6 text-text-muted transition-colors hover:border-border-default hover:bg-surface-1/50 hover:text-text-muted"
                         >
                           <Plus className="h-5 w-5" />
                           <span className="text-sm font-medium">
@@ -736,11 +736,11 @@ export function GameStatsPanel({
                 key={`vacant-${slot.index}`}
                 className="rounded-lg border border-dashed border-border-default bg-surface-1/30 p-4"
               >
-                <div className="flex items-center gap-2 text-muted">
+                <div className="flex items-center gap-2 text-text-muted">
                   <User className="h-5 w-5" />
                   <span className="font-medium">Empty Seat</span>
                 </div>
-                <p className="mt-2 text-sm text-muted">
+                <p className="mt-2 text-sm text-text-muted">
                   Waiting for player to join...
                 </p>
               </div>
@@ -829,7 +829,7 @@ function CommanderSlot({
     return (
       <div className="rounded-md border border-border-default bg-surface-0/50 p-3">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs font-medium text-muted">
+          <span className="text-xs font-medium text-text-muted">
             Commander {slotNumber}
             {slotNumber === 2 &&
               allowsSecondCommander &&
@@ -856,7 +856,7 @@ function CommanderSlot({
                 ? `Search ${suggestionsLabel?.toLowerCase()}...`
                 : 'Search for a commander...'
             }
-            className="h-9 border-border-default bg-surface-1 pr-10 text-sm text-white transition-colors placeholder:text-muted hover:border-border-default focus-visible:ring-brand"
+            className="h-9 border-border-default bg-surface-1 pr-10 text-sm text-white transition-colors placeholder:text-text-muted hover:border-border-default focus-visible:ring-brand"
             suggestions={slotNumber === 2 ? suggestions : undefined}
             suggestionsLabel={slotNumber === 2 ? suggestionsLabel : undefined}
             hideLoadingIndicator
@@ -864,7 +864,7 @@ function CommanderSlot({
           />
           <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
             {isSearching ? (
-              <Loader2 className="h-4 w-4 animate-spin text-muted" />
+              <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
             ) : status === 'saving' ? (
               <Loader2 className="h-4 w-4 animate-spin text-brand-muted-foreground" />
             ) : status === 'saved' ? (
@@ -936,7 +936,7 @@ function CommanderSlot({
       <div className="relative z-10 flex items-center justify-between p-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span className="text-shadow-sm text-sm font-medium text-secondary shadow-black">
+            <span className="text-shadow-sm text-sm font-medium text-text-secondary shadow-black">
               {commander.name}
             </span>
           </div>
@@ -952,7 +952,7 @@ function CommanderSlot({
           <Button
             size="icon"
             variant="outline"
-            className="h-8 w-8 border-border-default bg-surface-1/80 text-secondary backdrop-blur-sm hover:bg-surface-2 hover:text-white"
+            className="h-8 w-8 border-border-default bg-surface-1/80 text-text-secondary backdrop-blur-sm hover:bg-surface-2 hover:text-white"
             onMouseDown={damageMinus.handleStart}
             onMouseUp={damageMinus.handleStop}
             onMouseLeave={damageMinus.handleStop}
@@ -964,7 +964,7 @@ function CommanderSlot({
           </Button>
           <span
             className={`text-shadow-sm min-w-[2rem] text-center font-mono text-lg font-bold shadow-black ${
-              isLethal ? 'text-destructive' : 'text-secondary'
+              isLethal ? 'text-destructive' : 'text-text-secondary'
             }`}
           >
             {damage}
@@ -972,7 +972,7 @@ function CommanderSlot({
           <Button
             size="icon"
             variant="outline"
-            className="h-8 w-8 border-border-default bg-surface-1/80 text-secondary backdrop-blur-sm hover:bg-surface-2 hover:text-white"
+            className="h-8 w-8 border-border-default bg-surface-1/80 text-text-secondary backdrop-blur-sm hover:bg-surface-2 hover:text-white"
             onMouseDown={damagePlus.handleStart}
             onMouseUp={damagePlus.handleStop}
             onMouseLeave={damagePlus.handleStop}
