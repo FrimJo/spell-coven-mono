@@ -241,7 +241,7 @@ export function LandingPage({
       `}</style>
 
       {/* Background with gradient overlay */}
-      <div className="bg-linear-to-br absolute inset-0 from-purple-900/20 via-slate-950 to-blue-900/20" />
+      <div className="bg-linear-to-br via-background absolute inset-0 from-purple-900/20 to-blue-900/20" />
 
       {/* Animated background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -272,7 +272,7 @@ export function LandingPage({
                 </span>
               </div>
 
-              <h1 className="mb-6 text-5xl text-white md:text-7xl lg:text-8xl">
+              <h1 className="text-text-primary mb-6 text-5xl md:text-7xl lg:text-8xl">
                 Play Magic
                 <span className="mt-2 block bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
                   Anywhere.
@@ -328,7 +328,7 @@ export function LandingPage({
                       </DialogTrigger>
                       <DialogContent className="border-border-muted bg-surface-1">
                         <DialogHeader>
-                          <DialogTitle className="text-white">
+                          <DialogTitle className="text-text-primary">
                             Join a Game
                           </DialogTitle>
                         </DialogHeader>
@@ -345,7 +345,7 @@ export function LandingPage({
                               placeholder="Enter game ID (e.g., ABC123)"
                               value={joinGameId}
                               onChange={(e) => setJoinGameId(e.target.value)}
-                              className="border-surface-3 bg-surface-0 text-white"
+                              className="border-surface-3 bg-surface-0 text-text-primary"
                               onKeyDown={(e) =>
                                 e.key === 'Enter' && handleJoin()
                               }
@@ -404,7 +404,7 @@ export function LandingPage({
                       />
                     </div>
                     <div className="flex flex-col">
-                      <div className="text-lg font-semibold text-white sm:text-xl">
+                      <div className="text-text-primary text-lg font-semibold sm:text-xl">
                         {stat.value}
                       </div>
                       <div className="text-text-muted text-[10px] uppercase tracking-wider sm:text-xs sm:tracking-[0.2em]">
@@ -620,7 +620,7 @@ export function LandingPage({
         {/* Features Section */}
         <section id="features" className="container mx-auto px-4 py-20">
           <div className="mx-auto max-w-6xl">
-            <h2 className="mb-16 text-center text-4xl text-white md:text-5xl">
+            <h2 className="text-text-primary mb-16 text-center text-4xl md:text-5xl">
               Everything You Need to Play
             </h2>
             <div className="grid gap-8 md:grid-cols-3">
@@ -631,7 +631,9 @@ export function LandingPage({
                 <div className="bg-brand/20 mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
                   <Video className="text-brand-muted-foreground h-6 w-6" />
                 </div>
-                <h3 className="mb-2 text-xl text-white">Battlefield Video</h3>
+                <h3 className="text-text-primary mb-2 text-xl">
+                  Battlefield Video
+                </h3>
                 <p className="text-text-muted">
                   Clear video feeds of everyone&apos;s battlefield. See your
                   opponents&apos; playmats, cards, and game state in real-time.
@@ -645,7 +647,9 @@ export function LandingPage({
                 <div className="bg-info/20 mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
                   <Camera className="text-info h-6 w-6" />
                 </div>
-                <h3 className="mb-2 text-xl text-white">Card Recognition</h3>
+                <h3 className="text-text-primary mb-2 text-xl">
+                  Card Recognition
+                </h3>
                 <p className="text-text-muted">
                   Point your camera at cards and the system recognizes them for
                   your opponents to see.
@@ -659,7 +663,9 @@ export function LandingPage({
                 <div className="bg-success/20 mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
                   <Users className="text-success h-6 w-6" />
                 </div>
-                <h3 className="mb-3 text-xl text-white">Game Management</h3>
+                <h3 className="text-text-primary mb-3 text-xl">
+                  Game Management
+                </h3>
                 <p className="text-text-muted">
                   Life counters, commander damage, and game state tools to keep
                   everything organized.
@@ -678,7 +684,7 @@ export function LandingPage({
           <div className="bg-brand-muted pointer-events-none absolute left-0 top-1/2 -z-10 h-96 w-full -translate-y-1/2 blur-[120px]" />
 
           <div className="mx-auto max-w-6xl">
-            <h2 className="mb-20 text-center text-4xl text-white md:text-5xl">
+            <h2 className="text-text-primary mb-20 text-center text-4xl md:text-5xl">
               How It Works
             </h2>
 
@@ -695,7 +701,7 @@ export function LandingPage({
                     1
                   </div>
                 </div>
-                <h3 className="group-hover:text-brand-muted-foreground mb-3 text-xl font-semibold text-white transition-colors">
+                <h3 className="group-hover:text-brand-muted-foreground text-text-primary mb-3 text-xl font-semibold transition-colors">
                   Create or Join
                 </h3>
                 <p className="text-text-muted max-w-xs leading-relaxed">
@@ -713,7 +719,7 @@ export function LandingPage({
                     2
                   </div>
                 </div>
-                <h3 className="group-hover:text-info mb-3 text-xl font-semibold text-white transition-colors">
+                <h3 className="group-hover:text-info text-text-primary mb-3 text-xl font-semibold transition-colors">
                   Set Up Cameras
                 </h3>
                 <p className="text-text-muted max-w-xs leading-relaxed">
@@ -731,7 +737,7 @@ export function LandingPage({
                     3
                   </div>
                 </div>
-                <h3 className="group-hover:text-success mb-3 text-xl font-semibold text-white transition-colors">
+                <h3 className="group-hover:text-success text-text-primary mb-3 text-xl font-semibold transition-colors">
                   Play Magic
                 </h3>
                 <p className="text-text-muted max-w-xs leading-relaxed">
@@ -753,7 +759,7 @@ export function LandingPage({
             <div className="bg-brand/10 absolute -left-20 -top-20 h-64 w-64 rounded-full blur-3xl" />
             <div className="bg-info/10 absolute -bottom-20 -right-20 h-64 w-64 rounded-full blur-3xl" />
 
-            <h2 className="relative z-10 mb-6 text-3xl text-white md:text-5xl">
+            <h2 className="text-text-primary relative z-10 mb-6 text-3xl md:text-5xl">
               Ready to Enter the Coven?
             </h2>
             <p className="text-text-secondary relative z-10 mx-auto mb-8 max-w-2xl text-lg">
@@ -805,7 +811,7 @@ export function LandingPage({
                     alt="Spell Coven Logo"
                     className="h-8 w-8 rounded-lg object-contain grayscale transition-all hover:grayscale-0"
                   />
-                  <span className="text-lg font-bold text-white">
+                  <span className="text-text-primary text-lg font-bold">
                     Spell Coven
                   </span>
                 </div>
@@ -816,7 +822,7 @@ export function LandingPage({
               </div>
 
               <div>
-                <h4 className="mb-4 text-sm font-semibold text-white">
+                <h4 className="text-text-primary mb-4 text-sm font-semibold">
                   Product
                 </h4>
                 <ul className="text-text-muted space-y-2 text-sm">
@@ -847,7 +853,9 @@ export function LandingPage({
               </div>
 
               <div>
-                <h4 className="mb-4 text-sm font-semibold text-white">Legal</h4>
+                <h4 className="text-text-primary mb-4 text-sm font-semibold">
+                  Legal
+                </h4>
                 <ul className="text-text-muted space-y-2 text-sm">
                   <li>
                     <a href="#" className="hover:text-brand-muted-foreground">
@@ -869,7 +877,7 @@ export function LandingPage({
 
               {supportUrl && (
                 <div>
-                  <h4 className="mb-4 text-sm font-semibold text-white">
+                  <h4 className="text-text-primary mb-4 text-sm font-semibold">
                     Support
                   </h4>
                   <p className="text-text-muted mb-4 text-sm">
