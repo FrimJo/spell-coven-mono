@@ -59,6 +59,56 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* ----------------------------------------
+     Semantic Colors - Light Theme
+     ---------------------------------------- */
+
+  /* Brand (Purple) */
+  --brand: #7c3aed;
+  --brand-foreground: #ffffff;
+  --brand-muted: #ede9fe;
+  --brand-muted-foreground: #6d28d9;
+
+  /* Success (Green) */
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --success-muted: #dcfce7;
+  --success-muted-foreground: #166534;
+
+  /* Warning (Amber/Orange) */
+  --warning: #d97706;
+  --warning-foreground: #ffffff;
+  --warning-muted: #fef3c7;
+  --warning-muted-foreground: #92400e;
+
+  /* Info (Blue) */
+  --info: #2563eb;
+  --info-foreground: #ffffff;
+  --info-muted: #dbeafe;
+  --info-muted-foreground: #1e40af;
+
+  /* Surface levels (for layered backgrounds) */
+  --surface-0: #ffffff;
+  --surface-1: #f8fafc;
+  --surface-2: #f1f5f9;
+  --surface-3: #e2e8f0;
+
+  /* Text levels */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #64748b;
+  --text-muted: #94a3b8;
+  --text-placeholder: #cbd5e1;
+
+  /* Border levels */
+  --border-default: #e2e8f0;
+  --border-muted: #f1f5f9;
+  --border-strong: #cbd5e1;
+
+  /* Online/Active indicator */
+  --online: #10b981;
+  --online-foreground: #ffffff;
 }
 
 /* ============================================
@@ -108,6 +158,56 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+
+  /* ----------------------------------------
+     Semantic Colors - Dark Theme
+     ---------------------------------------- */
+
+  /* Brand (Purple) - dark mode values */
+  --brand: #a78bfa;
+  --brand-foreground: #1e1b4b;
+  --brand-muted: rgba(139, 92, 246, 0.2);
+  --brand-muted-foreground: #c4b5fd;
+
+  /* Success (Green) - dark mode values */
+  --success: #4ade80;
+  --success-foreground: #052e16;
+  --success-muted: rgba(34, 197, 94, 0.2);
+  --success-muted-foreground: #86efac;
+
+  /* Warning (Amber/Orange) - dark mode values */
+  --warning: #fbbf24;
+  --warning-foreground: #451a03;
+  --warning-muted: rgba(245, 158, 11, 0.2);
+  --warning-muted-foreground: #fcd34d;
+
+  /* Info (Blue) - dark mode values */
+  --info: #60a5fa;
+  --info-foreground: #1e3a5f;
+  --info-muted: rgba(59, 130, 246, 0.2);
+  --info-muted-foreground: #93c5fd;
+
+  /* Surface levels (for layered backgrounds) - slate palette */
+  --surface-0: #020617;  /* slate-950 */
+  --surface-1: #0f172a;  /* slate-900 */
+  --surface-2: #1e293b;  /* slate-800 */
+  --surface-3: #334155;  /* slate-700 */
+
+  /* Text levels - slate palette */
+  --text-primary: #f8fafc;   /* slate-50 */
+  --text-secondary: #e2e8f0; /* slate-200 */
+  --text-tertiary: #cbd5e1;  /* slate-300 */
+  --text-muted: #94a3b8;     /* slate-400 */
+  --text-placeholder: #64748b; /* slate-500 */
+
+  /* Border levels - slate palette */
+  --border-default: #334155;  /* slate-700 */
+  --border-muted: #1e293b;    /* slate-800 */
+  --border-strong: #475569;   /* slate-600 */
+
+  /* Online/Active indicator */
+  --online: #34d399;
+  --online-foreground: #022c22;
 }
 
 /* ============================================
@@ -122,7 +222,7 @@
    Maps CSS variables to Tailwind utility classes
    ============================================ */
 @theme inline {
-  /* Colors */
+  /* Core Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -166,4 +266,50 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Brand Colors */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-muted: var(--brand-muted);
+  --color-brand-muted-foreground: var(--brand-muted-foreground);
+
+  /* Success Colors */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-muted: var(--success-muted);
+  --color-success-muted-foreground: var(--success-muted-foreground);
+
+  /* Warning Colors */
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-muted: var(--warning-muted);
+  --color-warning-muted-foreground: var(--warning-muted-foreground);
+
+  /* Info Colors */
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-muted: var(--info-muted);
+  --color-info-muted-foreground: var(--info-muted-foreground);
+
+  /* Surface Colors */
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  /* Text Colors */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-muted: var(--text-muted);
+  --color-text-placeholder: var(--text-placeholder);
+
+  /* Border Colors */
+  --color-border-default: var(--border-default);
+  --color-border-muted: var(--border-muted);
+  --color-border-strong: var(--border-strong);
+
+  /* Online/Active */
+  --color-online: var(--online);
+  --color-online-foreground: var(--online-foreground);
 }
