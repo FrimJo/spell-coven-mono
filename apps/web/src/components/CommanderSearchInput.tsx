@@ -169,12 +169,12 @@ export function CommanderSearchInput({
             autoComplete="off"
           />
           {loading && !hideLoadingIndicator && (
-            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-500" />
+            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-text-muted" />
           )}
         </div>
       </PopoverAnchor>
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] border-slate-700 bg-slate-900 p-0"
+        className="w-[var(--radix-popover-trigger-width)] border-border-default bg-surface-1 p-0"
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
@@ -183,14 +183,14 @@ export function CommanderSearchInput({
             {effectiveSuggestions.length > 0 && (
               <CommandGroup
                 heading={suggestionsLabel}
-                className="text-slate-400"
+                className="text-text-muted"
               >
                 {effectiveSuggestions.map((name) => (
                   <CommandItem
                     key={`sug-${name}`}
                     value={name}
                     onSelect={() => handleSuggestionSelect(name)}
-                    className="cursor-pointer text-purple-300 hover:bg-slate-800"
+                    className="cursor-pointer text-brand-muted-foreground hover:bg-surface-2"
                   >
                     {name}
                   </CommandItem>
@@ -198,13 +198,13 @@ export function CommanderSearchInput({
               </CommandGroup>
             )}
             {results.length > 0 && (
-              <CommandGroup heading="Search Results" className="text-slate-400">
+              <CommandGroup heading="Search Results" className="text-text-muted">
                 {results.slice(0, 10).map((name) => (
                   <CommandItem
                     key={name}
                     value={name}
                     onSelect={() => handleSelect(name)}
-                    className="cursor-pointer text-slate-100 hover:bg-slate-800"
+                    className="cursor-pointer text-text-primary hover:bg-surface-2"
                   >
                     {name}
                   </CommandItem>
@@ -215,7 +215,7 @@ export function CommanderSearchInput({
               results.length === 0 &&
               effectiveSuggestions.length === 0 &&
               query.length >= 2 && (
-                <CommandEmpty className="text-slate-500">
+                <CommandEmpty className="text-text-muted">
                   No cards found
                 </CommandEmpty>
               )}

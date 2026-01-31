@@ -38,8 +38,8 @@ export function RejoinGameDialog({
           title: 'Banned from Game',
           description:
             'You have been banned from this game room by the owner. You cannot rejoin this room.',
-          icon: <Ban className="h-6 w-6 text-red-400" />,
-          iconBg: 'bg-red-500/20',
+          icon: <Ban className="h-6 w-6 text-destructive" />,
+          iconBg: 'bg-destructive/20',
           canRejoin: false,
         }
       case 'kicked':
@@ -47,8 +47,8 @@ export function RejoinGameDialog({
           title: 'Removed from Game',
           description:
             'You have been removed from the game room. You can attempt to rejoin or return to the main menu.',
-          icon: <AlertTriangle className="h-6 w-6 text-amber-400" />,
-          iconBg: 'bg-amber-500/20',
+          icon: <AlertTriangle className="h-6 w-6 text-warning" />,
+          iconBg: 'bg-warning/20',
           canRejoin: true,
           rejoinText: 'Rejoin Game',
           rejoinDescription: 'Attempt to join the game room again',
@@ -58,8 +58,8 @@ export function RejoinGameDialog({
           title: 'Connection Lost',
           description:
             'You lost connection to the game server. Check your internet connection and try again.',
-          icon: <AlertTriangle className="h-6 w-6 text-red-400" />,
-          iconBg: 'bg-red-500/20',
+          icon: <AlertTriangle className="h-6 w-6 text-destructive" />,
+          iconBg: 'bg-destructive/20',
           canRejoin: true,
           rejoinText: 'Reconnect',
           rejoinDescription: 'Try to reconnect to the game',
@@ -70,8 +70,8 @@ export function RejoinGameDialog({
           title: 'You Left the Game',
           description:
             'You have left the game room. You can rejoin if the game is still active.',
-          icon: <DoorOpen className="h-6 w-6 text-slate-400" />,
-          iconBg: 'bg-slate-500/20',
+          icon: <DoorOpen className="h-6 w-6 text-muted" />,
+          iconBg: 'bg-surface-3/20',
           canRejoin: true,
           rejoinText: 'Rejoin Game',
           rejoinDescription: 'Return to the game room',
@@ -83,7 +83,7 @@ export function RejoinGameDialog({
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="border-slate-800 bg-slate-900 sm:max-w-[450px] [&>button]:hidden">
+      <DialogContent className="border-muted bg-surface-1 sm:max-w-[450px] [&>button]:hidden">
         <DialogHeader>
           <div className="mb-2 flex justify-center">
             <div
@@ -92,10 +92,10 @@ export function RejoinGameDialog({
               {content.icon}
             </div>
           </div>
-          <DialogTitle className="text-center text-slate-100">
+          <DialogTitle className="text-center text-primary">
             {content.title}
           </DialogTitle>
-          <DialogDescription className="text-center text-slate-400">
+          <DialogDescription className="text-center text-muted">
             {content.description}
           </DialogDescription>
         </DialogHeader>
@@ -104,17 +104,17 @@ export function RejoinGameDialog({
           {content.canRejoin && (
             <button
               onClick={onRejoin}
-              className="group w-full cursor-pointer rounded-lg border border-purple-500/30 bg-purple-950/30 p-4 text-left transition-all hover:border-purple-500/60 hover:bg-purple-900/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              className="group w-full cursor-pointer rounded-lg border border-brand/30 bg-brand/30 p-4 text-left transition-all hover:border-brand/60 hover:bg-brand-muted/40 focus:outline-none focus:ring-2 focus:ring-brand/50"
             >
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/20 transition-colors group-hover:bg-purple-500/30">
-                  <RotateCcw className="h-5 w-5 text-purple-400" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/20 transition-colors group-hover:bg-brand/30">
+                  <RotateCcw className="h-5 w-5 text-brand-muted-foreground" />
                 </div>
                 <div>
-                  <p className="font-medium text-purple-200">
+                  <p className="font-medium text-brand-muted-foreground">
                     {content.rejoinText}
                   </p>
-                  <p className="mt-0.5 text-sm text-slate-400">
+                  <p className="mt-0.5 text-sm text-muted">
                     {content.rejoinDescription}
                   </p>
                 </div>
@@ -124,15 +124,15 @@ export function RejoinGameDialog({
 
           <button
             onClick={onLeave}
-            className="group w-full cursor-pointer rounded-lg border border-slate-700 bg-slate-800/50 p-4 text-left transition-all hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500/50"
+            className="group w-full cursor-pointer rounded-lg border border-default bg-surface-2/50 p-4 text-left transition-all hover:border-default hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-default/50"
           >
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-700/50 transition-colors group-hover:bg-slate-700">
-                <DoorOpen className="h-5 w-5 text-slate-400" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-3/50 transition-colors group-hover:bg-surface-3">
+                <DoorOpen className="h-5 w-5 text-muted" />
               </div>
               <div>
-                <p className="font-medium text-slate-200">Return to Home</p>
-                <p className="mt-0.5 text-sm text-slate-400">
+                <p className="font-medium text-secondary">Return to Home</p>
+                <p className="mt-0.5 text-sm text-muted">
                   Leave the game permanently
                 </p>
               </div>

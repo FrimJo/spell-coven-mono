@@ -174,7 +174,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="dark min-h-screen bg-slate-950">
+      <body className="dark min-h-screen bg-surface-0">
         <ConvexProvider>
           <AuthProvider>
             {children}

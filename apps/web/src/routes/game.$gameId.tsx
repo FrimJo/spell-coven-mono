@@ -123,19 +123,19 @@ export const Route = createFileRoute('/game/$gameId')({
     return {}
   },
   pendingComponent: () => (
-    <div className="flex h-screen items-center justify-center bg-slate-950">
+    <div className="flex h-screen items-center justify-center bg-surface-0">
       <div className="flex flex-col items-center space-y-4">
         <div className="relative">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-500/20">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-muted">
+            <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
           </div>
-          <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/10" />
+          <div className="absolute inset-0 animate-ping rounded-full bg-brand/10" />
         </div>
         <div className="space-y-1 text-center">
-          <h2 className="text-lg font-medium text-slate-200">
+          <h2 className="text-lg font-medium text-text-secondary">
             Loading in Game Room
           </h2>
-          <p className="text-sm text-slate-400">Setting up your session...</p>
+          <p className="text-sm text-text-muted">Setting up your session...</p>
         </div>
       </div>
     </div>
@@ -179,16 +179,16 @@ function GameRoomRoute() {
   // Show loading state while auth is being determined
   if (isAuthLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-950">
+      <div className="flex h-screen items-center justify-center bg-surface-0">
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-500/20">
-              <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-muted">
+              <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
             </div>
-            <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/10" />
+            <div className="absolute inset-0 animate-ping rounded-full bg-brand/10" />
           </div>
           <div className="space-y-1 text-center">
-            <h2 className="text-lg font-medium text-slate-200">
+            <h2 className="text-lg font-medium text-text-secondary">
               Checking authentication...
             </h2>
           </div>
@@ -200,7 +200,7 @@ function GameRoomRoute() {
   // Show auth dialog if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="h-screen bg-slate-950">
+      <div className="h-screen bg-surface-0">
         <AuthRequiredDialog
           open={true}
           onSignIn={handleSignIn}
