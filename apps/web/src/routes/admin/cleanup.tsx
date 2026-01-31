@@ -16,8 +16,8 @@ type ChannelsResult = {
 
 function AdminCleanup() {
   const [secret, setSecret] = useState('')
-  const [loading] = useState(false)
   const [result, setResult] = useState<ChannelsResult | null>(null)
+  const loading = false
 
   const handleList = async () => {
     setResult({
