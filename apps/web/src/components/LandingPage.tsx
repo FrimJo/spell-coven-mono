@@ -1,6 +1,6 @@
 import type { AuthUser } from '@/contexts/AuthContext'
-import { env } from '@/env'
 import { useMemo, useState } from 'react'
+import { env } from '@/env'
 import { sessionStorage } from '@/lib/session-storage'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
@@ -214,7 +214,7 @@ export function LandingPage({
   return (
     <div className="relative min-h-screen overflow-hidden">
       {error && (
-        <div className="fixed right-4 top-4 z-50 max-w-md rounded-lg bg-destructive/90 p-4 text-white shadow-lg">
+        <div className="bg-destructive/90 fixed right-4 top-4 z-50 max-w-md rounded-lg p-4 text-white shadow-lg">
           <p className="font-semibold">Error</p>
           <p className="text-sm">{error}</p>
         </div>
@@ -245,8 +245,8 @@ export function LandingPage({
 
       {/* Animated background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-20 top-20 h-64 w-64 animate-pulse rounded-full bg-brand/10 blur-3xl" />
-        <div className="absolute bottom-20 right-20 h-96 w-96 animate-pulse rounded-full bg-info/10 blur-3xl delay-1000" />
+        <div className="bg-brand/10 absolute left-20 top-20 h-64 w-64 animate-pulse rounded-full blur-3xl" />
+        <div className="bg-info/10 absolute bottom-20 right-20 h-96 w-96 animate-pulse rounded-full blur-3xl delay-1000" />
       </div>
 
       <div className="relative z-10">
@@ -265,9 +265,9 @@ export function LandingPage({
           <div className="grid items-center gap-12 md:grid-cols-2 lg:gap-20">
             {/* Text Content */}
             <div className="flex flex-col items-center text-center md:items-start md:text-left">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-muted px-4 py-2 backdrop-blur-md">
-                <Sparkles className="h-4 w-4 text-brand-muted-foreground" />
-                <span className="text-sm font-medium text-brand-muted-foreground">
+              <div className="border-brand/30 bg-brand-muted mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-2 backdrop-blur-md">
+                <Sparkles className="text-brand-muted-foreground h-4 w-4" />
+                <span className="text-brand-muted-foreground text-sm font-medium">
                   No downloads. No setup. Just play.
                 </span>
               </div>
@@ -279,7 +279,7 @@ export function LandingPage({
                 </span>
               </h1>
 
-              <p className="mb-8 max-w-xl text-lg leading-relaxed text-text-secondary md:text-xl">
+              <p className="text-text-secondary mb-8 max-w-xl text-lg leading-relaxed md:text-xl">
                 Spell Coven lets you play paper MTG remotely through video chat
                 and card recognition. Use your physical cards, see your
                 opponents, and enjoy the authentic experience.
@@ -290,7 +290,7 @@ export function LandingPage({
                   <>
                     <Button
                       size="lg"
-                      className="h-14 min-w-[200px] gap-2 bg-brand text-lg font-semibold text-white shadow-lg shadow-brand/25 transition-all duration-200 hover:bg-brand disabled:cursor-not-allowed disabled:opacity-50"
+                      className="bg-brand shadow-brand/25 hover:bg-brand h-14 min-w-[200px] gap-2 text-lg font-semibold text-white shadow-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                       onClick={handleCreateClick}
                       disabled={gameCreation.isCreating}
                       data-testid="create-game-button"
@@ -318,7 +318,7 @@ export function LandingPage({
                         <Button
                           size="lg"
                           variant="outline"
-                          className="h-14 min-w-[200px] gap-2 border-surface-3 bg-surface-1/50 text-lg font-semibold text-text-secondary hover:bg-surface-2 hover:text-white"
+                          className="border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2 h-14 min-w-[200px] gap-2 text-lg font-semibold hover:text-white"
                           onClick={handleJoinClick}
                           data-testid="join-game-button"
                         >
@@ -334,7 +334,10 @@ export function LandingPage({
                         </DialogHeader>
                         <div className="space-y-4 pt-4">
                           <div className="space-y-2">
-                            <Label htmlFor="game-id" className="text-text-secondary">
+                            <Label
+                              htmlFor="game-id"
+                              className="text-text-secondary"
+                            >
                               Game ID
                             </Label>
                             <Input
@@ -352,7 +355,7 @@ export function LandingPage({
                           <Button
                             onClick={handleJoin}
                             disabled={!joinGameId.trim()}
-                            className="w-full bg-brand text-white hover:bg-brand"
+                            className="bg-brand hover:bg-brand w-full text-white"
                             data-testid="join-game-submit-button"
                           >
                             Join Game Room
@@ -393,9 +396,9 @@ export function LandingPage({
                 {liveStats.map((stat) => (
                   <div
                     key={stat.label}
-                    className="relative flex flex-col items-start gap-3 rounded-2xl border border-border-muted bg-surface-0/70 px-3 py-3 shadow-lg shadow-brand/10 backdrop-blur-sm sm:flex-row sm:items-center sm:gap-4 md:flex-col md:items-start md:gap-3 lg:flex-row lg:items-center lg:gap-4 lg:px-4"
+                    className="border-border-muted bg-surface-0/70 shadow-brand/10 relative flex flex-col items-start gap-3 rounded-2xl border px-3 py-3 shadow-lg backdrop-blur-sm sm:flex-row sm:items-center sm:gap-4 md:flex-col md:items-start md:gap-3 lg:flex-row lg:items-center lg:gap-4 lg:px-4"
                   >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-2/60 sm:h-11 sm:w-11">
+                    <div className="bg-surface-2/60 flex h-10 w-10 shrink-0 items-center justify-center rounded-full sm:h-11 sm:w-11">
                       <stat.icon
                         className={`h-4 w-4 ${stat.accent} sm:h-5 sm:w-5`}
                       />
@@ -404,12 +407,12 @@ export function LandingPage({
                       <div className="text-lg font-semibold text-white sm:text-xl">
                         {stat.value}
                       </div>
-                      <div className="text-[10px] uppercase tracking-wider text-text-muted sm:text-xs sm:tracking-[0.2em]">
+                      <div className="text-text-muted text-[10px] uppercase tracking-wider sm:text-xs sm:tracking-[0.2em]">
                         {stat.label}
                       </div>
                     </div>
-                    <div className="absolute right-3 top-3 flex items-center gap-2 text-[10px] font-medium text-online">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-online sm:h-2 sm:w-2" />
+                    <div className="text-online absolute right-3 top-3 flex items-center gap-2 text-[10px] font-medium">
+                      <span className="bg-online h-1.5 w-1.5 animate-pulse rounded-full sm:h-2 sm:w-2" />
                       <span className="xs:inline hidden sm:inline">
                         {stat.badge}
                       </span>
@@ -422,7 +425,7 @@ export function LandingPage({
             {/* Visual/Logo */}
             <div className="relative mx-auto h-64 w-64 md:h-96 md:w-96">
               <div className="animate-float relative h-full w-full">
-                <div className="absolute inset-0 animate-pulse rounded-full bg-brand/20 blur-3xl" />
+                <div className="bg-brand/20 absolute inset-0 animate-pulse rounded-full blur-3xl" />
                 <img
                   src={logo}
                   alt="Spell Coven Logo"
@@ -430,9 +433,9 @@ export function LandingPage({
                 />
 
                 {/* Decorative sparkles */}
-                <Sparkles className="animate-sparkle absolute -left-8 top-10 h-8 w-8 text-warning drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
-                <Sparkles className="animate-sparkle absolute -right-4 bottom-20 h-6 w-6 text-info drop-shadow-[0_0_8px_rgba(147,197,253,0.8)] delay-700" />
-                <Sparkles className="animate-sparkle delay-1500 absolute bottom-0 left-0 h-8 w-8 text-brand-muted-foreground drop-shadow-[0_0_8px_rgba(216,180,254,0.8)]" />
+                <Sparkles className="animate-sparkle text-warning absolute -left-8 top-10 h-8 w-8 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
+                <Sparkles className="animate-sparkle text-info absolute -right-4 bottom-20 h-6 w-6 drop-shadow-[0_0_8px_rgba(147,197,253,0.8)] delay-700" />
+                <Sparkles className="animate-sparkle delay-1500 text-brand-muted-foreground absolute bottom-0 left-0 h-8 w-8 drop-shadow-[0_0_8px_rgba(216,180,254,0.8)]" />
               </div>
             </div>
           </div>
@@ -442,25 +445,27 @@ export function LandingPage({
             {/* Glow effects */}
             <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-purple-600/50 to-blue-600/50 opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-50" />
 
-            <div className="relative rounded-xl border border-border-muted bg-surface-0/80 p-2 shadow-2xl ring-1 ring-white/10 backdrop-blur-sm">
+            <div className="border-border-muted bg-surface-0/80 relative rounded-xl border p-2 shadow-2xl ring-1 ring-white/10 backdrop-blur-sm">
               <div className="absolute inset-0 -z-10 bg-gradient-to-b from-purple-500/5 to-transparent opacity-50" />
 
               {/* Fake Game Interface */}
               <div className="flex h-[400px] w-full flex-col overflow-hidden rounded-lg bg-[#0f1117] sm:h-[600px]">
                 {/* Top Bar */}
-                <div className="flex items-center justify-between border-b border-border-muted bg-surface-1/50 px-4 py-2">
+                <div className="border-border-muted bg-surface-1/50 flex items-center justify-between border-b px-4 py-2">
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 text-text-muted">
+                    <div className="text-text-muted flex items-center gap-2">
                       <LogOut className="h-4 w-4 rotate-180" />
                       <span className="text-sm">Leave</span>
                     </div>
-                    <div className="h-4 w-px bg-surface-2" />
-                    <span className="text-sm text-text-muted">
+                    <div className="bg-surface-2 h-4 w-px" />
+                    <span className="text-text-muted text-sm">
                       Game ID:{' '}
-                      <span className="font-mono text-brand-muted-foreground">ABC123</span>
+                      <span className="text-brand-muted-foreground font-mono">
+                        ABC123
+                      </span>
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-text-muted">
+                  <div className="text-text-muted flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     <span className="text-xs">4/4 Players</span>
                     <Settings className="ml-2 h-4 w-4" />
@@ -469,9 +474,9 @@ export function LandingPage({
 
                 <div className="flex flex-1 overflow-hidden">
                   {/* Sidebar */}
-                  <div className="hidden w-64 flex-col gap-4 border-r border-border-muted bg-surface-1/30 p-4 lg:flex">
-                    <div className="rounded-lg border border-border-muted bg-surface-2/20 p-4">
-                      <div className="mb-2 flex items-center gap-2 text-xs font-medium text-text-muted">
+                  <div className="border-border-muted bg-surface-1/30 hidden w-64 flex-col gap-4 border-r p-4 lg:flex">
+                    <div className="border-border-muted bg-surface-2/20 rounded-lg border p-4">
+                      <div className="text-text-muted mb-2 flex items-center gap-2 text-xs font-medium">
                         <Play className="h-3 w-3" />
                         Current Turn
                       </div>
@@ -479,15 +484,17 @@ export function LandingPage({
                         <div className="text-lg font-medium text-white">
                           Rowan
                         </div>
-                        <div className="text-xs text-text-muted">is playing</div>
-                        <div className="mt-3 w-full rounded bg-brand py-1.5 text-sm font-medium text-white shadow-lg shadow-brand/20">
+                        <div className="text-text-muted text-xs">
+                          is playing
+                        </div>
+                        <div className="bg-brand shadow-brand/20 mt-3 w-full rounded py-1.5 text-sm font-medium text-white shadow-lg">
                           Next Turn
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex-1 rounded-lg border border-border-muted bg-surface-2/20 p-4">
-                      <div className="mb-3 text-xs font-medium text-text-muted">
+                    <div className="border-border-muted bg-surface-2/20 flex-1 rounded-lg border p-4">
+                      <div className="text-text-muted mb-3 text-xs font-medium">
                         Players (4/4)
                       </div>
                       <div className="space-y-2">
@@ -499,7 +506,7 @@ export function LandingPage({
                         ].map((p) => (
                           <div
                             key={p.name}
-                            className={`flex items-center justify-between rounded p-2 ${p.me ? 'bg-brand/10 ring-1 ring-brand/50' : 'hover:bg-surface-2/50'}`}
+                            className={`flex items-center justify-between rounded p-2 ${p.me ? 'bg-brand/10 ring-brand/50 ring-1' : 'hover:bg-surface-2/50'}`}
                           >
                             <div className="flex items-center gap-2">
                               <div
@@ -510,13 +517,13 @@ export function LandingPage({
                               >
                                 {p.name}
                                 {p.me && (
-                                  <span className="ml-2 rounded bg-brand/20 px-1 py-0.5 text-[10px] text-brand-muted-foreground">
+                                  <span className="bg-brand/20 text-brand-muted-foreground ml-2 rounded px-1 py-0.5 text-[10px]">
                                     You
                                   </span>
                                 )}
                               </span>
                             </div>
-                            <div className="flex items-center gap-1 text-text-muted">
+                            <div className="text-text-muted flex items-center gap-1">
                               <Heart className="h-3 w-3" />
                               <span className="text-xs">{p.hp}</span>
                             </div>
@@ -546,34 +553,34 @@ export function LandingPage({
                     ].map((p, i) => (
                       <div
                         key={i}
-                        className={`relative overflow-hidden rounded-lg border bg-surface-1/50 shadow-inner transition-all ${p.isActive ? 'border-brand/50 shadow-[0_0_15px_-5px_rgba(168,85,247,0.3)] ring-1 ring-brand/30' : 'border-border-muted'}`}
+                        className={`bg-surface-1/50 relative overflow-hidden rounded-lg border shadow-inner transition-all ${p.isActive ? 'border-brand/50 ring-brand/30 shadow-[0_0_15px_-5px_rgba(168,85,247,0.3)] ring-1' : 'border-border-muted'}`}
                       >
                         {/* Player Header */}
-                        <div className="absolute left-2 top-2 z-10 flex items-center gap-2 rounded bg-surface-0/60 px-2 py-1 text-xs backdrop-blur-sm">
+                        <div className="bg-surface-0/60 absolute left-2 top-2 z-10 flex items-center gap-2 rounded px-2 py-1 text-xs backdrop-blur-sm">
                           <div
                             className={`h-1.5 w-1.5 rounded-full ${p.me ? 'bg-success' : 'bg-text-muted'}`}
                           />
                           <span className="text-text-secondary">{p.name}</span>
                           {p.me && (
-                            <span className="rounded bg-brand/30 px-1 py-0.5 text-[10px] font-medium text-brand-muted-foreground">
+                            <span className="bg-brand/30 text-brand-muted-foreground rounded px-1 py-0.5 text-[10px] font-medium">
                               You
                             </span>
                           )}
                         </div>
 
                         {/* Life Counter */}
-                        <div className="absolute bottom-4 left-4 z-10 rounded-lg border border-border-muted bg-surface-0/80 p-2 text-center backdrop-blur-sm">
+                        <div className="border-border-muted bg-surface-0/80 absolute bottom-4 left-4 z-10 rounded-lg border p-2 text-center backdrop-blur-sm">
                           <div className="text-xl font-bold text-white">40</div>
-                          <div className="text-[10px] uppercase tracking-wider text-text-muted">
+                          <div className="text-text-muted text-[10px] uppercase tracking-wider">
                             Life
                           </div>
                         </div>
 
                         {/* Simulated Camera Feed */}
-                        <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-surface-2/50 to-surface-0">
+                        <div className="from-surface-2/50 to-surface-0 flex h-full w-full items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))]">
                           <div className="flex flex-col items-center gap-3 opacity-20">
-                            <Camera className="h-8 w-8 text-text-muted" />
-                            <span className="text-sm font-medium text-text-muted">
+                            <Camera className="text-text-muted h-8 w-8" />
+                            <span className="text-text-muted text-sm font-medium">
                               Table View
                             </span>
                           </div>
@@ -584,9 +591,9 @@ export function LandingPage({
                           <div className="absolute right-4 top-1/2 z-20 w-24 -translate-y-1/2 rotate-3 transform transition-transform hover:rotate-0 hover:scale-150">
                             <div className="group relative aspect-[2.5/3.5] cursor-pointer overflow-hidden rounded border border-white/20 shadow-2xl">
                               {/* Placeholder for card image since we can't rely on external URLs reliably in preview without being sure they load, using a colored div with icon */}
-                              <div className="flex h-full w-full items-center justify-center bg-surface-2">
+                              <div className="bg-surface-2 flex h-full w-full items-center justify-center">
                                 <div className="h-full w-full bg-gradient-to-br from-amber-900/40 to-slate-900"></div>
-                                <Sparkles className="absolute text-warning/50" />
+                                <Sparkles className="text-warning/50 absolute" />
                               </div>
                               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
                                 <div className="flex h-full items-end justify-center pb-2">
@@ -621,8 +628,8 @@ export function LandingPage({
                 className="border-border-muted bg-surface-1/50 p-6 backdrop-blur-sm"
                 spotlightColor="rgba(168, 85, 247, 0.15)"
               >
-                <div className="mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand/20">
-                  <Video className="h-6 w-6 text-brand-muted-foreground" />
+                <div className="bg-brand/20 mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
+                  <Video className="text-brand-muted-foreground h-6 w-6" />
                 </div>
                 <h3 className="mb-2 text-xl text-white">Battlefield Video</h3>
                 <p className="text-text-muted">
@@ -635,8 +642,8 @@ export function LandingPage({
                 className="border-border-muted bg-surface-1/50 p-6 backdrop-blur-sm"
                 spotlightColor="rgba(59, 130, 246, 0.15)"
               >
-                <div className="mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-info/20">
-                  <Camera className="h-6 w-6 text-info" />
+                <div className="bg-info/20 mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
+                  <Camera className="text-info h-6 w-6" />
                 </div>
                 <h3 className="mb-2 text-xl text-white">Card Recognition</h3>
                 <p className="text-text-muted">
@@ -649,8 +656,8 @@ export function LandingPage({
                 className="border-border-muted bg-surface-1/50 p-6 backdrop-blur-sm"
                 spotlightColor="rgba(34, 197, 94, 0.15)"
               >
-                <div className="mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-success/20">
-                  <Users className="h-6 w-6 text-success" />
+                <div className="bg-success/20 mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
+                  <Users className="text-success h-6 w-6" />
                 </div>
                 <h3 className="mb-3 text-xl text-white">Game Management</h3>
                 <p className="text-text-muted">
@@ -668,7 +675,7 @@ export function LandingPage({
           className="container relative mx-auto overflow-hidden px-4 py-24"
         >
           {/* Background decoration */}
-          <div className="pointer-events-none absolute left-0 top-1/2 -z-10 h-96 w-full -translate-y-1/2 bg-brand-muted blur-[120px]" />
+          <div className="bg-brand-muted pointer-events-none absolute left-0 top-1/2 -z-10 h-96 w-full -translate-y-1/2 blur-[120px]" />
 
           <div className="mx-auto max-w-6xl">
             <h2 className="mb-20 text-center text-4xl text-white md:text-5xl">
@@ -681,17 +688,17 @@ export function LandingPage({
 
               {/* Step 1 */}
               <div className="group relative flex flex-col items-center text-center">
-                <div className="relative z-10 mb-6 flex h-24 w-24 items-center justify-center rounded-2xl border border-border-muted bg-surface-0 shadow-xl transition-all duration-300 group-hover:border-brand/50 group-hover:shadow-[0_0_30px_-5px_rgba(168,85,247,0.3)]">
+                <div className="border-border-muted bg-surface-0 group-hover:border-brand/50 relative z-10 mb-6 flex h-24 w-24 items-center justify-center rounded-2xl border shadow-xl transition-all duration-300 group-hover:shadow-[0_0_30px_-5px_rgba(168,85,247,0.3)]">
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 opacity-0 transition-opacity group-hover:opacity-100" />
-                  <Gamepad2 className="relative z-10 h-10 w-10 text-brand-muted-foreground transition-transform duration-300 group-hover:scale-110 group-hover:text-brand-muted-foreground" />
-                  <div className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full border border-border-muted bg-surface-1 text-sm font-bold text-white shadow-lg ring-4 ring-surface-0">
+                  <Gamepad2 className="text-brand-muted-foreground group-hover:text-brand-muted-foreground relative z-10 h-10 w-10 transition-transform duration-300 group-hover:scale-110" />
+                  <div className="border-border-muted bg-surface-1 ring-surface-0 absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold text-white shadow-lg ring-4">
                     1
                   </div>
                 </div>
-                <h3 className="mb-3 text-xl font-semibold text-white transition-colors group-hover:text-brand-muted-foreground">
+                <h3 className="group-hover:text-brand-muted-foreground mb-3 text-xl font-semibold text-white transition-colors">
                   Create or Join
                 </h3>
-                <p className="max-w-xs leading-relaxed text-text-muted">
+                <p className="text-text-muted max-w-xs leading-relaxed">
                   Start a new game room and share the game ID with your friends,
                   or join an existing game instantly.
                 </p>
@@ -699,17 +706,17 @@ export function LandingPage({
 
               {/* Step 2 */}
               <div className="group relative flex flex-col items-center text-center">
-                <div className="relative z-10 mb-6 flex h-24 w-24 items-center justify-center rounded-2xl border border-border-muted bg-surface-0 shadow-xl transition-all duration-300 group-hover:border-info/50 group-hover:shadow-[0_0_30px_-5px_rgba(59,130,246,0.3)]">
+                <div className="border-border-muted bg-surface-0 group-hover:border-info/50 relative z-10 mb-6 flex h-24 w-24 items-center justify-center rounded-2xl border shadow-xl transition-all duration-300 group-hover:shadow-[0_0_30px_-5px_rgba(59,130,246,0.3)]">
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 opacity-0 transition-opacity group-hover:opacity-100" />
-                  <Scan className="relative z-10 h-10 w-10 text-info transition-transform duration-300 group-hover:scale-110 group-hover:text-info" />
-                  <div className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full border border-border-muted bg-surface-1 text-sm font-bold text-white shadow-lg ring-4 ring-surface-0">
+                  <Scan className="text-info group-hover:text-info relative z-10 h-10 w-10 transition-transform duration-300 group-hover:scale-110" />
+                  <div className="border-border-muted bg-surface-1 ring-surface-0 absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold text-white shadow-lg ring-4">
                     2
                   </div>
                 </div>
-                <h3 className="mb-3 text-xl font-semibold text-white transition-colors group-hover:text-info">
+                <h3 className="group-hover:text-info mb-3 text-xl font-semibold text-white transition-colors">
                   Set Up Cameras
                 </h3>
-                <p className="max-w-xs leading-relaxed text-text-muted">
+                <p className="text-text-muted max-w-xs leading-relaxed">
                   Position your main camera for your playmat and cards.
                   Optionally add a second camera for video chat.
                 </p>
@@ -717,17 +724,17 @@ export function LandingPage({
 
               {/* Step 3 */}
               <div className="group relative flex flex-col items-center text-center">
-                <div className="relative z-10 mb-6 flex h-24 w-24 items-center justify-center rounded-2xl border border-border-muted bg-surface-0 shadow-xl transition-all duration-300 group-hover:border-success/50 group-hover:shadow-[0_0_30px_-5px_rgba(34,197,94,0.3)]">
+                <div className="border-border-muted bg-surface-0 group-hover:border-success/50 relative z-10 mb-6 flex h-24 w-24 items-center justify-center rounded-2xl border shadow-xl transition-all duration-300 group-hover:shadow-[0_0_30px_-5px_rgba(34,197,94,0.3)]">
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 opacity-0 transition-opacity group-hover:opacity-100" />
-                  <Swords className="relative z-10 h-10 w-10 text-success transition-transform duration-300 group-hover:scale-110 group-hover:text-success" />
-                  <div className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full border border-border-muted bg-surface-1 text-sm font-bold text-white shadow-lg ring-4 ring-surface-0">
+                  <Swords className="text-success group-hover:text-success relative z-10 h-10 w-10 transition-transform duration-300 group-hover:scale-110" />
+                  <div className="border-border-muted bg-surface-1 ring-surface-0 absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold text-white shadow-lg ring-4">
                     3
                   </div>
                 </div>
-                <h3 className="mb-3 text-xl font-semibold text-white transition-colors group-hover:text-success">
+                <h3 className="group-hover:text-success mb-3 text-xl font-semibold text-white transition-colors">
                   Play Magic
                 </h3>
-                <p className="max-w-xs leading-relaxed text-text-muted">
+                <p className="text-text-muted max-w-xs leading-relaxed">
                   Cast spells, track life totals, and enjoy authentic paper
                   Magic with your friends anywhere.
                 </p>
@@ -743,13 +750,13 @@ export function LandingPage({
             spotlightColor="rgba(168, 85, 247, 0.15)"
           >
             {/* Background effects */}
-            <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-brand/10 blur-3xl" />
-            <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-info/10 blur-3xl" />
+            <div className="bg-brand/10 absolute -left-20 -top-20 h-64 w-64 rounded-full blur-3xl" />
+            <div className="bg-info/10 absolute -bottom-20 -right-20 h-64 w-64 rounded-full blur-3xl" />
 
             <h2 className="relative z-10 mb-6 text-3xl text-white md:text-5xl">
               Ready to Enter the Coven?
             </h2>
-            <p className="relative z-10 mx-auto mb-8 max-w-2xl text-lg text-text-secondary">
+            <p className="text-text-secondary relative z-10 mx-auto mb-8 max-w-2xl text-lg">
               Join thousands of planeswalkers playing paper Magic remotely.
               It&apos;s free, runs in your browser, and brings the gathering
               back to Magic.
@@ -759,7 +766,7 @@ export function LandingPage({
               <Button
                 size="lg"
                 onClick={isAuthenticated ? handleCreateClick : onSignIn}
-                className="h-14 min-w-[200px] gap-2 bg-brand text-lg font-semibold text-white shadow-lg shadow-brand/25 hover:bg-brand"
+                className="bg-brand shadow-brand/25 hover:bg-brand h-14 min-w-[200px] gap-2 text-lg font-semibold text-white shadow-lg"
               >
                 <Sparkles className="h-5 w-5" />
                 {isAuthenticated
@@ -770,7 +777,7 @@ export function LandingPage({
                 <Button
                   variant="outline"
                   size="lg"
-                  className="h-14 min-w-[200px] border-surface-3 bg-surface-1/50 text-lg font-semibold text-text-secondary hover:bg-surface-2 hover:text-white"
+                  className="border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2 h-14 min-w-[200px] text-lg font-semibold hover:text-white"
                   onClick={() => {
                     const element = document.getElementById('how-it-works')
                     element?.scrollIntoView({ behavior: 'smooth' })
@@ -784,7 +791,7 @@ export function LandingPage({
         </section>
 
         {/* Footer */}
-        <footer className="border-t border-border-muted bg-surface-0">
+        <footer className="border-border-muted bg-surface-0 border-t">
           <div className="container mx-auto px-4 py-12">
             <div
               className={`grid gap-8 ${
@@ -802,7 +809,7 @@ export function LandingPage({
                     Spell Coven
                   </span>
                 </div>
-                <p className="max-w-xs text-sm text-text-muted">
+                <p className="text-text-muted max-w-xs text-sm">
                   The best way to play paper Magic: The Gathering remotely with
                   friends. High-quality video, card recognition, and zero setup.
                 </p>
@@ -812,7 +819,7 @@ export function LandingPage({
                 <h4 className="mb-4 text-sm font-semibold text-white">
                   Product
                 </h4>
-                <ul className="space-y-2 text-sm text-text-muted">
+                <ul className="text-text-muted space-y-2 text-sm">
                   <li>
                     <a
                       href="#features"
@@ -841,7 +848,7 @@ export function LandingPage({
 
               <div>
                 <h4 className="mb-4 text-sm font-semibold text-white">Legal</h4>
-                <ul className="space-y-2 text-sm text-text-muted">
+                <ul className="text-text-muted space-y-2 text-sm">
                   <li>
                     <a href="#" className="hover:text-brand-muted-foreground">
                       Privacy Policy
@@ -865,14 +872,14 @@ export function LandingPage({
                   <h4 className="mb-4 text-sm font-semibold text-white">
                     Support
                   </h4>
-                  <p className="mb-4 text-sm text-text-muted">
+                  <p className="text-text-muted mb-4 text-sm">
                     Enjoying Spell Coven? Support ongoing development.
                   </p>
                   <a
                     href={supportUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-brand/30 transition hover:bg-brand"
+                    className="bg-brand shadow-brand/30 hover:bg-brand inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-lg transition"
                   >
                     <Heart className="h-4 w-4" />
                     Buy me a coffee
@@ -881,7 +888,7 @@ export function LandingPage({
               )}
             </div>
 
-            <div className="mt-12 border-t border-border-muted pt-8 text-center text-sm text-text-muted">
+            <div className="border-border-muted text-text-muted mt-12 border-t pt-8 text-center text-sm">
               <p className="mb-2">Spell Coven © {new Date().getFullYear()}</p>
               <p>
                 Spell Coven is unofficial Fan Content permitted under the Fan

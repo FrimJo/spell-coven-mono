@@ -162,7 +162,7 @@ function GameRoomContent({
   }
 
   return (
-    <div className="flex h-screen flex-col bg-surface-0">
+    <div className="bg-surface-0 flex h-screen flex-col">
       {/* Duplicate Session Dialog - shown when user is already connected from another tab */}
       <DuplicateSessionDialog
         open={showDuplicateDialog}

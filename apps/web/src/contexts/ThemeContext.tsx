@@ -6,7 +6,13 @@
  */
 
 import type { ReactNode } from 'react'
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react'
 
 // ============================================================================
 // Types
@@ -45,7 +51,9 @@ interface ThemeProviderProps {
  */
 function getSystemTheme(): ResolvedTheme {
   if (typeof window === 'undefined') return 'dark'
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light'
 }
 
 /**
@@ -72,7 +80,10 @@ function applyThemeToDocument(resolvedTheme: ResolvedTheme) {
   }
 }
 
-export function ThemeProvider({ children, defaultTheme = 'dark' }: ThemeProviderProps) {
+export function ThemeProvider({
+  children,
+  defaultTheme = 'dark',
+}: ThemeProviderProps) {
   // Initialize theme from localStorage or default
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === 'undefined') return defaultTheme
@@ -83,8 +94,8 @@ export function ThemeProvider({ children, defaultTheme = 'dark' }: ThemeProvider
     return defaultTheme
   })
 
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() => 
-    resolveTheme(theme)
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
+    resolveTheme(theme),
   )
 
   // Apply theme on mount and when it changes
@@ -99,7 +110,7 @@ export function ThemeProvider({ children, defaultTheme = 'dark' }: ThemeProvider
     if (theme !== 'system') return
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    
+
     const handleChange = (e: MediaQueryListEvent) => {
       const resolved = e.matches ? 'dark' : 'light'
       setResolvedTheme(resolved)
