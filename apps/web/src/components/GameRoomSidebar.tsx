@@ -15,6 +15,8 @@ interface GameRoomSidebarProps {
   ownerId: string | null
   onKickPlayer: (playerId: string) => void
   onBanPlayer: (playerId: string) => void
+  mutedPlayers: Set<string>
+  onToggleMutePlayer: (playerId: string) => void
 }
 
 function SidebarContent({
@@ -23,6 +25,8 @@ function SidebarContent({
   ownerId,
   onKickPlayer,
   onBanPlayer,
+  mutedPlayers,
+  onToggleMutePlayer,
 }: GameRoomSidebarProps) {
   // Get game room participants from context (already deduplicated)
   const { uniqueParticipants } = usePresence()
@@ -40,6 +44,8 @@ function SidebarContent({
         onKickPlayer={onKickPlayer}
         onBanPlayer={onBanPlayer}
         ownerId={ownerId ?? undefined}
+        mutedPlayers={mutedPlayers}
+        onToggleMutePlayer={onToggleMutePlayer}
       />
       <CardPreview playerName={playerName} onClose={() => {}} />
     </div>
@@ -54,8 +60,8 @@ function SidebarLoading() {
         <div className="space-y-3">
           {/* Header with "Players" and count */}
           <div className="mb-2 flex items-center justify-between">
-            <Skeleton className="h-4 w-16 bg-surface-3/50" />
-            <Skeleton className="h-3 w-8 bg-surface-3/50" />
+            <Skeleton className="bg-surface-3/50 h-4 w-16" />
+            <Skeleton className="bg-surface-3/50 h-3 w-8" />
           </div>
 
           {/* Player items - show generic loading state */}
@@ -63,11 +69,11 @@ function SidebarLoading() {
             {[1, 2].map((i) => (
               <div
                 key={i}
-                className="flex items-center justify-between rounded-lg border border-surface-2 bg-surface-2/50 p-2"
+                className="border-surface-2 bg-surface-2/50 flex items-center justify-between rounded-lg border p-2"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <Skeleton className="h-2 w-2 rounded-full bg-surface-3/50" />
-                  <Skeleton className="h-4 w-24 bg-surface-3/50" />
+                  <Skeleton className="bg-surface-3/50 h-2 w-2 rounded-full" />
+                  <Skeleton className="bg-surface-3/50 h-4 w-24" />
                 </div>
               </div>
             ))}

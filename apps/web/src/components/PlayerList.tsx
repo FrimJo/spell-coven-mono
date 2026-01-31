@@ -1,5 +1,13 @@
 import { useState } from 'react'
-import { Ban, Crown, MoreVertical, UserX } from 'lucide-react'
+import {
+  Ban,
+  Crown,
+  MoreVertical,
+  Users,
+  UserX,
+  Volume2,
+  VolumeX,
+} from 'lucide-react'
 
 import {
   AlertDialog,
@@ -33,6 +41,8 @@ interface PlayerListProps {
   onKickPlayer: (playerId: string) => void
   onBanPlayer: (playerId: string) => void
   ownerId?: string
+  mutedPlayers: Set<string>
+  onToggleMutePlayer: (playerId: string) => void
 }
 
 type RemovalAction = 'kick' | 'ban'
@@ -44,6 +54,8 @@ export function PlayerList({
   onKickPlayer,
   onBanPlayer,
   ownerId,
+  mutedPlayers,
+  onToggleMutePlayer,
 }: PlayerListProps) {
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
@@ -70,8 +82,11 @@ export function PlayerList({
     <Card className="border-surface-2 bg-surface-1 p-4">
       <div className="space-y-3">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-sm text-text-muted">Players</span>
-          <span className="text-xs text-text-muted">{players.length}/4</span>
+          <div className="flex items-center gap-2">
+            <Users className="text-text-muted h-4 w-4" />
+            <span className="text-text-muted text-sm">Players</span>
+          </div>
+          <span className="text-text-muted text-xs">{players.length}/4</span>
         </div>
 
         <div className="space-y-2">
@@ -83,11 +98,11 @@ export function PlayerList({
               return (
                 <div
                   key={`empty-${index}`}
-                  className="flex items-center justify-between rounded-lg border border-dashed border-surface-3 bg-surface-2/20 p-2 transition-colors"
+                  className="border-surface-3 bg-surface-2/20 flex items-center justify-between rounded-lg border border-dashed p-2 transition-colors"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <div className="h-2 w-2 flex-shrink-0 rounded-full bg-surface-3" />
-                    <span className="truncate text-sm text-text-muted">
+                    <div className="bg-surface-3 h-2 w-2 flex-shrink-0 rounded-full" />
+                    <span className="text-text-muted truncate text-sm">
                       Open slot
                     </span>
                   </div>
@@ -98,17 +113,18 @@ export function PlayerList({
             // Filled slot
             const isLocal = player.name === localPlayerName
             const isOwner = ownerId ? player.id === ownerId : player.id === '1' // Use provided ownerId or fallback to first player
+            const isMuted = mutedPlayers.has(player.id)
 
             return (
               <div
                 key={player.id}
-                className="flex items-center justify-between rounded-lg border border-surface-2 bg-surface-2/50 p-2 transition-colors"
+                className="border-surface-2 bg-surface-2/50 flex items-center justify-between rounded-lg border p-2 transition-colors"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <div
                     className={`h-2 w-2 flex-shrink-0 rounded-full ${
                       player.isOnline !== false
-                        ? 'animate-pulse bg-online'
+                        ? 'bg-online animate-pulse'
                         : 'bg-surface-3'
                     }`}
                     title={
@@ -121,23 +137,31 @@ export function PlayerList({
                     {player.name}
                   </span>
                   {isOwner && (
-                    <Crown className="h-3 w-3 flex-shrink-0 text-warning" />
+                    <Crown className="text-warning h-3 w-3 flex-shrink-0" />
                   )}
                   {isLocal && (
-                    <span className="flex-shrink-0 rounded bg-brand/30 px-1.5 py-0.5 text-xs text-brand-muted-foreground">
+                    <span className="bg-brand/30 text-brand-muted-foreground flex-shrink-0 rounded px-1.5 py-0.5 text-xs">
                       You
+                    </span>
+                  )}
+                  {!isLocal && isMuted && (
+                    <span
+                      className="bg-destructive/20 text-destructive flex flex-shrink-0 items-center justify-center rounded px-1.5 py-1"
+                      title="Muted"
+                    >
+                      <VolumeX className="h-3 w-3" />
                     </span>
                   )}
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {isLobbyOwner && !isLocal && !isOwner && (
+                  {!isLocal && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0 text-text-muted hover:bg-surface-3 hover:text-text-secondary"
+                          className="text-text-muted hover:bg-surface-3 hover:text-text-secondary h-6 w-6 p-0"
                         >
                           <MoreVertical className="h-3 w-3" />
                         </Button>
@@ -147,19 +171,39 @@ export function PlayerList({
                         className="border-surface-3 bg-surface-2"
                       >
                         <DropdownMenuItem
-                          onClick={() => openConfirmDialog(player, 'kick')}
-                          className="text-warning focus:bg-warning/10 focus:text-warning"
+                          onClick={() => onToggleMutePlayer(player.id)}
+                          className="text-text-secondary focus:bg-surface-3 focus:text-white"
                         >
-                          <UserX className="mr-2 h-4 w-4" />
-                          Kick (can rejoin)
+                          {isMuted ? (
+                            <>
+                              <Volume2 className="mr-2 h-4 w-4" />
+                              Unmute
+                            </>
+                          ) : (
+                            <>
+                              <VolumeX className="mr-2 h-4 w-4" />
+                              Mute
+                            </>
+                          )}
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => openConfirmDialog(player, 'ban')}
-                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                        >
-                          <Ban className="mr-2 h-4 w-4" />
-                          Ban (permanent)
-                        </DropdownMenuItem>
+                        {isLobbyOwner && !isOwner && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => openConfirmDialog(player, 'kick')}
+                              className="text-warning focus:bg-warning/10 focus:text-warning"
+                            >
+                              <UserX className="mr-2 h-4 w-4" />
+                              Kick (can rejoin)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => openConfirmDialog(player, 'ban')}
+                              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                            >
+                              <Ban className="mr-2 h-4 w-4" />
+                              Ban (permanent)
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
@@ -199,7 +243,7 @@ export function PlayerList({
                     {confirmDialog.player?.name}
                   </span>
                   ?{' '}
-                  <span className="font-medium text-destructive">
+                  <span className="text-destructive font-medium">
                     This cannot be undone.
                   </span>{' '}
                   They will be permanently blocked from this room. To play
@@ -216,8 +260,8 @@ export function PlayerList({
               onClick={handleConfirm}
               className={
                 confirmDialog.action === 'kick'
-                  ? 'bg-warning text-white hover:bg-warning'
-                  : 'bg-destructive text-white hover:bg-destructive'
+                  ? 'bg-warning hover:bg-warning text-white'
+                  : 'bg-destructive hover:bg-destructive text-white'
               }
             >
               {confirmDialog.action === 'kick' ? 'Kick' : 'Ban'}

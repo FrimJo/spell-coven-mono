@@ -346,12 +346,24 @@ export const LocalMediaControls = memo(function LocalMediaControls({
   )
 })
 
-export const PlayerNameBadge = memo(function PlayerNameBadge(
-  props: PropsWithChildren,
-) {
+interface PlayerNameBadgeProps extends PropsWithChildren {
+  position?: 'top-left' | 'bottom-center'
+}
+
+export const PlayerNameBadge = memo(function PlayerNameBadge({
+  children,
+  position = 'top-left',
+}: PlayerNameBadgeProps) {
+  const positionClasses =
+    position === 'bottom-center'
+      ? 'bottom-3 left-1/2 -translate-x-1/2'
+      : 'left-3 top-3'
+
   return (
-    <div className="border-surface-2 bg-surface-0/90 absolute left-3 top-3 z-10 rounded-lg border px-3 py-2 backdrop-blur-sm">
-      <div className="flex items-center gap-2">{props.children}</div>
+    <div
+      className={`border-surface-2 bg-surface-0/90 absolute ${positionClasses} z-10 rounded-lg border px-3 py-2 backdrop-blur-sm`}
+    >
+      <div className="flex items-center gap-2">{children}</div>
     </div>
   )
 })
