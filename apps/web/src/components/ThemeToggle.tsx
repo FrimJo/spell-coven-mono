@@ -4,6 +4,7 @@
  * Features animated sun/moon icons and MTG-inspired styling.
  */
 
+import { isThemeToggleEnabled } from '@/env'
 import { Monitor, Moon, Sun } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
@@ -25,6 +26,8 @@ interface ThemeToggleProps {
 
 export function ThemeToggle({ className }: ThemeToggleProps) {
   const { theme, resolvedTheme, setTheme } = useTheme()
+
+  if (!isThemeToggleEnabled) return null
 
   return (
     <DropdownMenu>
