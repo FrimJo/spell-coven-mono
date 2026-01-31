@@ -168,14 +168,6 @@ export const LocalVideoCard = memo(function LocalVideoCard({
         <VideoDisabledPlaceholder />
       )}
 
-      {/* Player Info Badge */}
-      <PlayerNameBadge>
-        <span className="text-white">{localPlayerName}</span>
-        <span className="bg-brand/30 text-brand-muted-foreground rounded px-1.5 py-0.5 text-xs">
-          You
-        </span>
-      </PlayerNameBadge>
-
       {/* Commander Overlay */}
       {roomId && participant && currentUser && (
         <CommanderOverlay

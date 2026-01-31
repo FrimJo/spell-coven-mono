@@ -176,7 +176,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
 
   return (
     <>
-      <div className="border-surface-2 bg-surface-0/90 hover:bg-surface-0 absolute left-3 top-16 z-10 flex flex-col gap-1.5 rounded-lg border p-2 opacity-80 backdrop-blur-sm transition-opacity hover:opacity-100">
+      <div className="border-surface-2 bg-surface-0/90 hover:bg-surface-0 absolute left-3 top-3 z-10 flex flex-col gap-1.5 rounded-lg border p-2 opacity-80 backdrop-blur-sm transition-opacity hover:opacity-100">
         {/* Life */}
         <div className="flex items-center justify-between gap-3">
           <Tooltip>
@@ -263,39 +263,26 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
           </div>
         </div>
 
-        {/* Commander Damage */}
-        {totalCommanderDamage > 0 && (
-          <div className="border-surface-2 flex items-center justify-between gap-3 border-t pt-1.5">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="text-brand-muted-foreground flex cursor-help items-center gap-1.5">
-                  <span className="text-[10px] font-medium uppercase tracking-wide">
-                    CMD
-                  </span>
-                  <span className="min-w-[2ch] text-center font-mono text-xs font-bold text-white">
-                    {totalCommanderDamage}
-                  </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                Total Commander Damage (
-                {totalCommanderDamage >= 21
-                  ? 'Lethal'
-                  : `${21 - totalCommanderDamage} to lethal`}
-                )
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        )}
-
-        {/* Commander Damage Panel Toggle */}
+        {/* Commander Damage & Panel Toggle */}
         <Button
           variant="ghost"
           size="sm"
-          className="text-text-muted hover:bg-brand/20 hover:text-brand-muted-foreground mt-1 h-6 w-full text-[10px]"
+          className={`mt-1 flex h-7 w-full items-center justify-between gap-2 rounded-md border px-2 text-[10px] transition-all ${
+            totalCommanderDamage > 0
+              ? 'border-brand/30 bg-brand/10 text-brand-muted-foreground hover:bg-brand/20'
+              : 'text-text-muted hover:bg-brand/20 hover:text-brand-muted-foreground border-transparent'
+          }`}
           onClick={handleOpenPanel}
         >
-          COMMANDERS
+          <span className="font-medium tracking-wide">COMMANDERS</span>
+          {totalCommanderDamage > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="bg-brand/20 h-3 w-[1px]" />
+              <span className="font-mono text-xs font-bold">
+                {totalCommanderDamage}
+              </span>
+            </div>
+          )}
         </Button>
       </div>
 

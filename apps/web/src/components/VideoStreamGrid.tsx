@@ -1,22 +1,21 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { Participant } from '@/types/participant'
-import { memo, Suspense, useCallback, useMemo, useRef, useState } from 'react'
+import { memo, Suspense, useMemo, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { usePresence } from '@/contexts/PresenceContext'
 import { useConvexWebRTC } from '@/hooks/useConvexWebRTC'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
+import { motion } from 'framer-motion'
 import {
   AlertCircle,
+  Gamepad2,
   Loader2,
   MicOff,
-  Volume2,
-  VolumeX,
   Wifi,
   WifiOff,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
 
 import { CommanderOverlay } from './CommanderOverlay'
@@ -52,7 +51,7 @@ interface RemotePlayerCardProps {
   attachedStreamsRef: React.MutableRefObject<Map<string, MediaStream | null>>
   trackStates: Map<string, { videoEnabled: boolean; audioEnabled: boolean }>
   streamStates: Record<string, { video: boolean; audio: boolean }>
-  onToggleAudio: (playerId: string) => void
+  isMuted: boolean
   roomId: string
   localParticipant: Participant | undefined
   gameRoomParticipants: Participant[]
@@ -71,7 +70,7 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
   attachedStreamsRef,
   trackStates,
   streamStates,
-  onToggleAudio,
+  isMuted,
   roomId,
   localParticipant,
   gameRoomParticipants,
@@ -137,10 +136,6 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
     console.error(`[VideoStreamGrid] Video error for ${playerId}:`, e)
   }
 
-  const handleToggleAudioClick = useCallback(() => {
-    onToggleAudio(playerId)
-  }, [playerId, onToggleAudio])
-
   return (
     <Card className="border-surface-2 bg-surface-1 flex flex-col overflow-hidden">
       <div className="relative flex-1 bg-black">
@@ -151,7 +146,7 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
                 ref={handleVideoRef}
                 autoPlay
                 playsInline
-                muted={true}
+                muted={isMuted}
                 style={VIDEO_ELEMENT_STYLE}
                 onLoadedMetadata={handleLoadedMetadata}
                 onCanPlay={handleCanPlay}
@@ -163,7 +158,7 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
           <VideoDisabledPlaceholder />
         )}
 
-        <PlayerNameBadge>
+        <PlayerNameBadge position="bottom-center">
           <span className="text-white">{playerName}</span>
         </PlayerNameBadge>
 
@@ -190,48 +185,25 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
               <MicOff className="text-destructive h-4 w-4" />
             </div>
           )}
-          {connectionState && (
+          {connectionState && connectionState !== 'connected' && (
             <div
               className={`flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur-sm ${
-                connectionState === 'connected'
-                  ? 'border-success/30 bg-success/20'
-                  : connectionState === 'connecting' ||
-                      connectionState === 'reconnecting'
-                    ? 'border-warning/30 bg-warning/20'
-                    : connectionState === 'failed'
-                      ? 'border-destructive/30 bg-destructive/20'
-                      : 'border-default/30 bg-surface-3/20'
+                connectionState === 'connecting' ||
+                connectionState === 'reconnecting'
+                  ? 'border-warning/30 bg-warning/20'
+                  : connectionState === 'failed'
+                    ? 'border-destructive/30 bg-destructive/20'
+                    : 'border-default/30 bg-surface-3/20'
               }`}
               title={`Connection: ${connectionState}`}
             >
-              {connectionState === 'connected' ? (
-                <Wifi className="text-success h-4 w-4" />
-              ) : connectionState === 'failed' ? (
+              {connectionState === 'failed' ? (
                 <WifiOff className="text-destructive h-4 w-4" />
               ) : (
                 <Wifi className="text-warning h-4 w-4" />
               )}
             </div>
           )}
-        </div>
-
-        <div className="absolute bottom-4 right-4 z-10">
-          <Button
-            size="sm"
-            variant={peerAudioEnabled ? 'outline' : 'destructive'}
-            onClick={handleToggleAudioClick}
-            className={`h-10 w-10 p-0 backdrop-blur-sm ${
-              peerAudioEnabled
-                ? 'border-default bg-surface-0/90 hover:bg-surface-2 text-white'
-                : 'border-destructive bg-destructive hover:bg-destructive text-white'
-            }`}
-          >
-            {peerAudioEnabled ? (
-              <Volume2 className="h-5 w-5" />
-            ) : (
-              <VolumeX className="h-5 w-5" />
-            )}
-          </Button>
         </div>
       </div>
     </Card>
@@ -252,6 +224,8 @@ interface VideoStreamGridProps {
   usePerspectiveWarp?: boolean
   /** Callback when a card is cropped */
   onCardCrop?: (canvas: HTMLCanvasElement) => void
+  /** Set of muted player IDs (controlled by parent) */
+  mutedPlayers?: Set<string>
 }
 
 interface StreamState {
@@ -267,6 +241,7 @@ export function VideoStreamGrid({
   detectorType,
   usePerspectiveWarp = true,
   onCardCrop,
+  mutedPlayers = new Set(),
 }: VideoStreamGridProps) {
   // Get participants from context (already deduplicated)
   const {
@@ -379,18 +354,6 @@ export function VideoStreamGrid({
 
   // Find local player (not currently used but may be needed for future features)
   // const localPlayer = players.find((p) => p.name === localPlayerName)
-
-  const toggleAudio = useCallback((playerId: string) => {
-    // For remote players, just update UI state
-    setStreamStates((prev) => {
-      const currentState = prev[playerId]
-      if (!currentState) return prev
-      return {
-        ...prev,
-        [playerId]: { ...currentState, audio: !currentState.audio },
-      }
-    })
-  }, [])
 
   // Always show 2x2 grid for 4 player slots
   const getGridClass = () => {
@@ -524,6 +487,7 @@ export function VideoStreamGrid({
         const remoteStream = remoteStreams.get(player.id)
         const connectionState = connectionStates.get(player.id)
         const trackState = trackStates.get(player.id)
+        const isMuted = mutedPlayers.has(player.id)
 
         return (
           <RemotePlayerCard
@@ -539,7 +503,7 @@ export function VideoStreamGrid({
             attachedStreamsRef={attachedStreamsRef}
             trackStates={trackStates}
             streamStates={streamStates}
-            onToggleAudio={toggleAudio}
+            isMuted={isMuted}
             roomId={roomId}
             localParticipant={localParticipant}
             gameRoomParticipants={gameRoomParticipants}
@@ -555,13 +519,36 @@ export function VideoStreamGrid({
           className="border-default bg-surface-1/50 flex flex-col overflow-hidden border-dashed"
         >
           <div className="bg-surface-0/50 relative flex flex-1 items-center justify-center">
-            <div className="space-y-3 text-center">
-              <div className="bg-surface-2/50 mx-auto flex h-16 w-16 items-center justify-center rounded-full">
-                <div className="border-default h-8 w-8 rounded-full border-2 border-dashed" />
-              </div>
+            <div className="space-y-4 text-center">
+              <motion.div className="bg-brand/10 relative mx-auto flex h-16 w-16 items-center justify-center rounded-full">
+                <motion.div
+                  className="bg-brand/20 absolute inset-0 rounded-full"
+                  animate={{
+                    scale: [1, 1.4, 1],
+                    opacity: [0.5, 0, 0.5],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }}
+                />
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }}
+                >
+                  <Gamepad2 className="text-brand-muted-foreground h-8 w-8" />
+                </motion.div>
+              </motion.div>
               <div className="space-y-1">
                 <p className="text-text-muted text-sm font-medium">Open Slot</p>
-                <p className="text-text-muted text-xs">Waiting for player...</p>
+                <p className="text-text-muted/60 text-xs">
+                  Waiting for player...
+                </p>
               </div>
             </div>
           </div>

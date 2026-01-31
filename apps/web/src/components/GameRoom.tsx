@@ -62,6 +62,21 @@ function GameRoomContent({
     useState(false)
   const [showLeaveConfirmDialog, setShowLeaveConfirmDialog] = useState(false)
 
+  // Muted players state - tracks which remote players are muted by the local user
+  const [mutedPlayers, setMutedPlayers] = useState<Set<string>>(new Set())
+
+  const handleToggleMutePlayer = useCallback((playerId: string) => {
+    setMutedPlayers((prev) => {
+      const next = new Set(prev)
+      if (next.has(playerId)) {
+        next.delete(playerId)
+      } else {
+        next.add(playerId)
+      }
+      return next
+    })
+  }, [])
+
   // Show duplicate session dialog when detected, unless user has dismissed it
   // Reset dismissed state when duplicate session is resolved (so dialog can show again if new duplicate appears)
   const showDuplicateDialog = hasDuplicateSession && !duplicateDialogDismissed
@@ -219,6 +234,8 @@ function GameRoomContent({
             ownerId={ownerId}
             onKickPlayer={handleKickPlayer}
             onBanPlayer={handleBanPlayer}
+            mutedPlayers={mutedPlayers}
+            onToggleMutePlayer={handleToggleMutePlayer}
           />
 
           {/* Main Area - Video Stream Grid */}
@@ -231,6 +248,7 @@ function GameRoomContent({
               usePerspectiveWarp={usePerspectiveWarp}
               onCardCrop={query}
               enableCardDetection={false}
+              mutedPlayers={mutedPlayers}
             />
           </div>
         </div>
