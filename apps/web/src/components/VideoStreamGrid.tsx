@@ -216,10 +216,10 @@ export function VideoStreamGrid({
               </div>
             </div>
             <div className="space-y-1 text-center">
-              <p className="text-sm font-medium text-secondary">
+              <p className="text-sm font-medium text-text-secondary">
                 Checking Permissions
               </p>
-              <p className="text-xs text-muted">Please wait...</p>
+              <p className="text-xs text-text-muted">Please wait...</p>
             </div>
           </div>
         </div>
@@ -230,7 +230,7 @@ export function VideoStreamGrid({
             loadingFallback={
               <div className="flex flex-col items-center space-y-3">
                 <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
-                <p className="text-sm text-muted">Requesting access...</p>
+                <p className="text-sm text-text-muted">Requesting access...</p>
               </div>
             }
           >
@@ -248,10 +248,10 @@ export function VideoStreamGrid({
               <div className="absolute inset-0 animate-ping rounded-full bg-brand/10" />
             </div>
             <div className="space-y-1 text-center">
-              <p className="text-sm font-medium text-secondary">
+              <p className="text-sm font-medium text-text-secondary">
                 Initializing Camera
               </p>
-              <p className="text-xs text-muted">Starting video stream...</p>
+              <p className="text-xs text-text-muted">Starting video stream...</p>
             </div>
           </div>
         </div>
@@ -264,15 +264,15 @@ export function VideoStreamGrid({
               </div>
             </div>
             <div className="space-y-2 text-center">
-              <p className="text-sm font-semibold text-secondary">
+              <p className="text-sm font-semibold text-text-secondary">
                 Camera Access Failed
               </p>
-              <p className="max-w-md text-xs leading-relaxed text-muted">
+              <p className="max-w-md text-xs leading-relaxed text-text-muted">
                 {localStreamError.message ||
                   'Unable to access your camera. Please check your permissions and try again.'}
               </p>
             </div>
-            <div className="flex flex-col gap-2 text-xs text-muted">
+            <div className="flex flex-col gap-2 text-xs text-text-muted">
               <p className="flex items-center gap-1.5">
                 <span className="inline-block h-1 w-1 rounded-full bg-surface-3" />
                 Check browser permissions
@@ -509,8 +509,8 @@ export function VideoStreamGrid({
                 <div className="h-8 w-8 rounded-full border-2 border-dashed border-default" />
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted">Open Slot</p>
-                <p className="text-xs text-muted">Waiting for player...</p>
+                <p className="text-sm font-medium text-text-muted">Open Slot</p>
+                <p className="text-xs text-text-muted">Waiting for player...</p>
               </div>
             </div>
           </div>
@@ -531,10 +531,10 @@ function VideoStreamGridLoading() {
           <div className="absolute inset-0 animate-ping rounded-full bg-brand/10" />
         </div>
         <div className="space-y-1 text-center">
-          <p className="text-sm font-medium text-secondary">
+          <p className="text-sm font-medium text-text-secondary">
             Loading Video Streams
           </p>
-          <p className="text-xs text-muted">Connecting to players...</p>
+          <p className="text-xs text-text-muted">Connecting to players...</p>
         </div>
       </div>
     </div>

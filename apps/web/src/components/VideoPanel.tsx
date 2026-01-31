@@ -23,7 +23,7 @@ export function VideoPanel({ playerName, isLocal }: VideoPanelProps) {
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand/20">
                 <Camera className="h-8 w-8 text-brand-muted-foreground" />
               </div>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-text-muted">
                 {isLocal ? 'Your Camera' : `${playerName}'s Camera`}
               </p>
             </div>
@@ -31,8 +31,8 @@ export function VideoPanel({ playerName, isLocal }: VideoPanelProps) {
         ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-surface-0">
             <div className="space-y-2 text-center">
-              <VideoOff className="mx-auto h-8 w-8 text-muted" />
-              <p className="text-sm text-muted">Camera Off</p>
+              <VideoOff className="mx-auto h-8 w-8 text-text-muted" />
+              <p className="text-sm text-text-muted">Camera Off</p>
             </div>
           </div>
         )}

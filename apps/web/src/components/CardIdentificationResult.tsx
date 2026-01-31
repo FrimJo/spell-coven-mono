@@ -48,7 +48,7 @@ export function CardIdentificationResult({
         <div className="flex items-center justify-between border-b border-surface-2 bg-surface-0/50 px-3 py-2">
           <div className="flex items-center gap-2">
             <div className="h-2 w-2 rounded-full bg-brand-muted-foreground" />
-            <span className="text-sm text-secondary">Card Identification</span>
+            <span className="text-sm text-text-secondary">Card Identification</span>
           </div>
           {onClose && (
             <Button
@@ -69,7 +69,7 @@ export function CardIdentificationResult({
             <div className="flex items-center justify-center py-8">
               <div className="flex flex-col items-center gap-2">
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-muted-foreground border-t-transparent" />
-                <p className="text-sm text-muted">Identifying card...</p>
+                <p className="text-sm text-text-muted">Identifying card...</p>
               </div>
             </div>
           )}
@@ -103,7 +103,7 @@ export function CardIdentificationResult({
                   <h3 className="text-lg font-semibold text-white">
                     {result.card.name}
                   </h3>
-                  <p className="text-sm text-muted">
+                  <p className="text-sm text-text-muted">
                     {result.card.set.toUpperCase()}
                   </p>
                 </div>
@@ -121,7 +121,7 @@ export function CardIdentificationResult({
                       />
                     </div>
                   </div>
-                  <span className="text-xs font-medium text-secondary">
+                  <span className="text-xs font-medium text-text-secondary">
                     {(result.score * 100).toFixed(1)}%
                   </span>
                 </div>

@@ -206,7 +206,7 @@ function GameRoomContent({
               variant="ghost"
               size="sm"
               onClick={handleManualLeave}
-              className="text-muted hover:text-white"
+              className="text-text-muted hover:text-white"
               title="Leave game room"
               data-testid="leave-game-button"
             >
@@ -217,7 +217,7 @@ function GameRoomContent({
             <div className="h-6 w-px bg-surface-3" />
 
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted">Share Link:</span>
+              <span className="text-sm text-text-muted">Share Link:</span>
               <code
                 className="cursor-pointer break-all rounded bg-surface-2 px-2 py-1 text-sm text-brand-muted-foreground transition-colors hover:bg-surface-3"
                 data-testid="game-id-display"
@@ -230,7 +230,7 @@ function GameRoomContent({
                 variant="ghost"
                 size="sm"
                 onClick={handleCopyShareLink}
-                className="text-muted hover:text-white"
+                className="text-text-muted hover:text-white"
                 title="Copy shareable link"
                 data-testid="copy-share-link-button"
               >
@@ -249,7 +249,7 @@ function GameRoomContent({
               variant="ghost"
               size="sm"
               onClick={handleOpenSettings}
-              className="text-muted hover:text-white"
+              className="text-text-muted hover:text-white"
               title="Audio & video settings"
               data-testid="settings-button"
             >

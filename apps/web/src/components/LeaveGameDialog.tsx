@@ -37,7 +37,7 @@ export function LeaveGameDialog({
           <DialogTitle className="text-center text-white">
             Leave Game?
           </DialogTitle>
-          <DialogDescription className="text-center text-muted">
+          <DialogDescription className="text-center text-text-muted">
             Are you sure you want to leave this game room? You can rejoin later
             if the game is still active.
           </DialogDescription>

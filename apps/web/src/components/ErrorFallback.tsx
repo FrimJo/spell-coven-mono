@@ -12,7 +12,7 @@ export function ErrorFallback({
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4">
       <h1 className="text-2xl font-bold text-white">Something went wrong</h1>
-      {error && <p className="text-muted">{error.message}</p>}
+      {error && <p className="text-text-muted">{error.message}</p>}
       {resetErrorBoundary && (
         <Button
           onClick={resetErrorBoundary}
