@@ -98,11 +98,42 @@ Notes:
 ## Testing & Linting
 
 ```bash
-cd apps/web && bun run test          # vitest
+cd apps/web && bun run test          # vitest unit tests
 cd apps/web && bun run typecheck     # TypeScript
 cd apps/web && bun run format        # Prettier check
 cd apps/web && bun run lint          # Lint
 ```
+
+### End-to-End Tests (Playwright)
+
+```bash
+cd apps/web && bun run e2e           # Run all e2e tests
+cd apps/web && bun run e2e:ui        # Run with Playwright UI
+```
+
+### Visual Regression Tests
+
+Visual tests capture screenshots and compare them against baseline images to detect unintended UI changes.
+
+```bash
+cd apps/web && bun run e2e:visual           # Run visual tests
+cd apps/web && bun run e2e:visual:update    # Update baseline screenshots
+```
+
+**Visual test structure:**
+
+- `tests/visual/landing-page.visual.spec.ts` - Landing page screenshots (hero, features, footer, CTA)
+- `tests/visual/game-room.visual.spec.ts` - Game room and commander panel screenshots
+
+**When to update baselines:**
+
+Run `bun run e2e:visual:update` after intentional UI changes. Review the updated screenshots in `tests/visual/*.visual.spec.ts-snapshots/` before committing.
+
+**Tips for stable screenshots:**
+
+- Tests use `animations: 'disabled'` to freeze CSS animations
+- Video elements are masked to avoid flaky comparisons
+- Helper utilities `waitForVisualStability()` and `disableAnimations()` are available in `tests/helpers/test-utils.ts`
 
 ## Asset Paths
 
