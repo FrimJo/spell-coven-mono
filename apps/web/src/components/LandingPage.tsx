@@ -13,6 +13,7 @@ import {
   LogOut,
   Play,
   Plus,
+  RotateCcw,
   Scan,
   Settings,
   Sparkles,
@@ -86,6 +87,10 @@ export function LandingPage({
   })
   const liveStatsQuery = useQuery(api.rooms.getLiveStats)
   const createRoom = useMutation(api.rooms.createRoom)
+  const activeRoomQuery = useQuery(
+    api.players.getActiveRoomForUser,
+    user ? { userId: user.id } : 'skip',
+  )
   const onlineUsers = liveStatsQuery?.onlineUsers
   const activeRooms = liveStatsQuery?.activeRooms
   const liveStats = useMemo(
@@ -191,6 +196,20 @@ export function LandingPage({
     if (joinGameId.trim() && user) {
       // Use Discord username from auth
       handleJoinGame(user.username, joinGameId.trim())
+    }
+  }
+
+  const handleRejoinLastRoom = () => {
+    if (activeRoomQuery?.roomId && user) {
+      sessionStorage.saveGameState({
+        gameId: activeRoomQuery.roomId,
+        playerName: user.username,
+        timestamp: Date.now(),
+      })
+      navigate({
+        to: '/game/$gameId',
+        params: { gameId: activeRoomQuery.roomId },
+      })
     }
   }
 
@@ -372,6 +391,20 @@ export function LandingPage({
                       createdGameId={gameCreation.gameId}
                       onNavigateToRoom={handleNavigateToRoom}
                     />
+
+                    {/* Rejoin Last Room Button */}
+                    {activeRoomQuery?.roomId && (
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="border-success/40 bg-success/10 text-success hover:bg-success/20 h-14 min-w-[200px] gap-2 text-lg font-semibold hover:text-white"
+                        onClick={handleRejoinLastRoom}
+                        data-testid="rejoin-game-button"
+                      >
+                        <RotateCcw className="h-5 w-5" />
+                        Rejoin Last Room
+                      </Button>
+                    )}
                   </>
                 ) : (
                   <Button

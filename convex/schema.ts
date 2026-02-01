@@ -145,4 +145,19 @@ export default defineSchema({
     /** Total count */
     count: v.number(),
   }).index('by_name', ['name']),
+
+  /**
+   * userActiveRooms - Pointer to the user's current active room
+   *
+   * Used to enable "Rejoin last room" on the landing page.
+   * One record per userId; upserted on join/heartbeat, cleared on leave/ban.
+   */
+  userActiveRooms: defineTable({
+    /** Discord user ID */
+    userId: v.string(),
+    /** Room ID the user is currently in */
+    roomId: v.string(),
+    /** Last heartbeat timestamp (for presence TTL) */
+    lastSeenAt: v.number(),
+  }).index('by_userId', ['userId']),
 })

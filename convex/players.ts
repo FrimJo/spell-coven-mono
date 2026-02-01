@@ -97,6 +97,23 @@ export const joinRoom = mutation({
         commanders: existingSession.commanders ?? [],
         commanderDamage: existingSession.commanderDamage ?? {},
       })
+
+      // Upsert the userActiveRooms pointer
+      const existingPointer = await ctx.db
+        .query('userActiveRooms')
+        .withIndex('by_userId', (q) => q.eq('userId', userId))
+        .first()
+
+      if (existingPointer) {
+        await ctx.db.patch(existingPointer._id, { roomId, lastSeenAt: now })
+      } else {
+        await ctx.db.insert('userActiveRooms', {
+          userId,
+          roomId,
+          lastSeenAt: now,
+        })
+      }
+
       return { playerId: existingSession._id }
     }
 
@@ -129,6 +146,22 @@ export const joinRoom = mutation({
       lastSeenAt: now,
     })
 
+    // Upsert the userActiveRooms pointer
+    const existingPointer = await ctx.db
+      .query('userActiveRooms')
+      .withIndex('by_userId', (q) => q.eq('userId', userId))
+      .first()
+
+    if (existingPointer) {
+      await ctx.db.patch(existingPointer._id, { roomId, lastSeenAt: now })
+    } else {
+      await ctx.db.insert('userActiveRooms', {
+        userId,
+        roomId,
+        lastSeenAt: now,
+      })
+    }
+
     return { playerId }
   },
 })
@@ -154,10 +187,39 @@ export const leaveRoom = mutation({
       .first()
 
     if (player) {
+      const now = Date.now()
       await ctx.db.patch(player._id, {
         status: 'left',
-        lastSeenAt: Date.now(),
+        lastSeenAt: now,
       })
+
+      // Check if user has any other active sessions in this room
+      const presenceThreshold = now - PRESENCE_THRESHOLD_MS
+      const otherActiveSessions = await ctx.db
+        .query('roomPlayers')
+        .withIndex('by_roomId_userId', (q) =>
+          q.eq('roomId', roomId).eq('userId', player.userId),
+        )
+        .filter((q) =>
+          q.and(
+            q.neq(q.field('status'), 'left'),
+            q.gt(q.field('lastSeenAt'), presenceThreshold),
+            q.neq(q.field('sessionId'), sessionId),
+          ),
+        )
+        .first()
+
+      // If no other active sessions, clear the userActiveRooms pointer
+      if (!otherActiveSessions) {
+        const pointer = await ctx.db
+          .query('userActiveRooms')
+          .withIndex('by_userId', (q) => q.eq('userId', player.userId))
+          .first()
+
+        if (pointer && pointer.roomId === roomId) {
+          await ctx.db.delete(pointer._id)
+        }
+      }
 
       // Check if this user was the owner and transfer if needed
       const room = await ctx.db
@@ -166,22 +228,6 @@ export const leaveRoom = mutation({
         .first()
 
       if (room && room.ownerId === player.userId) {
-        // Check if user has any other active sessions in this room
-        const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
-        const otherActiveSessions = await ctx.db
-          .query('roomPlayers')
-          .withIndex('by_roomId_userId', (q) =>
-            q.eq('roomId', roomId).eq('userId', player.userId),
-          )
-          .filter((q) =>
-            q.and(
-              q.neq(q.field('status'), 'left'),
-              q.gt(q.field('lastSeenAt'), presenceThreshold),
-              q.neq(q.field('sessionId'), sessionId),
-            ),
-          )
-          .first()
-
         // Only transfer if user has no other active sessions
         if (!otherActiveSessions) {
           await ctx.runMutation(internal.rooms.transferOwnerIfNeeded, {
@@ -214,10 +260,27 @@ export const heartbeat = mutation({
 
     // Don't resurrect 'left' sessions - they were kicked/banned
     if (player && player.status !== 'left') {
+      const now = Date.now()
       await ctx.db.patch(player._id, {
-        lastSeenAt: Date.now(),
+        lastSeenAt: now,
         status: 'active',
       })
+
+      // Upsert the userActiveRooms pointer
+      const existingPointer = await ctx.db
+        .query('userActiveRooms')
+        .withIndex('by_userId', (q) => q.eq('userId', player.userId))
+        .first()
+
+      if (existingPointer) {
+        await ctx.db.patch(existingPointer._id, { roomId, lastSeenAt: now })
+      } else {
+        await ctx.db.insert('userActiveRooms', {
+          userId: player.userId,
+          roomId,
+          lastSeenAt: now,
+        })
+      }
     }
   },
 })
@@ -307,5 +370,49 @@ export const getPlayer = query({
       .first()
 
     return player
+  },
+})
+
+/**
+ * Get the active room for a user (for "Rejoin last room" on landing page)
+ *
+ * Returns the room pointer only if:
+ * - The pointer exists and lastSeenAt is within PRESENCE_THRESHOLD_MS
+ * - The user is NOT banned from that room
+ * Otherwise returns null.
+ */
+export const getActiveRoomForUser = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, { userId }) => {
+    const pointer = await ctx.db
+      .query('userActiveRooms')
+      .withIndex('by_userId', (q) => q.eq('userId', userId))
+      .first()
+
+    if (!pointer) {
+      return null
+    }
+
+    // Check if lastSeenAt is still within the presence threshold
+    const now = Date.now()
+    if (pointer.lastSeenAt < now - PRESENCE_THRESHOLD_MS) {
+      return null
+    }
+
+    // Check if user is banned from this room
+    const ban = await ctx.db
+      .query('roomBans')
+      .withIndex('by_roomId_userId', (q) =>
+        q.eq('roomId', pointer.roomId).eq('userId', userId),
+      )
+      .first()
+
+    if (ban) {
+      return null
+    }
+
+    return { roomId: pointer.roomId, lastSeenAt: pointer.lastSeenAt }
   },
 })
