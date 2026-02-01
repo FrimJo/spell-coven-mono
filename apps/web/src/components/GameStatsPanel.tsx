@@ -1,6 +1,7 @@
 import type { ScryfallCard } from '@/lib/scryfall'
 import type { Participant } from '@/types/participant'
-import { useEffect, useEffectEvent, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useState } from 'react'
+import { useDeltaDisplay } from '@/hooks/useDeltaDisplay'
 import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
 import { getCommanderImageUrl } from '@/lib/scryfall'
 import { commanderPanelMachine } from '@/state/commanderPanelMachine'
@@ -15,7 +16,6 @@ import {
   Loader2,
   Pencil,
   Plus,
-  Swords,
   User,
   UserCircle,
 } from 'lucide-react'
@@ -34,6 +34,7 @@ import {
 import type { Doc } from '../../../convex/_generated/dataModel'
 import { api } from '../../../convex/_generated/api'
 import { CommanderSearchInput } from './CommanderSearchInput'
+import { DeltaBubble } from './DeltaBubble'
 
 /** Maximum players in a Commander game */
 const MAX_PLAYERS = 4
@@ -785,18 +786,28 @@ function CommanderSlot({
   suggestionsLabel,
 }: CommanderSlotProps) {
   const [isSearching, setIsSearching] = useState(false)
-  const isLethal = damage >= 21
   const imageUrl = commander ? getCommanderImageUrl(commander.id) : null
+
+  // Delta display for damage
+  const damageDelta = useDeltaDisplay()
+
+  const handleDamageChange = useCallback(
+    (delta: number) => {
+      damageDelta.addDelta(delta)
+      onDamageChange(delta)
+    },
+    [damageDelta, onDamageChange],
+  )
 
   // Hold-to-repeat hooks for damage buttons
   const damageMinus = useHoldToRepeat({
-    onChange: onDamageChange,
+    onChange: handleDamageChange,
     immediateDelta: -1,
     repeatDelta: -10,
   })
 
   const damagePlus = useHoldToRepeat({
-    onChange: onDamageChange,
+    onChange: handleDamageChange,
     immediateDelta: 1,
     repeatDelta: 10,
   })
@@ -922,15 +933,17 @@ function CommanderSlot({
               {commander.name}
             </span>
           </div>
-          {isLethal && (
-            <span className="bg-destructive/10 text-destructive flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-bold backdrop-blur-sm">
-              <Swords className="h-3 w-3" /> Lethal
-            </span>
-          )}
         </div>
 
         {/* Damage counter */}
-        <div className="flex items-center gap-2">
+        <div className="relative flex items-center gap-2">
+          {damageDelta.delta < 0 && (
+            <DeltaBubble
+              delta={damageDelta.delta}
+              visible={damageDelta.visible}
+              side="left"
+            />
+          )}
           <Button
             size="icon"
             variant="outline"
@@ -944,11 +957,7 @@ function CommanderSlot({
           >
             -
           </Button>
-          <span
-            className={`text-shadow-sm min-w-[2rem] text-center font-mono text-lg font-bold shadow-black ${
-              isLethal ? 'text-destructive' : 'text-text-secondary'
-            }`}
-          >
+          <span className="text-shadow-sm text-text-secondary min-w-[2rem] text-center font-mono text-lg font-bold shadow-black">
             {damage}
           </span>
           <Button
@@ -963,6 +972,13 @@ function CommanderSlot({
           >
             +
           </Button>
+          {damageDelta.delta > 0 && (
+            <DeltaBubble
+              delta={damageDelta.delta}
+              visible={damageDelta.visible}
+              side="right"
+            />
+          )}
         </div>
       </div>
     </div>
