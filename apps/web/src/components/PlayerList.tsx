@@ -3,6 +3,7 @@ import {
   Ban,
   Crown,
   MoreVertical,
+  Swords,
   Users,
   UserX,
   Volume2,
@@ -43,6 +44,7 @@ interface PlayerListProps {
   ownerId?: string
   mutedPlayers: Set<string>
   onToggleMutePlayer: (playerId: string) => void
+  onViewCommanders?: (playerId: string) => void
 }
 
 type RemovalAction = 'kick' | 'ban'
@@ -56,6 +58,7 @@ export function PlayerList({
   ownerId,
   mutedPlayers,
   onToggleMutePlayer,
+  onViewCommanders,
 }: PlayerListProps) {
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
@@ -139,11 +142,6 @@ export function PlayerList({
                   {isOwner && (
                     <Crown className="text-warning h-3 w-3 flex-shrink-0" />
                   )}
-                  {isLocal && (
-                    <span className="bg-brand/30 text-brand-muted-foreground flex-shrink-0 rounded px-1.5 py-0.5 text-xs">
-                      You
-                    </span>
-                  )}
                   {!isLocal && isMuted && (
                     <span
                       className="bg-destructive/20 text-destructive flex flex-shrink-0 items-center justify-center rounded px-1.5 py-1"
@@ -155,24 +153,37 @@ export function PlayerList({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {!isLocal && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-text-muted hover:bg-surface-3 hover:text-text-secondary h-6 w-6 p-0"
-                        >
-                          <MoreVertical className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="border-surface-3 bg-surface-2"
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-text-muted hover:bg-surface-3 hover:text-text-secondary h-6 w-6 p-0"
                       >
+                        <MoreVertical className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="border-surface-3 bg-surface-2"
+                    >
+                      {onViewCommanders && (
+                        <DropdownMenuItem
+                          onClick={() => onViewCommanders(player.id)}
+                          className="text-text-secondary focus:bg-surface-3 focus:text-white"
+                          title="View and edit commanders"
+                        >
+                          <Swords className="mr-2 h-4 w-4" />
+                          Commanders
+                        </DropdownMenuItem>
+                      )}
+                      {!isLocal && (
                         <DropdownMenuItem
                           onClick={() => onToggleMutePlayer(player.id)}
                           className="text-text-secondary focus:bg-surface-3 focus:text-white"
+                          title={
+                            isMuted ? 'Unmute this player' : 'Mute this player'
+                          }
                         >
                           {isMuted ? (
                             <>
@@ -186,27 +197,29 @@ export function PlayerList({
                             </>
                           )}
                         </DropdownMenuItem>
-                        {isLobbyOwner && !isOwner && (
-                          <>
-                            <DropdownMenuItem
-                              onClick={() => openConfirmDialog(player, 'kick')}
-                              className="text-warning focus:bg-warning/10 focus:text-warning"
-                            >
-                              <UserX className="mr-2 h-4 w-4" />
-                              Kick (can rejoin)
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => openConfirmDialog(player, 'ban')}
-                              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                            >
-                              <Ban className="mr-2 h-4 w-4" />
-                              Ban (permanent)
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                      )}
+                      {isLobbyOwner && !isOwner && (
+                        <>
+                          <DropdownMenuItem
+                            onClick={() => openConfirmDialog(player, 'kick')}
+                            className="text-warning focus:bg-warning/10 focus:text-warning"
+                            title="Can rejoin"
+                          >
+                            <UserX className="mr-2 h-4 w-4" />
+                            Kick
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => openConfirmDialog(player, 'ban')}
+                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                            title="Permanent"
+                          >
+                            <Ban className="mr-2 h-4 w-4" />
+                            Ban
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             )
