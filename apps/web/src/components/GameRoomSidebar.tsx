@@ -1,10 +1,13 @@
-import { Suspense } from 'react'
+import type { Participant } from '@/types/participant'
+import { Suspense, useCallback, useMemo, useState } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 import { usePresence } from '@/contexts/PresenceContext'
 
 import { Card } from '@repo/ui/components/card'
 import { Skeleton } from '@repo/ui/components/skeleton'
 
 import { CardPreview } from './CardPreview'
+import { GameStatsPanel } from './GameStatsPanel'
 import { PlayerList } from './PlayerList'
 
 interface GameRoomSidebarProps {
@@ -20,6 +23,7 @@ interface GameRoomSidebarProps {
 }
 
 function SidebarContent({
+  roomId,
   playerName,
   isLobbyOwner,
   ownerId,
@@ -30,25 +34,69 @@ function SidebarContent({
 }: GameRoomSidebarProps) {
   // Get game room participants from context (already deduplicated)
   const { uniqueParticipants } = usePresence()
+  const { user } = useAuth()
+
+  // State for commanders panel
+  const [panelOpen, setPanelOpen] = useState(false)
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
+
+  // Find current user participant
+  const currentUser = useMemo<Participant | null>(() => {
+    if (!user) return null
+    return uniqueParticipants.find((p) => p.id === user.id) ?? null
+  }, [uniqueParticipants, user])
+
+  // Find selected player participant
+  const selectedPlayer = useMemo<Participant | undefined>(() => {
+    if (!selectedPlayerId) return undefined
+    return uniqueParticipants.find((p) => p.id === selectedPlayerId)
+  }, [uniqueParticipants, selectedPlayerId])
+
+  // Handler to open commanders panel for a player
+  const handleViewCommanders = useCallback((playerId: string) => {
+    setSelectedPlayerId(playerId)
+    setPanelOpen(true)
+  }, [])
+
+  // Handler to close panel
+  const handleClosePanel = useCallback(() => {
+    setPanelOpen(false)
+    setSelectedPlayerId(null)
+  }, [])
 
   return (
-    <div className="w-64 flex-shrink-0 space-y-4 overflow-y-auto">
-      <PlayerList
-        players={uniqueParticipants.map((participant) => ({
-          id: participant.id,
-          name: participant.username,
-          isOnline: true, // Game room participants are always online
-        }))}
-        isLobbyOwner={isLobbyOwner}
-        localPlayerName={playerName}
-        onKickPlayer={onKickPlayer}
-        onBanPlayer={onBanPlayer}
-        ownerId={ownerId ?? undefined}
-        mutedPlayers={mutedPlayers}
-        onToggleMutePlayer={onToggleMutePlayer}
-      />
-      <CardPreview playerName={playerName} onClose={() => {}} />
-    </div>
+    <>
+      <div className="w-64 flex-shrink-0 space-y-4 overflow-y-auto">
+        <PlayerList
+          players={uniqueParticipants.map((participant) => ({
+            id: participant.id,
+            name: participant.username,
+            isOnline: true, // Game room participants are always online
+          }))}
+          isLobbyOwner={isLobbyOwner}
+          localPlayerName={playerName}
+          onKickPlayer={onKickPlayer}
+          onBanPlayer={onBanPlayer}
+          ownerId={ownerId ?? undefined}
+          mutedPlayers={mutedPlayers}
+          onToggleMutePlayer={onToggleMutePlayer}
+          onViewCommanders={handleViewCommanders}
+        />
+        <CardPreview playerName={playerName} onClose={() => {}} />
+      </div>
+
+      {/* Commanders Panel */}
+      {currentUser && selectedPlayer && (
+        <GameStatsPanel
+          isOpen={panelOpen}
+          onClose={handleClosePanel}
+          roomId={roomId}
+          currentUser={currentUser}
+          participants={uniqueParticipants}
+          selectedPlayer={selectedPlayer}
+        />
+      )}
+    </>
   )
 }
 
