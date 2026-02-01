@@ -1,5 +1,6 @@
 # Generated files
 **/*.gen.ts
+apps/convex/_generated/
 
 # Build outputs
 **/dist/
@@ -12,4 +13,3 @@
 # Public assets that shouldn't be formatted
 apps/web/public/
 
-apps/convex/_generated/
