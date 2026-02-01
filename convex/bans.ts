@@ -91,6 +91,16 @@ export const banPlayer = mutation({
     for (const session of playerSessions) {
       await ctx.db.patch(session._id, { status: 'left' })
     }
+
+    // Clear the userActiveRooms pointer if it points to this room
+    const pointer = await ctx.db
+      .query('userActiveRooms')
+      .withIndex('by_userId', (q) => q.eq('userId', userId))
+      .first()
+
+    if (pointer && pointer.roomId === roomId) {
+      await ctx.db.delete(pointer._id)
+    }
   },
 })
 
