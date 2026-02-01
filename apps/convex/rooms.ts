@@ -10,7 +10,8 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 
-import { mutation, query } from './_generated/server'
+import { internal } from './_generated/api'
+import { internalMutation, mutation, query } from './_generated/server'
 import {
   AuthMismatchError,
   AuthRequiredError,
@@ -290,6 +291,138 @@ export const getLiveStats = query({
       activeRooms: activeRooms.size,
       asOf: Date.now(),
     }
+  },
+})
+
+/**
+ * Check all rooms with active players for owner presence timeout and transfer if needed.
+ *
+ * This is called by a cron job to handle cases where the owner disconnects
+ * (stops sending heartbeats) without explicitly leaving.
+ */
+export const checkAllRoomOwners = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
+
+    // Get all rooms that have at least one active player
+    const activePlayers = await ctx.db
+      .query('roomPlayers')
+      .filter((q) =>
+        q.and(
+          q.neq(q.field('status'), 'left'),
+          q.gt(q.field('lastSeenAt'), presenceThreshold),
+        ),
+      )
+      .collect()
+
+    // Get unique room IDs
+    const activeRoomIds = new Set<string>()
+    for (const player of activePlayers) {
+      activeRoomIds.add(player.roomId)
+    }
+
+    // Check each active room for owner transfer
+    const results: Array<{
+      roomId: string
+      transferred: boolean
+      newOwnerId?: string
+    }> = []
+
+    for (const roomId of activeRoomIds) {
+      const result = await ctx.runMutation(
+        internal.rooms.transferOwnerIfNeeded,
+        { roomId },
+      )
+      if (result.transferred) {
+        results.push({
+          roomId,
+          transferred: true,
+          newOwnerId: result.newOwnerId,
+        })
+      }
+    }
+
+    return { checkedRooms: activeRoomIds.size, transfers: results }
+  },
+})
+
+/**
+ * Transfer room ownership to the next active player if the current owner is inactive.
+ *
+ * Checks if `room.ownerId` is no longer among active players (filtered by
+ * `lastSeenAt > now - PRESENCE_THRESHOLD_MS` and `status !== 'left'`).
+ * If so, picks the next owner by ascending `joinedAt` (join order) from active players.
+ *
+ * This is an internal mutation that can be called from:
+ * - `leaveRoom` mutation when owner leaves manually
+ * - A scheduled cron job that checks for owner presence timeouts
+ *
+ * @param roomId - The room ID to check/transfer ownership for
+ * @returns Object with `transferred` boolean and optional `newOwnerId`
+ */
+export const transferOwnerIfNeeded = internalMutation({
+  args: {
+    roomId: v.string(),
+  },
+  handler: async (ctx, { roomId }) => {
+    const room = await ctx.db
+      .query('rooms')
+      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+      .first()
+
+    if (!room) {
+      return { transferred: false, reason: 'room_not_found' }
+    }
+
+    const now = Date.now()
+    const presenceThreshold = now - PRESENCE_THRESHOLD_MS
+
+    // Get all active players (not 'left' and within presence threshold)
+    const activePlayers = await ctx.db
+      .query('roomPlayers')
+      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+      .filter((q) =>
+        q.and(
+          q.neq(q.field('status'), 'left'),
+          q.gt(q.field('lastSeenAt'), presenceThreshold),
+        ),
+      )
+      .collect()
+
+    // Sort by joinedAt ascending (join order)
+    activePlayers.sort((a, b) => a.joinedAt - b.joinedAt)
+
+    // Deduplicate by userId (keep oldest session per user)
+    const uniqueActiveUsers = new Map<string, (typeof activePlayers)[number]>()
+    for (const player of activePlayers) {
+      if (!uniqueActiveUsers.has(player.userId)) {
+        uniqueActiveUsers.set(player.userId, player)
+      }
+    }
+
+    // Check if current owner is still active
+    const ownerIsActive = uniqueActiveUsers.has(room.ownerId)
+
+    if (ownerIsActive) {
+      return { transferred: false, reason: 'owner_still_active' }
+    }
+
+    // No active players remaining
+    if (uniqueActiveUsers.size === 0) {
+      return { transferred: false, reason: 'no_active_players' }
+    }
+
+    // Pick the first active player (by join order) as new owner
+    const sortedActiveUsers = Array.from(uniqueActiveUsers.values()).sort(
+      (a, b) => a.joinedAt - b.joinedAt,
+    )
+    const newOwner = sortedActiveUsers[0]!
+
+    // Update room ownership
+    await ctx.db.patch(room._id, { ownerId: newOwner.userId })
+
+    return { transferred: true, newOwnerId: newOwner.userId }
   },
 })
 

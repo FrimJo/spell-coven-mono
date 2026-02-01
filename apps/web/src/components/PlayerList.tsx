@@ -4,6 +4,7 @@ import {
   Crown,
   MoreVertical,
   Swords,
+  Unplug,
   Users,
   UserX,
   Volume2,
@@ -28,6 +29,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@repo/ui/components/dropdown-menu'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@repo/ui/components/tooltip'
 
 interface Player {
   id: string
@@ -101,7 +107,7 @@ export function PlayerList({
               return (
                 <div
                   key={`empty-${index}`}
-                  className="border-surface-3 bg-surface-2/20 flex items-center justify-between rounded-lg border border-dashed p-2 transition-colors"
+                  className="border-surface-3 bg-surface-2/20 flex min-h-[42px] items-center justify-between rounded-lg border border-dashed p-2 transition-colors"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2">
                     <div className="bg-surface-3 h-2 w-2 flex-shrink-0 rounded-full" />
@@ -128,12 +134,10 @@ export function PlayerList({
                     className={`h-2 w-2 flex-shrink-0 rounded-full ${
                       player.isOnline !== false
                         ? 'bg-online animate-pulse'
-                        : 'bg-surface-3'
+                        : 'bg-warning'
                     }`}
                     title={
-                      player.isOnline !== false
-                        ? 'Online'
-                        : 'Offline (not connected to backend)'
+                      player.isOnline !== false ? 'Online' : 'Disconnected'
                     }
                   />
                   <span className="truncate text-sm text-white">
@@ -141,6 +145,18 @@ export function PlayerList({
                   </span>
                   {isOwner && (
                     <Crown className="text-warning h-3 w-3 flex-shrink-0" />
+                  )}
+                  {player.isOnline === false && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="bg-warning/20 text-warning flex flex-shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs">
+                          <Unplug className="h-3 w-3" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Disconnected</p>
+                      </TooltipContent>
+                    </Tooltip>
                   )}
                   {!isLocal && isMuted && (
                     <span

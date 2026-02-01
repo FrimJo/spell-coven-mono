@@ -2,15 +2,15 @@
  * Ban Mutations & Queries
  *
  * Handles banning and kicking players from rooms.
- *
- * NOTE: These mutations currently don't verify caller identity for Phase 3.
- * In Phase 5 (auth migration), we'll use getAuthUserId for proper authorization.
+ * All mutations require authentication and verify the caller is the room owner.
  */
 
+import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 
 import { mutation, query } from './_generated/server'
 import {
+  AuthRequiredError,
   CannotTargetSelfError,
   NotRoomOwnerError,
   RoomNotFoundError,
@@ -21,18 +21,22 @@ import {
  *
  * Only the room owner can ban players.
  * Creates a persistent ban record and marks all player sessions as 'left'.
- *
- * NOTE: Caller identity not verified in Phase 3. Phase 5 will add proper auth.
+ * Requires authentication - caller identity is verified server-side.
  */
 export const banPlayer = mutation({
   args: {
     roomId: v.string(),
     userId: v.string(),
     reason: v.optional(v.string()),
-    callerId: v.optional(v.string()), // For Phase 3, will use auth in Phase 5
   },
-  handler: async (ctx, { roomId, userId, reason, callerId }) => {
-    // Check room ownership
+  handler: async (ctx, { roomId, userId, reason }) => {
+    // Get authenticated user ID from session
+    const callerId = await getAuthUserId(ctx)
+    if (!callerId) {
+      throw new AuthRequiredError()
+    }
+
+    // Check room exists and caller is owner
     const room = await ctx.db
       .query('rooms')
       .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
@@ -42,13 +46,11 @@ export const banPlayer = mutation({
       throw new RoomNotFoundError()
     }
 
-    // Phase 3: Check if caller is owner (when callerId is provided)
-    // Phase 5: Use getAuthUserId for proper authorization
-    if (callerId && room.ownerId !== callerId) {
+    if (room.ownerId !== callerId) {
       throw new NotRoomOwnerError('ban players')
     }
 
-    if (callerId && userId === callerId) {
+    if (userId === callerId) {
       throw new CannotTargetSelfError('ban')
     }
 
@@ -60,13 +62,11 @@ export const banPlayer = mutation({
       )
       .first()
 
-    const bannedBy = callerId ?? room.ownerId
-
     if (existingBan) {
       // Already banned, just update
       await ctx.db.patch(existingBan._id, {
         reason: reason ?? 'Banned by room owner',
-        bannedBy,
+        bannedBy: callerId,
         createdAt: Date.now(),
       })
     } else {
@@ -74,7 +74,7 @@ export const banPlayer = mutation({
       await ctx.db.insert('roomBans', {
         roomId,
         userId,
-        bannedBy,
+        bannedBy: callerId,
         reason: reason ?? 'Banned by room owner',
         createdAt: Date.now(),
       })
@@ -99,17 +99,21 @@ export const banPlayer = mutation({
  *
  * Only the room owner can kick players.
  * Marks all player sessions as 'left' but does not create a ban record.
- *
- * NOTE: Caller identity not verified in Phase 3. Phase 5 will add proper auth.
+ * Requires authentication - caller identity is verified server-side.
  */
 export const kickPlayer = mutation({
   args: {
     roomId: v.string(),
     userId: v.string(),
-    callerId: v.optional(v.string()), // For Phase 3, will use auth in Phase 5
   },
-  handler: async (ctx, { roomId, userId, callerId }) => {
-    // Check room ownership
+  handler: async (ctx, { roomId, userId }) => {
+    // Get authenticated user ID from session
+    const callerId = await getAuthUserId(ctx)
+    if (!callerId) {
+      throw new AuthRequiredError()
+    }
+
+    // Check room exists and caller is owner
     const room = await ctx.db
       .query('rooms')
       .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
@@ -119,13 +123,11 @@ export const kickPlayer = mutation({
       throw new RoomNotFoundError()
     }
 
-    // Phase 3: Check if caller is owner (when callerId is provided)
-    // Phase 5: Use getAuthUserId for proper authorization
-    if (callerId && room.ownerId !== callerId) {
+    if (room.ownerId !== callerId) {
       throw new NotRoomOwnerError('kick players')
     }
 
-    if (callerId && userId === callerId) {
+    if (userId === callerId) {
       throw new CannotTargetSelfError('kick')
     }
 
@@ -147,17 +149,21 @@ export const kickPlayer = mutation({
  * Unban a player
  *
  * Only the room owner can unban players.
- *
- * NOTE: Caller identity not verified in Phase 3. Phase 5 will add proper auth.
+ * Requires authentication - caller identity is verified server-side.
  */
 export const unbanPlayer = mutation({
   args: {
     roomId: v.string(),
     userId: v.string(),
-    callerId: v.optional(v.string()), // For Phase 3, will use auth in Phase 5
   },
-  handler: async (ctx, { roomId, userId, callerId }) => {
-    // Check room ownership
+  handler: async (ctx, { roomId, userId }) => {
+    // Get authenticated user ID from session
+    const callerId = await getAuthUserId(ctx)
+    if (!callerId) {
+      throw new AuthRequiredError()
+    }
+
+    // Check room exists and caller is owner
     const room = await ctx.db
       .query('rooms')
       .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
@@ -167,8 +173,7 @@ export const unbanPlayer = mutation({
       throw new RoomNotFoundError()
     }
 
-    // Phase 3: Check if caller is owner (when callerId is provided)
-    if (callerId && room.ownerId !== callerId) {
+    if (room.ownerId !== callerId) {
       throw new NotRoomOwnerError('unban players')
     }
 
