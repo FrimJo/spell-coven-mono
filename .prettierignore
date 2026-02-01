@@ -11,3 +11,5 @@
 
 # Public assets that shouldn't be formatted
 apps/web/public/
+
+apps/convex/_generated/
