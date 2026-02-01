@@ -1,16 +1,16 @@
 import type { Participant } from '@/types/participant'
+import type { Doc } from '@convex/_generated/dataModel'
 import { memo, useCallback, useMemo } from 'react'
 import { useDeltaDisplay } from '@/hooks/useDeltaDisplay'
 import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
 import { getCommanderImageUrl } from '@/lib/scryfall'
+import { api } from '@convex/_generated/api'
 import { useMutation } from 'convex/react'
 import { Minus, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
 
-import type { Doc } from '../../../convex/_generated/dataModel'
-import { api } from '../../../convex/_generated/api'
 import { DeltaBubble } from './DeltaBubble'
 
 interface CommanderOverlayProps {

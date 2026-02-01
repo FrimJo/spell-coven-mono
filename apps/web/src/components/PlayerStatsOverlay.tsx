@@ -1,7 +1,9 @@
 import type { Participant } from '@/types/participant'
+import type { Doc } from '@convex/_generated/dataModel'
 import { memo, useCallback, useMemo } from 'react'
 import { useDeltaDisplay } from '@/hooks/useDeltaDisplay'
 import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
+import { api } from '@convex/_generated/api'
 import { useMutation } from 'convex/react'
 import { Heart, Minus, Plus, Skull, Swords } from 'lucide-react'
 import { toast } from 'sonner'
@@ -13,8 +15,6 @@ import {
   TooltipTrigger,
 } from '@repo/ui/components/tooltip'
 
-import type { Doc } from '../../../convex/_generated/dataModel'
-import { api } from '../../../convex/_generated/api'
 import { DeltaBubble } from './DeltaBubble'
 
 interface PlayerStatsOverlayProps {

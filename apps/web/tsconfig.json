@@ -14,7 +14,8 @@
     "types": ["bun-types", "vite/client"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@convex/*": ["../../convex/*"]
     }
   }
 }

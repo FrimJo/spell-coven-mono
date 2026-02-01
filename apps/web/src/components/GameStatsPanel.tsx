@@ -1,10 +1,12 @@
 import type { ScryfallCard } from '@/lib/scryfall'
 import type { Participant } from '@/types/participant'
+import type { Doc } from '@convex/_generated/dataModel'
 import { useCallback, useEffect, useEffectEvent, useState } from 'react'
 import { useDeltaDisplay } from '@/hooks/useDeltaDisplay'
 import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
-import { getCommanderImageUrl } from '@/lib/scryfall'
+import { getCardByName, getCommanderImageUrl } from '@/lib/scryfall'
 import { commanderPanelMachine } from '@/state/commanderPanelMachine'
+import { api } from '@convex/_generated/api'
 import { useMutation } from '@tanstack/react-query'
 import { useMachine } from '@xstate/react'
 import { useMutation as useConvexMutation } from 'convex/react'
@@ -31,8 +33,6 @@ import {
   SheetTitle,
 } from '@repo/ui/components/sheet'
 
-import type { Doc } from '../../../convex/_generated/dataModel'
-import { api } from '../../../convex/_generated/api'
 import { CommanderSearchInput } from './CommanderSearchInput'
 import { DeltaBubble } from './DeltaBubble'
 
@@ -305,7 +305,6 @@ export function GameStatsPanel({
   // Quick-fill Commander 2 from a suggestion link
   const handleQuickFillCommander2 = async (name: string) => {
     setCommander2Name(name)
-    const { getCardByName } = await import('@/lib/scryfall')
     const card = await getCardByName(name, false)
     if (card) {
       baseOnCommander2Resolved(card)
