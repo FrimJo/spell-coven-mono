@@ -22,4 +22,17 @@ crons.interval(
   internal.signals.cleanupAllSignals,
 )
 
+/**
+ * Check for room owner presence timeouts every 30 seconds.
+ *
+ * If a room owner disconnects (stops sending heartbeats) for longer than
+ * the presence threshold (30s), ownership is transferred to the next
+ * active player in join order.
+ */
+crons.interval(
+  'check room owner presence',
+  { seconds: 30 },
+  internal.rooms.checkAllRoomOwners,
+)
+
 export default crons

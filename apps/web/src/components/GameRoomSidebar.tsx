@@ -1,5 +1,5 @@
 import type { Participant } from '@/types/participant'
-import { Suspense, useCallback, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePresence } from '@/contexts/PresenceContext'
 
@@ -9,6 +9,13 @@ import { Skeleton } from '@repo/ui/components/skeleton'
 import { CardPreview } from './CardPreview'
 import { GameStatsPanel } from './GameStatsPanel'
 import { PlayerList } from './PlayerList'
+
+/**
+ * Threshold for considering a player "online" (15 seconds)
+ * If lastSeenAt is older than this, they're shown as disconnected.
+ * This is shorter than the 30-second presence threshold that removes them from the list entirely.
+ */
+const ONLINE_THRESHOLD_MS = 15_000
 
 interface GameRoomSidebarProps {
   roomId: string
@@ -40,6 +47,27 @@ function SidebarContent({
   const [panelOpen, setPanelOpen] = useState(false)
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
 
+  // Current time state for computing online status (updates every 5 seconds)
+  const [now, setNow] = useState(Date.now())
+
+  // Update current time periodically to re-evaluate online status
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now())
+    }, 5_000) // Check every 5 seconds
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Compute players with online status based on lastSeenAt
+  const playersWithStatus = useMemo(() => {
+    return uniqueParticipants.map((participant) => ({
+      id: participant.id,
+      name: participant.username,
+      isOnline: now - participant.lastSeenAt < ONLINE_THRESHOLD_MS,
+    }))
+  }, [uniqueParticipants, now])
+
   // Find current user participant
   const currentUser = useMemo<Participant | null>(() => {
     if (!user) return null
@@ -68,11 +96,7 @@ function SidebarContent({
     <>
       <div className="w-64 flex-shrink-0 space-y-4 overflow-y-auto">
         <PlayerList
-          players={uniqueParticipants.map((participant) => ({
-            id: participant.id,
-            name: participant.username,
-            isOnline: true, // Game room participants are always online
-          }))}
+          players={playersWithStatus}
           isLobbyOwner={isLobbyOwner}
           localPlayerName={playerName}
           onKickPlayer={onKickPlayer}

@@ -353,6 +353,7 @@ export function useConvexPresence({
         poison: player.poison ?? 0,
         commanders: player.commanders ?? [],
         commanderDamage: player.commanderDamage ?? {},
+        lastSeenAt: player.lastSeenAt,
       }))
       .sort((a: Participant, b: Participant) => a.joinedAt - b.joinedAt)
   }, [allSessionsData])
@@ -402,7 +403,6 @@ export function useConvexPresence({
       await kickMutationRef.current({
         roomId: convexRoomId,
         userId: playerId,
-        callerId: userId, // Pass caller for Phase 3 authorization
       })
     },
     [convexRoomId, userId],
@@ -418,7 +418,6 @@ export function useConvexPresence({
       await banMutationRef.current({
         roomId: convexRoomId,
         userId: playerId,
-        callerId: userId, // Pass caller for Phase 3 authorization
       })
     },
     [convexRoomId, userId],

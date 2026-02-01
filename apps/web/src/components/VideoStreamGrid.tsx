@@ -1,6 +1,6 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { Participant } from '@/types/participant'
-import { memo, Suspense, useMemo, useRef, useState } from 'react'
+import { memo, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { usePresence } from '@/contexts/PresenceContext'
 import { useConvexWebRTC } from '@/hooks/useConvexWebRTC'
@@ -11,12 +11,18 @@ import {
   Gamepad2,
   Loader2,
   MicOff,
+  Unplug,
   Wifi,
   WifiOff,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Card } from '@repo/ui/components/card'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@repo/ui/components/tooltip'
 
 import { CommanderOverlay } from './CommanderOverlay'
 import { LocalVideoCard } from './LocalVideoCard'
@@ -26,6 +32,13 @@ import {
   PlayerNameBadge,
   VideoDisabledPlaceholder,
 } from './PlayerVideoCardParts'
+
+/**
+ * Threshold for considering a player "online" (15 seconds)
+ * If lastSeenAt is older than this, they're shown as disconnected.
+ * This matches the threshold used in GameRoomSidebar.
+ */
+const ONLINE_THRESHOLD_MS = 15_000
 
 // Extract inline styles to prevent recreation on every render
 const VIDEO_ELEMENT_STYLE: React.CSSProperties = {
@@ -56,6 +69,7 @@ interface RemotePlayerCardProps {
   localParticipant: Participant | undefined
   gameRoomParticipants: Participant[]
   gridIndex: number
+  isOnline: boolean // Presence-based online status (matches sidebar)
 }
 
 const RemotePlayerCard = memo(function RemotePlayerCard({
@@ -75,6 +89,7 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
   localParticipant,
   gameRoomParticipants,
   gridIndex,
+  isOnline,
 }: RemotePlayerCardProps) {
   // Remote players: use trackState which checks if track is 'live'
   const peerVideoEnabled = trackState?.videoEnabled ?? false
@@ -185,7 +200,21 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
               <MicOff className="text-destructive h-4 w-4" />
             </div>
           )}
-          {connectionState && connectionState !== 'connected' && (
+          {/* Show presence-based connection status (matches sidebar) */}
+          {!isOnline && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="border-warning/30 bg-warning/20 flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur-sm">
+                  <Unplug className="text-warning h-4 w-4" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Disconnected</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {/* Show WebRTC connection issues only when presence is online but WebRTC has problems */}
+          {isOnline && connectionState && connectionState !== 'connected' && (
             <div
               className={`flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur-sm ${
                 connectionState === 'connecting' ||
@@ -195,7 +224,7 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
                     ? 'border-destructive/30 bg-destructive/20'
                     : 'border-default/30 bg-surface-3/20'
               }`}
-              title={`Connection: ${connectionState}`}
+              title={`Video connection: ${connectionState}`}
             >
               {connectionState === 'failed' ? (
                 <WifiOff className="text-destructive h-4 w-4" />
@@ -251,6 +280,19 @@ export function VideoStreamGrid({
 
   // Presence is ready when not loading (channel has been set up with correct key)
   const presenceReady = !isPresenceLoading
+
+  // Current time state for computing online status (updates every 5 seconds)
+  // This matches the logic in GameRoomSidebar to keep status synchronized
+  const [now, setNow] = useState(Date.now())
+
+  // Update current time periodically to re-evaluate online status
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now())
+    }, 5_000) // Check every 5 seconds
+
+    return () => clearInterval(interval)
+  }, [])
 
   // Compute remote player IDs for WebRTC
   const remotePlayerIds = useMemo(() => {
@@ -488,6 +530,9 @@ export function VideoStreamGrid({
         const connectionState = connectionStates.get(player.id)
         const trackState = trackStates.get(player.id)
         const isMuted = mutedPlayers.has(player.id)
+        // Calculate online status based on presence (matches sidebar logic)
+        const isOnline =
+          now - player.participantData.lastSeenAt < ONLINE_THRESHOLD_MS
 
         return (
           <RemotePlayerCard
@@ -508,6 +553,7 @@ export function VideoStreamGrid({
             localParticipant={localParticipant}
             gameRoomParticipants={gameRoomParticipants}
             gridIndex={index + 1}
+            isOnline={isOnline}
           />
         )
       })}

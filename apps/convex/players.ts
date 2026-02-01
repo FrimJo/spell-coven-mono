@@ -10,6 +10,7 @@
 
 import { v } from 'convex/values'
 
+import { internal } from './_generated/api'
 import { mutation, query } from './_generated/server'
 import { DEFAULT_HEALTH } from './constants'
 import {
@@ -136,6 +137,8 @@ export const joinRoom = mutation({
  * Leave a room
  *
  * Marks the player session as 'left'.
+ * If the leaving player is the room owner, transfers ownership to the next
+ * active player in join order.
  */
 export const leaveRoom = mutation({
   args: {
@@ -155,6 +158,37 @@ export const leaveRoom = mutation({
         status: 'left',
         lastSeenAt: Date.now(),
       })
+
+      // Check if this user was the owner and transfer if needed
+      const room = await ctx.db
+        .query('rooms')
+        .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+        .first()
+
+      if (room && room.ownerId === player.userId) {
+        // Check if user has any other active sessions in this room
+        const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
+        const otherActiveSessions = await ctx.db
+          .query('roomPlayers')
+          .withIndex('by_roomId_userId', (q) =>
+            q.eq('roomId', roomId).eq('userId', player.userId),
+          )
+          .filter((q) =>
+            q.and(
+              q.neq(q.field('status'), 'left'),
+              q.gt(q.field('lastSeenAt'), presenceThreshold),
+              q.neq(q.field('sessionId'), sessionId),
+            ),
+          )
+          .first()
+
+        // Only transfer if user has no other active sessions
+        if (!otherActiveSessions) {
+          await ctx.runMutation(internal.rooms.transferOwnerIfNeeded, {
+            roomId,
+          })
+        }
+      }
     }
   },
 })

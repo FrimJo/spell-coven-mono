@@ -13,4 +13,6 @@ export interface Participant {
   poison: number
   commanders: Array<{ id: string; name: string }>
   commanderDamage: Record<string, number>
+  /** Timestamp of last heartbeat - used to determine online/offline status */
+  lastSeenAt: number
 }
