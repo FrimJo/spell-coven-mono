@@ -6,11 +6,10 @@
  */
 
 import type { Participant } from '@/types/participant'
+import type { Doc } from '@convex/_generated/dataModel'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { api } from '@convex/_generated/api'
 import { useMutation, useQuery } from 'convex/react'
-
-import type { Doc } from '../../../convex/_generated/dataModel'
-import { api } from '../../../convex/_generated/api'
 
 type RoomPlayer = Doc<'roomPlayers'>
 

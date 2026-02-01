@@ -8,9 +8,8 @@
 
 import { useCallback } from 'react'
 import { useAuthActions } from '@convex-dev/auth/react'
+import { api } from '@convex/_generated/api'
 import { useConvexAuth, useQuery } from 'convex/react'
-
-import { api } from '../../../convex/_generated/api'
 
 /**
  * User profile shape (compatible with existing AuthUser type)

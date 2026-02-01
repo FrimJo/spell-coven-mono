@@ -26,10 +26,11 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, './src'),
         '@repo/ui': path.resolve(__dirname, '../../packages/ui/src'),
+        '@convex': path.resolve(__dirname, '../../convex'),
       },
     },
     optimizeDeps: {
-      exclude: [],
+      exclude: ['@techstark/opencv-js'], // Exclude from pre-bundling (it's loaded dynamically)
     },
     ssr: {
       external: [],

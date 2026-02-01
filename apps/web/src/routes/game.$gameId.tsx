@@ -6,6 +6,7 @@ import { GameRoom } from '@/components/GameRoom'
 import { useAuth } from '@/contexts/AuthContext'
 import { convex } from '@/integrations/convex/provider'
 import { sessionStorage } from '@/lib/session-storage'
+import { api } from '@convex/_generated/api'
 import {
   createFileRoute,
   notFound,
@@ -17,8 +18,6 @@ import { zodValidator } from '@tanstack/zod-adapter'
 import { Loader2 } from 'lucide-react'
 import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
-
-import { api } from '../../../convex/_generated/api'
 
 const defaultValues = {
   detector: 'opencv' as const,
@@ -123,19 +122,19 @@ export const Route = createFileRoute('/game/$gameId')({
     return {}
   },
   pendingComponent: () => (
-    <div className="flex h-screen items-center justify-center bg-surface-0">
+    <div className="bg-surface-0 flex h-screen items-center justify-center">
       <div className="flex flex-col items-center space-y-4">
         <div className="relative">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand/20">
-            <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
+          <div className="bg-brand/20 flex h-16 w-16 items-center justify-center rounded-full">
+            <Loader2 className="text-brand-muted-foreground h-8 w-8 animate-spin" />
           </div>
-          <div className="absolute inset-0 animate-ping rounded-full bg-brand/10" />
+          <div className="bg-brand/10 absolute inset-0 animate-ping rounded-full" />
         </div>
         <div className="space-y-1 text-center">
-          <h2 className="text-lg font-medium text-text-secondary">
+          <h2 className="text-text-secondary text-lg font-medium">
             Loading in Game Room
           </h2>
-          <p className="text-sm text-text-muted">Setting up your session...</p>
+          <p className="text-text-muted text-sm">Setting up your session...</p>
         </div>
       </div>
     </div>
@@ -179,16 +178,16 @@ function GameRoomRoute() {
   // Show loading state while auth is being determined
   if (isAuthLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-surface-0">
+      <div className="bg-surface-0 flex h-screen items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand/20">
-              <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
+            <div className="bg-brand/20 flex h-16 w-16 items-center justify-center rounded-full">
+              <Loader2 className="text-brand-muted-foreground h-8 w-8 animate-spin" />
             </div>
-            <div className="absolute inset-0 animate-ping rounded-full bg-brand/10" />
+            <div className="bg-brand/10 absolute inset-0 animate-ping rounded-full" />
           </div>
           <div className="space-y-1 text-center">
-            <h2 className="text-lg font-medium text-text-secondary">
+            <h2 className="text-text-secondary text-lg font-medium">
               Checking authentication...
             </h2>
           </div>
@@ -200,7 +199,7 @@ function GameRoomRoute() {
   // Show auth dialog if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="h-screen bg-surface-0">
+      <div className="bg-surface-0 h-screen">
         <AuthRequiredDialog
           open={true}
           onSignIn={handleSignIn}

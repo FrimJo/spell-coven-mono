@@ -8,9 +8,8 @@
 import type { WebRTCSignal } from '@/types/webrtc-signal'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { validateWebRTCSignal } from '@/types/webrtc-signal'
+import { api } from '@convex/_generated/api'
 import { useMutation, useQuery } from 'convex/react'
-
-import { api } from '../../../convex/_generated/api'
 
 interface UseConvexSignalingProps {
   roomId: string
