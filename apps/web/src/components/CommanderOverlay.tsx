@@ -220,7 +220,7 @@ const CommanderTile = memo(function CommanderTile({
         <Button
           size="icon"
           variant="ghost"
-          className="absolute left-0 top-0 flex h-full w-1/2 items-center justify-center text-white opacity-0 transition-opacity group-hover:opacity-100"
+          className="absolute left-0 top-0 flex h-full w-1/2 items-center justify-center rounded-r-none text-white opacity-0 transition-opacity group-hover:opacity-100"
           onMouseDown={damageMinus.handleStart}
           onMouseUp={damageMinus.handleStop}
           onMouseLeave={damageMinus.handleStop}
@@ -235,7 +235,7 @@ const CommanderTile = memo(function CommanderTile({
         <Button
           size="icon"
           variant="ghost"
-          className="absolute right-0 top-0 flex h-full w-1/2 items-center justify-center text-white opacity-0 transition-opacity group-hover:opacity-100"
+          className="absolute right-0 top-0 flex h-full w-1/2 items-center justify-center rounded-l-none text-white opacity-0 transition-opacity group-hover:opacity-100"
           onMouseDown={damagePlus.handleStart}
           onMouseUp={damagePlus.handleStop}
           onMouseLeave={damagePlus.handleStop}

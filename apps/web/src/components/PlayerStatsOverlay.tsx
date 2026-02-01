@@ -1,15 +1,19 @@
 import type { Participant } from '@/types/participant'
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
 import { useMutation } from 'convex/react'
-import { Heart, Minus, Plus, Skull } from 'lucide-react'
+import { Heart, Minus, Plus, Skull, Swords } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@repo/ui/components/tooltip'
 
 import type { Doc } from '../../../convex/_generated/dataModel'
 import { api } from '../../../convex/_generated/api'
-import { GameStatsPanel } from './GameStatsPanel'
 
 interface PlayerStatsOverlayProps {
   roomId: string
@@ -26,7 +30,6 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
 }: PlayerStatsOverlayProps) {
   // Use roomId as-is - roomPlayers table stores bare roomId (e.g., "ABC123")
   const convexRoomId = roomId
-  const [panelOpen, setPanelOpen] = useState(false)
 
   // Helper function for optimistic updates on player queries
   type RoomPlayer = Doc<'roomPlayers'>
@@ -149,25 +152,45 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
     repeatDelta: 10,
   })
 
-  // Determine if this is the current user (affects UI emphasis or layout, though controls are available for all)
-  const isMe = participant.id === currentUser.id
+  // Calculate total commander damage and breakdown - memoized to avoid recalculation
+  const { totalCommanderDamage, commanderDamageBreakdown } = useMemo(() => {
+    const damageMap = participant.commanderDamage ?? {}
+    const total = Object.values(damageMap).reduce(
+      (sum, damage) => sum + damage,
+      0,
+    )
 
-  // Calculate total commander damage - memoized to avoid recalculation
-  const totalCommanderDamage = useMemo(
-    () =>
-      Object.values(participant.commanderDamage ?? {}).reduce(
-        (sum, damage) => sum + damage,
-        0,
-      ),
-    [participant.commanderDamage],
-  )
+    // Build breakdown: find commander names from participants
+    const breakdown: Array<{
+      commanderName: string
+      ownerName: string
+      damage: number
+    }> = []
+
+    for (const [key, damage] of Object.entries(damageMap)) {
+      if (damage <= 0) continue
+
+      // Key format: "ownerUserId:commanderId"
+      const [ownerUserId, commanderId] = key.split(':')
+      const owner = participants.find((p) => p.id === ownerUserId)
+      const commander = owner?.commanders.find((c) => c.id === commanderId)
+
+      breakdown.push({
+        commanderName: commander?.name ?? 'Unknown Commander',
+        ownerName: owner?.username ?? 'Unknown Player',
+        damage,
+      })
+    }
+
+    // Sort by damage descending
+    breakdown.sort((a, b) => b.damage - a.damage)
+
+    return { totalCommanderDamage: total, commanderDamageBreakdown: breakdown }
+  }, [participant.commanderDamage, participants])
 
   // Clamp health and poison to 0 minimum for display
   const displayHealth = Math.max(0, participant.health ?? 0)
   const displayPoison = Math.max(0, participant.poison ?? 0)
-
-  const handleOpenPanel = useCallback(() => setPanelOpen(true), [])
-  const handleClosePanel = useCallback(() => setPanelOpen(false), [])
 
   return (
     <>
@@ -248,38 +271,53 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
           </div>
         </div>
 
-        {/* Commander Damage & Panel Toggle */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className={`mt-1 flex h-7 w-full items-center justify-between gap-2 rounded-md border px-2 text-[10px] opacity-0 transition-all group-hover:opacity-100 ${
-            totalCommanderDamage > 0
-              ? 'border-brand/30 bg-brand/10 text-brand-muted-foreground hover:bg-brand/20'
-              : 'text-text-muted hover:bg-brand/20 hover:text-brand-muted-foreground border-transparent'
-          }`}
-          onClick={handleOpenPanel}
-        >
-          <span className="font-medium tracking-wide">COMMANDERS</span>
-          {totalCommanderDamage > 0 && (
-            <div className="flex items-center gap-1.5">
-              <span className="bg-brand/20 h-3 w-[1px]" />
-              <span className="font-mono text-xs font-bold">
-                {totalCommanderDamage}
-              </span>
-            </div>
-          )}
-        </Button>
+        {/* Commander Damage */}
+        <div className="flex items-center justify-between gap-3">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="text-brand-muted-foreground flex cursor-default items-center gap-1.5">
+                <Swords className="h-4 w-4" />
+                <span className="min-w-[2ch] text-center font-mono font-bold text-white">
+                  {totalCommanderDamage}
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent
+              side="right"
+              className="border-surface-2 bg-surface-1 text-text-secondary max-w-[280px] border p-0 shadow-xl"
+            >
+              {commanderDamageBreakdown.length > 0 ? (
+                <div className="flex flex-col gap-1 p-2">
+                  {commanderDamageBreakdown.map((entry, idx) => (
+                    <div
+                      key={idx}
+                      className="hover:bg-surface-2/50 flex items-center justify-between gap-3 rounded px-2 py-1.5"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-text-secondary text-xs font-medium">
+                          {entry.commanderName}
+                        </span>
+                        <span className="text-text-muted text-[10px]">
+                          {entry.ownerName}
+                        </span>
+                      </div>
+                      <span className="text-brand-muted-foreground font-mono text-sm font-bold">
+                        {entry.damage}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-3 py-4 text-center">
+                  <p className="text-text-muted text-xs">
+                    No commander damage taken yet
+                  </p>
+                </div>
+              )}
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
-
-      <GameStatsPanel
-        isOpen={panelOpen}
-        onClose={handleClosePanel}
-        roomId={roomId}
-        currentUser={currentUser}
-        participants={participants}
-        defaultTab={isMe ? 'setup' : 'damage'}
-        selectedPlayer={participant}
-      />
     </>
   )
 })
