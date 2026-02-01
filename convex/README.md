@@ -47,7 +47,7 @@ VITE_CONVEX_URL=https://<your-deployment>.convex.cloud
 ## Directory Structure
 
 ```
-apps/convex/
+convex/
 ├── _generated/     # Auto-generated types (do not edit)
 ├── auth.ts         # Discord OAuth configuration
 ├── bans.ts         # Player ban mutations/queries
@@ -72,14 +72,12 @@ See `SUPABASE_TO_CONVEX_PLAN.md` for the full data model.
 
 ## Development
 
-This package is integrated with the turbo monorepo. Running `bun run dev` from the repository root will start both the Convex dev server and the web app in parallel.
-
 ```bash
-# From repository root - starts both Convex and web dev servers
-bun run dev
+# Start Convex dev server (watches for changes)
+bunx convex dev
 
-# Or run just the Convex dev server
-cd apps/convex && bun run dev
+# Run in separate terminal
+bun run dev
 ```
 
 ## Migration Status (Phase 3)
