@@ -9,6 +9,7 @@
   "scripts": {
     "build": "bunx turbo run build",
     "dev": "bunx turbo run dev",
+    "convex:dev": "bunx convex dev",
     "test": "bunx turbo run test",
     "lint": "bunx turbo run lint",
     "lint:fix": "bunx turbo run lint -- --fix",
