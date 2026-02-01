@@ -504,29 +504,14 @@ export function GameStatsPanel({
                               <Plus className="h-3 w-3" />
                             </button>
                           )}
-                          {cmd2ImageUrl ? (
+                          {/* Only show commander 2 thumbnail if it exists - don't show add button since we need to check if commander 1 supports a partner */}
+                          {cmd2ImageUrl && (
                             <img
                               src={cmd2ImageUrl}
                               alt={commander2?.name}
                               title={commander2?.name}
                               className="border-border-default h-6 w-6 rounded-full border object-cover"
                             />
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                send({
-                                  type: 'SET_COLLAPSED',
-                                  collapsed: false,
-                                })
-                                handleStartEditing(player)
-                              }}
-                              className="border-border-default bg-surface-1/50 text-text-muted hover:border-brand hover:bg-brand/10 hover:text-brand-muted-foreground flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed transition-colors"
-                              title="Add Commander 2"
-                            >
-                              <Plus className="h-3 w-3" />
-                            </button>
                           )}
                         </span>
                         <ChevronDown className="text-text-muted h-4 w-4" />
@@ -586,27 +571,29 @@ export function GameStatsPanel({
                         </span>
                       )}
 
-                      {isEditingThisPlayer ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-border-default bg-surface-2 text-text-secondary hover:bg-surface-3 h-7 hover:text-white"
-                          onClick={() => send({ type: 'DONE_EDIT' })}
-                        >
-                          Done
-                        </Button>
-                      ) : player.commanders[0]?.name ||
-                        player.commanders[1]?.name ? (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-text-muted hover:bg-surface-2 hover:text-brand-muted-foreground h-7 w-7"
-                          onClick={() => handleStartEditing(player)}
-                          title="Edit commanders"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      ) : null}
+                      <div className="w-[3rem]">
+                        {isEditingThisPlayer ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-border-default bg-surface-2 text-text-secondary hover:bg-surface-3 h-7 w-full hover:text-white"
+                            onClick={() => send({ type: 'DONE_EDIT' })}
+                          >
+                            Done
+                          </Button>
+                        ) : player.commanders[0]?.name ||
+                          player.commanders[1]?.name ? (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-text-muted hover:bg-surface-2 hover:text-brand-muted-foreground h-7 w-7"
+                            onClick={() => handleStartEditing(player)}
+                            title="Edit commanders"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        ) : null}
+                      </div>
 
                       {isViewedPlayer &&
                         viewedPlayerHasCommanders &&
@@ -681,41 +668,45 @@ export function GameStatsPanel({
                       onQuickFillCommander2={handleQuickFillCommander2}
                     />
 
-                    {/* Commander 2 */}
-                    <CommanderSlot
-                      slotNumber={2}
-                      commander={player.commanders[1]}
-                      damage={
-                        player.commanders[1]
-                          ? (viewedPlayer.commanderDamage[
-                              `${player.id}:${player.commanders[1].id}`
-                            ] ?? 0)
-                          : 0
-                      }
-                      isEditing={isEditingThisPlayer}
-                      isViewedPlayer={isViewedPlayer}
-                      getCommanderImageUrl={getCommanderImageUrl}
-                      onDamageChange={(delta) =>
-                        player.commanders[1] &&
-                        handleUpdateDamage(
-                          player.id,
-                          player.commanders[1].id,
-                          delta,
-                        )
-                      }
-                      onStartEdit={() => handleStartEditing(player)}
-                      onClear={() => handleClearCommander(player, 2)}
-                      // Edit props
-                      inputValue={
-                        isEditingThisPlayer ? cmdState.commander2Name : ''
-                      }
-                      onInputChange={setCommander2Name}
-                      onCardResolved={onCommander2Resolved}
-                      status={playerCommander2Status}
-                      allowsSecondCommander={cmdState.allowsSecondCommander}
-                      suggestions={commander2Suggestions}
-                      suggestionsLabel={suggestionsLabel}
-                    />
+                    {/* Commander 2 - only show if commander 1 allows a second commander (Partner, Background, etc.) */}
+                    {(player.commanders[1]?.name ||
+                      (isEditingThisPlayer &&
+                        cmdState.allowsSecondCommander)) && (
+                      <CommanderSlot
+                        slotNumber={2}
+                        commander={player.commanders[1]}
+                        damage={
+                          player.commanders[1]
+                            ? (viewedPlayer.commanderDamage[
+                                `${player.id}:${player.commanders[1].id}`
+                              ] ?? 0)
+                            : 0
+                        }
+                        isEditing={isEditingThisPlayer}
+                        isViewedPlayer={isViewedPlayer}
+                        getCommanderImageUrl={getCommanderImageUrl}
+                        onDamageChange={(delta) =>
+                          player.commanders[1] &&
+                          handleUpdateDamage(
+                            player.id,
+                            player.commanders[1].id,
+                            delta,
+                          )
+                        }
+                        onStartEdit={() => handleStartEditing(player)}
+                        onClear={() => handleClearCommander(player, 2)}
+                        // Edit props
+                        inputValue={
+                          isEditingThisPlayer ? cmdState.commander2Name : ''
+                        }
+                        onInputChange={setCommander2Name}
+                        onCardResolved={onCommander2Resolved}
+                        status={playerCommander2Status}
+                        allowsSecondCommander={cmdState.allowsSecondCommander}
+                        suggestions={commander2Suggestions}
+                        suggestionsLabel={suggestionsLabel}
+                      />
+                    )}
                   </div>
                 </div>
               )
