@@ -1,5 +1,6 @@
 import type { Participant } from '@/types/participant'
-import { memo, useMemo } from 'react'
+import { memo, useCallback, useMemo } from 'react'
+import { useDeltaDisplay } from '@/hooks/useDeltaDisplay'
 import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
 import { getCommanderImageUrl } from '@/lib/scryfall'
 import { useMutation } from 'convex/react'
@@ -10,6 +11,7 @@ import { Button } from '@repo/ui/components/button'
 
 import type { Doc } from '../../../convex/_generated/dataModel'
 import { api } from '../../../convex/_generated/api'
+import { DeltaBubble } from './DeltaBubble'
 
 interface CommanderOverlayProps {
   participant: Participant
@@ -181,20 +183,40 @@ const CommanderTile = memo(function CommanderTile({
   const damageKey = `${participantId}:${commander.id}`
   const damage = currentUser.commanderDamage?.[damageKey] ?? 0
 
+  // Delta display for damage
+  const damageDelta = useDeltaDisplay()
+
+  const handleDamageChange = useCallback(
+    (delta: number) => {
+      damageDelta.addDelta(delta)
+      onUpdateDamage(participantId, commander.id, delta)
+    },
+    [damageDelta, onUpdateDamage, participantId, commander.id],
+  )
+
   const damageMinus = useHoldToRepeat({
-    onChange: (delta) => onUpdateDamage(participantId, commander.id, delta),
+    onChange: handleDamageChange,
     immediateDelta: -1,
     repeatDelta: -10,
   })
 
   const damagePlus = useHoldToRepeat({
-    onChange: (delta) => onUpdateDamage(participantId, commander.id, delta),
+    onChange: handleDamageChange,
     immediateDelta: 1,
     repeatDelta: 10,
   })
 
   return (
     <div className="group relative h-12 w-12">
+      {/* Delta bubble left of minus */}
+      {damageDelta.delta < 0 && (
+        <DeltaBubble
+          delta={damageDelta.delta}
+          visible={damageDelta.visible}
+          side="left"
+          className="top-1/2 -translate-y-1/2"
+        />
+      )}
       {/* Commander Image/Card - Square */}
       <div className="border-border-muted group-hover:border-brand/50 relative h-12 w-12 overflow-hidden rounded-lg border-2 shadow-lg ring-1 ring-black/20 transition-transform group-hover:scale-105">
         {imageUrl ? (
@@ -245,6 +267,15 @@ const CommanderTile = memo(function CommanderTile({
           <Plus className="h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" />
         </Button>
       </div>
+      {/* Delta bubble right of plus */}
+      {damageDelta.delta > 0 && (
+        <DeltaBubble
+          delta={damageDelta.delta}
+          visible={damageDelta.visible}
+          side="right"
+          className="top-1/2 -translate-y-1/2"
+        />
+      )}
     </div>
   )
 })

@@ -1,5 +1,6 @@
 import type { Participant } from '@/types/participant'
 import { memo, useCallback, useMemo } from 'react'
+import { useDeltaDisplay } from '@/hooks/useDeltaDisplay'
 import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
 import { useMutation } from 'convex/react'
 import { Heart, Minus, Plus, Skull, Swords } from 'lucide-react'
@@ -14,6 +15,7 @@ import {
 
 import type { Doc } from '../../../convex/_generated/dataModel'
 import { api } from '../../../convex/_generated/api'
+import { DeltaBubble } from './DeltaBubble'
 
 interface PlayerStatsOverlayProps {
   roomId: string
@@ -101,8 +103,13 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
     )
   })
 
+  // Delta display hooks for health and poison
+  const healthDelta = useDeltaDisplay()
+  const poisonDelta = useDeltaDisplay()
+
   const handleHealthChange = useCallback(
     (delta: number) => {
+      healthDelta.addDelta(delta)
       updateHealth({
         roomId: convexRoomId,
         userId: participant.id,
@@ -111,11 +118,12 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
         toast.error('Failed to update health')
       })
     },
-    [updateHealth, convexRoomId, participant.id],
+    [updateHealth, convexRoomId, participant.id, healthDelta],
   )
 
   const handlePoisonChange = useCallback(
     (delta: number) => {
+      poisonDelta.addDelta(delta)
       updatePoison({
         roomId: convexRoomId,
         userId: participant.id,
@@ -124,30 +132,30 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
         toast.error('Failed to update poison')
       })
     },
-    [updatePoison, convexRoomId, participant.id],
+    [updatePoison, convexRoomId, participant.id, poisonDelta],
   )
 
   // Hold-to-repeat hooks for each button
   const healthMinus = useHoldToRepeat({
-    onChange: (delta) => handleHealthChange(delta),
+    onChange: handleHealthChange,
     immediateDelta: -1,
     repeatDelta: -10,
   })
 
   const healthPlus = useHoldToRepeat({
-    onChange: (delta) => handleHealthChange(delta),
+    onChange: handleHealthChange,
     immediateDelta: 1,
     repeatDelta: 10,
   })
 
   const poisonMinus = useHoldToRepeat({
-    onChange: (delta) => handlePoisonChange(delta),
+    onChange: handlePoisonChange,
     immediateDelta: -1,
     repeatDelta: -10,
   })
 
   const poisonPlus = useHoldToRepeat({
-    onChange: (delta) => handlePoisonChange(delta),
+    onChange: handlePoisonChange,
     immediateDelta: 1,
     repeatDelta: 10,
   })
@@ -204,7 +212,14 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
             </span>
           </div>
 
-          <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="relative flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+            {healthDelta.delta < 0 && (
+              <DeltaBubble
+                delta={healthDelta.delta}
+                visible={healthDelta.visible}
+                side="left"
+              />
+            )}
             <Button
               size="icon"
               variant="ghost"
@@ -230,6 +245,13 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
             >
               <Plus className="h-3 w-3" />
             </Button>
+            {healthDelta.delta > 0 && (
+              <DeltaBubble
+                delta={healthDelta.delta}
+                visible={healthDelta.visible}
+                side="right"
+              />
+            )}
           </div>
         </div>
 
@@ -242,7 +264,14 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
             </span>
           </div>
 
-          <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="relative flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+            {poisonDelta.delta < 0 && (
+              <DeltaBubble
+                delta={poisonDelta.delta}
+                visible={poisonDelta.visible}
+                side="left"
+              />
+            )}
             <Button
               size="icon"
               variant="ghost"
@@ -268,6 +297,13 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
             >
               <Plus className="h-3 w-3" />
             </Button>
+            {poisonDelta.delta > 0 && (
+              <DeltaBubble
+                delta={poisonDelta.delta}
+                visible={poisonDelta.visible}
+                side="right"
+              />
+            )}
           </div>
         </div>
 
