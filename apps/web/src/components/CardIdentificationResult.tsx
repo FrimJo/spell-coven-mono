@@ -42,13 +42,15 @@ export function CardIdentificationResult({
   }
 
   return (
-    <Card className="overflow-hidden border-surface-2 bg-surface-1">
+    <Card className="border-surface-2 bg-surface-1 overflow-hidden">
       <div className="relative">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-surface-2 bg-surface-0/50 px-3 py-2">
+        <div className="border-surface-2 bg-surface-0/50 flex items-center justify-between border-b px-3 py-2">
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-brand-muted-foreground" />
-            <span className="text-sm text-text-secondary">Card Identification</span>
+            <div className="bg-brand-muted-foreground h-2 w-2 rounded-full" />
+            <span className="text-text-secondary text-sm">
+              Card Identification
+            </span>
           </div>
           {onClose && (
             <Button
@@ -68,8 +70,8 @@ export function CardIdentificationResult({
           {isLoading && (
             <div className="flex items-center justify-center py-8">
               <div className="flex flex-col items-center gap-2">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-muted-foreground border-t-transparent" />
-                <p className="text-sm text-text-muted">Identifying card...</p>
+                <div className="border-brand-muted-foreground h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
+                <p className="text-text-muted text-sm">Identifying card...</p>
               </div>
             </div>
           )}
@@ -103,31 +105,31 @@ export function CardIdentificationResult({
                   <h3 className="text-lg font-semibold text-white">
                     {result.card.name}
                   </h3>
-                  <p className="text-sm text-text-muted">
+                  <p className="text-text-muted text-sm">
                     {result.card.set.toUpperCase()}
                   </p>
                 </div>
 
                 {/* Similarity Score */}
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-text-muted">Confidence:</span>
+                  <span className="text-text-muted text-xs">Confidence:</span>
                   <div className="flex-1">
-                    <div className="h-2 overflow-hidden rounded-full bg-surface-2">
+                    <div className="bg-surface-2 h-2 overflow-hidden rounded-full">
                       <div
-                        className="h-full bg-brand-muted-foreground transition-all"
+                        className="bg-brand-muted-foreground h-full transition-all"
                         style={{
                           width: `${Math.max(0, Math.min(100, result.score * 100))}%`,
                         }}
                       />
                     </div>
                   </div>
-                  <span className="text-xs font-medium text-text-secondary">
+                  <span className="text-text-secondary text-xs font-medium">
                     {(result.score * 100).toFixed(1)}%
                   </span>
                 </div>
 
                 {/* Inference Time */}
-                <p className="text-xs text-text-muted">
+                <p className="text-text-muted text-xs">
                   Search time: {result.inferenceTimeMs.toFixed(0)}ms
                 </p>
               </div>

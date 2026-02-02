@@ -1,4 +1,3 @@
-import type { DetectorType } from '@/lib/detectors'
 import { Suspense } from 'react'
 import { AuthRequiredDialog } from '@/components/AuthRequiredDialog'
 import { ErrorFallback } from '@/components/ErrorFallback'
@@ -20,14 +19,13 @@ import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
 
 const defaultValues = {
-  detector: 'opencv' as const,
   usePerspectiveWarp: true, // SlimSAM provides quads
 }
 
 const gameSearchSchema = z.object({
   detector: z
     .enum(['opencv', 'detr', 'owl-vit', 'slimsam', 'yolov8'])
-    .default(defaultValues.detector),
+    .optional(),
   usePerspectiveWarp: z
     .boolean()
     .default(defaultValues.usePerspectiveWarp)
@@ -231,7 +229,7 @@ function GameRoomRoute() {
           roomId={gameId}
           playerName={user?.username ?? 'Player'}
           onLeaveGame={handleLeaveGame}
-          detectorType={detector as DetectorType | undefined}
+          detectorType={detector}
           usePerspectiveWarp={usePerspectiveWarp}
         />
       </Suspense>

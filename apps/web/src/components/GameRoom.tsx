@@ -214,7 +214,6 @@ function GameRoomContent({
       {/* Header */}
       <AppHeader
         variant="game"
-        roomId={roomId}
         shareLink={shareLink}
         copied={copied}
         onLeave={handleManualLeave}
@@ -247,7 +246,6 @@ function GameRoomContent({
               detectorType={detectorType}
               usePerspectiveWarp={usePerspectiveWarp}
               onCardCrop={query}
-              enableCardDetection={false}
               mutedPlayers={mutedPlayers}
             />
           </div>

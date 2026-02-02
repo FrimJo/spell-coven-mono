@@ -26,13 +26,6 @@ export const CommanderOverlay = memo(function CommanderOverlay({
   roomId,
   gridIndex,
 }: CommanderOverlayProps) {
-  // Only show if the participant has commanders
-  const hasCommanders =
-    participant.commanders.length > 0 &&
-    participant.commanders.some((c) => c?.name)
-
-  if (!hasCommanders) return null
-
   // Determine position based on grid index to center the overlay in the grid
   // 0: TL -> Bottom Right
   // 1: TR -> Bottom Left
@@ -121,6 +114,13 @@ export const CommanderOverlay = memo(function CommanderOverlay({
       },
     )
   })
+
+  // Only show if the participant has commanders
+  const hasCommanders =
+    participant.commanders.length > 0 &&
+    participant.commanders.some((c) => c?.name)
+
+  if (!hasCommanders) return null
 
   const handleUpdateDamage = (
     ownerUserId: string,

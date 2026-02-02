@@ -4,7 +4,6 @@
  * Features MTG-inspired styling with glass-morphism and purple accents.
  */
 
-import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   ArrowLeft,
@@ -55,8 +54,6 @@ interface AppHeaderProps {
   onSignIn?: () => void
 
   // Game-specific props
-  /** Room ID for player count (game only) */
-  roomId?: string
   /** Shareable link to display (game only) */
   shareLink?: string
   /** Whether the link was recently copied (game only) */
@@ -294,7 +291,6 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
 // ============================================================================
 
 function GameHeader({
-  roomId,
   shareLink,
   copied = false,
   onLeave,

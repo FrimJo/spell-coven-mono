@@ -38,7 +38,7 @@ export function RejoinGameDialog({
           title: 'Banned from Game',
           description:
             'You have been banned from this game room by the owner. You cannot rejoin this room.',
-          icon: <Ban className="h-6 w-6 text-destructive" />,
+          icon: <Ban className="text-destructive h-6 w-6" />,
           iconBg: 'bg-destructive/20',
           canRejoin: false,
         }
@@ -47,7 +47,7 @@ export function RejoinGameDialog({
           title: 'Removed from Game',
           description:
             'You have been removed from the game room. You can attempt to rejoin or return to the main menu.',
-          icon: <AlertTriangle className="h-6 w-6 text-warning" />,
+          icon: <AlertTriangle className="text-warning h-6 w-6" />,
           iconBg: 'bg-warning/20',
           canRejoin: true,
           rejoinText: 'Rejoin Game',
@@ -58,7 +58,7 @@ export function RejoinGameDialog({
           title: 'Connection Lost',
           description:
             'You lost connection to the game server. Check your internet connection and try again.',
-          icon: <AlertTriangle className="h-6 w-6 text-destructive" />,
+          icon: <AlertTriangle className="text-destructive h-6 w-6" />,
           iconBg: 'bg-destructive/20',
           canRejoin: true,
           rejoinText: 'Reconnect',
@@ -70,7 +70,7 @@ export function RejoinGameDialog({
           title: 'You Left the Game',
           description:
             'You have left the game room. You can rejoin if the game is still active.',
-          icon: <DoorOpen className="h-6 w-6 text-text-muted" />,
+          icon: <DoorOpen className="text-text-muted h-6 w-6" />,
           iconBg: 'bg-surface-3/20',
           canRejoin: true,
           rejoinText: 'Rejoin Game',
@@ -95,7 +95,7 @@ export function RejoinGameDialog({
           <DialogTitle className="text-center text-white">
             {content.title}
           </DialogTitle>
-          <DialogDescription className="text-center text-text-muted">
+          <DialogDescription className="text-text-muted text-center">
             {content.description}
           </DialogDescription>
         </DialogHeader>
@@ -104,17 +104,17 @@ export function RejoinGameDialog({
           {content.canRejoin && (
             <button
               onClick={onRejoin}
-              className="group w-full cursor-pointer rounded-lg border border-brand/30 bg-surface-0/30 p-4 text-left transition-all hover:border-brand/60 hover:bg-surface-1/40 focus:outline-none focus:ring-2 focus:ring-brand/50"
+              className="border-brand/30 bg-surface-0/30 hover:border-brand/60 hover:bg-surface-1/40 focus:ring-brand/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
             >
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/20 transition-colors group-hover:bg-brand/30">
-                  <RotateCcw className="h-5 w-5 text-brand-muted-foreground" />
+                <div className="bg-brand/20 group-hover:bg-brand/30 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors">
+                  <RotateCcw className="text-brand-muted-foreground h-5 w-5" />
                 </div>
                 <div>
-                  <p className="font-medium text-brand-muted-foreground">
+                  <p className="text-brand-muted-foreground font-medium">
                     {content.rejoinText}
                   </p>
-                  <p className="mt-0.5 text-sm text-text-muted">
+                  <p className="text-text-muted mt-0.5 text-sm">
                     {content.rejoinDescription}
                   </p>
                 </div>
@@ -124,15 +124,17 @@ export function RejoinGameDialog({
 
           <button
             onClick={onLeave}
-            className="group w-full cursor-pointer rounded-lg border border-surface-3 bg-surface-2/50 p-4 text-left transition-all hover:border-surface-3 hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-surface-3/50"
+            className="border-surface-3 bg-surface-2/50 hover:border-surface-3 hover:bg-surface-2 focus:ring-surface-3/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
           >
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-3/50 transition-colors group-hover:bg-surface-3">
-                <DoorOpen className="h-5 w-5 text-text-muted" />
+              <div className="bg-surface-3/50 group-hover:bg-surface-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors">
+                <DoorOpen className="text-text-muted h-5 w-5" />
               </div>
               <div>
-                <p className="font-medium text-text-secondary">Return to Home</p>
-                <p className="mt-0.5 text-sm text-text-muted">
+                <p className="text-text-secondary font-medium">
+                  Return to Home
+                </p>
+                <p className="text-text-muted mt-0.5 text-sm">
                   Leave the game permanently
                 </p>
               </div>

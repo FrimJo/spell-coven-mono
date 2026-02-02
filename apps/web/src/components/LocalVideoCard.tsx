@@ -13,7 +13,6 @@ import {
   CroppedCanvas,
   FullResCanvas,
   LocalMediaControls,
-  PlayerNameBadge,
   VideoDisabledPlaceholder,
 } from './PlayerVideoCardParts'
 
@@ -29,7 +28,6 @@ const LOCAL_VIDEO_STYLE: React.CSSProperties = {
 }
 
 interface LocalVideoCardProps {
-  localPlayerName: string
   stream?: MediaStream | null
   enableCardDetection?: boolean
   detectorType?: DetectorType
@@ -43,7 +41,6 @@ interface LocalVideoCardProps {
 }
 
 export const LocalVideoCard = memo(function LocalVideoCard({
-  localPlayerName,
   stream,
   enableCardDetection = true,
   detectorType,
@@ -179,11 +176,10 @@ export const LocalVideoCard = memo(function LocalVideoCard({
       )}
 
       {/* Stats Overlay */}
-      {roomId && participant && currentUser && participants && (
+      {roomId && participant && participants && (
         <PlayerStatsOverlay
           roomId={roomId}
           participant={participant}
-          currentUser={currentUser}
           participants={participants}
         />
       )}

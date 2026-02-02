@@ -48,7 +48,7 @@ function SidebarContent({
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
 
   // Current time state for computing online status (updates every 5 seconds)
-  const [now, setNow] = useState(Date.now())
+  const [now, setNow] = useState(() => Date.now())
 
   // Update current time periodically to re-evaluate online status
   useEffect(() => {

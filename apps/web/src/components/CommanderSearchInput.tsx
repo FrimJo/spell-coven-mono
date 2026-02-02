@@ -169,12 +169,12 @@ export function CommanderSearchInput({
             autoComplete="off"
           />
           {loading && !hideLoadingIndicator && (
-            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-text-muted" />
+            <Loader2 className="text-text-muted absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin" />
           )}
         </div>
       </PopoverAnchor>
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] border-surface-3 bg-surface-1 p-0"
+        className="border-surface-3 bg-surface-1 w-[var(--radix-popover-trigger-width)] p-0"
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
@@ -190,7 +190,7 @@ export function CommanderSearchInput({
                     key={`sug-${name}`}
                     value={name}
                     onSelect={() => handleSuggestionSelect(name)}
-                    className="cursor-pointer text-brand-muted-foreground hover:bg-surface-2"
+                    className="text-brand-muted-foreground hover:bg-surface-2 cursor-pointer"
                   >
                     {name}
                   </CommandItem>
@@ -198,13 +198,16 @@ export function CommanderSearchInput({
               </CommandGroup>
             )}
             {results.length > 0 && (
-              <CommandGroup heading="Search Results" className="text-text-muted">
+              <CommandGroup
+                heading="Search Results"
+                className="text-text-muted"
+              >
                 {results.slice(0, 10).map((name) => (
                   <CommandItem
                     key={name}
                     value={name}
                     onSelect={() => handleSelect(name)}
-                    className="cursor-pointer text-text-secondary hover:bg-surface-2"
+                    className="text-text-secondary hover:bg-surface-2 cursor-pointer"
                   >
                     {name}
                   </CommandItem>
