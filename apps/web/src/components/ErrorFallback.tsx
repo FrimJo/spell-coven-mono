@@ -16,7 +16,7 @@ export function ErrorFallback({
       {resetErrorBoundary && (
         <Button
           onClick={resetErrorBoundary}
-          className="bg-info text-white hover:bg-info"
+          className="bg-info hover:bg-info text-white"
         >
           Try again
         </Button>

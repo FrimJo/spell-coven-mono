@@ -20,14 +20,12 @@ import { DeltaBubble } from './DeltaBubble'
 interface PlayerStatsOverlayProps {
   roomId: string
   participant: Participant
-  currentUser: Participant
   participants: Participant[]
 }
 
 export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
   roomId,
   participant,
-  currentUser,
   participants,
 }: PlayerStatsOverlayProps) {
   // Use roomId as-is - roomPlayers table stores bare roomId (e.g., "ABC123")

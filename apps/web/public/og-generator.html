@@ -1,151 +1,175 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      width: 1200px;
-      height: 630px;
-      overflow: hidden;
-      background-color: #020617;
-      position: relative;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background-color: #020617;
+        position: relative;
+      }
 
-    .og-container {
-      width: 1200px;
-      height: 630px;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
+      .og-container {
+        width: 1200px;
+        height: 630px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
 
-    /* Background Gradients */
-    .bg-gradient {
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 15% 50%, rgba(88, 28, 135, 0.25) 0%, transparent 50%),
-                  radial-gradient(circle at 85% 30%, rgba(30, 58, 138, 0.25) 0%, transparent 50%);
-      z-index: 0;
-    }
+      /* Background Gradients */
+      .bg-gradient {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            circle at 15% 50%,
+            rgba(88, 28, 135, 0.25) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 85% 30%,
+            rgba(30, 58, 138, 0.25) 0%,
+            transparent 50%
+          );
+        z-index: 0;
+      }
 
-    .grid-overlay {
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-      background-size: 50px 50px;
-      z-index: 1;
-      mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
-    }
+      .grid-overlay {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 50px 50px;
+        z-index: 1;
+        mask-image: radial-gradient(
+          circle at center,
+          black 40%,
+          transparent 100%
+        );
+      }
 
-    /* Decorative Elements */
-    .orb-1 {
-      position: absolute;
-      top: -100px;
-      right: -100px;
-      width: 400px;
-      height: 400px;
-      background: #7c3aed;
-      filter: blur(120px);
-      opacity: 0.2;
-      z-index: 0;
-    }
+      /* Decorative Elements */
+      .orb-1 {
+        position: absolute;
+        top: -100px;
+        right: -100px;
+        width: 400px;
+        height: 400px;
+        background: #7c3aed;
+        filter: blur(120px);
+        opacity: 0.2;
+        z-index: 0;
+      }
 
-    .orb-2 {
-      position: absolute;
-      bottom: -100px;
-      left: -100px;
-      width: 400px;
-      height: 400px;
-      background: #2563eb;
-      filter: blur(120px);
-      opacity: 0.2;
-      z-index: 0;
-    }
+      .orb-2 {
+        position: absolute;
+        bottom: -100px;
+        left: -100px;
+        width: 400px;
+        height: 400px;
+        background: #2563eb;
+        filter: blur(120px);
+        opacity: 0.2;
+        z-index: 0;
+      }
 
-    .content {
-      position: relative;
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      gap: 24px;
-    }
+      .content {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 24px;
+      }
 
-    .logo-container {
-      position: relative;
-      width: 180px;
-      height: 180px;
-      margin-bottom: 16px;
-      filter: drop-shadow(0 0 30px rgba(147, 51, 234, 0.5));
-    }
+      .logo-container {
+        position: relative;
+        width: 180px;
+        height: 180px;
+        margin-bottom: 16px;
+        filter: drop-shadow(0 0 30px rgba(147, 51, 234, 0.5));
+      }
 
-    .logo-glow {
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle, rgba(147, 51, 234, 0.4) 0%, transparent 70%);
-      filter: blur(20px);
-      z-index: -1;
-    }
+      .logo-glow {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          circle,
+          rgba(147, 51, 234, 0.4) 0%,
+          transparent 70%
+        );
+        filter: blur(20px);
+        z-index: -1;
+      }
 
-    h1 {
-      font-size: 84px;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1;
-      margin: 0;
-      color: #ffffff;
-      text-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
+      h1 {
+        font-size: 84px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1;
+        margin: 0;
+        color: #ffffff;
+        text-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      }
 
-    h1 .highlight {
-      background: linear-gradient(to right, #c084fc, #60a5fa);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
+      h1 .highlight {
+        background: linear-gradient(to right, #c084fc, #60a5fa);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
 
-    p {
-      font-size: 36px;
-      font-weight: 500;
-      color: #94a3b8;
-      margin: 0;
-      max-width: 800px;
-      line-height: 1.4;
-    }
-  </style>
-</head>
-<body>
-  <div class="og-container">
-    <div class="bg-gradient"></div>
-    <div class="grid-overlay"></div>
-    <div class="orb-1"></div>
-    <div class="orb-2"></div>
+      p {
+        font-size: 36px;
+        font-weight: 500;
+        color: #94a3b8;
+        margin: 0;
+        max-width: 800px;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="og-container">
+      <div class="bg-gradient"></div>
+      <div class="grid-overlay"></div>
+      <div class="orb-1"></div>
+      <div class="orb-2"></div>
 
-    <div class="content">
-      <div class="logo-container">
-        <div class="logo-glow"></div>
-        <img src="./logo512.png" alt="Spell Coven Logo" style="width: 100%; height: 100%; object-fit: contain;">
+      <div class="content">
+        <div class="logo-container">
+          <div class="logo-glow"></div>
+          <img
+            src="./logo512.png"
+            alt="Spell Coven Logo"
+            style="width: 100%; height: 100%; object-fit: contain"
+          />
+        </div>
+
+        <h1>Spell Coven</h1>
+
+        <p style="color: #ffffff; font-size: 48px; font-weight: 700">
+          Play Paper MTG <span class="highlight">Anywhere</span>.
+        </p>
+        <p style="font-size: 28px; opacity: 0.8; margin-top: 12px">
+          Free • Browser-based • No Downloads
+        </p>
       </div>
-
-      <h1>Spell Coven</h1>
-
-      <p style="color: #ffffff; font-size: 48px; font-weight: 700;">
-        Play Paper MTG <span class="highlight">Anywhere</span>.
-      </p>
-      <p style="font-size: 28px; opacity: 0.8; margin-top: 12px;">
-        Free • Browser-based • No Downloads
-      </p>
     </div>
-  </div>
-</body>
+  </body>
 </html>

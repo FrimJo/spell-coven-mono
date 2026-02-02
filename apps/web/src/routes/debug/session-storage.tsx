@@ -9,27 +9,27 @@ function DebugSessionStorage() {
   const creatorInviteState = sessionStorage.loadCreatorInviteState?.()
 
   return (
-    <div className="min-h-screen bg-surface-0 p-8 text-white">
+    <div className="bg-surface-0 min-h-screen p-8 text-white">
       <h1 className="mb-4 text-3xl font-bold">Debug: Session Storage</h1>
 
       <div className="space-y-6">
-        <div className="rounded bg-surface-2 p-4">
+        <div className="bg-surface-2 rounded p-4">
           <h2 className="mb-2 text-xl font-bold">Game State</h2>
-          <pre className="overflow-auto rounded bg-surface-1 p-3 text-sm">
+          <pre className="bg-surface-1 overflow-auto rounded p-3 text-sm">
             {JSON.stringify(gameState, null, 2) || 'null'}
           </pre>
         </div>
 
-        <div className="rounded bg-surface-2 p-4">
+        <div className="bg-surface-2 rounded p-4">
           <h2 className="mb-2 text-xl font-bold">Creator Invite State</h2>
-          <pre className="overflow-auto rounded bg-surface-1 p-3 text-sm">
+          <pre className="bg-surface-1 overflow-auto rounded p-3 text-sm">
             {JSON.stringify(creatorInviteState, null, 2) || 'null'}
           </pre>
         </div>
 
-        <div className="rounded bg-surface-2 p-4">
+        <div className="bg-surface-2 rounded p-4">
           <h2 className="mb-2 text-xl font-bold">Raw sessionStorage</h2>
-          <pre className="overflow-auto rounded bg-surface-1 p-3 text-sm">
+          <pre className="bg-surface-1 overflow-auto rounded p-3 text-sm">
             {JSON.stringify(
               Object.fromEntries(
                 Object.keys(sessionStorage).map((key) => [

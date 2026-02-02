@@ -14,7 +14,7 @@ export const Route = createFileRoute('/')({
 
 function LandingPageContent() {
   const navigate = useNavigate()
-  const { user, isLoading: isAuthLoading, signIn, signOut } = useAuth()
+  const { user, isLoading: isAuthLoading, signIn } = useAuth()
 
   // After authentication completes, redirect to the stored return URL (e.g., game room)
   useEffect(() => {
@@ -40,9 +40,7 @@ function LandingPageContent() {
         onRefreshInvite={() => {}}
         isRefreshingInvite={false}
         user={user}
-        isAuthLoading={isAuthLoading}
         onSignIn={signIn}
-        onSignOut={signOut}
       />
     </ErrorBoundary>
   )

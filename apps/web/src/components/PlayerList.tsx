@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import {
   Ban,
   Crown,
@@ -105,17 +106,41 @@ export function PlayerList({
             // Empty slot
             if (!player) {
               return (
-                <div
+                <motion.div
                   key={`empty-${index}`}
-                  className="border-surface-3 bg-surface-2/20 flex min-h-[42px] items-center justify-between rounded-lg border border-dashed p-2 transition-colors"
+                  className="border-surface-3 bg-surface-2/20 flex min-h-[42px] items-center justify-between rounded-lg border border-dashed p-2"
+                  animate={{
+                    opacity: [0.6, 0.85, 0.6],
+                    borderColor: [
+                      'rgba(255, 255, 255, 0.1)',
+                      'rgba(255, 255, 255, 0.2)',
+                      'rgba(255, 255, 255, 0.1)',
+                    ],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }}
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <div className="bg-surface-3 h-2 w-2 flex-shrink-0 rounded-full" />
+                    <motion.div
+                      className="bg-surface-3 h-2 w-2 flex-shrink-0 rounded-full"
+                      animate={{
+                        scale: [1, 1.2, 1],
+                        opacity: [0.5, 0.8, 0.5],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: 'easeInOut',
+                      }}
+                    />
                     <span className="text-text-muted truncate text-sm">
-                      Open slot
+                      Open seat
                     </span>
                   </div>
-                </div>
+                </motion.div>
               )
             }
 

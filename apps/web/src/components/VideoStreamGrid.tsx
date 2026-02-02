@@ -188,7 +188,6 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
             <PlayerStatsOverlay
               roomId={roomId}
               participant={participantData}
-              currentUser={localParticipant}
               participants={gameRoomParticipants}
             />
           </>
@@ -245,8 +244,6 @@ interface VideoStreamGridProps {
   userId: string
   localPlayerName: string
   // Card detection
-  /** Enable card detection with green borders and click-to-crop */
-  enableCardDetection?: boolean
   /** Detector type to use (opencv, detr, owl-vit) */
   detectorType?: DetectorType
   /** Enable perspective warp for corner refinement */
@@ -266,12 +263,13 @@ export function VideoStreamGrid({
   roomId,
   userId,
   localPlayerName,
-  enableCardDetection = true, // Always enabled by default
   detectorType,
   usePerspectiveWarp = true,
   onCardCrop,
   mutedPlayers = new Set(),
 }: VideoStreamGridProps) {
+  const enableCardDetection = !!detectorType
+
   // Get participants from context (already deduplicated)
   const {
     uniqueParticipants: gameRoomParticipants,
@@ -384,14 +382,16 @@ export function VideoStreamGrid({
     [gameRoomParticipants, localPlayerName],
   )
 
-  const [streamStates, setStreamStates] = useState<Record<string, StreamState>>(
-    players.reduce(
-      (acc, player) => ({
-        ...acc,
-        [player.id]: { video: true, audio: true },
-      }),
-      {} as Record<string, StreamState>,
-    ),
+  const streamStates = useMemo<Record<string, StreamState>>(
+    () =>
+      players.reduce(
+        (acc, player) => ({
+          ...acc,
+          [player.id]: { video: true, audio: true },
+        }),
+        {},
+      ),
+    [players],
   )
 
   // Find local player (not currently used but may be needed for future features)
@@ -509,7 +509,6 @@ export function VideoStreamGrid({
         </div>
       ) : (
         <LocalVideoCard
-          localPlayerName={localPlayerName}
           stream={localStream}
           enableCardDetection={enableCardDetection}
           detectorType={detectorType}

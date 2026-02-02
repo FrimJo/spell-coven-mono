@@ -44,15 +44,15 @@ export function MediaSetupPage({ onComplete, onCancel }: MediaSetupPageProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-0">
+    <div className="bg-surface-0 flex min-h-screen items-center justify-center">
       {/* Background gradient */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-1/4 -top-1/4 h-1/2 w-1/2 rounded-full bg-brand/10 blur-3xl" />
-        <div className="absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full bg-info/10 blur-3xl" />
+        <div className="bg-brand/10 absolute -left-1/4 -top-1/4 h-1/2 w-1/2 rounded-full blur-3xl" />
+        <div className="bg-info/10 absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full blur-3xl" />
       </div>
 
       {/* Media Setup Panel - centered card */}
-      <div className="relative z-10 w-full max-w-[700px] rounded-lg border border-surface-2 bg-surface-1 p-6 shadow-xl">
+      <div className="border-surface-2 bg-surface-1 relative z-10 w-full max-w-[700px] rounded-lg border p-6 shadow-xl">
         <MediaSetupPanel
           onComplete={onComplete}
           onCancel={handlePanelCancel}
@@ -66,13 +66,13 @@ export function MediaSetupPage({ onComplete, onCancel }: MediaSetupPageProps) {
       <AlertDialog open={showCancelWarning} onOpenChange={setShowCancelWarning}>
         <AlertDialogContent className="border-surface-2 bg-surface-1">
           <AlertDialogHeader>
-            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-warning/20">
-              <AlertTriangle className="h-6 w-6 text-warning" />
+            <div className="bg-warning/20 mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full">
+              <AlertTriangle className="text-warning h-6 w-6" />
             </div>
             <AlertDialogTitle className="text-center text-white">
               Leave Without Saving?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-text-muted">
+            <AlertDialogDescription className="text-text-muted text-center">
               Your settings will not be saved and you&apos;ll be redirected to
               the home page. You must complete audio & video setup before
               joining a game room.
@@ -87,7 +87,7 @@ export function MediaSetupPage({ onComplete, onCancel }: MediaSetupPageProps) {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmCancel}
-              className="bg-warning text-white hover:bg-warning"
+              className="bg-warning hover:bg-warning text-white"
             >
               Leave Anyway
             </AlertDialogAction>

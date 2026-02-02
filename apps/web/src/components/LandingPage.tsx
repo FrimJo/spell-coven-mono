@@ -7,6 +7,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import {
   Camera,
+  ChevronDown,
   Gamepad2,
   Heart,
   Loader2,
@@ -30,6 +31,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@repo/ui/components/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@repo/ui/components/dropdown-menu'
 import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
 import { Toaster } from '@repo/ui/components/sonner'
@@ -49,9 +56,7 @@ interface LandingPageProps {
   isRefreshingInvite?: boolean
   /** Auth props */
   user?: AuthUser | null
-  isAuthLoading?: boolean
   onSignIn?: () => void | Promise<void>
-  onSignOut?: () => void | Promise<void>
 }
 
 export function LandingPage({
@@ -60,9 +65,7 @@ export function LandingPage({
   onRefreshInvite: _onRefreshInvite,
   isRefreshingInvite: _isRefreshingInvite,
   user,
-  isAuthLoading,
   onSignIn,
-  onSignOut,
 }: LandingPageProps) {
   const navigate = useNavigate()
   const supportUrl = env.VITE_SUPPORT_URL
@@ -327,61 +330,150 @@ export function LandingPage({
                       )}
                     </Button>
 
-                    <Dialog
-                      open={dialogs.join}
-                      onOpenChange={(open) =>
-                        setDialogs((prev) => ({ ...prev, join: open }))
-                      }
-                    >
-                      <DialogTrigger asChild>
+                    {/* Join / Rejoin Game - Combined Button */}
+                    {activeRoomQuery?.roomId ? (
+                      // User has an active room - show rejoin as primary with dropdown for join with code
+                      <div className="flex">
                         <Button
                           size="lg"
                           variant="outline"
-                          className="border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2 h-14 min-w-[200px] gap-2 text-lg font-semibold hover:text-white"
-                          onClick={handleJoinClick}
-                          data-testid="join-game-button"
+                          className="border-success/40 bg-success/10 text-success hover:bg-success/20 h-14 min-w-[160px] gap-2 rounded-r-none border-r-0 text-lg font-semibold hover:text-white"
+                          onClick={handleRejoinLastRoom}
+                          data-testid="rejoin-game-button"
                         >
-                          <Play className="h-5 w-5" />
-                          Join Game
+                          <RotateCcw className="h-5 w-5" />
+                          Rejoin Game
                         </Button>
-                      </DialogTrigger>
-                      <DialogContent className="border-border-muted bg-surface-1">
-                        <DialogHeader>
-                          <DialogTitle className="text-text-primary">
-                            Join a Game
-                          </DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 pt-4">
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor="game-id"
-                              className="text-text-secondary"
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="lg"
+                              variant="outline"
+                              className="border-success/40 bg-success/10 text-success hover:bg-success/20 h-14 rounded-l-none px-3"
+                              data-testid="join-game-dropdown"
                             >
-                              Game ID
-                            </Label>
-                            <Input
-                              id="game-id"
-                              placeholder="Enter game ID (e.g., ABC123)"
-                              value={joinGameId}
-                              onChange={(e) => setJoinGameId(e.target.value)}
-                              className="border-surface-3 bg-surface-0 text-text-primary"
-                              onKeyDown={(e) =>
-                                e.key === 'Enter' && handleJoin()
-                              }
-                              data-testid="join-game-id-input"
-                            />
-                          </div>
-                          <Button
-                            onClick={handleJoin}
-                            disabled={!joinGameId.trim()}
-                            className="bg-brand hover:bg-brand w-full text-white"
-                            data-testid="join-game-submit-button"
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="border-surface-3 bg-surface-1"
                           >
-                            Join Game Room
+                            <DropdownMenuItem
+                              onClick={handleJoinClick}
+                              className="text-text-secondary hover:text-white"
+                            >
+                              <Play className="mr-2 h-4 w-4" />
+                              Join with Code
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    ) : (
+                      // No active room - show regular join game button
+                      <Dialog
+                        open={dialogs.join}
+                        onOpenChange={(open) =>
+                          setDialogs((prev) => ({ ...prev, join: open }))
+                        }
+                      >
+                        <DialogTrigger asChild>
+                          <Button
+                            size="lg"
+                            variant="outline"
+                            className="border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2 h-14 min-w-[200px] gap-2 text-lg font-semibold hover:text-white"
+                            onClick={handleJoinClick}
+                            data-testid="join-game-button"
+                          >
+                            <Play className="h-5 w-5" />
+                            Join Game
                           </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                        </DialogTrigger>
+                        <DialogContent className="border-border-muted bg-surface-1">
+                          <DialogHeader>
+                            <DialogTitle className="text-text-primary">
+                              Join a Game
+                            </DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 pt-4">
+                            <div className="space-y-2">
+                              <Label
+                                htmlFor="game-id"
+                                className="text-text-secondary"
+                              >
+                                Game ID
+                              </Label>
+                              <Input
+                                id="game-id"
+                                placeholder="Enter game ID (e.g., ABC123)"
+                                value={joinGameId}
+                                onChange={(e) => setJoinGameId(e.target.value)}
+                                className="border-surface-3 bg-surface-0 text-text-primary"
+                                onKeyDown={(e) =>
+                                  e.key === 'Enter' && handleJoin()
+                                }
+                                data-testid="join-game-id-input"
+                              />
+                            </div>
+                            <Button
+                              onClick={handleJoin}
+                              disabled={!joinGameId.trim()}
+                              className="bg-brand hover:bg-brand w-full text-white"
+                              data-testid="join-game-submit-button"
+                            >
+                              Join Game Room
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+
+                    {/* Join Game Dialog - used when dropdown "Join with Code" is clicked */}
+                    {activeRoomQuery?.roomId && (
+                      <Dialog
+                        open={dialogs.join}
+                        onOpenChange={(open) =>
+                          setDialogs((prev) => ({ ...prev, join: open }))
+                        }
+                      >
+                        <DialogContent className="border-border-muted bg-surface-1">
+                          <DialogHeader>
+                            <DialogTitle className="text-text-primary">
+                              Join a Game
+                            </DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 pt-4">
+                            <div className="space-y-2">
+                              <Label
+                                htmlFor="game-id"
+                                className="text-text-secondary"
+                              >
+                                Game ID
+                              </Label>
+                              <Input
+                                id="game-id"
+                                placeholder="Enter game ID (e.g., ABC123)"
+                                value={joinGameId}
+                                onChange={(e) => setJoinGameId(e.target.value)}
+                                className="border-surface-3 bg-surface-0 text-text-primary"
+                                onKeyDown={(e) =>
+                                  e.key === 'Enter' && handleJoin()
+                                }
+                                data-testid="join-game-id-input"
+                              />
+                            </div>
+                            <Button
+                              onClick={handleJoin}
+                              disabled={!joinGameId.trim()}
+                              className="bg-brand hover:bg-brand w-full text-white"
+                              data-testid="join-game-submit-button"
+                            >
+                              Join Game Room
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
 
                     {/* Create Game Dialog */}
                     <CreateGameDialog
@@ -391,20 +483,6 @@ export function LandingPage({
                       createdGameId={gameCreation.gameId}
                       onNavigateToRoom={handleNavigateToRoom}
                     />
-
-                    {/* Rejoin Last Room Button */}
-                    {activeRoomQuery?.roomId && (
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="border-success/40 bg-success/10 text-success hover:bg-success/20 h-14 min-w-[200px] gap-2 text-lg font-semibold hover:text-white"
-                        onClick={handleRejoinLastRoom}
-                        data-testid="rejoin-game-button"
-                      >
-                        <RotateCcw className="h-5 w-5" />
-                        Rejoin Last Room
-                      </Button>
-                    )}
                   </>
                 ) : (
                   <Button
