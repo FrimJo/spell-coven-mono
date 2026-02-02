@@ -19,7 +19,7 @@ import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
 
 const defaultValues = {
-  usePerspectiveWarp: true, // SlimSAM provides quads
+  usePerspectiveWarp: true, // Use OpenCV quad for precise perspective correction
   testStream: false, // Show a synthetic test stream in an empty slot
 }
 

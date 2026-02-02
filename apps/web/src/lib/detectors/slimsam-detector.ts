@@ -369,8 +369,8 @@ export class SlimSAMDetector implements CardDetector {
               if (blob) {
                 const url = URL.createObjectURL(blob)
                 console.groupCollapsed(
-                  '%c[DEBUG DETECTION] SlimSAM detected quad (GREEN=edges, RED=corners)',
-                  'background: #795548; color: white; padding: 2px 6px; border-radius: 3px;',
+                  '%c[DEBUG STAGE 2] SlimSAM quad detection (GREEN=edges, RED=corners)',
+                  'background: #4CAF50; color: white; padding: 2px 6px; border-radius: 3px;',
                 )
                 console.log(
                   '%c ',
@@ -386,8 +386,25 @@ export class SlimSAMDetector implements CardDetector {
             const validation = validateQuad(quad, canvasWidth, canvasHeight)
 
             if (validation.valid) {
-              // T020: Apply perspective warp to get canonical 224×224 image
-              const warpedCanvas = await warpCardToCanonical(canvas, quad)
+              // T020: Apply perspective warp using OpenCV quad to get canonical card image
+              console.log(
+                '[SlimSAM] Calling warpCardToCanonical with quad:',
+                quad,
+              )
+              let warpedCanvas: HTMLCanvasElement | undefined
+              try {
+                warpedCanvas = await warpCardToCanonical(canvas, quad)
+                console.log('[SlimSAM] warpCardToCanonical returned:', {
+                  hasCanvas: !!warpedCanvas,
+                  width: warpedCanvas?.width,
+                  height: warpedCanvas?.height,
+                })
+              } catch (warpError) {
+                console.error(
+                  '[SlimSAM] warpCardToCanonical failed:',
+                  warpError,
+                )
+              }
 
               // Convert quad to normalized polygon for DetectedCard
               const polygon: Point[] = [

@@ -30,7 +30,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     optimizeDeps: {
-      exclude: ['@techstark/opencv-js'], // Exclude from pre-bundling (it's loaded dynamically)
+      // Note: @techstark/opencv-js is used only for TypeScript types
+      // The actual OpenCV.js is loaded via CDN script tag to avoid Vite bundling issues
     },
     ssr: {
       external: [],

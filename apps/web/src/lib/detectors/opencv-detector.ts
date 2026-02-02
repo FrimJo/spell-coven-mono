@@ -21,10 +21,12 @@ import type { CV, InputArray, Mat, MatVector } from '@techstark/opencv-js'
 
 import type {
   CardDetector,
+  CardQuad,
   DetectionOutput,
   DetectorConfig,
   DetectorStatus,
 } from './types.js'
+import { warpCardToCanonical } from './geometry/perspective.js'
 
 // OpenCV.js minimal type definitions
 declare global {
@@ -180,34 +182,71 @@ export class OpenCVDetector implements CardDetector {
       console.log(
         `[OpenCV] Filtering ${rawDetections.length} detections with threshold=${this.config.confidenceThreshold || 0.01}`,
       )
-      let cards = rawDetections
-        .filter((d) => d.score >= (this.config.confidenceThreshold || 0.01))
-        .map((d) => ({
-          box: d.box,
-          score: d.score,
-          polygon: d.polygon,
-        }))
+      let filteredDetections = rawDetections.filter(
+        (d) => d.score >= (this.config.confidenceThreshold || 0.01),
+      )
 
       // If click point provided, prioritize detections near it
-      if (this.clickPoint && cards.length > 0) {
+      if (this.clickPoint && filteredDetections.length > 0) {
         const clickPoint = this.clickPoint
         // Calculate distance from click point to each detection's center
-        const cardsWithDistance = cards.map((card) => {
-          const centerX = ((card.box.xmin + card.box.xmax) / 2) * canvas.width
-          const centerY = ((card.box.ymin + card.box.ymax) / 2) * canvas.height
+        const detectionsWithDistance = filteredDetections.map((detection) => {
+          const centerX =
+            ((detection.box.xmin + detection.box.xmax) / 2) * canvas.width
+          const centerY =
+            ((detection.box.ymin + detection.box.ymax) / 2) * canvas.height
           const dx = centerX - clickPoint.x
           const dy = centerY - clickPoint.y
           const distance = Math.sqrt(dx * dx + dy * dy)
-          return { card, distance }
+          return { detection, distance }
         })
 
         // Sort by distance (closest first)
-        cardsWithDistance.sort((a, b) => a.distance - b.distance)
-        cards = cardsWithDistance.map((c) => c.card)
+        detectionsWithDistance.sort((a, b) => a.distance - b.distance)
+        filteredDetections = detectionsWithDistance.map((c) => c.detection)
       }
 
       // Clear click point after use
       this.clickPoint = null
+
+      // Apply perspective warp to each detection using the polygon
+      const cards = await Promise.all(
+        filteredDetections.map(async (d) => {
+          // Convert polygon to CardQuad
+          const quad = this.polygonToQuad(
+            d.polygon,
+            canvas.width,
+            canvas.height,
+          )
+
+          // DEBUG: Log the quad detection
+          this.logQuadDebug(canvas, quad, d.polygon)
+
+          // Apply perspective warp
+          let warpedCanvas: HTMLCanvasElement | undefined
+          if (quad) {
+            try {
+              warpedCanvas = await warpCardToCanonical(canvas, quad)
+              console.log('[OpenCV] Perspective warp successful:', {
+                width: warpedCanvas.width,
+                height: warpedCanvas.height,
+              })
+            } catch (warpError) {
+              console.error('[OpenCV] Perspective warp failed:', warpError)
+            }
+          }
+
+          return {
+            box: d.box,
+            score: d.score,
+            polygon: d.polygon.map((p) => ({
+              x: p.x / canvas.width,
+              y: p.y / canvas.height,
+            })),
+            warpedCanvas,
+          }
+        }),
+      )
 
       const inferenceTime = performance.now() - startTime
 
@@ -224,6 +263,125 @@ export class OpenCVDetector implements CardDetector {
         rawDetectionCount: 0,
       }
     }
+  }
+
+  /**
+   * Convert polygon points to ordered CardQuad
+   * Orders points as: top-left, top-right, bottom-right, bottom-left
+   */
+  private polygonToQuad(
+    polygon: Array<{ x: number; y: number }>,
+    _canvasWidth: number,
+    _canvasHeight: number,
+  ): CardQuad | null {
+    if (polygon.length !== 4) {
+      console.warn('[OpenCV] Polygon does not have 4 points:', polygon.length)
+      return null
+    }
+
+    // Calculate centroid
+    const centroid = {
+      x: polygon.reduce((sum, p) => sum + p.x, 0) / 4,
+      y: polygon.reduce((sum, p) => sum + p.y, 0) / 4,
+    }
+
+    // Sort points by angle from centroid (clockwise in screen coords)
+    const sorted = [...polygon].sort((a, b) => {
+      const angleA = Math.atan2(a.y - centroid.y, a.x - centroid.x)
+      const angleB = Math.atan2(b.y - centroid.y, b.x - centroid.x)
+      return angleB - angleA // Descending for clockwise
+    })
+
+    // Find top-left point (smallest x + y sum)
+    let topLeftIdx = 0
+    let minSum = sorted[0]!.x + sorted[0]!.y
+
+    for (let i = 1; i < 4; i++) {
+      const point = sorted[i]!
+      const sum = point.x + point.y
+      if (sum < minSum) {
+        minSum = sum
+        topLeftIdx = i
+      }
+    }
+
+    // Reorder starting from top-left, going clockwise
+    const ordered = []
+    for (let i = 0; i < 4; i++) {
+      ordered.push(sorted[(topLeftIdx + i) % 4]!)
+    }
+
+    return {
+      topLeft: ordered[0]!,
+      topRight: ordered[1]!,
+      bottomRight: ordered[2]!,
+      bottomLeft: ordered[3]!,
+    }
+  }
+
+  /**
+   * Log debug visualization of the detected quad
+   */
+  private logQuadDebug(
+    canvas: HTMLCanvasElement,
+    quad: CardQuad | null,
+    polygon: Array<{ x: number; y: number }>,
+  ): void {
+    if (!quad) return
+
+    const debugCanvas = document.createElement('canvas')
+    debugCanvas.width = canvas.width
+    debugCanvas.height = canvas.height
+    const debugCtx = debugCanvas.getContext('2d', { willReadFrequently: true })
+    if (!debugCtx) return
+
+    debugCtx.drawImage(canvas, 0, 0)
+
+    // Draw the quad corners and edges
+    debugCtx.strokeStyle = '#00ff00'
+    debugCtx.lineWidth = 3
+    debugCtx.beginPath()
+    debugCtx.moveTo(quad.topLeft.x, quad.topLeft.y)
+    debugCtx.lineTo(quad.topRight.x, quad.topRight.y)
+    debugCtx.lineTo(quad.bottomRight.x, quad.bottomRight.y)
+    debugCtx.lineTo(quad.bottomLeft.x, quad.bottomLeft.y)
+    debugCtx.closePath()
+    debugCtx.stroke()
+
+    // Draw corner circles with labels
+    debugCtx.fillStyle = '#ff0000'
+    const drawCorner = (x: number, y: number, label: string) => {
+      debugCtx.beginPath()
+      debugCtx.arc(x, y, 8, 0, 2 * Math.PI)
+      debugCtx.fill()
+      debugCtx.fillStyle = '#ffffff'
+      debugCtx.font = '14px monospace'
+      debugCtx.fillText(label, x + 12, y + 5)
+      debugCtx.fillStyle = '#ff0000'
+    }
+    drawCorner(quad.topLeft.x, quad.topLeft.y, 'TL')
+    drawCorner(quad.topRight.x, quad.topRight.y, 'TR')
+    drawCorner(quad.bottomRight.x, quad.bottomRight.y, 'BR')
+    drawCorner(quad.bottomLeft.x, quad.bottomLeft.y, 'BL')
+
+    // Log the quad visualization
+    debugCanvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        console.groupCollapsed(
+          '%c[DEBUG STAGE 2] OpenCV quad detection (GREEN=edges, RED=corners)',
+          'background: #4CAF50; color: white; padding: 2px 6px; border-radius: 3px;',
+        )
+        console.log(
+          '%c ',
+          `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+        )
+        console.log('Blob URL (copy this):', url)
+        console.log('Quad:', quad)
+        console.log('Raw polygon:', polygon)
+        console.groupEnd()
+      }
+    }, 'image/png')
   }
 
   dispose(): void {
