@@ -27,6 +27,9 @@ The following features are currently available and working:
 - ✅ **Multi-party Video/Audio Chat**: WebRTC-powered video and audio communication between players
 - ✅ **Webcam Integration**: Use your webcam as an overhead camera for your playmat
 - ✅ **User Authentication**: Sign in with Clerk authentication
+- ✅ **Life Total Tracking**: Keep track of life totals for all players
+- ✅ **Commander Damage Tracking**: Track commander damage across multiple opponents
+- ✅ **Invite by URL**: Share a link to invite friends to your game room
 
 ## Coming Soon
 
@@ -40,15 +43,9 @@ These features are actively being developed:
 
 Future enhancements on the roadmap:
 
-- **Life Total Tracking**: Keep track of life totals for all players
-- **Commander Damage Tracking**: Track commander damage across multiple opponents
-- **Turn Indicator System**: Visual indicator for whose turn it is
-- **Game Timer/Turn Clock**: Optional timers for competitive play
 - **Public/Private Room Matchmaking**: Find games with players of similar formats and power levels
 - **User Accounts and Game History**: Track your play sessions over time
 - **Replay and Spectator Modes**: Watch games or review past sessions
-- **Custom Game Rules and Formats**: Support for house rules and custom formats
-- **Community Features**: Friends lists, invites, and social features
 
 ## Target Use Case
 
@@ -57,7 +54,7 @@ Spell Coven is designed for Magic: The Gathering players who want to play with t
 - **Remote Play Sessions**: Play paper MTG with friends across distances using video chat
 - **Casual & Competitive Play**: Support for various formats (Commander, Modern, Standard, etc.) with power level indicators
 - **Card Identification**: Quickly identify cards on camera for rules lookups and oracle text (coming soon)
-- **Game State Tracking**: Keep track of life totals and commander damage (coming soon)
+- **Game State Tracking**: Keep track of life totals and commander damage
 - **Flexible Setup**: Use any webcam or smartphone as an overhead camera—no special equipment needed
 
 ### Competitive Landscape
