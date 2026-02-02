@@ -20,6 +20,7 @@ import { z } from 'zod'
 
 const defaultValues = {
   usePerspectiveWarp: true, // SlimSAM provides quads
+  testStream: false, // Show a synthetic test stream in an empty slot
 }
 
 const gameSearchSchema = z.object({
@@ -30,6 +31,10 @@ const gameSearchSchema = z.object({
     .boolean()
     .default(defaultValues.usePerspectiveWarp)
     .describe('Enable perspective correction (corner refinement + warp)'),
+  testStream: z
+    .boolean()
+    .default(defaultValues.testStream)
+    .describe('Show a synthetic test stream in an empty slot for development'),
 })
 
 // Zod schema for validating the gameId path parameter
@@ -154,7 +159,7 @@ const AUTH_RETURN_TO_KEY = 'auth-return-to'
 
 function GameRoomRoute() {
   const { gameId } = Route.useParams()
-  const { detector, usePerspectiveWarp } = Route.useSearch()
+  const { detector, usePerspectiveWarp, testStream } = Route.useSearch()
   const navigate = useNavigate()
   const { user, isLoading: isAuthLoading, isAuthenticated, signIn } = useAuth()
 
@@ -231,6 +236,7 @@ function GameRoomRoute() {
           onLeaveGame={handleLeaveGame}
           detectorType={detector}
           usePerspectiveWarp={usePerspectiveWarp}
+          showTestStream={testStream}
         />
       </Suspense>
     </ErrorBoundary>

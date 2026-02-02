@@ -3,8 +3,14 @@ import type { Participant } from '@/types/participant'
 import { memo, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { usePresence } from '@/contexts/PresenceContext'
+import { useCardDetector } from '@/hooks/useCardDetector'
 import { useConvexWebRTC } from '@/hooks/useConvexWebRTC'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
+import {
+  createSilentAudioStream,
+  createSyntheticVideoStream,
+} from '@/lib/mockMedia'
+import { attachVideoStream } from '@/lib/video-stream-utils'
 import { motion } from 'framer-motion'
 import {
   AlertCircle,
@@ -29,6 +35,9 @@ import { LocalVideoCard } from './LocalVideoCard'
 import { MediaPermissionGate } from './MediaPermissionGate'
 import { PlayerStatsOverlay } from './PlayerStatsOverlay'
 import {
+  CardDetectionOverlay,
+  CroppedCanvas,
+  FullResCanvas,
   PlayerNameBadge,
   VideoDisabledPlaceholder,
 } from './PlayerVideoCardParts'
@@ -70,6 +79,11 @@ interface RemotePlayerCardProps {
   gameRoomParticipants: Participant[]
   gridIndex: number
   isOnline: boolean // Presence-based online status (matches sidebar)
+  // Card detection props
+  enableCardDetection: boolean
+  detectorType?: DetectorType
+  usePerspectiveWarp: boolean
+  onCardCrop?: (canvas: HTMLCanvasElement) => void
 }
 
 const RemotePlayerCard = memo(function RemotePlayerCard({
@@ -90,13 +104,35 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
   gameRoomParticipants,
   gridIndex,
   isOnline,
+  enableCardDetection,
+  detectorType,
+  usePerspectiveWarp,
+  onCardCrop,
 }: RemotePlayerCardProps) {
+  // Local video ref for card detection (separate from the shared remoteVideoRefs map)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
   // Remote players: use trackState which checks if track is 'live'
   const peerVideoEnabled = trackState?.videoEnabled ?? false
   const peerAudioEnabled = trackState?.audioEnabled ?? streamState.audio
 
-  // These handlers use refs which are stable, so no need to memoize
+  // Initialize card detector for this remote player's stream
+  const { overlayRef, croppedRef, fullResRef } = useCardDetector({
+    videoRef: videoRef,
+    enableCardDetection:
+      enableCardDetection && peerVideoEnabled && !!remoteStream,
+    detectorType,
+    usePerspectiveWarp,
+    onCrop: onCardCrop,
+    reinitializeTrigger: remoteStream ? 1 : 0,
+  })
+
+  // Combined ref handler - updates both local ref and shared map
   const handleVideoRef = (element: HTMLVideoElement | null) => {
+    // Update local ref for card detector
+    videoRef.current = element
+
+    // Update shared map for stream attachment
     if (element) {
       remoteVideoRefs.current.set(playerId, element)
     } else {
@@ -168,6 +204,15 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
                 onError={handleVideoError}
               />
             )}
+            {enableCardDetection && overlayRef && (
+              <CardDetectionOverlay overlayRef={overlayRef} />
+            )}
+            {enableCardDetection && croppedRef && (
+              <CroppedCanvas croppedRef={croppedRef} />
+            )}
+            {enableCardDetection && fullResRef && (
+              <FullResCanvas fullResRef={fullResRef} />
+            )}
           </>
         ) : (
           <VideoDisabledPlaceholder />
@@ -238,6 +283,88 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
   )
 })
 
+// Extract video element style for test stream slot
+const TEST_VIDEO_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+  zIndex: 0,
+}
+
+/**
+ * Test stream slot component - renders a synthetic video stream for development testing.
+ * Uses the mock media functions to create an animated canvas stream with a test card image.
+ */
+const TestStreamSlot = memo(function TestStreamSlot() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [testStream, setTestStream] = useState<MediaStream | null>(null)
+
+  // Create the test stream on mount
+  useEffect(() => {
+    console.log('[TestStreamSlot] Creating synthetic test stream')
+
+    // Create video and audio streams
+    const videoStream = createSyntheticVideoStream()
+    const audioStream = createSilentAudioStream()
+
+    // Combine into a single stream
+    const combinedStream = new MediaStream([
+      ...videoStream.getVideoTracks(),
+      ...audioStream.getAudioTracks(),
+    ])
+
+    setTestStream(combinedStream)
+
+    // Cleanup on unmount
+    return () => {
+      console.log('[TestStreamSlot] Cleaning up test stream')
+      combinedStream.getTracks().forEach((track) => track.stop())
+    }
+  }, [])
+
+  // Attach stream to video element when ready
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || !testStream) return
+
+    attachVideoStream(video, testStream)
+  }, [testStream])
+
+  return (
+    <Card className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden">
+      <div className="relative min-h-0 flex-1 bg-black">
+        {testStream ? (
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            style={TEST_VIDEO_STYLE}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <Loader2 className="text-brand-muted-foreground h-8 w-8 animate-spin" />
+          </div>
+        )}
+
+        <PlayerNameBadge position="bottom-center">
+          <span className="text-white">Test Stream</span>
+        </PlayerNameBadge>
+
+        {/* Indicator that this is a test stream */}
+        <div className="absolute left-3 top-3 z-10">
+          <div className="border-brand/30 bg-brand/20 flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs backdrop-blur-sm">
+            <span className="text-brand-foreground">🧪 Test</span>
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
+})
+
 interface VideoStreamGridProps {
   // Room and user identification (for fetching participants)
   roomId: string
@@ -252,6 +379,8 @@ interface VideoStreamGridProps {
   onCardCrop?: (canvas: HTMLCanvasElement) => void
   /** Set of muted player IDs (controlled by parent) */
   mutedPlayers?: Set<string>
+  /** Show a synthetic test stream in an empty slot (for development) */
+  showTestStream?: boolean
 }
 
 interface StreamState {
@@ -267,6 +396,7 @@ export function VideoStreamGrid({
   usePerspectiveWarp = true,
   onCardCrop,
   mutedPlayers = new Set(),
+  showTestStream = false,
 }: VideoStreamGridProps) {
   const enableCardDetection = !!detectorType
 
@@ -553,52 +683,65 @@ export function VideoStreamGrid({
             gameRoomParticipants={gameRoomParticipants}
             gridIndex={index + 1}
             isOnline={isOnline}
+            enableCardDetection={enableCardDetection}
+            detectorType={detectorType}
+            usePerspectiveWarp={usePerspectiveWarp}
+            onCardCrop={onCardCrop}
           />
         )
       })}
 
+      {/* Test stream slot - rendered when showTestStream is true and there are empty slots */}
+      {showTestStream && emptySlots > 0 && (
+        <TestStreamSlot key="test-stream-slot" />
+      )}
+
       {/* Empty slots for players who haven't joined yet */}
-      {Array.from({ length: emptySlots }).map((_, index) => (
-        <Card
-          key={`empty-slot-${index}`}
-          className="border-default bg-surface-1/50 flex h-full flex-col overflow-hidden border-dashed"
-        >
-          <div className="bg-surface-0/50 relative flex min-h-0 flex-1 items-center justify-center">
-            <div className="space-y-4 text-center">
-              <motion.div className="bg-brand/10 relative mx-auto flex h-16 w-16 items-center justify-center rounded-full">
-                <motion.div
-                  className="bg-brand/20 absolute inset-0 rounded-full"
-                  animate={{
-                    scale: [1, 1.4, 1],
-                    opacity: [0.5, 0, 0.5],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  }}
-                />
-                <motion.div
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  }}
-                >
-                  <Gamepad2 className="text-brand-muted-foreground h-8 w-8" />
+      {Array.from({ length: showTestStream ? emptySlots - 1 : emptySlots }).map(
+        (_, index) => (
+          <Card
+            key={`empty-slot-${index}`}
+            className="border-default bg-surface-1/50 flex h-full flex-col overflow-hidden border-dashed"
+          >
+            <div className="bg-surface-0/50 relative flex min-h-0 flex-1 items-center justify-center">
+              <div className="space-y-4 text-center">
+                <motion.div className="bg-brand/10 relative mx-auto flex h-16 w-16 items-center justify-center rounded-full">
+                  <motion.div
+                    className="bg-brand/20 absolute inset-0 rounded-full"
+                    animate={{
+                      scale: [1, 1.4, 1],
+                      opacity: [0.5, 0, 0.5],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                  />
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                  >
+                    <Gamepad2 className="text-brand-muted-foreground h-8 w-8" />
+                  </motion.div>
                 </motion.div>
-              </motion.div>
-              <div className="space-y-1">
-                <p className="text-text-muted text-sm font-medium">Open Slot</p>
-                <p className="text-text-muted/60 text-xs">
-                  Waiting for player...
-                </p>
+                <div className="space-y-1">
+                  <p className="text-text-muted text-sm font-medium">
+                    Open Slot
+                  </p>
+                  <p className="text-text-muted/60 text-xs">
+                    Waiting for player...
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        </Card>
-      ))}
+          </Card>
+        ),
+      )}
     </div>
   )
 }
