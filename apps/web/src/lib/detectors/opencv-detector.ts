@@ -25,7 +25,9 @@ import type {
   DetectionOutput,
   DetectorConfig,
   DetectorStatus,
+  Point,
 } from './types.js'
+import { orderQuadPoints } from './geometry/contours.js'
 import { warpCardToCanonical } from './geometry/perspective.js'
 
 // OpenCV.js minimal type definitions
@@ -213,11 +215,10 @@ export class OpenCVDetector implements CardDetector {
       const cards = await Promise.all(
         filteredDetections.map(async (d) => {
           // Convert polygon to CardQuad
-          const quad = this.polygonToQuad(
-            d.polygon,
-            canvas.width,
-            canvas.height,
-          )
+          const quad =
+            d.polygon.length === 4
+              ? orderQuadPoints(d.polygon as Point[])
+              : null
 
           // DEBUG: Log the quad detection
           this.logQuadDebug(canvas, quad, d.polygon)
@@ -262,60 +263,6 @@ export class OpenCVDetector implements CardDetector {
         inferenceTimeMs: performance.now() - startTime,
         rawDetectionCount: 0,
       }
-    }
-  }
-
-  /**
-   * Convert polygon points to ordered CardQuad
-   * Orders points as: top-left, top-right, bottom-right, bottom-left
-   */
-  private polygonToQuad(
-    polygon: Array<{ x: number; y: number }>,
-    _canvasWidth: number,
-    _canvasHeight: number,
-  ): CardQuad | null {
-    if (polygon.length !== 4) {
-      console.warn('[OpenCV] Polygon does not have 4 points:', polygon.length)
-      return null
-    }
-
-    // Calculate centroid
-    const centroid = {
-      x: polygon.reduce((sum, p) => sum + p.x, 0) / 4,
-      y: polygon.reduce((sum, p) => sum + p.y, 0) / 4,
-    }
-
-    // Sort points by angle from centroid (clockwise in screen coords)
-    const sorted = [...polygon].sort((a, b) => {
-      const angleA = Math.atan2(a.y - centroid.y, a.x - centroid.x)
-      const angleB = Math.atan2(b.y - centroid.y, b.x - centroid.x)
-      return angleB - angleA // Descending for clockwise
-    })
-
-    // Find top-left point (smallest x + y sum)
-    let topLeftIdx = 0
-    let minSum = sorted[0]!.x + sorted[0]!.y
-
-    for (let i = 1; i < 4; i++) {
-      const point = sorted[i]!
-      const sum = point.x + point.y
-      if (sum < minSum) {
-        minSum = sum
-        topLeftIdx = i
-      }
-    }
-
-    // Reorder starting from top-left, going clockwise
-    const ordered = []
-    for (let i = 0; i < 4; i++) {
-      ordered.push(sorted[(topLeftIdx + i) % 4]!)
-    }
-
-    return {
-      topLeft: ordered[0]!,
-      topRight: ordered[1]!,
-      bottomRight: ordered[2]!,
-      bottomLeft: ordered[3]!,
     }
   }
 
