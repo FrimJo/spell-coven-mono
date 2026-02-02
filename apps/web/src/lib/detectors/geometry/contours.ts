@@ -176,89 +176,221 @@ export async function approximateToQuad(
 }
 
 /**
- * Order quad points in consistent order: top-left, top-right, bottom-right, bottom-left
+ * Calculate distance between two points
+ */
+function distance(p1: Point, p2: Point): number {
+  const dx = p2.x - p1.x
+  const dy = p2.y - p1.y
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
+/**
+ * Order quad points for MTG card: ensures output is portrait orientation (taller than wide)
  *
  * Algorithm:
- * 1. Find centroid of the 4 points
- * 2. Sort by angle from centroid (clockwise in screen coordinates)
- * 3. Identify top-left as the point with smallest x+y sum
- * 4. Order remaining points clockwise
- *
- * Note: In screen coordinates (Y increases downward), atan2 returns angles where:
- * - Left of centroid: ±π
- * - Above centroid: -π/2
- * - Right of centroid: 0
- * - Below centroid: +π/2
- *
- * Sorting ascending gives: right(0) → bottom(π/2) → left(±π) → top(-π/2)
- * But we want clockwise from top-left: TL → TR → BR → BL
- *
- * After finding top-left (smallest x+y) and rotating the array to start there,
- * ascending angle order gives us the correct clockwise sequence.
+ * 1. Find all 6 pairwise distances between the 4 points
+ * 2. The two longest distances are the diagonals
+ * 3. The 4 shorter distances are the edges
+ * 4. Group adjacent points (connected by edges) to find opposite corner pairs
+ * 5. Use edge lengths to determine which edges are width (short) vs height (long)
+ * 6. Assign corners so the output is portrait orientation
  *
  * @param points - Array of 4 corner points (any order)
- * @returns Ordered CardQuad
+ * @returns Ordered CardQuad where topLeft-topRight is a SHORT edge (card width)
  */
 export function orderQuadPoints(points: Point[]): CardQuad {
   if (points.length !== 4) {
     throw new Error(`Expected 4 points, got ${points.length}`)
   }
 
-  // Calculate centroid
-  const centroid = {
-    x: points.reduce((sum, p) => sum + p.x, 0) / 4,
-    y: points.reduce((sum, p) => sum + p.y, 0) / 4,
+  const [p0, p1, p2, p3] = points
+  if (!p0 || !p1 || !p2 || !p3) {
+    throw new Error('orderQuadPoints: Missing points')
   }
 
-  // Sort points by angle from centroid (ascending order)
-  // This gives us a consistent ordering around the quad
-  const sorted = [...points].sort((a, b) => {
-    const angleA = Math.atan2(a.y - centroid.y, a.x - centroid.x)
-    const angleB = Math.atan2(b.y - centroid.y, b.x - centroid.x)
-    return angleA - angleB // Ascending
-  })
-
-  // Find top-left point (smallest x + y sum)
-  let topLeftIdx = 0
-  const firstPoint = sorted[0]
-  if (!firstPoint) {
-    throw new Error(
-      'orderQuadPoints: Expected at least 1 point in sorted array',
-    )
-  }
-  let minSum = firstPoint.x + firstPoint.y
-
-  for (let i = 1; i < 4; i++) {
-    const point = sorted[i]
-    if (!point) {
-      throw new Error(`orderQuadPoints: Missing point at index ${i}`)
-    }
-    const sum = point.x + point.y
-    if (sum < minSum) {
-      minSum = sum
-      topLeftIdx = i
-    }
-  }
-
-  // Reorder starting from top-left, going clockwise
-  const ordered: Point[] = []
+  // Calculate all 6 pairwise distances
+  const distances: Array<{ i: number; j: number; dist: number }> = []
   for (let i = 0; i < 4; i++) {
-    const point = sorted[(topLeftIdx + i) % 4]
-    if (!point) {
-      throw new Error(
-        `orderQuadPoints: Missing point at index ${(topLeftIdx + i) % 4}`,
-      )
+    for (let j = i + 1; j < 4; j++) {
+      const pi = points[i]!
+      const pj = points[j]!
+      distances.push({ i, j, dist: distance(pi, pj) })
     }
-    ordered.push(point)
+  }
+
+  // Sort by distance descending - the two longest are diagonals
+  distances.sort((a, b) => b.dist - a.dist)
+
+  // The 4 shortest are edges (indices 2,3,4,5 after sorting)
+  const edges = distances.slice(2)
+
+  // Build adjacency: which points are connected by edges
+  const adjacent: Map<number, number[]> = new Map()
+  for (let i = 0; i < 4; i++) adjacent.set(i, [])
+
+  for (const edge of edges) {
+    adjacent.get(edge.i)!.push(edge.j)
+    adjacent.get(edge.j)!.push(edge.i)
+  }
+
+  // Each point should have exactly 2 adjacent points (forming a quadrilateral)
+  // Find the edge lengths for each point pair
+  const getEdgeLength = (i: number, j: number): number => {
+    const edge = edges.find(
+      (e) => (e.i === i && e.j === j) || (e.i === j && e.j === i),
+    )
+    return edge ? edge.dist : 0
+  }
+
+  // Start from point 0, traverse the quad to get ordered points
+  const ordered: number[] = [0]
+  const visited = new Set<number>([0])
+
+  while (ordered.length < 4) {
+    const current = ordered[ordered.length - 1]!
+    const neighbors = adjacent.get(current)!
+    const next = neighbors.find((n) => !visited.has(n))
+    if (next === undefined) break
+    ordered.push(next)
+    visited.add(next)
   }
 
   if (ordered.length !== 4) {
-    throw new Error('orderQuadPoints: Expected exactly 4 ordered points')
+    throw new Error('orderQuadPoints: Could not traverse quad')
   }
 
-  const [topLeft, topRight, bottomRight, bottomLeft] = ordered
-  if (!topLeft || !topRight || !bottomRight || !bottomLeft) {
-    throw new Error('orderQuadPoints: Missing required points')
+  // Now we have points in order around the quad (either CW or CCW)
+  // Get the actual points
+  const q0 = points[ordered[0]!]!
+  const q1 = points[ordered[1]!]!
+  const q2 = points[ordered[2]!]!
+  const q3 = points[ordered[3]!]!
+
+  // Calculate edge lengths in traversal order
+  const len01 = distance(q0, q1)
+  const len12 = distance(q1, q2)
+  const len23 = distance(q2, q3)
+  const len30 = distance(q3, q0)
+
+  // Opposite edges: (q0-q1, q2-q3) and (q1-q2, q3-q0)
+  const avgLen01_23 = (len01 + len23) / 2
+  const avgLen12_30 = (len12 + len30) / 2
+
+  // Determine which edges are the "width" (shorter) edges
+  // These should become top and bottom in output
+
+  let topLeft: Point, topRight: Point, bottomRight: Point, bottomLeft: Point
+
+  // In traversal order q0 -> q1 -> q2 -> q3 -> q0:
+  // - q0-q1 and q2-q3 are opposite edges
+  // - q1-q2 and q3-q0 are opposite edges
+  // - q0 connects to q1 (forward) and q3 (backward)
+  // - q1 connects to q2 (forward) and q0 (backward)
+  // - q2 connects to q3 (forward) and q1 (backward)
+  // - q3 connects to q0 (forward) and q2 (backward)
+
+  if (avgLen01_23 < avgLen12_30) {
+    // q0-q1 and q2-q3 are the SHORT edges (should become top/bottom)
+    // q1-q2 and q3-q0 are the LONG edges (should become left/right, i.e., height)
+
+    // Determine which short edge is "top" (smaller Y = higher on screen)
+    const midY01 = (q0.y + q1.y) / 2
+    const midY23 = (q2.y + q3.y) / 2
+
+    if (midY01 <= midY23) {
+      // q0-q1 is top edge, q2-q3 is bottom edge
+      // In traversal: q0 -> q1 -> q2 -> q3 -> q0
+      // q1 connects to q2, q0 connects to q3
+      if (q0.x <= q1.x) {
+        // q0 is left, q1 is right on top edge
+        topLeft = q0
+        topRight = q1
+        // q1 -> q2, so q2 is adjacent to topRight -> q2 is bottomRight
+        // q0 <- q3, so q3 is adjacent to topLeft -> q3 is bottomLeft
+        bottomRight = q2
+        bottomLeft = q3
+      } else {
+        // q1 is left, q0 is right on top edge
+        topLeft = q1
+        topRight = q0
+        // q1 -> q2, so q2 is adjacent to topLeft -> q2 is bottomLeft
+        // q0 <- q3, so q3 is adjacent to topRight -> q3 is bottomRight
+        bottomLeft = q2
+        bottomRight = q3
+      }
+    } else {
+      // q2-q3 is top edge, q0-q1 is bottom edge
+      // In traversal: q0 -> q1 -> q2 -> q3 -> q0
+      // q2 connects to q3 (forward) and q1 (backward)
+      // q3 connects to q0 (forward) and q2 (backward)
+      if (q2.x <= q3.x) {
+        // q2 is left, q3 is right on top edge
+        topLeft = q2
+        topRight = q3
+        // q2 <- q1, so q1 is adjacent to topLeft -> q1 is bottomLeft
+        // q3 -> q0, so q0 is adjacent to topRight -> q0 is bottomRight
+        bottomLeft = q1
+        bottomRight = q0
+      } else {
+        // q3 is left, q2 is right on top edge
+        topLeft = q3
+        topRight = q2
+        // q3 -> q0, so q0 is adjacent to topLeft -> q0 is bottomLeft
+        // q2 <- q1, so q1 is adjacent to topRight -> q1 is bottomRight
+        bottomLeft = q0
+        bottomRight = q1
+      }
+    }
+  } else {
+    // q1-q2 and q3-q0 are the SHORT edges (should become top/bottom)
+    // q0-q1 and q2-q3 are the LONG edges (should become left/right, i.e., height)
+
+    const midY12 = (q1.y + q2.y) / 2
+    const midY30 = (q3.y + q0.y) / 2
+
+    if (midY12 <= midY30) {
+      // q1-q2 is top edge, q3-q0 is bottom edge
+      // q1 connects to q0 (backward) and q2 (forward)
+      // q2 connects to q1 (backward) and q3 (forward)
+      if (q1.x <= q2.x) {
+        // q1 is left, q2 is right on top edge
+        topLeft = q1
+        topRight = q2
+        // q1 <- q0, so q0 is adjacent to topLeft -> q0 is bottomLeft
+        // q2 -> q3, so q3 is adjacent to topRight -> q3 is bottomRight
+        bottomLeft = q0
+        bottomRight = q3
+      } else {
+        // q2 is left, q1 is right on top edge
+        topLeft = q2
+        topRight = q1
+        // q2 -> q3, so q3 is adjacent to topLeft -> q3 is bottomLeft
+        // q1 <- q0, so q0 is adjacent to topRight -> q0 is bottomRight
+        bottomLeft = q3
+        bottomRight = q0
+      }
+    } else {
+      // q3-q0 is top edge, q1-q2 is bottom edge
+      // q3 connects to q2 (backward) and q0 (forward)
+      // q0 connects to q3 (backward) and q1 (forward)
+      if (q3.x <= q0.x) {
+        // q3 is left, q0 is right on top edge
+        topLeft = q3
+        topRight = q0
+        // q3 <- q2, so q2 is adjacent to topLeft -> q2 is bottomLeft
+        // q0 -> q1, so q1 is adjacent to topRight -> q1 is bottomRight
+        bottomLeft = q2
+        bottomRight = q1
+      } else {
+        // q0 is left, q3 is right on top edge
+        topLeft = q0
+        topRight = q3
+        // q0 -> q1, so q1 is adjacent to topLeft -> q1 is bottomLeft
+        // q3 <- q2, so q2 is adjacent to topRight -> q2 is bottomRight
+        bottomLeft = q1
+        bottomRight = q2
+      }
+    }
   }
 
   return {

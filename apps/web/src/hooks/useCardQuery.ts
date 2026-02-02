@@ -5,7 +5,7 @@ import type {
   UseCardQueryReturn,
 } from '@/types/card-query'
 import { useCallback, useRef, useState } from 'react'
-import { embedFromCanvas, top1, topK } from '@/lib/clip-search'
+import { embedFromCanvas, isModelReady, top1, topK } from '@/lib/clip-search'
 import { generateOrientationCandidates } from '@/lib/detectors/geometry/orientation'
 import { validateCanvas } from '@/types/card-query'
 
@@ -155,23 +155,49 @@ export function useCardQuery(): UseCardQueryReturn {
             }
           }, 'image/png')
 
+          // Synchronous log to confirm code execution continues after toBlob
+          console.log(
+            `[useCardQuery] Proceeding to embed orientation candidate ${i} (toBlob logged asynchronously above)`,
+          )
+
+          // Check if model and database are ready
+          if (!isModelReady()) {
+            const errorMsg =
+              'CLIP model or embeddings database not loaded. Cannot proceed with embedding.'
+            console.error(`[useCardQuery] ${errorMsg}`)
+            throw new Error(errorMsg)
+          }
+
           // Embed the candidate
           console.log(
             `[useCardQuery] Starting embedding for orientation ${i}...`,
           )
-          const { embedding, metrics: embeddingMetrics } =
-            await embedFromCanvas(candidate).catch((err) => {
-              throw new Error(`Failed to embed canvas: ${err.message}`)
-            })
+          let embedding: Float32Array
+          let embeddingMetrics: EmbeddingMetrics
+          try {
+            const embeddingResult = await embedFromCanvas(candidate)
+            embedding = embeddingResult.embedding
+            embeddingMetrics = embeddingResult.metrics
+          } catch (err) {
+            console.error(
+              `[useCardQuery] Failed to embed canvas for orientation ${i}:`,
+              err,
+            )
+            throw new Error(
+              `Failed to embed canvas: ${err instanceof Error ? err.message : String(err)}`,
+            )
+          }
           totalEmbeddingMs += embeddingMetrics.total
           console.log(`[useCardQuery] Embedding completed for orientation ${i}`)
 
           // Query the database
           console.log('[useCardQuery] Embedding dimension:', embedding.length)
+          console.log('[useCardQuery] About to query database with top1()...')
           const searchStart = performance.now()
           let result
           try {
             result = top1(embedding)
+            console.log('[useCardQuery] top1() returned result:', result)
           } catch (err) {
             console.error('[useCardQuery] top1() threw error:', err)
             throw err
