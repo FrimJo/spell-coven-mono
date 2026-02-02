@@ -211,6 +211,311 @@
 }
 
 /* ============================================
+   MTG Color Themes (Dark Mode variants)
+   Each theme overrides the dark mode palette
+   ============================================ */
+
+/* ⚪ White --- Order, Light, Structure */
+[data-mtg-theme='white'].dark {
+  /* Core Colors */
+  --background: #1a1915; /* Dark warm base */
+  --foreground: #F5F2E9; /* Ivory */
+  --card: #252218;
+  --card-foreground: #F5F2E9;
+  --popover: #252218;
+  --popover-foreground: #F5F2E9;
+  --primary: #D4AF37; /* Gold accent */
+  --primary-foreground: #1a1915;
+  --secondary: #2d2a22;
+  --secondary-foreground: #F5F2E9;
+  --muted: #2d2a22;
+  --muted-foreground: #D9D9D6; /* Marble gray */
+  --accent: #D4AF37;
+  --accent-foreground: #1a1915;
+  --destructive: #B8352D;
+  --destructive-foreground: #F5F2E9;
+
+  /* Borders & Inputs */
+  --border: #3d3a30;
+  --input: #3d3a30;
+  --ring: #D4AF37;
+
+  /* Brand (White/Gold theme) */
+  --brand: #D4AF37;
+  --brand-foreground: #1a1915;
+  --brand-muted: rgba(212, 175, 55, 0.2);
+  --brand-muted-foreground: #FFF4CC; /* Soft halo */
+
+  /* Surface levels */
+  --surface-0: #0f0e0a;
+  --surface-1: #1a1915;
+  --surface-2: #252218;
+  --surface-3: #3d3a30;
+
+  /* Text levels */
+  --text-primary: #FAFAF7; /* Warm white */
+  --text-secondary: #F5F2E9; /* Ivory */
+  --text-tertiary: #D9D9D6; /* Marble gray */
+  --text-muted: #a8a59c;
+  --text-placeholder: #6d6a5f;
+
+  /* Border levels */
+  --border-default: #3d3a30;
+  --border-muted: #252218;
+  --border-strong: #5d5a4f;
+
+  /* Sidebar */
+  --sidebar: #1a1915;
+  --sidebar-foreground: #F5F2E9;
+  --sidebar-primary: #D4AF37;
+  --sidebar-primary-foreground: #1a1915;
+  --sidebar-accent: #2d2a22;
+  --sidebar-accent-foreground: #F5F2E9;
+  --sidebar-border: #3d3a30;
+  --sidebar-ring: #D4AF37;
+}
+
+/* 🔵 Blue --- Knowledge, Control, Precision */
+[data-mtg-theme='blue'].dark {
+  /* Core Colors */
+  --background: #0a1520; /* Deep ocean base */
+  --foreground: #DCEBFF; /* Mist */
+  --card: #0d1f2d;
+  --card-foreground: #DCEBFF;
+  --popover: #0d1f2d;
+  --popover-foreground: #DCEBFF;
+  --primary: #4DA6FF; /* Mana glow */
+  --primary-foreground: #0a1520;
+  --secondary: #152535;
+  --secondary-foreground: #DCEBFF;
+  --muted: #152535;
+  --muted-foreground: #5A6F8E; /* Steel blue */
+  --accent: #4DA6FF;
+  --accent-foreground: #0a1520;
+  --destructive: #e04848;
+  --destructive-foreground: #DCEBFF;
+
+  /* Borders & Inputs */
+  --border: #1F4FD8; /* Arcane blue */
+  --input: #1d3550;
+  --ring: #4DA6FF;
+
+  /* Brand (Blue theme) */
+  --brand: #1F4FD8; /* Arcane blue */
+  --brand-foreground: #DCEBFF;
+  --brand-muted: rgba(77, 166, 255, 0.2);
+  --brand-muted-foreground: #4DA6FF;
+
+  /* Surface levels */
+  --surface-0: #050a10;
+  --surface-1: #0a1520;
+  --surface-2: #0d1f2d;
+  --surface-3: #1d3550;
+
+  /* Text levels */
+  --text-primary: #DCEBFF; /* Mist */
+  --text-secondary: #b5d4ff;
+  --text-tertiary: #8ab8f5;
+  --text-muted: #5A6F8E; /* Steel blue */
+  --text-placeholder: #3a4f6e;
+
+  /* Border levels */
+  --border-default: #1d3550;
+  --border-muted: #152535;
+  --border-strong: #2a5080;
+
+  /* Sidebar */
+  --sidebar: #0d1f2d;
+  --sidebar-foreground: #DCEBFF;
+  --sidebar-primary: #4DA6FF;
+  --sidebar-primary-foreground: #0a1520;
+  --sidebar-accent: #152535;
+  --sidebar-accent-foreground: #DCEBFF;
+  --sidebar-border: #1d3550;
+  --sidebar-ring: #4DA6FF;
+}
+
+/* ⚫ Black --- Power, Death, Ambition */
+[data-mtg-theme='black'].dark {
+  /* Core Colors */
+  --background: #0a0a0a; /* Near obsidian */
+  --foreground: #C9C1B6; /* Bone */
+  --card: #121212; /* Obsidian */
+  --card-foreground: #C9C1B6;
+  --popover: #121212;
+  --popover-foreground: #C9C1B6;
+  --primary: #C9C1B6; /* Bone */
+  --primary-foreground: #121212;
+  --secondary: #1C1C1F; /* Void */
+  --secondary-foreground: #C9C1B6;
+  --muted: #1C1C1F;
+  --muted-foreground: #7a7570;
+  --accent: #7A1E1E; /* Blood accent */
+  --accent-foreground: #C9C1B6;
+  --destructive: #7A1E1E;
+  --destructive-foreground: #C9C1B6;
+
+  /* Borders & Inputs */
+  --border: #3A3A3A; /* Ash gray */
+  --input: #2a2a2a;
+  --ring: #7A1E1E;
+
+  /* Brand (Black/Blood theme) */
+  --brand: #7A1E1E;
+  --brand-foreground: #C9C1B6;
+  --brand-muted: rgba(122, 30, 30, 0.3);
+  --brand-muted-foreground: #b84040;
+
+  /* Surface levels */
+  --surface-0: #050505;
+  --surface-1: #0a0a0a;
+  --surface-2: #121212;
+  --surface-3: #1C1C1F;
+
+  /* Text levels */
+  --text-primary: #C9C1B6; /* Bone */
+  --text-secondary: #a8a299;
+  --text-tertiary: #7a7570;
+  --text-muted: #5a5550;
+  --text-placeholder: #3A3A3A;
+
+  /* Border levels */
+  --border-default: #2a2a2a;
+  --border-muted: #1C1C1F;
+  --border-strong: #3A3A3A;
+
+  /* Sidebar */
+  --sidebar: #121212;
+  --sidebar-foreground: #C9C1B6;
+  --sidebar-primary: #7A1E1E;
+  --sidebar-primary-foreground: #C9C1B6;
+  --sidebar-accent: #1C1C1F;
+  --sidebar-accent-foreground: #C9C1B6;
+  --sidebar-border: #2a2a2a;
+  --sidebar-ring: #7A1E1E;
+}
+
+/* 🔴 Red --- Chaos, Speed, Emotion */
+[data-mtg-theme='red'].dark {
+  /* Core Colors */
+  --background: #1a0f0f; /* Dark charcoal with red tint */
+  --foreground: #FFD166; /* Spark */
+  --card: #2B1B1B; /* Charcoal */
+  --card-foreground: #FFD166;
+  --popover: #2B1B1B;
+  --popover-foreground: #FFD166;
+  --primary: #C62828; /* Ember */
+  --primary-foreground: #FFD166;
+  --secondary: #3a2020;
+  --secondary-foreground: #FFD166;
+  --muted: #3a2020;
+  --muted-foreground: #FF8A50; /* Flame */
+  --accent: #FF5722; /* Lava */
+  --accent-foreground: #1a0f0f;
+  --destructive: #C62828;
+  --destructive-foreground: #FFD166;
+
+  /* Borders & Inputs */
+  --border: #4a2525;
+  --input: #3a2020;
+  --ring: #FF5722;
+
+  /* Brand (Red/Fire theme) */
+  --brand: #C62828;
+  --brand-foreground: #FFD166;
+  --brand-muted: rgba(198, 40, 40, 0.3);
+  --brand-muted-foreground: #FF8A50;
+
+  /* Surface levels */
+  --surface-0: #0d0808;
+  --surface-1: #1a0f0f;
+  --surface-2: #2B1B1B;
+  --surface-3: #4a2525;
+
+  /* Text levels */
+  --text-primary: #FFD166; /* Spark */
+  --text-secondary: #ffb84d;
+  --text-tertiary: #FF8A50; /* Flame */
+  --text-muted: #c06030;
+  --text-placeholder: #704020;
+
+  /* Border levels */
+  --border-default: #4a2525;
+  --border-muted: #3a2020;
+  --border-strong: #6a3535;
+
+  /* Sidebar */
+  --sidebar: #2B1B1B;
+  --sidebar-foreground: #FFD166;
+  --sidebar-primary: #FF5722;
+  --sidebar-primary-foreground: #1a0f0f;
+  --sidebar-accent: #3a2020;
+  --sidebar-accent-foreground: #FFD166;
+  --sidebar-border: #4a2525;
+  --sidebar-ring: #FF5722;
+}
+
+/* 🟢 Green --- Growth, Nature, Strength */
+[data-mtg-theme='green'].dark {
+  /* Core Colors */
+  --background: #0d1a0d; /* Dark forest base */
+  --foreground: #E8F5E9; /* Sunlit */
+  --card: #152515;
+  --card-foreground: #E8F5E9;
+  --popover: #152515;
+  --popover-foreground: #E8F5E9;
+  --primary: #4CAF50; /* Moss */
+  --primary-foreground: #0d1a0d;
+  --secondary: #1d2d1d;
+  --secondary-foreground: #E8F5E9;
+  --muted: #1d2d1d;
+  --muted-foreground: #81C784; /* Leaf */
+  --accent: #2E7D32; /* Forest */
+  --accent-foreground: #E8F5E9;
+  --destructive: #c75050;
+  --destructive-foreground: #E8F5E9;
+
+  /* Borders & Inputs */
+  --border: #2a4a2a;
+  --input: #1d2d1d;
+  --ring: #4CAF50;
+
+  /* Brand (Green/Nature theme) */
+  --brand: #2E7D32; /* Forest */
+  --brand-foreground: #E8F5E9;
+  --brand-muted: rgba(76, 175, 80, 0.2);
+  --brand-muted-foreground: #81C784;
+
+  /* Surface levels */
+  --surface-0: #050d05;
+  --surface-1: #0d1a0d;
+  --surface-2: #152515;
+  --surface-3: #2a4a2a;
+
+  /* Text levels */
+  --text-primary: #E8F5E9; /* Sunlit */
+  --text-secondary: #c8e6c9;
+  --text-tertiary: #81C784; /* Leaf */
+  --text-muted: #5D9060;
+  --text-placeholder: #3a6040;
+
+  /* Border levels */
+  --border-default: #2a4a2a;
+  --border-muted: #1d2d1d;
+  --border-strong: #3a6a3a;
+
+  /* Sidebar */
+  --sidebar: #152515;
+  --sidebar-foreground: #E8F5E9;
+  --sidebar-primary: #4CAF50;
+  --sidebar-primary-foreground: #0d1a0d;
+  --sidebar-accent: #1d2d1d;
+  --sidebar-accent-foreground: #E8F5E9;
+  --sidebar-border: #2a4a2a;
+  --sidebar-ring: #4CAF50;
+}
+
+/* ============================================
    Tailwind Theme - Static Tokens
    ============================================ */
 @theme {
