@@ -204,7 +204,17 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
         {/* Life */}
         <div className="flex items-center justify-between gap-3">
           <div className="text-destructive flex items-center gap-1.5">
-            <Heart className="h-4 w-4" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Heart className="h-4 w-4" />
+              </TooltipTrigger>
+              <TooltipContent
+                side="right"
+                className="border-surface-2 bg-surface-1 text-text-secondary border shadow-lg"
+              >
+                <p className="text-xs font-medium">Health</p>
+              </TooltipContent>
+            </Tooltip>
             <span className="min-w-[2ch] text-center font-mono font-bold text-white">
               {displayHealth}
             </span>
@@ -256,7 +266,17 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
         {/* Poison */}
         <div className="flex items-center justify-between gap-3">
           <div className="text-success flex items-center gap-1.5">
-            <Skull className="h-4 w-4" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Skull className="h-4 w-4" />
+              </TooltipTrigger>
+              <TooltipContent
+                side="right"
+                className="border-surface-2 bg-surface-1 text-text-secondary border shadow-lg"
+              >
+                <p className="text-xs font-medium">Poison counters</p>
+              </TooltipContent>
+            </Tooltip>
             <span className="min-w-[2ch] text-center font-mono font-bold text-white">
               {displayPoison}
             </span>
@@ -335,7 +355,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                           {entry.ownerName}
                         </span>
                       </div>
-                      <span className="text-brand-muted-foreground font-mono text-sm font-bold">
+                      <span className="font-mono text-sm font-bold text-white">
                         {entry.damage}
                       </span>
                     </div>

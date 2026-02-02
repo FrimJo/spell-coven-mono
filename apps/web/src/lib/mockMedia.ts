@@ -84,7 +84,7 @@ export function shouldEnableMockMedia(): boolean {
 const TEST_CARD_IMAGE_URL = '/cn2-176-birds-of-paradise.jpg'
 
 // Create a synthetic video stream from a canvas
-function createSyntheticVideoStream(): MediaStream {
+export function createSyntheticVideoStream(): MediaStream {
   const canvas = document.createElement('canvas')
   canvas.width = 640
   canvas.height = 480
@@ -289,7 +289,7 @@ async function createVideoFileStream(videoUrl: string): Promise<MediaStream> {
 }
 
 // Create a silent audio stream
-function createSilentAudioStream(): MediaStream {
+export function createSilentAudioStream(): MediaStream {
   const audioContext = new AudioContext()
   const oscillator = audioContext.createOscillator()
   const gainNode = audioContext.createGain()

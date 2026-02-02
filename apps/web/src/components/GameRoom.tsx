@@ -26,6 +26,7 @@ interface GameRoomProps {
   onLeaveGame: () => void
   detectorType?: DetectorType
   usePerspectiveWarp?: boolean
+  showTestStream?: boolean
 }
 
 function GameRoomContent({
@@ -33,6 +34,7 @@ function GameRoomContent({
   onLeaveGame,
   detectorType,
   usePerspectiveWarp = true,
+  showTestStream = false,
 }: Omit<GameRoomProps, 'playerName'>) {
   // Get authenticated user from Convex Auth (Discord OAuth)
   const { user } = useAuth()
@@ -247,6 +249,7 @@ function GameRoomContent({
               usePerspectiveWarp={usePerspectiveWarp}
               onCardCrop={query}
               mutedPlayers={mutedPlayers}
+              showTestStream={showTestStream}
             />
           </div>
         </div>
@@ -261,6 +264,7 @@ function GameRoomWithPresence({
   onLeaveGame,
   detectorType,
   usePerspectiveWarp,
+  showTestStream,
 }: Omit<GameRoomProps, 'playerName'>) {
   const handleDuplicateSession = useCallback(() => {
     console.log('[GameRoom] Duplicate session detected, showing dialog')
@@ -289,6 +293,7 @@ function GameRoomWithPresence({
         onLeaveGame={onLeaveGame}
         detectorType={detectorType}
         usePerspectiveWarp={usePerspectiveWarp}
+        showTestStream={showTestStream}
       />
     </PresenceProvider>
   )
