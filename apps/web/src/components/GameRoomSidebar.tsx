@@ -7,6 +7,7 @@ import { Card } from '@repo/ui/components/card'
 import { Skeleton } from '@repo/ui/components/skeleton'
 
 import { CardPreview } from './CardPreview'
+import { CardSearchPanel } from './CardSearchPanel'
 import { GameStatsPanel } from './GameStatsPanel'
 import { PlayerList } from './PlayerList'
 
@@ -106,6 +107,7 @@ function SidebarContent({
           onToggleMutePlayer={onToggleMutePlayer}
           onViewCommanders={handleViewCommanders}
         />
+        <CardSearchPanel />
         <CardPreview playerName={playerName} onClose={() => {}} />
       </div>
 

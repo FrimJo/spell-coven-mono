@@ -298,7 +298,19 @@ const TEST_VIDEO_STYLE: React.CSSProperties = {
  * Test stream slot component - renders a synthetic video stream for development testing.
  * Uses the mock media functions to create an animated canvas stream with a test card image.
  */
-const TestStreamSlot = memo(function TestStreamSlot() {
+interface TestStreamSlotProps {
+  enableCardDetection: boolean
+  detectorType?: DetectorType
+  usePerspectiveWarp: boolean
+  onCardCrop?: (canvas: HTMLCanvasElement) => void
+}
+
+const TestStreamSlot = memo(function TestStreamSlot({
+  enableCardDetection,
+  detectorType,
+  usePerspectiveWarp,
+  onCardCrop,
+}: TestStreamSlotProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [testStream, setTestStream] = useState<MediaStream | null>(null)
 
@@ -333,17 +345,38 @@ const TestStreamSlot = memo(function TestStreamSlot() {
     attachVideoStream(video, testStream)
   }, [testStream])
 
+  // Initialize card detector for the test stream
+  const { overlayRef, croppedRef, fullResRef } = useCardDetector({
+    videoRef: videoRef,
+    enableCardDetection: enableCardDetection && !!testStream,
+    detectorType,
+    usePerspectiveWarp,
+    onCrop: onCardCrop,
+    reinitializeTrigger: testStream ? 1 : 0,
+  })
+
   return (
     <Card className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden">
       <div className="relative min-h-0 flex-1 bg-black">
         {testStream ? (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            style={TEST_VIDEO_STYLE}
-          />
+          <>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={TEST_VIDEO_STYLE}
+            />
+            {enableCardDetection && overlayRef && (
+              <CardDetectionOverlay overlayRef={overlayRef} />
+            )}
+            {enableCardDetection && croppedRef && (
+              <CroppedCanvas croppedRef={croppedRef} />
+            )}
+            {enableCardDetection && fullResRef && (
+              <FullResCanvas fullResRef={fullResRef} />
+            )}
+          </>
         ) : (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="text-brand-muted-foreground h-8 w-8 animate-spin" />
@@ -693,7 +726,13 @@ export function VideoStreamGrid({
 
       {/* Test stream slot - rendered when showTestStream is true and there are empty slots */}
       {showTestStream && emptySlots > 0 && (
-        <TestStreamSlot key="test-stream-slot" />
+        <TestStreamSlot
+          key="test-stream-slot"
+          enableCardDetection={enableCardDetection}
+          detectorType={detectorType}
+          usePerspectiveWarp={usePerspectiveWarp}
+          onCardCrop={onCardCrop}
+        />
       )}
 
       {/* Empty slots for players who haven't joined yet */}

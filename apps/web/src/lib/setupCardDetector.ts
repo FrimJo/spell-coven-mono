@@ -74,19 +74,14 @@ let currentFullResCanvas: HTMLCanvasElement | null = null
 // Canvas and Video Elements
 // ============================================================================
 
-let overlayCtx: CanvasRenderingContext2D | null = null
-let fullResCtx: CanvasRenderingContext2D | null = null
-let croppedCtx: CanvasRenderingContext2D | null = null
-let videoEl: HTMLVideoElement
-let overlayEl: HTMLCanvasElement
-let fullResCanvas: HTMLCanvasElement
-let croppedCanvas: HTMLCanvasElement
+// Note: These module-level variables are still used for some shared state,
+// but the critical videoEl is now passed explicitly to functions to support
+// multiple video streams (local, remote, test) with separate card detection.
 
 // ============================================================================
 // Click Handling State
 // ============================================================================
 
-let clickHandler: ((evt: MouseEvent) => void) | null = null
 const CLICK_DEBOUNCE_MS = 2000 // Minimum time between clicks (2 seconds)
 const CARD_CROP_PADDING_RATIO = 0.02 // Slight padding to avoid clipping card edges
 
@@ -239,12 +234,31 @@ async function initializeDetector(
 // ============================================================================
 
 /**
+ * Instance-specific detection context
+ * Each video stream gets its own context to avoid cross-contamination
+ */
+interface DetectionContext {
+  videoEl: HTMLVideoElement
+  overlayEl: HTMLCanvasElement
+  fullResCanvas: HTMLCanvasElement
+  croppedCanvas: HTMLCanvasElement
+  overlayCtx: CanvasRenderingContext2D
+  fullResCtx: CanvasRenderingContext2D
+  croppedCtx: CanvasRenderingContext2D
+  enablePerspectiveWarp: boolean
+}
+
+/**
  * Run detection on current video frame
  * Captures video frame, runs detector inference, filters results, and renders bounding boxes
  * Includes performance monitoring and error handling
+ * @param ctx Detection context with video and canvas elements
  * @param clickPoint Optional click coordinates for point-based detection
  */
-async function detectCards(clickPoint?: { x: number; y: number }) {
+async function detectCards(
+  ctx: DetectionContext,
+  clickPoint?: { x: number; y: number },
+) {
   // Skip if already detecting or detector not ready
   if (!detector) {
     return
@@ -261,26 +275,26 @@ async function detectCards(clickPoint?: { x: number; y: number }) {
   try {
     // Create a temporary canvas for detection (don't touch the overlay yet)
     const tempCanvas = document.createElement('canvas')
-    tempCanvas.width = overlayEl.width
-    tempCanvas.height = overlayEl.height
+    tempCanvas.width = ctx.overlayEl.width
+    tempCanvas.height = ctx.overlayEl.height
     const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })
     if (!tempCtx) {
       throw new Error(
         'setupCardDetector: Failed to get 2d context from temp canvas',
       )
     }
-    tempCtx.drawImage(videoEl, 0, 0, tempCanvas.width, tempCanvas.height)
+    tempCtx.drawImage(ctx.videoEl, 0, 0, tempCanvas.width, tempCanvas.height)
 
     // Store current frame for click handling (full resolution for accuracy)
     const fullResSnapshot = document.createElement('canvas')
-    fullResSnapshot.width = videoEl.videoWidth
-    fullResSnapshot.height = videoEl.videoHeight
+    fullResSnapshot.width = ctx.videoEl.videoWidth
+    fullResSnapshot.height = ctx.videoEl.videoHeight
     const fullResSnapshotCtx = fullResSnapshot.getContext('2d', {
       willReadFrequently: true,
     })
     if (fullResSnapshotCtx) {
       fullResSnapshotCtx.drawImage(
-        videoEl,
+        ctx.videoEl,
         0,
         0,
         fullResSnapshot.width,
@@ -305,17 +319,14 @@ async function detectCards(clickPoint?: { x: number; y: number }) {
     // Run detection using pluggable detector
     const result = await detector.detect(
       tempCanvas,
-      overlayEl.width,
-      overlayEl.height,
+      ctx.overlayEl.width,
+      ctx.overlayEl.height,
     )
 
     detectedCards = result.cards
 
     // Clear overlay - no detection boxes shown
-    if (!overlayCtx) {
-      throw new Error('setupCardDetector: overlayCtx is not initialized')
-    }
-    overlayCtx.clearRect(0, 0, overlayEl.width, overlayEl.height)
+    ctx.overlayCtx.clearRect(0, 0, ctx.overlayEl.width, ctx.overlayEl.height)
   } catch {
     // Silently handle detection errors
   } finally {
@@ -326,15 +337,16 @@ async function detectCards(clickPoint?: { x: number; y: number }) {
 /**
  * Stop detection loop
  * Clears detection interval, overlay canvas, and resets detection state
+ * @param ctx Optional detection context to clear specific overlay
  */
-function stopDetection() {
+function stopDetection(ctx?: DetectionContext) {
   if (detectionInterval) {
     clearInterval(detectionInterval)
     detectionInterval = null
   }
   // Clear overlay when stopping
-  if (overlayCtx && overlayEl) {
-    overlayCtx.clearRect(0, 0, overlayEl.width, overlayEl.height)
+  if (ctx) {
+    ctx.overlayCtx.clearRect(0, 0, ctx.overlayEl.width, ctx.overlayEl.height)
   }
   detectedCards = []
   currentFrameCanvas = null
@@ -347,11 +359,13 @@ function stopDetection() {
  * CRITICAL: Must match Python embedding pipeline preprocessing for accuracy
  * Python pipeline: pad to square with black borders → resize to target size
  * See: packages/mtg-image-db/build_mtg_faiss.py
+ * @param ctx Detection context with canvas elements
  * @param box Bounding box from DETR detection (normalized coordinates)
  * @param sourceCanvas Optional source canvas to crop from (if not provided, uses videoEl)
  * @returns True if crop succeeded, false otherwise
  */
 function cropCardFromBoundingBox(
+  ctx: DetectionContext,
   box: {
     xmin: number
     ymin: number
@@ -367,19 +381,16 @@ function cropCardFromBoundingBox(
     canvasToUse = sourceCanvas
   } else {
     // Draw full resolution video to canvas
-    fullResCanvas.width = videoEl.videoWidth
-    fullResCanvas.height = videoEl.videoHeight
-    if (!fullResCtx) {
-      throw new Error('setupCardDetector: fullResCtx is not initialized')
-    }
-    fullResCtx.drawImage(
-      videoEl,
+    ctx.fullResCanvas.width = ctx.videoEl.videoWidth
+    ctx.fullResCanvas.height = ctx.videoEl.videoHeight
+    ctx.fullResCtx.drawImage(
+      ctx.videoEl,
       0,
       0,
-      fullResCanvas.width,
-      fullResCanvas.height,
+      ctx.fullResCanvas.width,
+      ctx.fullResCanvas.height,
     )
-    canvasToUse = fullResCanvas
+    canvasToUse = ctx.fullResCanvas
   }
 
   // Convert normalized coordinates to pixels
@@ -426,15 +437,17 @@ function cropCardFromBoundingBox(
   // Resize to target dimensions with aspect ratio preservation and padding
   // The CLIP model expects square images, so we center the card and add black padding
   const targetSize = getQueryTargetSize()
-  croppedCanvas.width = targetSize
-  croppedCanvas.height = targetSize
-  if (!croppedCtx) {
-    throw new Error('setupCardDetector: croppedCtx is not initialized')
-  }
-  croppedCtx.fillStyle = 'black'
-  croppedCtx.fillRect(0, 0, croppedCanvas.width, croppedCanvas.height)
-  croppedCtx.imageSmoothingEnabled = true
-  croppedCtx.imageSmoothingQuality = 'high'
+  ctx.croppedCanvas.width = targetSize
+  ctx.croppedCanvas.height = targetSize
+  ctx.croppedCtx.fillStyle = 'black'
+  ctx.croppedCtx.fillRect(
+    0,
+    0,
+    ctx.croppedCanvas.width,
+    ctx.croppedCanvas.height,
+  )
+  ctx.croppedCtx.imageSmoothingEnabled = true
+  ctx.croppedCtx.imageSmoothingQuality = 'high'
 
   // Calculate scaling to fit card within target size while preserving aspect ratio
   const scale = Math.min(
@@ -448,10 +461,7 @@ function cropCardFromBoundingBox(
   const offsetX = (targetSize - scaledWidth) / 2
   const offsetY = (targetSize - scaledHeight) / 2
 
-  if (!croppedCtx) {
-    throw new Error('setupCardDetector: croppedCtx is not initialized')
-  }
-  croppedCtx.drawImage(
+  ctx.croppedCtx.drawImage(
     contrastEnhancedCanvas,
     0,
     0,
@@ -468,37 +478,42 @@ function cropCardFromBoundingBox(
 
 /**
  * Draw card border on overlay canvas (development only)
+ * @param ctx Detection context with overlay canvas
  * @param box Bounding box in normalized coordinates
  * @param color Border color
  * @param lineWidth Border line width
  */
 function drawCardBorder(
+  ctx: DetectionContext,
   box: { xmin: number; ymin: number; xmax: number; ymax: number },
   color: string = '#00ff00',
   lineWidth: number = 3,
 ): void {
-  if (!overlayCtx || !overlayEl) return
-
   // Convert normalized coordinates to pixels
-  const x = box.xmin * overlayEl.width
-  const y = box.ymin * overlayEl.height
-  const width = (box.xmax - box.xmin) * overlayEl.width
-  const height = (box.ymax - box.ymin) * overlayEl.height
+  const x = box.xmin * ctx.overlayEl.width
+  const y = box.ymin * ctx.overlayEl.height
+  const width = (box.xmax - box.xmin) * ctx.overlayEl.width
+  const height = (box.ymax - box.ymin) * ctx.overlayEl.height
 
   // Draw rectangle border
-  overlayCtx.strokeStyle = color
-  overlayCtx.lineWidth = lineWidth
-  overlayCtx.strokeRect(x, y, width, height)
+  ctx.overlayCtx.strokeStyle = color
+  ctx.overlayCtx.lineWidth = lineWidth
+  ctx.overlayCtx.strokeRect(x, y, width, height)
 }
 
 /**
  * Crop card at click position
  * Finds the closest DETR-detected card and crops it
+ * @param ctx Detection context with canvas elements
  * @param x Click X coordinate on overlay canvas
  * @param y Click Y coordinate on overlay canvas
  * @returns Boolean indicating success
  */
-async function cropCardAt(x: number, y: number): Promise<boolean> {
+async function cropCardAt(
+  ctx: DetectionContext,
+  x: number,
+  y: number,
+): Promise<boolean> {
   // Need detected cards to crop
   if (!detectedCards.length) {
     console.log(
@@ -526,10 +541,10 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
     const box = card.box
 
     // Convert normalized box to pixel coordinates
-    const boxXMin = box.xmin * overlayEl.width
-    const boxYMin = box.ymin * overlayEl.height
-    const boxXMax = box.xmax * overlayEl.width
-    const boxYMax = box.ymax * overlayEl.height
+    const boxXMin = box.xmin * ctx.overlayEl.width
+    const boxYMin = box.ymin * ctx.overlayEl.height
+    const boxXMax = box.xmax * ctx.overlayEl.width
+    const boxYMax = box.ymax * ctx.overlayEl.height
 
     // Check if click is inside this box
     const isInside =
@@ -541,7 +556,7 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
     const boxWidth = boxXMax - boxXMin
     const boxHeight = boxYMax - boxYMin
     const area = boxWidth * boxHeight
-    const canvasArea = overlayEl.width * overlayEl.height
+    const canvasArea = ctx.overlayEl.width * ctx.overlayEl.height
 
     // Distance from click to box center (closer is better)
     const centerX = boxXMin + boxWidth / 2
@@ -549,7 +564,7 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
     const dx = x - centerX
     const dy = y - centerY
     const distance = Math.hypot(dx, dy)
-    const maxDistance = Math.hypot(overlayEl.width, overlayEl.height)
+    const maxDistance = Math.hypot(ctx.overlayEl.width, ctx.overlayEl.height)
     const distanceScore = (1 - distance / maxDistance) * 200000
 
     // Score: balance between proximity, confidence, and size
@@ -591,11 +606,9 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
   // Draw card border in development mode
   if (isDevelopment) {
     // Clear previous border first
-    if (overlayCtx && overlayEl) {
-      overlayCtx.clearRect(0, 0, overlayEl.width, overlayEl.height)
-    }
+    ctx.overlayCtx.clearRect(0, 0, ctx.overlayEl.width, ctx.overlayEl.height)
     // Draw border around detected card
-    drawCardBorder(card.box, '#00ff00', 3)
+    drawCardBorder(ctx, card.box, '#00ff00', 3)
   }
 
   // Use the current full-res frame canvas captured during detection
@@ -645,7 +658,7 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
   }
 
   // T022: Use warped canvas if available (from SlimSAM perspective correction) and enabled
-  if (enablePerspectiveWarp && card.warpedCanvas) {
+  if (ctx.enablePerspectiveWarp && card.warpedCanvas) {
     // DEBUG STAGE 3: Log SlimSAM warped canvas before resize
     logDebugBlobUrl(
       card.warpedCanvas,
@@ -663,16 +676,18 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
 
     // Copy warped canvas to cropped canvas
     const targetSize = getQueryTargetSize()
-    croppedCanvas.width = targetSize
-    croppedCanvas.height = targetSize
-    if (!croppedCtx) {
-      throw new Error('setupCardDetector: croppedCtx is not initialized')
-    }
-    croppedCtx.fillStyle = 'black'
-    croppedCtx.fillRect(0, 0, croppedCanvas.width, croppedCanvas.height)
-    croppedCtx.imageSmoothingEnabled = true
-    croppedCtx.imageSmoothingQuality = 'high'
-    croppedCtx.drawImage(
+    ctx.croppedCanvas.width = targetSize
+    ctx.croppedCanvas.height = targetSize
+    ctx.croppedCtx.fillStyle = 'black'
+    ctx.croppedCtx.fillRect(
+      0,
+      0,
+      ctx.croppedCanvas.width,
+      ctx.croppedCanvas.height,
+    )
+    ctx.croppedCtx.imageSmoothingEnabled = true
+    ctx.croppedCtx.imageSmoothingQuality = 'high'
+    ctx.croppedCtx.drawImage(
       contrastEnhancedCanvas,
       0,
       0,
@@ -688,14 +703,14 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
   }
 
   // Two-stage pipeline: Refine bounding box to precise corners + perspective correction
-  if (enablePerspectiveWarp && currentDetectorType !== 'slimsam') {
+  if (ctx.enablePerspectiveWarp && currentDetectorType !== 'slimsam') {
     try {
       // Step 1: Refine bounding box to precise card corners using OpenCV
       const quad = await refineBoundingBoxToCorners(
         sourceCanvas,
         card.box,
-        overlayEl.width,
-        overlayEl.height,
+        ctx.overlayEl.width,
+        ctx.overlayEl.height,
         0.15, // 15% padding around bbox
       )
 
@@ -720,16 +735,18 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
 
         // Copy warped canvas to cropped canvas
         const targetSize = getQueryTargetSize()
-        croppedCanvas.width = targetSize
-        croppedCanvas.height = targetSize
-        if (!croppedCtx) {
-          throw new Error('setupCardDetector: croppedCtx is not initialized')
-        }
-        croppedCtx.fillStyle = 'black'
-        croppedCtx.fillRect(0, 0, croppedCanvas.width, croppedCanvas.height)
-        croppedCtx.imageSmoothingEnabled = true
-        croppedCtx.imageSmoothingQuality = 'high'
-        croppedCtx.drawImage(
+        ctx.croppedCanvas.width = targetSize
+        ctx.croppedCanvas.height = targetSize
+        ctx.croppedCtx.fillStyle = 'black'
+        ctx.croppedCtx.fillRect(
+          0,
+          0,
+          ctx.croppedCanvas.width,
+          ctx.croppedCanvas.height,
+        )
+        ctx.croppedCtx.imageSmoothingEnabled = true
+        ctx.croppedCtx.imageSmoothingQuality = 'high'
+        ctx.croppedCtx.drawImage(
           contrastEnhancedCanvas,
           0,
           0,
@@ -749,11 +766,12 @@ async function cropCardAt(x: number, y: number): Promise<boolean> {
   }
 
   // Fallback: Use the bounding box to crop from source canvas (no perspective correction)
-  return cropCardFromBoundingBox(card.box, sourceCanvas)
+  return cropCardFromBoundingBox(ctx, card.box, sourceCanvas)
 }
 
 /**
  * Initialize card detector with video element and canvas refs
+ * Each instance creates its own detection context to support multiple video streams.
  * @param args.video Video element to analyze
  * @param args.overlay Canvas for drawing detection overlays
  * @param args.cropped Canvas for storing cropped card images
@@ -774,10 +792,11 @@ export async function setupCardDetector(args: {
   onCrop?: (canvas: HTMLCanvasElement) => void
   onProgress?: (msg: string) => void
 }) {
-  videoEl = args.video
-  overlayEl = args.overlay
-  croppedCanvas = args.cropped
-  fullResCanvas = args.fullRes
+  // Create instance-specific context - captured in closures below
+  // This allows multiple video streams to have independent card detection
+  const instanceOverlayEl = args.overlay
+  const instanceCroppedCanvas = args.cropped
+  const instanceFullResCanvas = args.fullRes
 
   // Wait for embeddings/manifest to be loaded before accessing manifest values
   // This ensures we have contrast enhancement factor and target size from the build
@@ -785,30 +804,47 @@ export async function setupCardDetector(args: {
 
   // Set cropped canvas to target size from manifest
   const targetSize = getQueryTargetSize()
-  croppedCanvas.width = targetSize
-  croppedCanvas.height = targetSize
+  instanceCroppedCanvas.width = targetSize
+  instanceCroppedCanvas.height = targetSize
 
-  overlayCtx = overlayEl.getContext('2d', { willReadFrequently: true })
-  fullResCtx = fullResCanvas.getContext('2d', { willReadFrequently: true })
-  croppedCtx = croppedCanvas.getContext('2d', { willReadFrequently: true })
+  const instanceOverlayCtx = instanceOverlayEl.getContext('2d', {
+    willReadFrequently: true,
+  })
+  const instanceFullResCtx = instanceFullResCanvas.getContext('2d', {
+    willReadFrequently: true,
+  })
+  const instanceCroppedCtx = instanceCroppedCanvas.getContext('2d', {
+    willReadFrequently: true,
+  })
 
-  // Set perspective warp flag
-  enablePerspectiveWarp = args.usePerspectiveWarp !== false
+  if (!instanceOverlayCtx || !instanceFullResCtx || !instanceCroppedCtx) {
+    throw new Error('setupCardDetector: Failed to get 2d context from canvases')
+  }
 
-  // Initialize detector
+  // Create the detection context for this instance
+  const ctx: DetectionContext = {
+    videoEl: args.video,
+    overlayEl: instanceOverlayEl,
+    fullResCanvas: instanceFullResCanvas,
+    croppedCanvas: instanceCroppedCanvas,
+    overlayCtx: instanceOverlayCtx,
+    fullResCtx: instanceFullResCtx,
+    croppedCtx: instanceCroppedCtx,
+    enablePerspectiveWarp: args.usePerspectiveWarp !== false,
+  }
+
+  // Initialize detector (shared across all instances)
   try {
     await initializeDetector(args.detectorType, args.onProgress)
   } catch {
     console.error('[Detector] Failed to initialize')
   }
 
-  // Remove any existing click handler to prevent multiple listeners
-  if (clickHandler) {
-    overlayEl.removeEventListener('click', clickHandler)
-  }
+  // Store click handler reference for cleanup
+  let instanceClickHandler: ((evt: MouseEvent) => void) | null = null
 
-  // Create new click handler
-  clickHandler = (evt: MouseEvent) => {
+  // Create new click handler that captures this instance's context
+  instanceClickHandler = (evt: MouseEvent) => {
     const now = performance.now()
     const globalState = getGlobalClickState()
 
@@ -830,13 +866,13 @@ export async function setupCardDetector(args: {
       return
     }
 
-    const rect = overlayEl.getBoundingClientRect()
+    const rect = ctx.overlayEl.getBoundingClientRect()
     const clickX = evt.clientX - rect.left
     const clickY = evt.clientY - rect.top
 
     // Scale click coordinates from display size to canvas size
-    const x = Math.floor(clickX * (overlayEl.width / rect.width))
-    const y = Math.floor(clickY * (overlayEl.height / rect.height))
+    const x = Math.floor(clickX * (ctx.overlayEl.width / rect.width))
+    const y = Math.floor(clickY * (ctx.overlayEl.height / rect.height))
 
     globalState.lastClickTime = now
     globalState.isProcessing = true
@@ -860,9 +896,9 @@ export async function setupCardDetector(args: {
     // This ensures the click event completes before we process the crop
     requestAnimationFrame(async () => {
       try {
-        // 1. Run detection at click point
+        // 1. Run detection at click point using this instance's video element
         const detectionStart = performance.now()
-        await detectCards({ x, y })
+        await detectCards(ctx, { x, y })
         metrics.detection = performance.now() - detectionStart
 
         // DEBUG STAGE 1: Log the video frame at the time of click
@@ -912,9 +948,9 @@ export async function setupCardDetector(args: {
           })
         }
 
-        // 2. Crop the detected card
+        // 2. Crop the detected card using this instance's context
         const cropStart = performance.now()
-        const ok = await cropCardAt(x, y)
+        const ok = await cropCardAt(ctx, x, y)
         metrics.crop = performance.now() - cropStart
 
         if (!ok) {
@@ -933,13 +969,13 @@ export async function setupCardDetector(args: {
         if (ok && typeof args.onCrop === 'function') {
           // 3. Embedding and search happen in onCrop callback
           // Store metrics start time for callback to use
-          const canvasWithMetrics = croppedCanvas as HTMLCanvasElement & {
+          const canvasWithMetrics = ctx.croppedCanvas as HTMLCanvasElement & {
             __metricsStart?: number
             __pipelineMetrics?: typeof metrics
           }
           canvasWithMetrics.__metricsStart = performance.now()
           canvasWithMetrics.__pipelineMetrics = metrics
-          args.onCrop(croppedCanvas)
+          args.onCrop(ctx.croppedCanvas)
         }
       } finally {
         // Always reset the global flag, even if there was an error
@@ -949,7 +985,7 @@ export async function setupCardDetector(args: {
     })
   }
 
-  overlayEl.addEventListener('click', clickHandler)
+  ctx.overlayEl.addEventListener('click', instanceClickHandler)
 
   // Add mouse move listener to warm up the model when user hovers over the stream
   // This eliminates the first-inference penalty (2-5x slower) by pre-compiling the model
@@ -961,11 +997,11 @@ export async function setupCardDetector(args: {
     })
     // Remove listener after first trigger to avoid repeated warmups
     if (mouseWarmupHandler) {
-      overlayEl.removeEventListener('mousemove', mouseWarmupHandler)
+      ctx.overlayEl.removeEventListener('mousemove', mouseWarmupHandler)
       mouseWarmupHandler = null
     }
   }
-  overlayEl.addEventListener('mousemove', mouseWarmupHandler)
+  ctx.overlayEl.addEventListener('mousemove', mouseWarmupHandler)
 
   return {
     /**
@@ -973,14 +1009,19 @@ export async function setupCardDetector(args: {
      * @returns The canvas element containing the cropped card image
      */
     getCroppedCanvas() {
-      return croppedCanvas
+      return ctx.croppedCanvas
     },
 
     /**
      * Stop card detection
      */
     stopDetection() {
-      stopDetection()
+      stopDetection(ctx)
+      // Remove click handler when stopping
+      if (instanceClickHandler) {
+        ctx.overlayEl.removeEventListener('click', instanceClickHandler)
+        instanceClickHandler = null
+      }
     },
   }
 }

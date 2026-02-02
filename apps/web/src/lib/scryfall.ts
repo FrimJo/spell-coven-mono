@@ -36,6 +36,10 @@ export interface ScryfallCard {
   }
   scryfall_uri: string
   legalities: Record<string, string>
+  /** Set code (e.g., "lea", "m21") */
+  set: string
+  /** Full set name (e.g., "Limited Edition Alpha", "Core Set 2021") */
+  set_name: string
 }
 
 export interface ScryfallAutocompleteResponse {

@@ -1,5 +1,9 @@
 import type { EmbeddingMetrics } from '@/lib/clip-search'
-import type { CardQueryState, UseCardQueryReturn } from '@/types/card-query'
+import type {
+  CardQueryResult,
+  CardQueryState,
+  UseCardQueryReturn,
+} from '@/types/card-query'
 import { useCallback, useRef, useState } from 'react'
 import { embedFromCanvas, top1, topK } from '@/lib/clip-search'
 import { generateOrientationCandidates } from '@/lib/detectors/geometry/orientation'
@@ -20,6 +24,22 @@ export function useCardQuery(): UseCardQueryReturn {
       abortControllerRef.current = null
     }
   }, [])
+
+  /**
+   * Manually set a card result (e.g., from Scryfall search selection).
+   * Cancels any pending query and sets state to success.
+   */
+  const setResult = useCallback(
+    (result: CardQueryResult) => {
+      cancel()
+      setState({
+        status: 'success',
+        result,
+        error: null,
+      })
+    },
+    [cancel],
+  )
 
   const query = useCallback(
     async (canvas: HTMLCanvasElement) => {
@@ -258,5 +278,5 @@ export function useCardQuery(): UseCardQueryReturn {
     [cancel],
   )
 
-  return { state, query, cancel }
+  return { state, query, cancel, setResult }
 }
