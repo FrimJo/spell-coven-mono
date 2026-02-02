@@ -12,8 +12,7 @@ import {
   waitForEmbeddings,
   warmModel,
 } from './clip-search.js'
-import { refineBoundingBoxToCorners } from './detectors/geometry/bbox-refinement.js'
-import { warpCardToCanonical } from './detectors/geometry/perspective.js'
+// Removed: refineBoundingBoxToCorners and warpCardToCanonical - perspective warp disabled
 import { createDetector } from './detectors/index.js'
 
 // ============================================================================
@@ -83,7 +82,6 @@ let currentFullResCanvas: HTMLCanvasElement | null = null
 // ============================================================================
 
 const CLICK_DEBOUNCE_MS = 2000 // Minimum time between clicks (2 seconds)
-const CARD_CROP_PADDING_RATIO = 0.02 // Slight padding to avoid clipping card edges
 
 // Use global state to prevent multiple HMR instances from processing clicks concurrently
 declare global {
@@ -103,48 +101,6 @@ function getGlobalClickState() {
     }
   }
   return window.__cardDetectorClickState
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
-}
-
-function getClampedCropRect(
-  box: { xmin: number; ymin: number; xmax: number; ymax: number },
-  canvasWidth: number,
-  canvasHeight: number,
-  paddingRatio: number = 0,
-) {
-  const rawX = box.xmin * canvasWidth
-  const rawY = box.ymin * canvasHeight
-  const rawWidth = (box.xmax - box.xmin) * canvasWidth
-  const rawHeight = (box.ymax - box.ymin) * canvasHeight
-
-  const padX = rawWidth * paddingRatio
-  const padY = rawHeight * paddingRatio
-
-  const paddedX = rawX - padX
-  const paddedY = rawY - padY
-  const paddedWidth = rawWidth + padX * 2
-  const paddedHeight = rawHeight + padY * 2
-
-  const clampedX = clamp(Math.round(paddedX), 0, canvasWidth - 1)
-  const clampedY = clamp(Math.round(paddedY), 0, canvasHeight - 1)
-  const clampedWidth = Math.max(
-    1,
-    Math.min(Math.round(paddedWidth), canvasWidth - clampedX),
-  )
-  const clampedHeight = Math.max(
-    1,
-    Math.min(Math.round(paddedHeight), canvasHeight - clampedY),
-  )
-
-  return {
-    x: clampedX,
-    y: clampedY,
-    width: clampedWidth,
-    height: clampedHeight,
-  }
 }
 
 // ============================================================================
@@ -323,6 +279,12 @@ async function detectCards(
       ctx.overlayEl.height,
     )
 
+    console.log('[detectCards] Detection result:', {
+      detector: currentDetectorType,
+      cards: result.cards.length,
+      hasWarpedCanvas: result.cards.map((c) => !!c.warpedCanvas),
+    })
+
     detectedCards = result.cards
 
     // Clear overlay - no detection boxes shown
@@ -352,128 +314,6 @@ function stopDetection(ctx?: DetectionContext) {
   currentFrameCanvas = null
   currentFullResCanvas = null
   isDetecting = false
-}
-
-/**
- * Crop card from bounding box
- * CRITICAL: Must match Python embedding pipeline preprocessing for accuracy
- * Python pipeline: pad to square with black borders → resize to target size
- * See: packages/mtg-image-db/build_mtg_faiss.py
- * @param ctx Detection context with canvas elements
- * @param box Bounding box from DETR detection (normalized coordinates)
- * @param sourceCanvas Optional source canvas to crop from (if not provided, uses videoEl)
- * @returns True if crop succeeded, false otherwise
- */
-function cropCardFromBoundingBox(
-  ctx: DetectionContext,
-  box: {
-    xmin: number
-    ymin: number
-    xmax: number
-    ymax: number
-  },
-  sourceCanvas?: HTMLCanvasElement | null,
-): boolean {
-  // Use provided source canvas or draw from video element
-  let canvasToUse: HTMLCanvasElement
-
-  if (sourceCanvas) {
-    canvasToUse = sourceCanvas
-  } else {
-    // Draw full resolution video to canvas
-    ctx.fullResCanvas.width = ctx.videoEl.videoWidth
-    ctx.fullResCanvas.height = ctx.videoEl.videoHeight
-    ctx.fullResCtx.drawImage(
-      ctx.videoEl,
-      0,
-      0,
-      ctx.fullResCanvas.width,
-      ctx.fullResCanvas.height,
-    )
-    canvasToUse = ctx.fullResCanvas
-  }
-
-  // Convert normalized coordinates to pixels
-  const cropRect = getClampedCropRect(
-    box,
-    canvasToUse.width,
-    canvasToUse.height,
-    CARD_CROP_PADDING_RATIO,
-  )
-
-  // Extract the full card region from the bounding box
-  const canvasCtx = canvasToUse.getContext('2d', { willReadFrequently: true })
-  if (!canvasCtx) {
-    throw new Error('setupCardDetector: Failed to get 2d context from canvas')
-  }
-  const cardImageData = canvasCtx.getImageData(
-    cropRect.x,
-    cropRect.y,
-    cropRect.width,
-    cropRect.height,
-  )
-
-  // Create temporary canvas for the extracted card
-  const tempCanvas = document.createElement('canvas')
-  tempCanvas.width = cropRect.width
-  tempCanvas.height = cropRect.height
-  const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })
-  if (!tempCtx) {
-    throw new Error(
-      'setupCardDetector: Failed to get 2d context from temp canvas',
-    )
-  }
-  tempCtx.putImageData(cardImageData, 0, 0)
-
-  // Apply contrast enhancement BEFORE resize to match Python preprocessing order
-  // Python: load → enhance contrast → pad → resize
-  // Browser: crop → enhance contrast → pad → resize
-  const contrastFactor = getQueryContrastEnhancement()
-  const contrastEnhancedCanvas = enhanceCanvasContrast(
-    tempCanvas,
-    contrastFactor,
-  )
-
-  // Resize to target dimensions with aspect ratio preservation and padding
-  // The CLIP model expects square images, so we center the card and add black padding
-  const targetSize = getQueryTargetSize()
-  ctx.croppedCanvas.width = targetSize
-  ctx.croppedCanvas.height = targetSize
-  ctx.croppedCtx.fillStyle = 'black'
-  ctx.croppedCtx.fillRect(
-    0,
-    0,
-    ctx.croppedCanvas.width,
-    ctx.croppedCanvas.height,
-  )
-  ctx.croppedCtx.imageSmoothingEnabled = true
-  ctx.croppedCtx.imageSmoothingQuality = 'high'
-
-  // Calculate scaling to fit card within target size while preserving aspect ratio
-  const scale = Math.min(
-    targetSize / cropRect.width,
-    targetSize / cropRect.height,
-  )
-  const scaledWidth = cropRect.width * scale
-  const scaledHeight = cropRect.height * scale
-
-  // Center the card in the canvas
-  const offsetX = (targetSize - scaledWidth) / 2
-  const offsetY = (targetSize - scaledHeight) / 2
-
-  ctx.croppedCtx.drawImage(
-    contrastEnhancedCanvas,
-    0,
-    0,
-    cropRect.width,
-    cropRect.height,
-    offsetX,
-    offsetY,
-    scaledWidth,
-    scaledHeight,
-  )
-
-  return true
 }
 
 /**
@@ -621,152 +461,69 @@ async function cropCardAt(
     return false
   }
 
-  const cropRect = getClampedCropRect(
-    card.box,
-    sourceCanvas.width,
-    sourceCanvas.height,
-    CARD_CROP_PADDING_RATIO,
-  )
-  const cardWidthPx = cropRect.width
-  const cardHeightPx = cropRect.height
-  const detectionCropCanvas = document.createElement('canvas')
-  detectionCropCanvas.width = cardWidthPx
-  detectionCropCanvas.height = cardHeightPx
-  const detectionCropCtx = detectionCropCanvas.getContext('2d', {
-    willReadFrequently: true,
+  // Use warped canvas from SlimSAM perspective correction
+  console.log('[cropCardAt] Perspective warp check:', {
+    enablePerspectiveWarp: ctx.enablePerspectiveWarp,
+    hasWarpedCanvas: !!card.warpedCanvas,
   })
-  if (detectionCropCtx) {
-    detectionCropCtx.drawImage(
-      sourceCanvas,
-      cropRect.x,
-      cropRect.y,
-      cropRect.width,
-      cropRect.height,
-      0,
-      0,
-      cardWidthPx,
-      cardHeightPx,
-    )
-
-    // DEBUG STAGE 2: Log the raw bounding box crop (before perspective correction)
-    logDebugBlobUrl(
-      detectionCropCanvas,
-      'Bounding box crop (raw detection)',
-      2,
-      '#4CAF50', // Green
-    )
-  }
-
-  // T022: Use warped canvas if available (from SlimSAM perspective correction) and enabled
   if (ctx.enablePerspectiveWarp && card.warpedCanvas) {
-    // DEBUG STAGE 3: Log SlimSAM warped canvas before resize
-    logDebugBlobUrl(
-      card.warpedCanvas,
-      'After perspective correction (SlimSAM warp)',
-      3,
-      '#FF9800', // Orange
-    )
-
-    // Apply contrast enhancement BEFORE resize to match Python preprocessing order
+    // Apply contrast enhancement
     const contrastFactor = getQueryContrastEnhancement()
     const contrastEnhancedCanvas = enhanceCanvasContrast(
       card.warpedCanvas,
       contrastFactor,
     )
 
-    // Copy warped canvas to cropped canvas
-    const targetSize = getQueryTargetSize()
-    ctx.croppedCanvas.width = targetSize
-    ctx.croppedCanvas.height = targetSize
-    ctx.croppedCtx.fillStyle = 'black'
-    ctx.croppedCtx.fillRect(
-      0,
-      0,
-      ctx.croppedCanvas.width,
-      ctx.croppedCanvas.height,
-    )
-    ctx.croppedCtx.imageSmoothingEnabled = true
-    ctx.croppedCtx.imageSmoothingQuality = 'high'
-    ctx.croppedCtx.drawImage(
-      contrastEnhancedCanvas,
-      0,
-      0,
-      contrastEnhancedCanvas.width,
-      contrastEnhancedCanvas.height,
-      0,
-      0,
-      targetSize,
-      targetSize,
-    )
+    // Copy to cropped canvas (warpedCanvas is already the right size)
+    ctx.croppedCanvas.width = contrastEnhancedCanvas.width
+    ctx.croppedCanvas.height = contrastEnhancedCanvas.height
+    ctx.croppedCtx.drawImage(contrastEnhancedCanvas, 0, 0)
 
     return true
   }
 
-  // Two-stage pipeline: Refine bounding box to precise corners + perspective correction
-  if (ctx.enablePerspectiveWarp && currentDetectorType !== 'slimsam') {
-    try {
-      // Step 1: Refine bounding box to precise card corners using OpenCV
-      const quad = await refineBoundingBoxToCorners(
-        sourceCanvas,
-        card.box,
-        ctx.overlayEl.width,
-        ctx.overlayEl.height,
-        0.15, // 15% padding around bbox
-      )
+  // Fallback: Simple bounding box crop (when perspective warp is disabled)
+  const targetSize = getQueryTargetSize()
+  ctx.croppedCanvas.width = targetSize
+  ctx.croppedCanvas.height = targetSize
+  ctx.croppedCtx.fillStyle = 'black'
+  ctx.croppedCtx.fillRect(0, 0, targetSize, targetSize)
 
-      if (quad) {
-        // Step 2: Apply perspective correction to get canonical target-size image
-        const warpedCanvas = await warpCardToCanonical(sourceCanvas, quad)
+  const box = card.box
+  const cropX = Math.round(box.xmin * ctx.overlayEl.width)
+  const cropY = Math.round(box.ymin * ctx.overlayEl.height)
+  const cropW = Math.round((box.xmax - box.xmin) * ctx.overlayEl.width)
+  const cropH = Math.round((box.ymax - box.ymin) * ctx.overlayEl.height)
 
-        // DEBUG STAGE 3: Log OpenCV warped canvas
-        logDebugBlobUrl(
-          warpedCanvas,
-          'After perspective correction (OpenCV warp)',
-          3,
-          '#FF9800', // Orange
-        )
+  const scale = Math.min(targetSize / cropW, targetSize / cropH)
+  const scaledW = Math.round(cropW * scale)
+  const scaledH = Math.round(cropH * scale)
+  const offsetX = Math.round((targetSize - scaledW) / 2)
+  const offsetY = Math.round((targetSize - scaledH) / 2)
 
-        // Apply contrast enhancement BEFORE resize to match Python preprocessing order
-        const contrastFactor = getQueryContrastEnhancement()
-        const contrastEnhancedCanvas = enhanceCanvasContrast(
-          warpedCanvas,
-          contrastFactor,
-        )
+  ctx.croppedCtx.imageSmoothingEnabled = true
+  ctx.croppedCtx.imageSmoothingQuality = 'high'
+  ctx.croppedCtx.drawImage(
+    sourceCanvas,
+    cropX,
+    cropY,
+    cropW,
+    cropH,
+    offsetX,
+    offsetY,
+    scaledW,
+    scaledH,
+  )
 
-        // Copy warped canvas to cropped canvas
-        const targetSize = getQueryTargetSize()
-        ctx.croppedCanvas.width = targetSize
-        ctx.croppedCanvas.height = targetSize
-        ctx.croppedCtx.fillStyle = 'black'
-        ctx.croppedCtx.fillRect(
-          0,
-          0,
-          ctx.croppedCanvas.width,
-          ctx.croppedCanvas.height,
-        )
-        ctx.croppedCtx.imageSmoothingEnabled = true
-        ctx.croppedCtx.imageSmoothingQuality = 'high'
-        ctx.croppedCtx.drawImage(
-          contrastEnhancedCanvas,
-          0,
-          0,
-          contrastEnhancedCanvas.width,
-          contrastEnhancedCanvas.height,
-          0,
-          0,
-          targetSize,
-          targetSize,
-        )
+  // DEBUG: Fallback bbox crop (only shown when perspective warp disabled)
+  logDebugBlobUrl(
+    ctx.croppedCanvas,
+    'Fallback bbox crop (no perspective warp)',
+    99,
+    '#F44336', // Red - indicates fallback
+  )
 
-        return true
-      }
-    } catch {
-      // Fallback to simple crop on error
-    }
-  }
-
-  // Fallback: Use the bounding box to crop from source canvas (no perspective correction)
-  return cropCardFromBoundingBox(ctx, card.box, sourceCanvas)
+  return true
 }
 
 /**

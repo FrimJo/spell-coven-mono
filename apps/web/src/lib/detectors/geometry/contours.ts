@@ -180,9 +180,21 @@ export async function approximateToQuad(
  *
  * Algorithm:
  * 1. Find centroid of the 4 points
- * 2. Sort by angle from centroid
+ * 2. Sort by angle from centroid (clockwise in screen coordinates)
  * 3. Identify top-left as the point with smallest x+y sum
  * 4. Order remaining points clockwise
+ *
+ * Note: In screen coordinates (Y increases downward), atan2 returns angles where:
+ * - Left of centroid: ±π
+ * - Above centroid: -π/2
+ * - Right of centroid: 0
+ * - Below centroid: +π/2
+ *
+ * Sorting ascending gives: right(0) → bottom(π/2) → left(±π) → top(-π/2)
+ * But we want clockwise from top-left: TL → TR → BR → BL
+ *
+ * After finding top-left (smallest x+y) and rotating the array to start there,
+ * ascending angle order gives us the correct clockwise sequence.
  *
  * @param points - Array of 4 corner points (any order)
  * @returns Ordered CardQuad
@@ -198,11 +210,12 @@ export function orderQuadPoints(points: Point[]): CardQuad {
     y: points.reduce((sum, p) => sum + p.y, 0) / 4,
   }
 
-  // Sort points by angle from centroid (clockwise from top)
+  // Sort points by angle from centroid (ascending order)
+  // This gives us a consistent ordering around the quad
   const sorted = [...points].sort((a, b) => {
     const angleA = Math.atan2(a.y - centroid.y, a.x - centroid.x)
     const angleB = Math.atan2(b.y - centroid.y, b.x - centroid.x)
-    return angleA - angleB
+    return angleA - angleB // Ascending
   })
 
   // Find top-left point (smallest x + y sum)

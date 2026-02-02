@@ -147,13 +147,13 @@ export async function warpPerspective(
     tempCanvas.height = cardHeight
     cv.imshow(tempCanvas, warped)
 
-    // Log the perspective-warped card (before padding to square)
+    // Log the perspective-warped card (cut out and deskewed)
     tempCanvas.toBlob((blob) => {
       if (blob) {
         const url = URL.createObjectURL(blob)
         console.groupCollapsed(
-          '%c[DEBUG STAGE 3a] Perspective warp (deskewed, before padding)',
-          'background: #00BCD4; color: white; padding: 2px 6px; border-radius: 3px;',
+          '%c[DEBUG STAGE 3] OpenCV cut out (perspective corrected)',
+          'background: #FF9800; color: white; padding: 2px 6px; border-radius: 3px;',
         )
         console.log(
           '%c ',
@@ -175,8 +175,8 @@ export async function warpPerspective(
       if (blob) {
         const url = URL.createObjectURL(blob)
         console.groupCollapsed(
-          '%c[DEBUG STAGE 3b] Perspective warp + padding to square',
-          'background: #00BCD4; color: white; padding: 2px 6px; border-radius: 3px;',
+          '%c[DEBUG STAGE 4] Padded to square (black borders)',
+          'background: #9C27B0; color: white; padding: 2px 6px; border-radius: 3px;',
         )
         console.log(
           '%c ',

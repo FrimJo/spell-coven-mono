@@ -20,6 +20,6 @@
     "verbatimModuleSyntax": true,
     "types": ["bun-types"],
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
+    "noUncheckedSideEffectImports": true
   }
 }
