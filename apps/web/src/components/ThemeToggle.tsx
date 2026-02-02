@@ -1,23 +1,26 @@
 /**
  * ThemeToggle - A dropdown menu for selecting light/dark/system theme
+ * and MTG color themes (White, Blue, Black, Red, Green)
  *
  * Features animated sun/moon icons and MTG-inspired styling.
  */
 
 import { isThemeToggleEnabled } from '@/env'
-import { Monitor, Moon, Sun } from 'lucide-react'
+import { Monitor, Moon, Palette, Sun } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@repo/ui/components/dropdown-menu'
 
-import type { Theme } from '../contexts/ThemeContext.js'
-import { useTheme } from '../contexts/ThemeContext.js'
+import type { MtgColorTheme, Theme } from '../contexts/ThemeContext.js'
+import { MTG_THEMES, useTheme } from '../contexts/ThemeContext.js'
 
 interface ThemeToggleProps {
   /** Additional class names */
@@ -25,7 +28,7 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ className }: ThemeToggleProps) {
-  const { theme, resolvedTheme, setTheme } = useTheme()
+  const { theme, resolvedTheme, setTheme, mtgTheme, setMtgTheme } = useTheme()
 
   if (!isThemeToggleEnabled) return null
 
@@ -60,8 +63,11 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="border-surface-3 bg-surface-1"
+        className="border-surface-3 bg-surface-1 w-56"
       >
+        <DropdownMenuLabel className="text-text-muted text-xs font-normal">
+          Mode
+        </DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={theme}
           onValueChange={(value) => setTheme(value as Theme)}
@@ -87,6 +93,33 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
             <Monitor className="mr-2 h-4 w-4" />
             System
           </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+
+        <DropdownMenuSeparator className="bg-surface-3" />
+        
+        <DropdownMenuLabel className="text-text-muted text-xs font-normal flex items-center gap-1">
+          <Palette className="h-3 w-3" />
+          MTG Color Theme
+        </DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={mtgTheme}
+          onValueChange={(value) => setMtgTheme(value as MtgColorTheme)}
+        >
+          {(Object.keys(MTG_THEMES) as MtgColorTheme[]).map((key) => (
+            <DropdownMenuRadioItem
+              key={key}
+              value={key}
+              className="text-text-secondary focus:bg-surface-2 focus:text-foreground cursor-pointer"
+            >
+              <span className="mr-2 w-4 text-center">{MTG_THEMES[key].emoji}</span>
+              <span className="flex-1">{MTG_THEMES[key].label}</span>
+              {key !== 'none' && (
+                <span className="text-text-muted text-xs ml-2 hidden sm:inline">
+                  {MTG_THEMES[key].description.split(',')[0]}
+                </span>
+              )}
+            </DropdownMenuRadioItem>
+          ))}
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
