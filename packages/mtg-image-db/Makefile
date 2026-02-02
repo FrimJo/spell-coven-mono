@@ -39,8 +39,8 @@ test:
 	conda run -n mtg-faiss-mps $(PYTHON) test_perfect_match.py
 
 query:
-	@echo "Usage: $(PYTHON) query_index.py <image_path> [--k N]"
-	@echo "Example: $(PYTHON) query_index.py image_cache/your_image.jpg --k 5"
+	@if [ -z "$(IMAGE)" ]; then echo "Usage: make query IMAGE=path/to/image [K=5]"; exit 1; fi
+	$(PYTHON) query_index.py "$(IMAGE)" --k $(or $(K),5)
 
 serve:
 	@echo "Serving on http://localhost:$(PORT)"
