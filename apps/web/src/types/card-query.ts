@@ -140,6 +140,9 @@ export interface UseCardQueryReturn {
 
   /** Function to cancel pending query */
   cancel: () => void
+
+  /** Function to manually set a result (e.g., from search selection) */
+  setResult: (result: CardQueryResult) => void
 }
 
 /**
