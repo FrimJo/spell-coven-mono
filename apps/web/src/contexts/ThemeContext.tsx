@@ -2,6 +2,7 @@
  * Theme Context - Provides dark/light mode theming throughout the app
  *
  * Supports light, dark, and system preference modes.
+ * Also supports MTG color themes (White, Blue, Black, Red, Green).
  * Persists preference to localStorage.
  */
 
@@ -23,6 +24,19 @@ import { isThemeToggleEnabled } from '@/env'
 export type Theme = 'light' | 'dark' | 'system'
 export type ResolvedTheme = 'light' | 'dark'
 
+/** MTG color themes based on the five colors of Magic */
+export type MtgColorTheme = 'none' | 'white' | 'blue' | 'black' | 'red' | 'green'
+
+/** Information about MTG color themes */
+export const MTG_THEMES = {
+  none: { label: 'Default', emoji: '⚙️', description: 'Standard theme' },
+  white: { label: 'White', emoji: '⚪', description: 'Order, Light, Structure' },
+  blue: { label: 'Blue', emoji: '🔵', description: 'Knowledge, Control, Precision' },
+  black: { label: 'Black', emoji: '⚫', description: 'Power, Death, Ambition' },
+  red: { label: 'Red', emoji: '🔴', description: 'Chaos, Speed, Emotion' },
+  green: { label: 'Green', emoji: '🟢', description: 'Growth, Nature, Strength' },
+} as const
+
 interface ThemeContextValue {
   /** Current theme setting (light, dark, or system) */
   theme: Theme
@@ -32,11 +46,16 @@ interface ThemeContextValue {
   setTheme: (theme: Theme) => void
   /** Toggle between light and dark (skips system) */
   toggleTheme: () => void
+  /** Current MTG color theme */
+  mtgTheme: MtgColorTheme
+  /** Set MTG color theme */
+  setMtgTheme: (theme: MtgColorTheme) => void
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 const STORAGE_KEY = 'spell-coven-theme'
+const MTG_THEME_STORAGE_KEY = 'spell-coven-mtg-theme'
 
 // ============================================================================
 // Theme Provider
@@ -72,6 +91,20 @@ function applyThemeToDocument(resolvedTheme: ResolvedTheme) {
   }
 }
 
+/**
+ * Apply the MTG color theme to the document
+ */
+function applyMtgThemeToDocument(mtgTheme: MtgColorTheme) {
+  if (typeof document === 'undefined') return
+
+  const root = document.documentElement
+  if (mtgTheme === 'none') {
+    root.removeAttribute('data-mtg-theme')
+  } else {
+    root.setAttribute('data-mtg-theme', mtgTheme)
+  }
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = 'dark',
@@ -85,6 +118,18 @@ export function ThemeProvider({
       return stored
     }
     return defaultTheme
+  })
+
+  // Initialize MTG theme from localStorage
+  const [mtgTheme, setMtgThemeState] = useState<MtgColorTheme>(() => {
+    if (!isThemeToggleEnabled) return 'none'
+    if (typeof window === 'undefined') return 'none'
+    const stored = localStorage.getItem(MTG_THEME_STORAGE_KEY)
+    if (stored === 'none' || stored === 'white' || stored === 'blue' || 
+        stored === 'black' || stored === 'red' || stored === 'green') {
+      return stored
+    }
+    return 'none'
   })
 
   // Compute effective theme - when flag is disabled, always use 'dark'
@@ -112,6 +157,11 @@ export function ThemeProvider({
     applyThemeToDocument(resolvedTheme)
   }, [resolvedTheme])
 
+  // Apply MTG theme to document whenever mtgTheme changes
+  useEffect(() => {
+    applyMtgThemeToDocument(mtgTheme)
+  }, [mtgTheme])
+
   // Listen for system theme changes when theme is set to 'system'
   useEffect(() => {
     if (!isThemeToggleEnabled) return
@@ -138,6 +188,15 @@ export function ThemeProvider({
     localStorage.setItem(STORAGE_KEY, newTheme)
   }, [])
 
+  const setMtgTheme = useCallback((newMtgTheme: MtgColorTheme) => {
+    if (!isThemeToggleEnabled) {
+      setMtgThemeState('none')
+      return
+    }
+    setMtgThemeState(newMtgTheme)
+    localStorage.setItem(MTG_THEME_STORAGE_KEY, newMtgTheme)
+  }, [])
+
   const toggleTheme = useCallback(() => {
     if (!isThemeToggleEnabled) {
       setTheme('dark')
@@ -153,6 +212,8 @@ export function ThemeProvider({
     resolvedTheme,
     setTheme,
     toggleTheme,
+    mtgTheme,
+    setMtgTheme,
   }
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
