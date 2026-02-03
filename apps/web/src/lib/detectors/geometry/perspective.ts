@@ -11,6 +11,13 @@
 import type { CardQuad } from '../types.js'
 import { loadOpenCV } from '../../opencv-loader.js'
 import { CANONICAL_CARD_SIZE } from '../types.js'
+import { cropAndCenterToSquare, quadToBoundingBox } from './crop.js'
+
+/**
+ * Feature flag to skip perspective correction for testing.
+ * When true, uses simple bounding box crop instead of perspective warp.
+ */
+export const SKIP_PERSPECTIVE_CORRECTION = true
 
 /**
  * Compute homography matrix from source quad to destination rectangle
@@ -157,7 +164,7 @@ export async function warpPerspective(
         )
         console.log(
           '%c ',
-          `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+          `background: url(${url}) no-repeat; background-size: contain; padding: 150px;`,
         )
         console.log('Blob URL (copy this):', url)
         console.log('Dimensions:', `${tempCanvas.width}x${tempCanvas.height}`)
@@ -180,7 +187,7 @@ export async function warpPerspective(
         )
         console.log(
           '%c ',
-          `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+          `background: url(${url}) no-repeat; background-size: contain; padding: 150px;`,
         )
         console.log('Blob URL (copy this):', url)
         console.log(
@@ -201,9 +208,37 @@ export async function warpPerspective(
 }
 
 /**
+ * Simple bounding box crop without perspective correction
+ *
+ * Used for testing when perspective correction causes issues.
+ * Crops the bounding box of the quad and resizes to target size.
+ *
+ * @param sourceCanvas - Source canvas containing the card
+ * @param quad - Detected card corners (used to compute bounding box)
+ * @param targetSize - Final square output size (default: 224)
+ * @returns Canvas with cropped and resized card image
+ */
+export function simpleCrop(
+  sourceCanvas: HTMLCanvasElement,
+  quad: CardQuad,
+  targetSize: number = CANONICAL_CARD_SIZE.width,
+): HTMLCanvasElement {
+  const region = quadToBoundingBox(quad)
+
+  return cropAndCenterToSquare(sourceCanvas, region, {
+    targetSize,
+    highQuality: true,
+    debugLabel: `Simple crop to ${targetSize}x${targetSize} (NO perspective warp)`,
+    debugStage: 3,
+    debugColor: '#FF5722',
+  })
+}
+
+/**
  * Quick perspective warp without separate homography computation
  *
- * Convenience function that combines homography computation and warping
+ * Convenience function that combines homography computation and warping.
+ * When SKIP_PERSPECTIVE_CORRECTION is true, uses simple bounding box crop instead.
  *
  * @param sourceCanvas - Source canvas containing the card
  * @param quad - Detected card corners
@@ -213,6 +248,13 @@ export async function warpCardToCanonical(
   sourceCanvas: HTMLCanvasElement,
   quad: CardQuad,
 ): Promise<HTMLCanvasElement> {
+  if (SKIP_PERSPECTIVE_CORRECTION) {
+    console.log(
+      '%c[PERSPECTIVE] Skipping perspective correction (SKIP_PERSPECTIVE_CORRECTION=true)',
+      'background: #E91E63; color: white; padding: 2px 6px; border-radius: 3px; font-weight: bold;',
+    )
+    return simpleCrop(sourceCanvas, quad, CANONICAL_CARD_SIZE.width)
+  }
   return warpPerspective(sourceCanvas, quad, CANONICAL_CARD_SIZE.width)
 }
 

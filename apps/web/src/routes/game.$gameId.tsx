@@ -4,6 +4,7 @@ import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
 import { useAuth } from '@/contexts/AuthContext'
 import { convex } from '@/integrations/convex/provider'
+import { loadEmbeddingsAndMetaFromPackage } from '@/lib/clip-search'
 import { sessionStorage } from '@/lib/session-storage'
 import { api } from '@convex/_generated/api'
 import {
@@ -103,24 +104,21 @@ export const Route = createFileRoute('/game/$gameId')({
       throw notFound()
     }
   },
-  loader: async () => {
-    // // Load embeddings
-    // await loadEmbeddingsAndMetaFromPackage()
-
-    // // Load CLIP model
-    // await loadModel()
-
-    // // Load OpenCV with timeout (continue if fails - will lazy-load later)
-    // try {
-    //   await Promise.race([
-    //     loadOpenCV(),
-    //     new Promise((_, reject) =>
-    //       setTimeout(() => reject(new Error('OpenCV loading timeout')), 30000),
-    //     ),
-    //   ])
-    // } catch (err) {
-    //   console.error('Failed to load OpenCV:', err)
-    // }
+  loaderDeps: ({ search }) => ({ detector: search.detector }),
+  loader: async ({ deps }) => {
+    // Load embeddings database if card detection is enabled (detector param is set)
+    if (deps.detector) {
+      console.log(
+        '[game.$gameId loader] Detector enabled, preloading embeddings database...',
+      )
+      try {
+        await loadEmbeddingsAndMetaFromPackage()
+        console.log('[game.$gameId loader] Embeddings database loaded')
+      } catch (err) {
+        console.error('[game.$gameId loader] Failed to load embeddings:', err)
+        // Don't block page load - lazy loading will retry when query runs
+      }
+    }
 
     return {}
   },

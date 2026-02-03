@@ -638,12 +638,12 @@ export async function embedFromCanvas(
     if (blob) {
       const url = URL.createObjectURL(blob)
       console.groupCollapsed(
-        '%c[DEBUG STAGE 6] Final card for CLIP embedding (contrast already applied)',
+        '%c[DEBUG STAGE 5] Final card for CLIP embedding (contrast already applied)',
         'background: #673AB7; color: white; padding: 2px 6px; border-radius: 3px;',
       )
       console.log(
         '%c ',
-        `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+        `background: url(${url}) no-repeat; background-size: contain; padding: 150px;`,
       )
       console.log('Blob URL (copy this):', url)
       console.log('Dimensions:', `${canvas.width}x${canvas.height}`)

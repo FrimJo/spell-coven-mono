@@ -128,6 +128,23 @@ export function CardPreview({ playerName, onClose }: CardPreviewProps) {
           </div>
         </div>
 
+        {/* Query Image (Development only) */}
+        {import.meta.env.DEV && state.queryImageUrl && (
+          <div className="border-surface-2 mx-3 mb-3 border-t pt-3">
+            <p className="text-text-muted mb-2 text-xs font-medium">
+              Query Image (Dev)
+            </p>
+            <div className="bg-surface-0 overflow-hidden rounded-lg">
+              <img
+                src={state.queryImageUrl}
+                alt="Query image used for database lookup"
+                className="h-auto w-full"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Card Info */}
         {cardState === 'success' && (
           <div className="flex items-center justify-between px-3 pb-3">

@@ -13,6 +13,7 @@ import { Toaster } from '@repo/ui/components/sonner'
 
 import type { RejoinReason } from './RejoinGameDialog.js'
 import { AppHeader } from './AppHeader.js'
+import { CardSearchCommand } from './CardSearchCommand.js'
 import { DuplicateSessionDialog } from './DuplicateSessionDialog.js'
 import { GameRoomSidebar } from './GameRoomSidebar.js'
 import { LeaveGameDialog } from './LeaveGameDialog.js'
@@ -63,6 +64,7 @@ function GameRoomContent({
   const [duplicateDialogDismissed, setDuplicateDialogDismissed] =
     useState(false)
   const [showLeaveConfirmDialog, setShowLeaveConfirmDialog] = useState(false)
+  const [showCardSearch, setShowCardSearch] = useState(false)
 
   // Muted players state - tracks which remote players are muted by the local user
   const [mutedPlayers, setMutedPlayers] = useState<Set<string>>(new Set())
@@ -117,6 +119,10 @@ function GameRoomContent({
 
   const handleOpenSettings = useCallback(() => {
     setMediaDialogOpen(true)
+  }, [])
+
+  const handleSearchClick = useCallback(() => {
+    setShowCardSearch(true)
   }, [])
 
   const handleKickPlayer = async (playerId: string) => {
@@ -213,6 +219,12 @@ function GameRoomContent({
 
       <Toaster />
 
+      {/* Card Search Command Dialog */}
+      <CardSearchCommand
+        open={showCardSearch}
+        onOpenChange={setShowCardSearch}
+      />
+
       {/* Header */}
       <AppHeader
         variant="game"
@@ -221,6 +233,7 @@ function GameRoomContent({
         onLeave={handleManualLeave}
         onCopyLink={handleCopyShareLink}
         onOpenSettings={handleOpenSettings}
+        onSearchClick={handleSearchClick}
       />
 
       {/* Main Content */}

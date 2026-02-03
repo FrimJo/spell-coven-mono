@@ -47,6 +47,9 @@ export interface CardQueryState {
 
   /** Error message (present when status is 'error') */
   error: string | null
+
+  /** Data URL of the image used to query the database (dev only) */
+  queryImageUrl: string | null
 }
 
 /**
