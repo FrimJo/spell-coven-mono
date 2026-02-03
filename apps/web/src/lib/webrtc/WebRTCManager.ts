@@ -57,6 +57,13 @@ export class WebRTCManager {
   }
 
   /**
+   * Check if local stream is set
+   */
+  hasLocalStream(): boolean {
+    return this.localStream !== null
+  }
+
+  /**
    * Handle an incoming signal from a remote peer
    */
   async handleSignal(signal: WebRTCSignal): Promise<void> {

@@ -59,9 +59,15 @@ export function useConvexWebRTC({
   const webrtcManagerRef = useRef<WebRTCManager | null>(null)
   const onErrorRef = useRef(onError)
   const previousRemotePlayerIdsRef = useRef<string[]>([])
+  const localStreamRef = useRef<MediaStream | null>(localStream)
 
   // Queue for signals that arrive before manager is ready
   const pendingSignalsRef = useRef<WebRTCSignal[]>([])
+
+  // Keep local stream ref up to date
+  useEffect(() => {
+    localStreamRef.current = localStream
+  }, [localStream])
 
   // Update error callback ref
   useEffect(() => {
@@ -168,6 +174,15 @@ export function useConvexWebRTC({
 
     webrtcManagerRef.current = webrtcManager
 
+    // Set local stream immediately if it already exists
+    // This prevents race conditions where peer connection effect runs before local stream effect
+    if (localStreamRef.current) {
+      console.log(
+        '[ConvexWebRTC:Hook] Setting existing local stream on newly created manager',
+      )
+      webrtcManager.setLocalStream(localStreamRef.current)
+    }
+
     console.log('[ConvexWebRTC:Hook] WebRTC manager initialized')
 
     // Note: Don't replay signals here - wait for local stream to be set first
@@ -230,8 +245,12 @@ export function useConvexWebRTC({
       return
     }
 
-    if (!localStream) {
-      console.log('[ConvexWebRTC:Hook] Skipping - local stream not ready')
+    // Check both the prop AND that the manager actually has the stream set
+    // This prevents race conditions where the prop exists but hasn't been set on the manager yet
+    if (!localStream || !webrtcManagerRef.current.hasLocalStream()) {
+      console.log(
+        '[ConvexWebRTC:Hook] Skipping - local stream not ready on manager',
+      )
       return
     }
 
