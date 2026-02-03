@@ -5,7 +5,14 @@ import type {
   UseCardQueryReturn,
 } from '@/types/card-query'
 import { useCallback, useRef, useState } from 'react'
-import { embedFromCanvas, isModelReady, top1, topK } from '@/lib/clip-search'
+import {
+  embedFromCanvas,
+  isModelReady,
+  loadEmbeddingsAndMetaFromPackage,
+  loadModel,
+  top1,
+  topK,
+} from '@/lib/clip-search'
 import { generateOrientationCandidates } from '@/lib/detectors/geometry/orientation'
 import { validateCanvas } from '@/types/card-query'
 
@@ -14,6 +21,7 @@ export function useCardQuery(): UseCardQueryReturn {
     status: 'idle',
     result: null,
     error: null,
+    queryImageUrl: null,
   })
 
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -36,6 +44,7 @@ export function useCardQuery(): UseCardQueryReturn {
         status: 'success',
         result,
         error: null,
+        queryImageUrl: null, // Clear query image when manually setting result
       })
     },
     [cancel],
@@ -68,37 +77,55 @@ export function useCardQuery(): UseCardQueryReturn {
           status: 'error',
           result: null,
           error: validation.error || 'Invalid canvas',
+          queryImageUrl: null,
         })
         return
       }
 
-      // Log the input canvas (after crop & perspective warp, before rotation)
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob)
-          console.groupCollapsed(
-            '%c[DEBUG STAGE 4] Final cropped card (resized to 224x224, before rotation)',
-            'background: #9C27B0; color: white; padding: 2px 6px; border-radius: 3px;',
-          )
-          console.log(
-            '%c ',
-            `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
-          )
-          console.log('Blob URL (copy this):', url)
-          console.log('Dimensions:', `${canvas.width}x${canvas.height}`)
-          console.groupEnd()
-        }
-      }, 'image/png')
+      // Capture query image as data URL (for development debugging)
+      const queryImageUrl = canvas.toDataURL('image/png')
 
       // Set querying state
       setState({
         status: 'querying',
         result: null,
         error: null,
+        queryImageUrl,
       })
 
       try {
         // Check if aborted
+        if (abortController.signal.aborted) {
+          return
+        }
+
+        // Ensure model and database are loaded before proceeding
+        if (!isModelReady()) {
+          console.log('[useCardQuery] Model/database not ready, loading now...')
+          try {
+            // Load embeddings and model in parallel for faster initialization
+            await Promise.all([loadEmbeddingsAndMetaFromPackage(), loadModel()])
+            console.log('[useCardQuery] Model and database loaded successfully')
+          } catch (loadErr) {
+            const errorMessage =
+              loadErr instanceof Error
+                ? loadErr.message
+                : 'Failed to load CLIP model or embeddings database'
+            console.error(
+              '[useCardQuery] Failed to load model/database:',
+              loadErr,
+            )
+            setState({
+              status: 'error',
+              result: null,
+              error: errorMessage,
+              queryImageUrl,
+            })
+            return
+          }
+        }
+
+        // Check if aborted after loading
         if (abortController.signal.aborted) {
           return
         }
@@ -139,12 +166,12 @@ export function useCardQuery(): UseCardQueryReturn {
             if (blob) {
               const url = URL.createObjectURL(blob)
               console.groupCollapsed(
-                `%c[DEBUG STAGE 5] Card orientation candidate ${i} (ready for embedding)`,
+                `%c[DEBUG STAGE 4] Card orientation candidate ${i} (ready for embedding)`,
                 'background: #E91E63; color: white; padding: 2px 6px; border-radius: 3px;',
               )
               console.log(
                 '%c ',
-                `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+                `background: url(${url}) no-repeat; background-size: contain; padding: 150px;`,
               )
               console.log('Blob URL (copy this):', url)
               console.log(
@@ -159,14 +186,6 @@ export function useCardQuery(): UseCardQueryReturn {
           console.log(
             `[useCardQuery] Proceeding to embed orientation candidate ${i} (toBlob logged asynchronously above)`,
           )
-
-          // Check if model and database are ready
-          if (!isModelReady()) {
-            const errorMsg =
-              'CLIP model or embeddings database not loaded. Cannot proceed with embedding.'
-            console.error(`[useCardQuery] ${errorMsg}`)
-            throw new Error(errorMsg)
-          }
 
           // Embed the candidate
           console.log(
@@ -209,6 +228,16 @@ export function useCardQuery(): UseCardQueryReturn {
           )
           console.log('[useCardQuery] Search result:', result)
 
+          // Log orientation score prominently
+          const orientationLabel =
+            ['0°', '90°', '180°', '270°'][i] || `${i * 90}°`
+          console.log(
+            `%c[ORIENTATION ${i}] ${orientationLabel} → score=${result?.score?.toFixed(4) ?? 'N/A'} match="${result?.name ?? 'none'}"`,
+            result && result.score > bestScore
+              ? 'background: #4CAF50; color: white; padding: 2px 6px; border-radius: 3px; font-weight: bold;'
+              : 'background: #9E9E9E; color: white; padding: 2px 6px; border-radius: 3px;',
+          )
+
           if (result && result.score > bestScore) {
             bestScore = result.score
             bestResult = result
@@ -221,6 +250,15 @@ export function useCardQuery(): UseCardQueryReturn {
         if (!bestResult) {
           throw new Error('No valid result from database search')
         }
+
+        // Log winning orientation summary
+        const winningLabel =
+          ['0°', '90°', '180°', '270°'][bestOrientation] ||
+          `${bestOrientation * 90}°`
+        console.log(
+          `%c[ORIENTATION WINNER] ${winningLabel} (index ${bestOrientation}) → score=${bestScore.toFixed(4)} match="${bestResult.name}"`,
+          'background: #2196F3; color: white; padding: 4px 8px; border-radius: 3px; font-weight: bold; font-size: 12px;',
+        )
 
         // Check if aborted after query
         if (abortController.signal.aborted) {
@@ -280,6 +318,7 @@ export function useCardQuery(): UseCardQueryReturn {
           status: 'success',
           result: bestResult,
           error: null,
+          queryImageUrl,
         })
         console.log('[useCardQuery] State updated to success')
       } catch (err) {
@@ -292,6 +331,7 @@ export function useCardQuery(): UseCardQueryReturn {
             status: 'error',
             result: null,
             error: errorMessage,
+            queryImageUrl,
           })
         }
       } finally {

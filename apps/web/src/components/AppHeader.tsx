@@ -12,6 +12,7 @@ import {
   LogIn,
   LogOut,
   Menu,
+  Search,
   Settings,
 } from 'lucide-react'
 
@@ -64,6 +65,8 @@ interface AppHeaderProps {
   onCopyLink?: () => void
   /** Callback when settings button is clicked (game only) */
   onOpenSettings?: () => void
+  /** Callback when search button is clicked (game only) */
+  onSearchClick?: () => void
 }
 
 // ============================================================================
@@ -296,6 +299,7 @@ function GameHeader({
   onLeave,
   onCopyLink,
   onOpenSettings,
+  onSearchClick,
 }: AppHeaderProps) {
   return (
     <header className="border-surface-2 bg-surface-1/80 shrink-0 border-b backdrop-blur-md">
@@ -364,6 +368,22 @@ function GameHeader({
 
         {/* Right side */}
         <div className="flex items-center gap-3">
+          {/* Search Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSearchClick}
+            className="border-surface-3 bg-surface-2 text-text-muted hover:bg-surface-3 hover:text-text-primary gap-2"
+            title="Search cards (⌘K)"
+            data-testid="search-button"
+          >
+            <Search className="h-4 w-4" />
+            <span className="hidden sm:inline">Search cards</span>
+            <kbd className="bg-surface-3 text-text-muted pointer-events-none hidden h-5 select-none items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-75 sm:inline-flex">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </Button>
+
           <ThemeToggle />
 
           <Button

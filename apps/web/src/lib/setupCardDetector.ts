@@ -12,6 +12,11 @@ import {
   waitForEmbeddings,
   warmModel,
 } from './clip-search.js'
+import {
+  captureVideoFrame,
+  cropAndCenterToSquare,
+  normalizedBoxToCropRegion,
+} from './detectors/geometry/crop.js'
 // Removed: refineBoundingBoxToCorners and warpCardToCanonical - perspective warp disabled
 import { createDetector } from './detectors/index.js'
 
@@ -41,7 +46,7 @@ function logDebugBlobUrl(
       )
       console.log(
         '%c ',
-        `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+        `background: url(${url}) no-repeat; background-size: contain; padding: 150px;`,
       )
       console.log('Blob URL (copy this):', url)
       console.log('Dimensions:', `${canvas.width}x${canvas.height}`)
@@ -229,39 +234,16 @@ async function detectCards(
   isDetecting = true
 
   try {
-    // Create a temporary canvas for detection (don't touch the overlay yet)
-    const tempCanvas = document.createElement('canvas')
-    tempCanvas.width = ctx.overlayEl.width
-    tempCanvas.height = ctx.overlayEl.height
-    const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })
-    if (!tempCtx) {
-      throw new Error(
-        'setupCardDetector: Failed to get 2d context from temp canvas',
-      )
-    }
-    tempCtx.drawImage(ctx.videoEl, 0, 0, tempCanvas.width, tempCanvas.height)
+    // Capture video frame at native resolution (preserves aspect ratio)
+    const { canvas: frameCanvas } = captureVideoFrame(
+      ctx.videoEl,
+      ctx.overlayEl.width,
+      ctx.overlayEl.height,
+    )
 
-    // Store current frame for click handling (full resolution for accuracy)
-    const fullResSnapshot = document.createElement('canvas')
-    fullResSnapshot.width = ctx.videoEl.videoWidth
-    fullResSnapshot.height = ctx.videoEl.videoHeight
-    const fullResSnapshotCtx = fullResSnapshot.getContext('2d', {
-      willReadFrequently: true,
-    })
-    if (fullResSnapshotCtx) {
-      fullResSnapshotCtx.drawImage(
-        ctx.videoEl,
-        0,
-        0,
-        fullResSnapshot.width,
-        fullResSnapshot.height,
-      )
-      currentFullResCanvas = fullResSnapshot
-      currentFrameCanvas = fullResSnapshot
-    } else {
-      currentFrameCanvas = tempCanvas
-      currentFullResCanvas = null
-    }
+    // Store for both detection and click handling
+    currentFrameCanvas = frameCanvas
+    currentFullResCanvas = frameCanvas
 
     // Set click point for SlimSAM detector if provided
     if (
@@ -274,7 +256,7 @@ async function detectCards(
 
     // Run detection using pluggable detector
     const result = await detector.detect(
-      tempCanvas,
+      frameCanvas,
       ctx.overlayEl.width,
       ctx.overlayEl.height,
     )
@@ -484,44 +466,24 @@ async function cropCardAt(
 
   // Fallback: Simple bounding box crop (when perspective warp is disabled)
   const targetSize = getQueryTargetSize()
-  ctx.croppedCanvas.width = targetSize
-  ctx.croppedCanvas.height = targetSize
-  ctx.croppedCtx.fillStyle = 'black'
-  ctx.croppedCtx.fillRect(0, 0, targetSize, targetSize)
-
-  const box = card.box
-  const cropX = Math.round(box.xmin * ctx.overlayEl.width)
-  const cropY = Math.round(box.ymin * ctx.overlayEl.height)
-  const cropW = Math.round((box.xmax - box.xmin) * ctx.overlayEl.width)
-  const cropH = Math.round((box.ymax - box.ymin) * ctx.overlayEl.height)
-
-  const scale = Math.min(targetSize / cropW, targetSize / cropH)
-  const scaledW = Math.round(cropW * scale)
-  const scaledH = Math.round(cropH * scale)
-  const offsetX = Math.round((targetSize - scaledW) / 2)
-  const offsetY = Math.round((targetSize - scaledH) / 2)
-
-  ctx.croppedCtx.imageSmoothingEnabled = true
-  ctx.croppedCtx.imageSmoothingQuality = 'high'
-  ctx.croppedCtx.drawImage(
-    sourceCanvas,
-    cropX,
-    cropY,
-    cropW,
-    cropH,
-    offsetX,
-    offsetY,
-    scaledW,
-    scaledH,
+  const region = normalizedBoxToCropRegion(
+    card.box,
+    ctx.overlayEl.width,
+    ctx.overlayEl.height,
   )
 
-  // DEBUG: Fallback bbox crop (only shown when perspective warp disabled)
-  logDebugBlobUrl(
-    ctx.croppedCanvas,
-    'Fallback bbox crop (no perspective warp)',
-    99,
-    '#F44336', // Red - indicates fallback
-  )
+  const croppedResult = cropAndCenterToSquare(sourceCanvas, region, {
+    targetSize,
+    highQuality: true,
+    debugLabel: 'Fallback bbox crop (no perspective warp)',
+    debugStage: 99,
+    debugColor: '#F44336',
+  })
+
+  // Copy result to the instance's cropped canvas
+  ctx.croppedCanvas.width = croppedResult.width
+  ctx.croppedCanvas.height = croppedResult.height
+  ctx.croppedCtx.drawImage(croppedResult, 0, 0)
 
   return true
 }

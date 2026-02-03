@@ -321,7 +321,7 @@ export class OpenCVDetector implements CardDetector {
         )
         console.log(
           '%c ',
-          `background: url(${url}) no-repeat; background-size: contain; padding: 100px 150px;`,
+          `background: url(${url}) no-repeat; background-size: contain; padding: 150px;`,
         )
         console.log('Blob URL (copy this):', url)
         console.log('Quad:', quad)
