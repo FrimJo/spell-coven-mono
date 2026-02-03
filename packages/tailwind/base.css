@@ -75,6 +75,9 @@
     247,
     0.6
   ); /* Brand color with 60% opacity for glow effects */
+  /* Gradient colors for text effects */
+  --gradient-from: oklch(0.55 0.25 285); /* Brand color */
+  --gradient-to: oklch(0.55 0.2 250); /* Info (blue) color */
 
   /* Success (Green) */
   --success: oklch(0.6 0.2 145);
@@ -180,6 +183,9 @@
     237,
     0.6
   ); /* Brand color with 60% opacity for glow effects */
+  /* Gradient colors for text effects */
+  --gradient-from: #7c3aed; /* Brand color */
+  --gradient-to: #3b82f6; /* Info (blue) color */
 
   /* Success (Green) - dark mode values */
   --success: #4ade80;
@@ -263,6 +269,9 @@
     55,
     0.6
   ); /* Brand color with 60% opacity for glow effects */
+  /* Gradient colors for text effects */
+  --gradient-from: #d4af37; /* Gold */
+  --gradient-to: #fbbf24; /* Lighter gold/amber */
 
   /* Surface levels */
   --surface-0: #0f0e0a;
@@ -329,6 +338,9 @@
     216,
     0.6
   ); /* Brand color with 60% opacity for glow effects */
+  /* Gradient colors for text effects */
+  --gradient-from: #1f4fd8; /* Arcane blue */
+  --gradient-to: #4da6ff; /* Lighter blue */
 
   /* Surface levels */
   --surface-0: #050a10;
@@ -395,6 +407,9 @@
     30,
     0.6
   ); /* Brand color with 60% opacity for glow effects */
+  /* Gradient colors for text effects */
+  --gradient-from: #7a1e1e; /* Dark red */
+  --gradient-to: #b84040; /* Lighter red */
 
   /* Surface levels */
   --surface-0: #050505;
@@ -461,6 +476,9 @@
     40,
     0.6
   ); /* Brand color with 60% opacity for glow effects */
+  /* Gradient colors for text effects */
+  --gradient-from: #c62828; /* Red */
+  --gradient-to: #ff8a50; /* Orange */
 
   /* Surface levels */
   --surface-0: #0d0808;
@@ -527,6 +545,9 @@
     50,
     0.6
   ); /* Brand color with 60% opacity for glow effects */
+  /* Gradient colors for text effects */
+  --gradient-from: #2e7d32; /* Forest green */
+  --gradient-to: #81c784; /* Lighter green */
 
   /* Surface levels */
   --surface-0: #050d05;
