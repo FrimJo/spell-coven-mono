@@ -1,14 +1,163 @@
+import type { CardHistoryEntry } from '@/types/card-query'
 import type { Participant } from '@/types/participant'
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCardQueryContext } from '@/contexts/CardQueryContext'
 import { usePresence } from '@/contexts/PresenceContext'
+import { History, Trash2 } from 'lucide-react'
 
+import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
 import { Skeleton } from '@repo/ui/components/skeleton'
 
 import { CardPreview } from './CardPreview'
 import { GameStatsPanel } from './GameStatsPanel'
 import { PlayerList } from './PlayerList'
+
+/**
+ * Shared sidebar card component with header and content
+ */
+export function SidebarCard({
+  icon: Icon,
+  title,
+  count,
+  children,
+  maxHeight,
+  onScrollToTop,
+  scrollTrigger,
+  headerAction,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  count: string | number
+  children: React.ReactNode
+  maxHeight?: string
+  onScrollToTop?: boolean
+  scrollTrigger?: number
+  headerAction?: React.ReactNode
+}) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const prevScrollTriggerRef = useRef(scrollTrigger ?? 0)
+
+  // Scroll to top when trigger changes (e.g., new item added)
+  useEffect(() => {
+    if (
+      onScrollToTop &&
+      scrollTrigger !== undefined &&
+      scrollTrigger > prevScrollTriggerRef.current &&
+      scrollContainerRef.current
+    ) {
+      scrollContainerRef.current.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      })
+    }
+    if (scrollTrigger !== undefined) {
+      prevScrollTriggerRef.current = scrollTrigger
+    }
+  }, [scrollTrigger, onScrollToTop])
+
+  return (
+    <Card className="border-surface-2 bg-surface-1 gap-0 overflow-hidden">
+      <div className="border-surface-2 bg-surface-0/50 flex items-center justify-between border-b px-3 py-2">
+        <div className="flex items-center gap-2">
+          <Icon className="text-text-muted h-4 w-4" />
+          <span className="text-text-secondary text-sm font-medium">
+            {title}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-text-muted text-xs">{count}</span>
+          {headerAction}
+        </div>
+      </div>
+      <div
+        ref={scrollContainerRef}
+        className={maxHeight ? `${maxHeight} overflow-y-auto` : ''}
+      >
+        {children}
+      </div>
+    </Card>
+  )
+}
+
+/**
+ * Compact card history list component
+ */
+function CardHistoryList({
+  history,
+  onSelect,
+  selectedCardId,
+  onClear,
+}: {
+  history: CardHistoryEntry[]
+  onSelect: (entry: CardHistoryEntry) => void
+  selectedCardId: string | null
+  onClear: () => void
+}) {
+  const hasHistory = history.length > 0
+
+  return (
+    <SidebarCard
+      icon={History}
+      title="Recent Cards"
+      count={`(${history.length})`}
+      maxHeight="max-h-[300px]"
+      onScrollToTop
+      scrollTrigger={history.length}
+      headerAction={
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClear}
+          disabled={!hasHistory}
+          className="text-text-muted hover:text-destructive disabled:text-text-muted/50 h-5 w-5 p-0 disabled:cursor-not-allowed"
+          title="Clear history"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      }
+    >
+      {history.map((entry) => {
+        const isSelected = selectedCardId === entry.id
+        return (
+          <button
+            key={`${entry.id}-${entry.timestamp}`}
+            onClick={() => onSelect(entry)}
+            className={`flex w-full items-center gap-2 px-3 py-2 text-left transition-colors ${
+              isSelected
+                ? 'bg-surface-2 border-brand border-l-2'
+                : 'hover:bg-surface-2'
+            }`}
+          >
+            {entry.image_url && (
+              <img
+                src={entry.image_url}
+                alt=""
+                className="h-8 w-6 flex-shrink-0 rounded object-cover"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="text-text-primary truncate text-sm">
+                {entry.name}
+              </div>
+              <div className="text-text-muted text-xs uppercase">
+                {entry.set}
+              </div>
+            </div>
+          </button>
+        )
+      })}
+    </SidebarCard>
+  )
+}
 
 /**
  * Threshold for considering a player "online" (15 seconds)
@@ -42,10 +191,46 @@ function SidebarContent({
   // Get game room participants from context (already deduplicated)
   const { uniqueParticipants } = usePresence()
   const { user } = useAuth()
+  const { state, history, setResultWithoutHistory, clearResult, clearHistory } =
+    useCardQueryContext()
+
+  // Determine the currently selected card ID for highlighting
+  const selectedCardIdForHighlight = useMemo(() => {
+    // Prefer state.result, fallback to history[0]
+    const firstHistoryEntry = history[0]
+    const displayResult =
+      state.result ??
+      (firstHistoryEntry && (state.status !== 'idle' || state.result != null)
+        ? {
+            name: firstHistoryEntry.name,
+            set: firstHistoryEntry.set,
+          }
+        : null)
+
+    if (!displayResult) return null
+
+    // Match by name:set (same format as history entry id)
+    return `${displayResult.name}:${displayResult.set}`
+  }, [state.result, state.status, history])
 
   // State for commanders panel
   const [panelOpen, setPanelOpen] = useState(false)
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
+
+  // Handler to re-select a history entry (doesn't add to history)
+  const handleHistorySelect = useCallback(
+    (entry: CardHistoryEntry) => {
+      setResultWithoutHistory({
+        name: entry.name,
+        set: entry.set,
+        score: 1.0, // Re-selection = full confidence
+        scryfall_uri: entry.scryfall_uri,
+        image_url: entry.image_url,
+        card_url: entry.card_url,
+      })
+    },
+    [setResultWithoutHistory],
+  )
 
   // Current time state for computing online status (updates every 5 seconds)
   const [now, setNow] = useState(() => Date.now())
@@ -106,7 +291,13 @@ function SidebarContent({
           onToggleMutePlayer={onToggleMutePlayer}
           onViewCommanders={handleViewCommanders}
         />
-        <CardPreview playerName={playerName} onClose={() => {}} />
+        <CardPreview playerName={playerName} onClose={clearResult} />
+        <CardHistoryList
+          history={history}
+          onSelect={handleHistorySelect}
+          selectedCardId={selectedCardIdForHighlight}
+          onClear={clearHistory}
+        />
       </div>
 
       {/* Commanders Panel */}

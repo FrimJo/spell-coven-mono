@@ -237,10 +237,16 @@ export class OpenCVDetector implements CardDetector {
             }
           }
 
+          // Use ordered quad points for polygon (TL, TR, BR, BL order)
+          // This matches the Stage 2 debug visualization
+          const orderedPolygon = quad
+            ? [quad.topLeft, quad.topRight, quad.bottomRight, quad.bottomLeft]
+            : d.polygon
+
           return {
             box: d.box,
             score: d.score,
-            polygon: d.polygon.map((p) => ({
+            polygon: orderedPolygon.map((p) => ({
               x: p.x / canvas.width,
               y: p.y / canvas.height,
             })),

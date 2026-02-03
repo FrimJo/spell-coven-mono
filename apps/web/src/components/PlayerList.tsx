@@ -23,7 +23,6 @@ import {
   AlertDialogTitle,
 } from '@repo/ui/components/alert-dialog'
 import { Button } from '@repo/ui/components/button'
-import { Card } from '@repo/ui/components/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +34,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@repo/ui/components/tooltip'
+
+import { SidebarCard } from './GameRoomSidebar'
 
 interface Player {
   id: string
@@ -89,183 +90,171 @@ export function PlayerList({
     setConfirmDialog({ open: true, player, action })
   }
   return (
-    <Card className="border-surface-2 bg-surface-1 p-4">
-      <div className="space-y-3">
-        <div className="mb-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="text-text-muted h-4 w-4" />
-            <span className="text-text-muted text-sm">Players</span>
-          </div>
-          <span className="text-text-muted text-xs">{players.length}/4</span>
-        </div>
+    <SidebarCard icon={Users} title="Players" count={`${players.length}/4`}>
+      <div className="space-y-2 p-2">
+        {Array.from({ length: 4 }).map((_, index) => {
+          const player = players[index]
 
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, index) => {
-            const player = players[index]
-
-            // Empty slot
-            if (!player) {
-              return (
-                <motion.div
-                  key={`empty-${index}`}
-                  className="border-surface-3 bg-surface-2/20 flex min-h-[42px] items-center justify-between rounded-lg border border-dashed p-2"
-                  animate={{
-                    opacity: [0.6, 0.85, 0.6],
-                    borderColor: [
-                      'rgba(255, 255, 255, 0.1)',
-                      'rgba(255, 255, 255, 0.2)',
-                      'rgba(255, 255, 255, 0.1)',
-                    ],
-                  }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  }}
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <motion.div
-                      className="bg-surface-3 h-2 w-2 flex-shrink-0 rounded-full"
-                      animate={{
-                        scale: [1, 1.2, 1],
-                        opacity: [0.5, 0.8, 0.5],
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: 'easeInOut',
-                      }}
-                    />
-                    <span className="text-text-muted truncate text-sm">
-                      Open seat
-                    </span>
-                  </div>
-                </motion.div>
-              )
-            }
-
-            // Filled slot
-            const isLocal = player.name === localPlayerName
-            const isOwner = ownerId ? player.id === ownerId : player.id === '1' // Use provided ownerId or fallback to first player
-            const isMuted = mutedPlayers.has(player.id)
-
+          // Empty slot
+          if (!player) {
             return (
-              <div
-                key={player.id}
-                className="border-surface-2 bg-surface-2/50 flex items-center justify-between rounded-lg border p-2 transition-colors"
+              <motion.div
+                key={`empty-${index}`}
+                className="border-surface-3 bg-surface-2/20 flex min-h-[42px] items-center justify-between rounded-lg border border-dashed p-2"
+                animate={{
+                  opacity: [0.6, 0.85, 0.6],
+                  borderColor: [
+                    'rgba(255, 255, 255, 0.1)',
+                    'rgba(255, 255, 255, 0.2)',
+                    'rgba(255, 255, 255, 0.1)',
+                  ],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <div
-                    className={`h-2 w-2 flex-shrink-0 rounded-full ${
-                      player.isOnline !== false
-                        ? 'bg-online animate-pulse'
-                        : 'bg-warning'
-                    }`}
-                    title={
-                      player.isOnline !== false ? 'Online' : 'Disconnected'
-                    }
+                  <motion.div
+                    className="bg-surface-3 h-2 w-2 flex-shrink-0 rounded-full"
+                    animate={{
+                      scale: [1, 1.2, 1],
+                      opacity: [0.5, 0.8, 0.5],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
                   />
-                  <span className="truncate text-sm text-white">
-                    {player.name}
+                  <span className="text-text-muted truncate text-sm">
+                    Open seat
                   </span>
-                  {isOwner && (
-                    <Crown className="text-warning h-3 w-3 flex-shrink-0" />
-                  )}
-                  {player.isOnline === false && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="bg-warning/20 text-warning flex flex-shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs">
-                          <Unplug className="h-3 w-3" />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Disconnected</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                  {!isLocal && isMuted && (
-                    <span
-                      className="bg-destructive/20 text-destructive flex flex-shrink-0 items-center justify-center rounded px-1.5 py-1"
-                      title="Muted"
-                    >
-                      <VolumeX className="h-3 w-3" />
-                    </span>
-                  )}
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-text-muted hover:bg-surface-3 hover:text-text-secondary h-6 w-6 p-0"
-                      >
-                        <MoreVertical className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="border-surface-3 bg-surface-2"
-                    >
-                      {onViewCommanders && (
-                        <DropdownMenuItem
-                          onClick={() => onViewCommanders(player.id)}
-                          className="text-text-secondary focus:bg-surface-3 focus:text-white"
-                          title="View and edit commanders"
-                        >
-                          <Swords className="mr-2 h-4 w-4" />
-                          Commanders
-                        </DropdownMenuItem>
-                      )}
-                      {!isLocal && (
-                        <DropdownMenuItem
-                          onClick={() => onToggleMutePlayer(player.id)}
-                          className="text-text-secondary focus:bg-surface-3 focus:text-white"
-                          title={
-                            isMuted ? 'Unmute this player' : 'Mute this player'
-                          }
-                        >
-                          {isMuted ? (
-                            <>
-                              <Volume2 className="mr-2 h-4 w-4" />
-                              Unmute
-                            </>
-                          ) : (
-                            <>
-                              <VolumeX className="mr-2 h-4 w-4" />
-                              Mute
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                      )}
-                      {isLobbyOwner && !isOwner && (
-                        <>
-                          <DropdownMenuItem
-                            onClick={() => openConfirmDialog(player, 'kick')}
-                            className="text-warning focus:bg-warning/10 focus:text-warning"
-                            title="Can rejoin"
-                          >
-                            <UserX className="mr-2 h-4 w-4" />
-                            Kick
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => openConfirmDialog(player, 'ban')}
-                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                            title="Permanent"
-                          >
-                            <Ban className="mr-2 h-4 w-4" />
-                            Ban
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
+              </motion.div>
             )
-          })}
-        </div>
+          }
+
+          // Filled slot
+          const isLocal = player.name === localPlayerName
+          const isOwner = ownerId ? player.id === ownerId : player.id === '1' // Use provided ownerId or fallback to first player
+          const isMuted = mutedPlayers.has(player.id)
+
+          return (
+            <div
+              key={player.id}
+              className="border-surface-2 bg-surface-2/50 flex items-center justify-between rounded-lg border p-2 transition-colors"
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <div
+                  className={`h-2 w-2 flex-shrink-0 rounded-full ${
+                    player.isOnline !== false
+                      ? 'bg-online animate-pulse'
+                      : 'bg-warning'
+                  }`}
+                  title={player.isOnline !== false ? 'Online' : 'Disconnected'}
+                />
+                <span className="truncate text-sm text-white">
+                  {player.name}
+                </span>
+                {isOwner && (
+                  <Crown className="text-warning h-3 w-3 flex-shrink-0" />
+                )}
+                {player.isOnline === false && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="bg-warning/20 text-warning flex flex-shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs">
+                        <Unplug className="h-3 w-3" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Disconnected</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {!isLocal && isMuted && (
+                  <span
+                    className="bg-destructive/20 text-destructive flex flex-shrink-0 items-center justify-center rounded px-1.5 py-1"
+                    title="Muted"
+                  >
+                    <VolumeX className="h-3 w-3" />
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-text-muted hover:bg-surface-3 hover:text-text-secondary h-6 w-6 p-0"
+                    >
+                      <MoreVertical className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="border-surface-3 bg-surface-2"
+                  >
+                    {onViewCommanders && (
+                      <DropdownMenuItem
+                        onClick={() => onViewCommanders(player.id)}
+                        className="text-text-secondary focus:bg-surface-3 focus:text-white"
+                        title="View and edit commanders"
+                      >
+                        <Swords className="mr-2 h-4 w-4" />
+                        Commanders
+                      </DropdownMenuItem>
+                    )}
+                    {!isLocal && (
+                      <DropdownMenuItem
+                        onClick={() => onToggleMutePlayer(player.id)}
+                        className="text-text-secondary focus:bg-surface-3 focus:text-white"
+                        title={
+                          isMuted ? 'Unmute this player' : 'Mute this player'
+                        }
+                      >
+                        {isMuted ? (
+                          <>
+                            <Volume2 className="mr-2 h-4 w-4" />
+                            Unmute
+                          </>
+                        ) : (
+                          <>
+                            <VolumeX className="mr-2 h-4 w-4" />
+                            Mute
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                    )}
+                    {isLobbyOwner && !isOwner && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => openConfirmDialog(player, 'kick')}
+                          className="text-warning focus:bg-warning/10 focus:text-warning"
+                          title="Can rejoin"
+                        >
+                          <UserX className="mr-2 h-4 w-4" />
+                          Kick
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => openConfirmDialog(player, 'ban')}
+                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                          title="Permanent"
+                        >
+                          <Ban className="mr-2 h-4 w-4" />
+                          Ban
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          )
+        })}
       </div>
 
       {/* Confirmation Dialog */}
@@ -323,6 +312,6 @@ export function PlayerList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+    </SidebarCard>
   )
 }

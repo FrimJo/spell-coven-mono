@@ -2,7 +2,6 @@
 // Uses pluggable detector architecture (DETR, OWL-ViT, etc.)
 
 import type { DetectedCard } from '@/types/card-query'
-import { isDevelopment } from '@/env.js'
 
 import type { CardDetector, DetectorType } from './detectors/index.js'
 import {
@@ -308,31 +307,6 @@ function stopDetection(ctx?: DetectionContext) {
 }
 
 /**
- * Draw card border on overlay canvas (development only)
- * @param ctx Detection context with overlay canvas
- * @param box Bounding box in normalized coordinates
- * @param color Border color
- * @param lineWidth Border line width
- */
-function drawCardBorder(
-  ctx: DetectionContext,
-  box: { xmin: number; ymin: number; xmax: number; ymax: number },
-  color: string = '#00ff00',
-  lineWidth: number = 3,
-): void {
-  // Convert normalized coordinates to pixels
-  const x = box.xmin * ctx.overlayEl.width
-  const y = box.ymin * ctx.overlayEl.height
-  const width = (box.xmax - box.xmin) * ctx.overlayEl.width
-  const height = (box.ymax - box.ymin) * ctx.overlayEl.height
-
-  // Draw rectangle border
-  ctx.overlayCtx.strokeStyle = color
-  ctx.overlayCtx.lineWidth = lineWidth
-  ctx.overlayCtx.strokeRect(x, y, width, height)
-}
-
-/**
  * Crop card at click position
  * Finds the closest DETR-detected card and crops it
  * @param ctx Detection context with canvas elements
@@ -437,14 +411,6 @@ async function cropCardAt(
     `%c[DEBUG cropCardAt] Selected card ${bestIndex + 1} (score: ${card.score.toFixed(3)})`,
     'color: #4CAF50;',
   )
-
-  // Draw card border in development mode
-  if (isDevelopment) {
-    // Clear previous border first
-    ctx.overlayCtx.clearRect(0, 0, ctx.overlayEl.width, ctx.overlayEl.height)
-    // Draw border around detected card
-    drawCardBorder(ctx, card.box, '#00ff00', 3)
-  }
 
   // Use the current full-res frame canvas captured during detection
   const sourceCanvas = currentFullResCanvas ?? currentFrameCanvas
