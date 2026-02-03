@@ -15,7 +15,19 @@ import {
   useMemo,
   useState,
 } from 'react'
+import bSvgRaw from '@/assets/b.svg?raw'
+import gSvgRaw from '@/assets/g.svg?raw'
+import rSvgRaw from '@/assets/r.svg?raw'
+import uSvgRaw from '@/assets/u.svg?raw'
+import wSvgRaw from '@/assets/w.svg?raw'
 import { isThemeToggleEnabled } from '@/env'
+
+/** Prepare raw SVG for inline use: currentColor fill and full size in container */
+function svgForInline(raw: string) {
+  return raw
+    .replace(/fill="#444"/, 'fill="currentColor"')
+    .replace(/width="32" height="32"/, 'width="100%" height="100%"')
+}
 
 // ============================================================================
 // Types
@@ -33,24 +45,51 @@ export type MtgColorTheme =
   | 'red'
   | 'green'
 
+/** Icon color per MTG theme (matches mana symbol identity) */
+const MTG_THEME_COLORS: Record<Exclude<MtgColorTheme, 'none'>, string> = {
+  white: '#d4af37',
+  blue: '#4da6ff',
+  black: '#5c3d99',
+  red: '#c62828',
+  green: '#4caf50',
+}
+
 /** Information about MTG color themes */
 export const MTG_THEMES = {
-  none: { label: 'Default', emoji: '⚙️', description: 'Standard theme' },
+  none: {
+    label: 'Default',
+    iconSvg: null,
+    iconColor: null,
+    description: 'Standard theme',
+  },
   white: {
     label: 'White',
-    emoji: '⚪',
+    iconSvg: svgForInline(wSvgRaw),
+    iconColor: MTG_THEME_COLORS.white,
     description: 'Order, Light, Structure',
   },
   blue: {
     label: 'Blue',
-    emoji: '🔵',
+    iconSvg: svgForInline(uSvgRaw),
+    iconColor: MTG_THEME_COLORS.blue,
     description: 'Knowledge, Control, Precision',
   },
-  black: { label: 'Black', emoji: '⚫', description: 'Power, Death, Ambition' },
-  red: { label: 'Red', emoji: '🔴', description: 'Chaos, Speed, Emotion' },
+  black: {
+    label: 'Black',
+    iconSvg: svgForInline(bSvgRaw),
+    iconColor: MTG_THEME_COLORS.black,
+    description: 'Power, Death, Ambition',
+  },
+  red: {
+    label: 'Red',
+    iconSvg: svgForInline(rSvgRaw),
+    iconColor: MTG_THEME_COLORS.red,
+    description: 'Chaos, Speed, Emotion',
+  },
   green: {
     label: 'Green',
-    emoji: '🟢',
+    iconSvg: svgForInline(gSvgRaw),
+    iconColor: MTG_THEME_COLORS.green,
     description: 'Growth, Nature, Strength',
   },
 } as const
