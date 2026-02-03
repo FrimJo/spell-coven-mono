@@ -45,7 +45,7 @@ function GameRoomContent({
   const userId = user?.id ?? ''
   const username = user?.username ?? 'Unknown'
 
-  const { query } = useCardQueryContext()
+  const { query, clearHistory } = useCardQueryContext()
 
   // Get presence data and actions from context
   const {
@@ -173,8 +173,10 @@ function GameRoomContent({
   // We don't call disconnect('left') because that would show the RejoinGameDialog
   const handleConfirmLeave = useCallback(() => {
     setShowLeaveConfirmDialog(false)
+    // Clear card history for this room on explicit manual leave
+    clearHistory()
     onLeaveGame()
-  }, [onLeaveGame])
+  }, [onLeaveGame, clearHistory])
 
   // Handle rejoin attempt - use connect callback
   const handleRejoin = useCallback(() => {
@@ -315,7 +317,7 @@ function GameRoomWithPresence({
 export function GameRoom(props: GameRoomProps) {
   return (
     <MediaStreamProvider>
-      <CardQueryProvider>
+      <CardQueryProvider roomId={props.roomId}>
         <GameRoomWithPresence {...props} />
       </CardQueryProvider>
     </MediaStreamProvider>

@@ -173,6 +173,54 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+(() => {
+  try {
+    const themeKey = 'spell-coven-theme';
+    const mtgThemeKey = 'spell-coven-mtg-theme';
+    const storedTheme = localStorage.getItem(themeKey);
+    const storedMtgTheme = localStorage.getItem(mtgThemeKey);
+
+    const theme =
+      storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system'
+        ? storedTheme
+        : 'dark';
+
+    const resolvedTheme =
+      theme === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : theme;
+
+    const root = document.documentElement;
+    if (resolvedTheme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+
+    if (
+      storedMtgTheme === 'none' ||
+      storedMtgTheme === 'white' ||
+      storedMtgTheme === 'blue' ||
+      storedMtgTheme === 'black' ||
+      storedMtgTheme === 'red' ||
+      storedMtgTheme === 'green'
+    ) {
+      if (storedMtgTheme === 'none') {
+        root.removeAttribute('data-mtg-theme');
+      } else {
+        root.setAttribute('data-mtg-theme', storedMtgTheme);
+      }
+    }
+  } catch {
+    // no-op: use default styles
+  }
+})();
+`,
+          }}
+        />
         <HeadContent />
       </head>
       <body className="bg-surface-0 min-h-screen">

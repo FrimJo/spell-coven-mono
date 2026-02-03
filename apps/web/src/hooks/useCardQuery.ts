@@ -1,10 +1,11 @@
 import type { EmbeddingMetrics } from '@/lib/clip-search'
 import type {
+  CardHistoryEntry,
   CardQueryResult,
   CardQueryState,
   UseCardQueryReturn,
 } from '@/types/card-query'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   embedFromCanvas,
   isModelReady,
@@ -16,13 +17,126 @@ import {
 import { generateOrientationCandidates } from '@/lib/detectors/geometry/orientation'
 import { validateCanvas } from '@/types/card-query'
 
-export function useCardQuery(): UseCardQueryReturn {
+/** Maximum number of history entries to store per room */
+const MAX_HISTORY_ENTRIES = 30
+
+/** Prefix for localStorage key */
+const STORAGE_KEY_PREFIX = 'spell-coven:card-history:'
+
+/**
+ * Load card history from localStorage for a specific room
+ */
+function loadHistory(roomId: string): CardHistoryEntry[] {
+  if (!roomId) return []
+  try {
+    const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${roomId}`)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed as CardHistoryEntry[]
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Save card history to localStorage for a specific room
+ */
+function saveHistory(roomId: string, history: CardHistoryEntry[]): void {
+  if (!roomId) return
+  try {
+    localStorage.setItem(
+      `${STORAGE_KEY_PREFIX}${roomId}`,
+      JSON.stringify(history),
+    )
+  } catch {
+    // Ignore quota errors
+  }
+}
+
+/**
+ * Remove card history from localStorage for a specific room
+ */
+function removeHistory(roomId: string): void {
+  if (!roomId) return
+  try {
+    localStorage.removeItem(`${STORAGE_KEY_PREFIX}${roomId}`)
+  } catch {
+    // Ignore errors
+  }
+}
+
+/**
+ * Create a history entry from a CardQueryResult
+ */
+function createHistoryEntry(
+  result: CardQueryResult,
+  source: 'search' | 'detection',
+): CardHistoryEntry {
+  return {
+    id: `${result.name}:${result.set}`,
+    name: result.name,
+    set: result.set,
+    image_url: result.image_url,
+    card_url: result.card_url,
+    scryfall_uri: result.scryfall_uri,
+    timestamp: Date.now(),
+    source,
+  }
+}
+
+export function useCardQuery(roomId: string): UseCardQueryReturn {
   const [state, setState] = useState<CardQueryState>({
     status: 'idle',
     result: null,
     error: null,
     queryImageUrl: null,
   })
+
+  // History state
+  const [history, setHistory] = useState<CardHistoryEntry[]>([])
+
+  // Dismissed state - when true, preview is hidden even if history exists
+  const [isDismissed, setIsDismissed] = useState(false)
+
+  // Track roomId to detect changes
+  const roomIdRef = useRef<string>(roomId)
+
+  // Load history from localStorage on mount or when roomId changes
+  useEffect(() => {
+    if (roomId !== roomIdRef.current) {
+      roomIdRef.current = roomId
+      setIsDismissed(false) // Reset dismissed state when switching rooms
+    }
+    const loaded = loadHistory(roomId)
+    setHistory(loaded)
+  }, [roomId])
+
+  /**
+   * Add an entry to history (capped at MAX_HISTORY_ENTRIES, most recent first)
+   */
+  const addToHistory = useCallback(
+    (result: CardQueryResult, source: 'search' | 'detection') => {
+      const entry = createHistoryEntry(result, source)
+      setHistory((prev) => {
+        // Remove duplicate if it exists (same id)
+        const filtered = prev.filter((e) => e.id !== entry.id)
+        // Add to front and cap
+        const updated = [entry, ...filtered].slice(0, MAX_HISTORY_ENTRIES)
+        saveHistory(roomId, updated)
+        return updated
+      })
+    },
+    [roomId],
+  )
+
+  /**
+   * Clear the history for current room
+   */
+  const clearHistory = useCallback(() => {
+    setHistory([])
+    removeHistory(roomId)
+  }, [roomId])
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -34,18 +148,55 @@ export function useCardQuery(): UseCardQueryReturn {
   }, [])
 
   /**
+   * Clear the current result state and dismiss the preview
+   */
+  const clearResult = useCallback(() => {
+    cancel()
+    setIsDismissed(true) // Dismiss the preview
+    setState({
+      status: 'idle',
+      result: null,
+      error: null,
+      queryImageUrl: null,
+    })
+  }, [cancel])
+
+  /**
    * Manually set a card result (e.g., from Scryfall search selection).
    * Cancels any pending query and sets state to success.
+   * Adds the result to history.
    */
   const setResult = useCallback(
     (result: CardQueryResult) => {
       cancel()
+      setIsDismissed(false) // Un-dismiss when new card is selected
       setState({
         status: 'success',
         result,
         error: null,
         queryImageUrl: null, // Clear query image when manually setting result
       })
+      // Add to history
+      addToHistory(result, 'search')
+    },
+    [cancel, addToHistory],
+  )
+
+  /**
+   * Set a card result without adding to history (e.g., clicking history entry).
+   * Cancels any pending query and sets state to success.
+   */
+  const setResultWithoutHistory = useCallback(
+    (result: CardQueryResult) => {
+      cancel()
+      setIsDismissed(false) // Un-dismiss when selecting from history
+      setState({
+        status: 'success',
+        result,
+        error: null,
+        queryImageUrl: null, // Clear query image when manually setting result
+      })
+      // Do NOT add to history
     },
     [cancel],
   )
@@ -320,12 +471,15 @@ export function useCardQuery(): UseCardQueryReturn {
           : queryImageUrl
 
         // Set success state
+        setIsDismissed(false) // Un-dismiss when new card is detected
         setState({
           status: 'success',
           result: bestResult,
           error: null,
           queryImageUrl: finalQueryImageUrl,
         })
+        // Add to history (detection source)
+        addToHistory(bestResult, 'detection')
         console.log(
           '[useCardQuery] State updated to success, orientation:',
           bestOrientation,
@@ -350,8 +504,18 @@ export function useCardQuery(): UseCardQueryReturn {
         }
       }
     },
-    [cancel],
+    [cancel, addToHistory],
   )
 
-  return { state, query, cancel, setResult }
+  return {
+    state,
+    query,
+    cancel,
+    setResult,
+    setResultWithoutHistory,
+    history,
+    isDismissed,
+    clearHistory,
+    clearResult,
+  }
 }

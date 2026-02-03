@@ -5,7 +5,7 @@ import type { CardQueryResult } from '@/types/card-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useCardQueryContext } from '@/contexts/CardQueryContext'
 import { searchCards } from '@/lib/scryfall'
-import { Loader2, Search } from 'lucide-react'
+import { ExternalLink, Loader2, Search } from 'lucide-react'
 
 import {
   CommandDialog,
@@ -151,7 +151,7 @@ export function CardSearchCommand({
       contentClassName="top-[33%] translate-y-0"
     >
       <CommandInput
-        placeholder="Search cards... (type:instant, cmc:1, color:red)"
+        placeholder="Search cards..."
         value={query}
         onValueChange={handleValueChange}
       />
@@ -172,7 +172,16 @@ export function CardSearchCommand({
             <Search className="mx-auto mb-2 h-8 w-8 opacity-50" />
             <p>Type at least 2 characters to search</p>
             <p className="mt-1 text-xs opacity-75">
-              Use Scryfall syntax: type:instant, cmc:1, color:red
+              Supports{' '}
+              <a
+                href="https://scryfall.com/docs/syntax"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground inline-flex items-center gap-1 underline"
+              >
+                Scryfall search syntax
+                <ExternalLink className="h-3 w-3" />
+              </a>
             </p>
           </div>
         )}

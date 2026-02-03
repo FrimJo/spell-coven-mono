@@ -132,6 +132,37 @@ export interface LoadingOverlayProps {
 }
 
 /**
+ * Entry in the card history list
+ *
+ * Stored in localStorage per room to persist across reloads.
+ */
+export interface CardHistoryEntry {
+  /** Unique identifier (name:set if not available from source) */
+  id: string
+
+  /** Card name */
+  name: string
+
+  /** Set code */
+  set: string
+
+  /** Optional URL to card art crop image */
+  image_url?: string
+
+  /** Optional URL to full card image */
+  card_url?: string
+
+  /** Optional link to Scryfall card page */
+  scryfall_uri?: string
+
+  /** Timestamp when this entry was added */
+  timestamp: number
+
+  /** Source of the entry: 'search' for manual search, 'detection' for stream click */
+  source: 'search' | 'detection'
+}
+
+/**
  * Return type of useCardQuery hook
  */
 export interface UseCardQueryReturn {
@@ -146,6 +177,21 @@ export interface UseCardQueryReturn {
 
   /** Function to manually set a result (e.g., from search selection) */
   setResult: (result: CardQueryResult) => void
+
+  /** Function to set a result without adding to history (e.g., clicking history entry) */
+  setResultWithoutHistory: (result: CardQueryResult) => void
+
+  /** History of recent card selections (most recent first, max 30) */
+  history: CardHistoryEntry[]
+
+  /** Whether the preview has been dismissed (hidden even if history exists) */
+  isDismissed: boolean
+
+  /** Clear the card history for the current room */
+  clearHistory: () => void
+
+  /** Clear the current result state and dismiss the preview */
+  clearResult: () => void
 }
 
 /**

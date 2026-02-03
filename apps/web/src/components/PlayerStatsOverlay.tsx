@@ -204,30 +204,13 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
         {/* Life */}
         <div className="flex items-center justify-between gap-3">
           <div className="text-destructive flex items-center gap-1.5">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Heart className="h-4 w-4" />
-              </TooltipTrigger>
-              <TooltipContent
-                side="right"
-                className="border-surface-2 bg-surface-1 text-text-secondary border shadow-lg"
-              >
-                <p className="text-xs font-medium">Health</p>
-              </TooltipContent>
-            </Tooltip>
+            <Heart className="h-4 w-4" />
             <span className="min-w-[2ch] text-center font-mono font-bold text-white">
               {displayHealth}
             </span>
           </div>
 
           <div className="relative flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-            {healthDelta.delta < 0 && (
-              <DeltaBubble
-                delta={healthDelta.delta}
-                visible={healthDelta.visible}
-                side="left"
-              />
-            )}
             <Button
               size="icon"
               variant="ghost"
@@ -253,7 +236,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
             >
               <Plus className="h-3 w-3" />
             </Button>
-            {healthDelta.delta > 0 && (
+            {healthDelta.delta !== 0 && (
               <DeltaBubble
                 delta={healthDelta.delta}
                 visible={healthDelta.visible}
@@ -266,30 +249,13 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
         {/* Poison */}
         <div className="flex items-center justify-between gap-3">
           <div className="text-success flex items-center gap-1.5">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Skull className="h-4 w-4" />
-              </TooltipTrigger>
-              <TooltipContent
-                side="right"
-                className="border-surface-2 bg-surface-1 text-text-secondary border shadow-lg"
-              >
-                <p className="text-xs font-medium">Poison counters</p>
-              </TooltipContent>
-            </Tooltip>
+            <Skull className="h-4 w-4" />
             <span className="min-w-[2ch] text-center font-mono font-bold text-white">
               {displayPoison}
             </span>
           </div>
 
           <div className="relative flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-            {poisonDelta.delta < 0 && (
-              <DeltaBubble
-                delta={poisonDelta.delta}
-                visible={poisonDelta.visible}
-                side="left"
-              />
-            )}
             <Button
               size="icon"
               variant="ghost"
@@ -315,7 +281,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
             >
               <Plus className="h-3 w-3" />
             </Button>
-            {poisonDelta.delta > 0 && (
+            {poisonDelta.delta !== 0 && (
               <DeltaBubble
                 delta={poisonDelta.delta}
                 visible={poisonDelta.visible}
@@ -337,7 +303,8 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
               </div>
             </TooltipTrigger>
             <TooltipContent
-              side="right"
+              side="bottom"
+              align="start"
               className="border-surface-2 bg-surface-1 text-text-secondary max-w-[280px] border p-0 shadow-xl"
             >
               {commanderDamageBreakdown.length > 0 ? (

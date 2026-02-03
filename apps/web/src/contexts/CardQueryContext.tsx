@@ -5,8 +5,16 @@ import { useCardQuery } from '@/hooks/useCardQuery'
 
 const CardQueryContext = createContext<UseCardQueryReturn | null>(null)
 
-export function CardQueryProvider({ children }: { children: ReactNode }) {
-  const cardQuery = useCardQuery()
+interface CardQueryProviderProps {
+  children: ReactNode
+  roomId: string
+}
+
+export function CardQueryProvider({
+  children,
+  roomId,
+}: CardQueryProviderProps) {
+  const cardQuery = useCardQuery(roomId)
 
   return (
     <CardQueryContext.Provider value={cardQuery}>
