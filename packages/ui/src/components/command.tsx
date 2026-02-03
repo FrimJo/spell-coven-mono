@@ -4,6 +4,8 @@ import * as React from 'react'
 import { Command as CommandPrimitive } from 'cmdk'
 import { SearchIcon } from 'lucide-react'
 
+import { cn } from '@repo/ui/lib/utils'
+
 import {
   Dialog,
   DialogContent,
@@ -11,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from './dialog.js'
-import { cn } from '@repo/ui/lib/utils'
 
 function Command({
   className,
@@ -32,11 +33,13 @@ function Command({
 function CommandDialog({
   title = 'Command Palette',
   description = 'Search for a command to run...',
+  contentClassName,
   children,
   ...props
 }: React.ComponentProps<typeof Dialog> & {
   title?: string
   description?: string
+  contentClassName?: string
 }) {
   return (
     <Dialog {...props}>
@@ -44,7 +47,7 @@ function CommandDialog({
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
-      <DialogContent className="overflow-hidden p-0">
+      <DialogContent className={cn('overflow-hidden p-0', contentClassName)}>
         <Command className="[&_[cmdk-group-heading]]:text-muted-foreground **:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
           {children}
         </Command>

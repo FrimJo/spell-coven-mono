@@ -148,6 +148,7 @@ export function CardSearchCommand({
       onOpenChange={onOpenChange}
       title="Card Search"
       description="Search for Magic: The Gathering cards using Scryfall syntax"
+      contentClassName="top-[33%] translate-y-0"
     >
       <CommandInput
         placeholder="Search cards... (type:instant, cmc:1, color:red)"
