@@ -313,14 +313,23 @@ export function useCardQuery(): UseCardQueryReturn {
           }
         }
 
+        // Use the winning orientation's canvas for the query image
+        const winningCanvas = orientationCandidates[bestOrientation]
+        const finalQueryImageUrl = winningCanvas
+          ? winningCanvas.toDataURL('image/png')
+          : queryImageUrl
+
         // Set success state
         setState({
           status: 'success',
           result: bestResult,
           error: null,
-          queryImageUrl,
+          queryImageUrl: finalQueryImageUrl,
         })
-        console.log('[useCardQuery] State updated to success')
+        console.log(
+          '[useCardQuery] State updated to success, orientation:',
+          bestOrientation,
+        )
       } catch (err) {
         // Only update state if not aborted
         if (!abortController.signal.aborted) {

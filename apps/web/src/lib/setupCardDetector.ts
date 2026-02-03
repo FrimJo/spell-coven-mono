@@ -241,6 +241,14 @@ async function detectCards(
       ctx.overlayEl.height,
     )
 
+    console.log('[detectCards] Frame captured:', {
+      frameWidth: frameCanvas.width,
+      frameHeight: frameCanvas.height,
+      videoWidth: ctx.videoEl.videoWidth,
+      videoHeight: ctx.videoEl.videoHeight,
+      clickPoint,
+    })
+
     // Store for both detection and click handling
     currentFrameCanvas = frameCanvas
     currentFullResCanvas = frameCanvas
@@ -271,8 +279,9 @@ async function detectCards(
 
     // Clear overlay - no detection boxes shown
     ctx.overlayCtx.clearRect(0, 0, ctx.overlayEl.width, ctx.overlayEl.height)
-  } catch {
-    // Silently handle detection errors
+  } catch (err) {
+    // Log detection errors instead of silently swallowing them
+    console.error('[detectCards] Detection error:', err)
   } finally {
     isDetecting = false
   }
@@ -350,6 +359,10 @@ async function cropCardAt(
   let bestIndex = -1
   let bestScore = -Infinity
 
+  // Use video dimensions for coordinate conversion (matches detection canvas)
+  const frameWidth = ctx.videoEl.videoWidth || ctx.overlayEl.width
+  const frameHeight = ctx.videoEl.videoHeight || ctx.overlayEl.height
+
   // Log click position relative to detected boxes
   console.log(
     '%c[DEBUG cropCardAt] Checking click position against detected boxes',
@@ -362,11 +375,11 @@ async function cropCardAt(
     if (!card) continue
     const box = card.box
 
-    // Convert normalized box to pixel coordinates
-    const boxXMin = box.xmin * ctx.overlayEl.width
-    const boxYMin = box.ymin * ctx.overlayEl.height
-    const boxXMax = box.xmax * ctx.overlayEl.width
-    const boxYMax = box.ymax * ctx.overlayEl.height
+    // Convert normalized box to pixel coordinates (using video dimensions)
+    const boxXMin = box.xmin * frameWidth
+    const boxYMin = box.ymin * frameHeight
+    const boxXMax = box.xmax * frameWidth
+    const boxYMax = box.ymax * frameHeight
 
     // Check if click is inside this box
     const isInside =
@@ -378,7 +391,7 @@ async function cropCardAt(
     const boxWidth = boxXMax - boxXMin
     const boxHeight = boxYMax - boxYMin
     const area = boxWidth * boxHeight
-    const canvasArea = ctx.overlayEl.width * ctx.overlayEl.height
+    const canvasArea = frameWidth * frameHeight
 
     // Distance from click to box center (closer is better)
     const centerX = boxXMin + boxWidth / 2
@@ -386,7 +399,7 @@ async function cropCardAt(
     const dx = x - centerX
     const dy = y - centerY
     const distance = Math.hypot(dx, dy)
-    const maxDistance = Math.hypot(ctx.overlayEl.width, ctx.overlayEl.height)
+    const maxDistance = Math.hypot(frameWidth, frameHeight)
     const distanceScore = (1 - distance / maxDistance) * 200000
 
     // Score: balance between proximity, confidence, and size
@@ -465,11 +478,12 @@ async function cropCardAt(
   }
 
   // Fallback: Simple bounding box crop (when perspective warp is disabled)
+  // Use source canvas dimensions (video native resolution) for coordinate conversion
   const targetSize = getQueryTargetSize()
   const region = normalizedBoxToCropRegion(
     card.box,
-    ctx.overlayEl.width,
-    ctx.overlayEl.height,
+    sourceCanvas.width,
+    sourceCanvas.height,
   )
 
   const croppedResult = cropAndCenterToSquare(sourceCanvas, region, {
@@ -589,9 +603,12 @@ export async function setupCardDetector(args: {
     const clickX = evt.clientX - rect.left
     const clickY = evt.clientY - rect.top
 
-    // Scale click coordinates from display size to canvas size
-    const x = Math.floor(clickX * (ctx.overlayEl.width / rect.width))
-    const y = Math.floor(clickY * (ctx.overlayEl.height / rect.height))
+    // Scale click coordinates from display size to video's native size
+    // (detection now uses video dimensions, not overlay dimensions)
+    const videoWidth = ctx.videoEl.videoWidth || ctx.overlayEl.width
+    const videoHeight = ctx.videoEl.videoHeight || ctx.overlayEl.height
+    const x = Math.floor(clickX * (videoWidth / rect.width))
+    const y = Math.floor(clickY * (videoHeight / rect.height))
 
     globalState.lastClickTime = now
     globalState.isProcessing = true
