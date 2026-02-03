@@ -45,6 +45,8 @@ interface PresenceContextValue {
   isConnected: boolean
   /** Reason for last disconnect (if disconnected) */
   disconnectReason: DisconnectReason | null
+  /** Room seat count (1-4, defaults to 4) */
+  roomSeatCount: number
 
   // Actions
   /** Connect to presence (rejoin) */
@@ -57,6 +59,8 @@ interface PresenceContextValue {
   banPlayer: (playerId: string) => Promise<void>
   /** Transfer session to this tab (kicks other tabs) */
   transferSession: () => Promise<void>
+  /** Set room seat count (owner only) */
+  setRoomSeatCount: (seatCount: number) => Promise<{ seatCount: number }>
 }
 
 const PresenceContext = createContext<PresenceContextValue | null>(null)
@@ -147,8 +151,14 @@ export function PresenceProvider({
       kickPlayer: presence.kickPlayer,
       banPlayer: presence.banPlayer,
       transferSession: presence.transferSession,
+      setRoomSeatCount: presence.setRoomSeatCount,
     }),
-    [presence.kickPlayer, presence.banPlayer, presence.transferSession],
+    [
+      presence.kickPlayer,
+      presence.banPlayer,
+      presence.transferSession,
+      presence.setRoomSeatCount,
+    ],
   )
 
   const value = useMemo<PresenceContextValue>(
@@ -161,6 +171,7 @@ export function PresenceProvider({
       isOwner: presence.isOwner,
       sessionId: presence.sessionId,
       hasDuplicateSession: presence.hasDuplicateSession,
+      roomSeatCount: presence.roomSeatCount,
       isConnected,
       disconnectReason,
       connect,
@@ -176,6 +187,7 @@ export function PresenceProvider({
       presence.isOwner,
       presence.sessionId,
       presence.hasDuplicateSession,
+      presence.roomSeatCount,
       isConnected,
       disconnectReason,
       connect,

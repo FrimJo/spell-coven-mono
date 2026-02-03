@@ -3,16 +3,24 @@ import { ErrorFallback } from '@/components/ErrorFallback'
 import { LandingPage } from '@/components/LandingPage'
 import { useAuth } from '@/contexts/AuthContext'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { zodValidator } from '@tanstack/zod-adapter'
 import { ErrorBoundary } from 'react-error-boundary'
+import { z } from 'zod'
 
 // Key for storing the return URL after OAuth (must match game route)
 const AUTH_RETURN_TO_KEY = 'auth-return-to'
 
+const searchSchema = z.object({
+  error: z.string().optional(),
+})
+
 export const Route = createFileRoute('/')({
   component: LandingPageRoute,
+  validateSearch: zodValidator(searchSchema),
 })
 
 function LandingPageContent() {
+  const { error } = Route.useSearch()
   const navigate = useNavigate()
   const { user, isLoading: isAuthLoading, signIn } = useAuth()
 
@@ -35,7 +43,7 @@ function LandingPageContent() {
       onReset={() => window.location.reload()}
     >
       <LandingPage
-        initialError={null}
+        initialError={error || null}
         inviteState={null}
         onRefreshInvite={() => {}}
         isRefreshingInvite={false}

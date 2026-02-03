@@ -144,12 +144,13 @@ export const createRoom = mutation({
     // Generate sequential room code (newCount - 1 because we want 0-indexed)
     const roomId = toBase32Code(newCount - 1)
 
-    // Create room
+    // Create room with default seat count
     await ctx.db.insert('rooms', {
       roomId,
       ownerId: userId,
       status: 'waiting',
       createdAt: now,
+      seatCount: 4,
     })
 
     return { roomId, waitMs: null }
@@ -181,13 +182,14 @@ export const getRoom = query({
  * Check if a user can access a room
  *
  * Returns the access status:
- * - 'ok': Room exists and user is not banned
+ * - 'ok': Room exists, user is not banned, and room has capacity (or user is already in room)
  * - 'not_found': Room does not exist
  * - 'banned': User is banned from this room
+ * - 'full': Room is full and user is not already in the room
  *
  * @param roomId - The room ID to check
  *
- * Uses the authenticated user's ID from the Convex auth context to check for bans.
+ * Uses the authenticated user's ID from the Convex auth context to check for bans and capacity.
  */
 export const checkRoomAccess = query({
   args: {
@@ -218,6 +220,57 @@ export const checkRoomAccess = query({
 
       if (ban) {
         return { status: 'banned' as const }
+      }
+
+      // Check if user is already an active player in the room
+      const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
+      const existingPlayer = await ctx.db
+        .query('roomPlayers')
+        .withIndex('by_roomId_userId', (q) =>
+          q.eq('roomId', roomId).eq('userId', userId),
+        )
+        .filter((q) =>
+          q.and(
+            q.neq(q.field('status'), 'left'),
+            q.gt(q.field('lastSeenAt'), presenceThreshold),
+          ),
+        )
+        .first()
+
+      // If user is already in the room, allow access
+      if (existingPlayer) {
+        return { status: 'ok' as const }
+      }
+
+      // Check room capacity for new players
+      const activePlayers = await ctx.db
+        .query('roomPlayers')
+        .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+        .filter((q) =>
+          q.and(
+            q.neq(q.field('status'), 'left'),
+            q.gt(q.field('lastSeenAt'), presenceThreshold),
+          ),
+        )
+        .collect()
+
+      // Deduplicate by userId to count unique players
+      const uniqueUserIds = new Set<string>()
+      for (const player of activePlayers) {
+        uniqueUserIds.add(player.userId)
+      }
+      const currentPlayerCount = uniqueUserIds.size
+
+      // Get seat count from room (defaults to 4 if not set)
+      const seatCount = room.seatCount ?? 4
+
+      // Check if room is full
+      if (currentPlayerCount >= seatCount) {
+        return {
+          status: 'full' as const,
+          currentCount: currentPlayerCount,
+          maxCount: seatCount,
+        }
       }
     }
 
@@ -598,5 +651,69 @@ export const updateCommanderDamage = mutation({
         },
       })
     }
+  },
+})
+
+/**
+ * Set the room's seat count (1-4 players)
+ *
+ * Only the room owner can change this value.
+ * The seat count is clamped to:
+ * - Minimum: current number of active players in the room (cannot reduce below)
+ * - Maximum: 4
+ */
+export const setRoomSeatCount = mutation({
+  args: {
+    roomId: v.string(),
+    seatCount: v.number(),
+  },
+  handler: async (ctx, { roomId, seatCount }) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new AuthRequiredError()
+    }
+
+    const room = await ctx.db
+      .query('rooms')
+      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+      .first()
+
+    if (!room) {
+      throw new RoomNotFoundError()
+    }
+
+    if (room.ownerId !== userId) {
+      throw new NotRoomOwnerError('change seat count')
+    }
+
+    // Count current active players to enforce minimum
+    const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
+    const activePlayers = await ctx.db
+      .query('roomPlayers')
+      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+      .filter((q) =>
+        q.and(
+          q.neq(q.field('status'), 'left'),
+          q.gt(q.field('lastSeenAt'), presenceThreshold),
+        ),
+      )
+      .collect()
+
+    // Deduplicate by userId
+    const uniqueUserIds = new Set<string>()
+    for (const player of activePlayers) {
+      uniqueUserIds.add(player.userId)
+    }
+    const currentPlayerCount = uniqueUserIds.size
+
+    // Clamp seat count: min = current players, max = 4
+    const clampedSeatCount = Math.max(
+      currentPlayerCount,
+      Math.min(4, Math.max(1, seatCount)),
+    )
+
+    await ctx.db.patch(room._id, { seatCount: clampedSeatCount })
+
+    return { seatCount: clampedSeatCount }
   },
 })
