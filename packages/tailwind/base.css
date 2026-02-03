@@ -69,6 +69,12 @@
   --brand-foreground: oklch(0.985 0 0);
   --brand-muted: oklch(0.96 0.03 285);
   --brand-muted-foreground: oklch(0.45 0.2 285);
+  --brand-glow: rgba(
+    168,
+    85,
+    247,
+    0.6
+  ); /* Brand color with 60% opacity for glow effects */
 
   /* Success (Green) */
   --success: oklch(0.6 0.2 145);
@@ -168,6 +174,12 @@
   --brand-foreground: #ffffff;
   --brand-muted: rgba(139, 92, 246, 0.2);
   --brand-muted-foreground: #a78bfa;
+  --brand-glow: rgba(
+    124,
+    58,
+    237,
+    0.6
+  ); /* Brand color with 60% opacity for glow effects */
 
   /* Success (Green) - dark mode values */
   --success: #4ade80;
@@ -245,6 +257,12 @@
   --brand-foreground: #1a1915;
   --brand-muted: rgba(212, 175, 55, 0.2);
   --brand-muted-foreground: #fff4cc; /* Soft halo */
+  --brand-glow: rgba(
+    212,
+    175,
+    55,
+    0.6
+  ); /* Brand color with 60% opacity for glow effects */
 
   /* Surface levels */
   --surface-0: #0f0e0a;
@@ -305,6 +323,12 @@
   --brand-foreground: #dcebff;
   --brand-muted: rgba(77, 166, 255, 0.2);
   --brand-muted-foreground: #4da6ff;
+  --brand-glow: rgba(
+    31,
+    79,
+    216,
+    0.6
+  ); /* Brand color with 60% opacity for glow effects */
 
   /* Surface levels */
   --surface-0: #050a10;
@@ -365,6 +389,12 @@
   --brand-foreground: #c9c1b6;
   --brand-muted: rgba(122, 30, 30, 0.3);
   --brand-muted-foreground: #b84040;
+  --brand-glow: rgba(
+    122,
+    30,
+    30,
+    0.6
+  ); /* Brand color with 60% opacity for glow effects */
 
   /* Surface levels */
   --surface-0: #050505;
@@ -425,6 +455,12 @@
   --brand-foreground: #ffd166;
   --brand-muted: rgba(198, 40, 40, 0.3);
   --brand-muted-foreground: #ff8a50;
+  --brand-glow: rgba(
+    198,
+    40,
+    40,
+    0.6
+  ); /* Brand color with 60% opacity for glow effects */
 
   /* Surface levels */
   --surface-0: #0d0808;
@@ -485,6 +521,12 @@
   --brand-foreground: #e8f5e9;
   --brand-muted: rgba(76, 175, 80, 0.2);
   --brand-muted-foreground: #81c784;
+  --brand-glow: rgba(
+    46,
+    125,
+    50,
+    0.6
+  ); /* Brand color with 60% opacity for glow effects */
 
   /* Surface levels */
   --surface-0: #050d05;

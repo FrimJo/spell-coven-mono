@@ -540,7 +540,10 @@ export function LandingPage({
                 <img
                   src={logo}
                   alt="Spell Coven Logo"
-                  className="relative z-10 h-full w-full object-contain drop-shadow-[0_0_30px_rgba(168,85,247,0.6)]"
+                  className="relative z-10 h-full w-full object-contain"
+                  style={{
+                    filter: 'drop-shadow(0 0 30px var(--brand-glow))',
+                  }}
                 />
 
                 {/* Decorative sparkles */}
