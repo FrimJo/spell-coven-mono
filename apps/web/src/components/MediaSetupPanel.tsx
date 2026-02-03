@@ -22,6 +22,7 @@ import {
   useState,
 } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
+import { isCameraFocusControlsEnabled } from '@/env'
 import { useAudioOutput } from '@/hooks/useAudioOutput'
 import { useMediaPermissions } from '@/hooks/useMediaPermissions'
 import {
@@ -985,8 +986,8 @@ export function MediaSetupPanel({
             </div>
           )}
 
-          {/* Focus Control - only show when permissions granted and video enabled */}
-          {hasPermissions && videoEnabled && (
+          {/* Focus Control - only show when enabled, permissions granted, and video enabled */}
+          {isCameraFocusControlsEnabled && hasPermissions && videoEnabled && (
             <div
               className={`border-border-default bg-surface-2/50 mt-3 space-y-3 rounded-lg border p-3 ${
                 !focusCapabilities?.supportsFocus ? 'opacity-50' : ''
