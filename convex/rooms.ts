@@ -10,6 +10,7 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 
+import type { MutationCtx } from './_generated/server'
 import { internal } from './_generated/api'
 import { internalMutation, mutation, query } from './_generated/server'
 import {
@@ -29,6 +30,28 @@ const PRESENCE_THRESHOLD_MS = 30_000
  * Room creation throttle (minimum time between room creations)
  */
 const ROOM_CREATION_COOLDOWN_MS = 10_000
+
+/**
+ * Room inactivity timeout in milliseconds (1 hour)
+ */
+const ROOM_INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000
+
+/**
+ * Update the lastActivityAt timestamp for a room
+ */
+async function updateRoomActivity(
+  ctx: MutationCtx,
+  roomId: string,
+): Promise<void> {
+  const room = await ctx.db
+    .query('rooms')
+    .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+    .first()
+
+  if (room) {
+    await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
+  }
+}
 
 /**
  * Base-32 character set (excludes confusing chars: 0, O, 1, I)
@@ -151,6 +174,7 @@ export const createRoom = mutation({
       status: 'waiting',
       createdAt: now,
       seatCount: 4,
+      lastActivityAt: now,
     })
 
     return { roomId, waitMs: null }
@@ -307,7 +331,7 @@ export const updateRoomStatus = mutation({
       throw new NotRoomOwnerError('change room status')
     }
 
-    await ctx.db.patch(room._id, { status })
+    await ctx.db.patch(room._id, { status, lastActivityAt: Date.now() })
   },
 })
 
@@ -472,8 +496,11 @@ export const transferOwnerIfNeeded = internalMutation({
     )
     const newOwner = sortedActiveUsers[0]!
 
-    // Update room ownership
-    await ctx.db.patch(room._id, { ownerId: newOwner.userId })
+    // Update room ownership and activity
+    await ctx.db.patch(room._id, {
+      ownerId: newOwner.userId,
+      lastActivityAt: Date.now(),
+    })
 
     return { transferred: true, newOwnerId: newOwner.userId }
   },
@@ -517,6 +544,9 @@ export const updatePlayerHealth = mutation({
         health: nextHealth,
       })
     }
+
+    // Update room activity
+    await updateRoomActivity(ctx, roomId)
   },
 })
 
@@ -558,6 +588,9 @@ export const updatePlayerPoison = mutation({
         poison: nextPoison,
       })
     }
+
+    // Update room activity
+    await updateRoomActivity(ctx, roomId)
   },
 })
 
@@ -601,6 +634,9 @@ export const setPlayerCommanders = mutation({
         commanders,
       })
     }
+
+    // Update room activity
+    await updateRoomActivity(ctx, roomId)
   },
 })
 
@@ -651,6 +687,9 @@ export const updateCommanderDamage = mutation({
         },
       })
     }
+
+    // Update room activity
+    await updateRoomActivity(ctx, roomId)
   },
 })
 
@@ -712,8 +751,115 @@ export const setRoomSeatCount = mutation({
       Math.min(4, Math.max(1, seatCount)),
     )
 
-    await ctx.db.patch(room._id, { seatCount: clampedSeatCount })
+    await ctx.db.patch(room._id, {
+      seatCount: clampedSeatCount,
+      lastActivityAt: Date.now(),
+    })
 
     return { seatCount: clampedSeatCount }
+  },
+})
+
+/**
+ * Clean up inactive rooms and their related data
+ *
+ * Deletes rooms that have been inactive for more than ROOM_INACTIVITY_TIMEOUT_MS
+ * (1 hour) and have no active players. Also cleans up all related data:
+ * - roomPlayers records
+ * - roomBans records
+ * - roomSignals records
+ * - userActiveRooms pointers
+ */
+export const cleanupInactiveRooms = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now()
+    const inactivityThreshold = now - ROOM_INACTIVITY_TIMEOUT_MS
+    const presenceThreshold = now - PRESENCE_THRESHOLD_MS
+
+    // Find all rooms that haven't had activity in the last hour
+    // For rooms without lastActivityAt, use createdAt as fallback
+    const allRooms = await ctx.db.query('rooms').collect()
+    const inactiveRooms = allRooms.filter((room) => {
+      const activityTime = room.lastActivityAt ?? room.createdAt
+      return activityTime < inactivityThreshold
+    })
+
+    const results: Array<{
+      roomId: string
+      deleted: boolean
+      reason?: string
+    }> = []
+
+    for (const room of inactiveRooms) {
+      // Check if room has any active players
+      const activePlayers = await ctx.db
+        .query('roomPlayers')
+        .withIndex('by_roomId', (q) => q.eq('roomId', room.roomId))
+        .filter((q) =>
+          q.and(
+            q.neq(q.field('status'), 'left'),
+            q.gt(q.field('lastSeenAt'), presenceThreshold),
+          ),
+        )
+        .collect()
+
+      // Only delete if there are no active players
+      if (activePlayers.length === 0) {
+        // Delete all roomPlayers records for this room
+        const allRoomPlayers = await ctx.db
+          .query('roomPlayers')
+          .withIndex('by_roomId', (q) => q.eq('roomId', room.roomId))
+          .collect()
+        for (const player of allRoomPlayers) {
+          await ctx.db.delete(player._id)
+        }
+
+        // Delete all roomBans records for this room
+        const allBans = await ctx.db
+          .query('roomBans')
+          .withIndex('by_roomId', (q) => q.eq('roomId', room.roomId))
+          .collect()
+        for (const ban of allBans) {
+          await ctx.db.delete(ban._id)
+        }
+
+        // Delete all roomSignals records for this room
+        const allSignals = await ctx.db
+          .query('roomSignals')
+          .withIndex('by_roomId', (q) => q.eq('roomId', room.roomId))
+          .collect()
+        for (const signal of allSignals) {
+          await ctx.db.delete(signal._id)
+        }
+
+        // Delete userActiveRooms pointers pointing to this room
+        const allUserActiveRooms = await ctx.db
+          .query('userActiveRooms')
+          .collect()
+        for (const pointer of allUserActiveRooms) {
+          if (pointer.roomId === room.roomId) {
+            await ctx.db.delete(pointer._id)
+          }
+        }
+
+        // Finally, delete the room itself
+        await ctx.db.delete(room._id)
+
+        results.push({ roomId: room.roomId, deleted: true })
+      } else {
+        results.push({
+          roomId: room.roomId,
+          deleted: false,
+          reason: 'has_active_players',
+        })
+      }
+    }
+
+    return {
+      checkedRooms: inactiveRooms.length,
+      deletedRooms: results.filter((r) => r.deleted).length,
+      results,
+    }
   },
 })

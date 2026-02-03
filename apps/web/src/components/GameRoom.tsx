@@ -54,6 +54,7 @@ function GameRoomContent({
     isConnected,
     disconnectReason,
     connect,
+    leaveRoom,
     kickPlayer,
     banPlayer,
     transferSession,
@@ -158,8 +159,18 @@ function GameRoomContent({
   }
 
   // Handle closing this tab (user wants to keep other session)
-  const handleCloseDuplicateTab = () => {
+  const handleCloseDuplicateTab = async () => {
     setDuplicateDialogDismissed(true)
+    // Explicitly leave the room before navigating
+    try {
+      await leaveRoom()
+      console.log(
+        '[GameRoom] Successfully left room (duplicate tab), navigating away',
+      )
+    } catch (error) {
+      console.error('[GameRoom] Failed to leave room (duplicate tab):', error)
+      // Still navigate away even if leave fails
+    }
     onLeaveGame()
   }
 
@@ -168,15 +179,26 @@ function GameRoomContent({
     setShowLeaveConfirmDialog(true)
   }, [])
 
-  // Handle confirmed leave - navigate away directly
-  // The presence cleanup happens automatically when the component unmounts
+  // Handle confirmed leave - explicitly leave room before navigating away
+  // We call leaveRoom explicitly to ensure the backend is notified before navigation
   // We don't call disconnect('left') because that would show the RejoinGameDialog
-  const handleConfirmLeave = useCallback(() => {
+  const handleConfirmLeave = useCallback(async () => {
     setShowLeaveConfirmDialog(false)
     // Clear card history for this room on explicit manual leave
     clearHistory()
+
+    // Explicitly leave the room before navigating to ensure backend is updated
+    try {
+      await leaveRoom()
+      console.log('[GameRoom] Successfully left room, navigating away')
+    } catch (error) {
+      console.error('[GameRoom] Failed to leave room:', error)
+      // Still navigate away even if leave fails (cleanup will happen on unmount)
+    }
+
+    // Navigate away after leaving (or if leave failed)
     onLeaveGame()
-  }, [onLeaveGame, clearHistory])
+  }, [onLeaveGame, clearHistory, leaveRoom])
 
   // Handle rejoin attempt - use connect callback
   const handleRejoin = useCallback(() => {
