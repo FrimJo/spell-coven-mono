@@ -35,14 +35,15 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="ghost"
-          size="icon"
-          className={`text-text-muted hover:text-foreground relative transition-all duration-300 hover:shadow-[0_0_12px_rgba(124,58,237,0.3)] ${className ?? ''}`}
+          variant="outline"
+          size="default"
+          className={`border-brand/50 bg-surface-1 text-brand-muted-foreground hover:bg-brand/20 hover:text-brand-muted-foreground hover:border-brand/80 relative flex items-center gap-2 px-3 py-2 font-semibold transition-all duration-300 hover:shadow-[0_0_12px_rgba(124,58,237,0.4)] ${className ?? ''}`}
           title="Toggle theme"
           data-testid="theme-toggle-button"
         >
           {/* Palette icon - represents theme/color selection */}
-          <Palette className="h-4 w-4 transition-all duration-300" />
+          <Palette className="h-5 w-5 transition-all duration-300" />
+          <span className="hidden text-sm font-bold sm:inline">Theme</span>
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
