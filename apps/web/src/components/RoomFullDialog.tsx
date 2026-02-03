@@ -2,9 +2,9 @@
  * RoomFullDialog - Shown when user tries to access a room that is full
  */
 
-import { AlertCircle, Home } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Home, Users } from 'lucide-react'
 
-import { Button } from '@repo/ui/components/button'
 import {
   Dialog,
   DialogContent,
@@ -24,32 +24,108 @@ export function RoomFullDialog({
   onClose,
   message = 'The room is full',
 }: RoomFullDialogProps) {
+  // Extract room ID from message if present (e.g., "Room is full (Room ABC123)")
+  const roomIdMatch = message.match(/\(Room ([A-Z0-9]+)\)/)
+  const roomId = roomIdMatch ? roomIdMatch[1] : null
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="border-surface-2 bg-surface-1 sm:max-w-[450px]">
         <DialogHeader>
-          <div className="mb-2 flex justify-center">
-            <div className="bg-warning/20 flex h-12 w-12 items-center justify-center rounded-full">
-              <AlertCircle className="text-warning-muted-foreground h-6 w-6" />
-            </div>
+          <div className="mb-4 flex justify-center">
+            <motion.div
+              className="relative"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', duration: 0.5 }}
+            >
+              {/* Animated ring */}
+              <motion.div
+                className="bg-warning/20 absolute inset-0 rounded-full"
+                animate={{
+                  scale: [1, 1.3, 1],
+                  opacity: [0.5, 0, 0.5],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              />
+              {/* Icon container */}
+              <div className="bg-warning/20 relative flex h-16 w-16 items-center justify-center rounded-full">
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }}
+                >
+                  <Users className="text-warning h-8 w-8" />
+                </motion.div>
+              </div>
+            </motion.div>
           </div>
-          <DialogTitle className="text-center text-white">
-            Room is Full
-          </DialogTitle>
-          <DialogDescription className="text-text-muted text-center">
-            {message}. Please try again later or join a different game.
-          </DialogDescription>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <DialogTitle className="text-center text-xl text-white">
+              All Seats Taken
+            </DialogTitle>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <DialogDescription className="text-text-muted text-center">
+              {roomId ? (
+                <>
+                  All seats in room{' '}
+                  <span className="font-mono font-medium text-white">
+                    {roomId}
+                  </span>{' '}
+                  are taken.
+                </>
+              ) : (
+                <>All seats at this table are taken.</>
+              )}
+              <br />
+              Please wait for a seat to open or find another room.
+            </DialogDescription>
+          </motion.div>
         </DialogHeader>
 
-        <div className="flex justify-center pt-4">
-          <Button
+        <motion.div
+          className="pt-4"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <button
             onClick={onClose}
-            className="bg-brand hover:bg-brand gap-2 text-white"
+            className="border-brand/30 bg-surface-0/30 hover:border-brand/60 hover:bg-surface-1/40 focus:ring-brand/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
           >
-            <Home className="h-4 w-4" />
-            Back to Home
-          </Button>
-        </div>
+            <div className="flex items-center gap-3">
+              <div className="bg-brand/20 group-hover:bg-brand/30 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors">
+                <Home className="text-brand-muted-foreground h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-brand-muted-foreground font-medium">
+                  Back to Home
+                </p>
+                <p className="text-text-muted mt-0.5 text-sm">
+                  Find or create another game room
+                </p>
+              </div>
+            </div>
+          </button>
+        </motion.div>
       </DialogContent>
     </Dialog>
   )
