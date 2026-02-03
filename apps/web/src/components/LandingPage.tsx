@@ -42,7 +42,9 @@ import { Label } from '@repo/ui/components/label'
 import { Toaster } from '@repo/ui/components/sonner'
 
 import type { CreatorInviteState } from '../lib/session-storage.js'
+import logoWarmGold from '../assets/logo_1024_warmgold.png'
 import logo from '../assets/logo_1024x1024.png'
+import { useTheme } from '../contexts/ThemeContext.js'
 import { AppHeader } from './AppHeader.js'
 import { CreateGameDialog } from './CreateGameDialog.js'
 import { RoomNotFoundDialog } from './RoomNotFoundDialog.js'
@@ -68,7 +70,10 @@ export function LandingPage({
   onSignIn,
 }: LandingPageProps) {
   const navigate = useNavigate()
+  const { mtgTheme } = useTheme()
   const supportUrl = env.VITE_SUPPORT_URL
+  // Use warm gold logo for White theme, default logo otherwise
+  const logoSrc = mtgTheme === 'white' ? logoWarmGold : logo
   const [joinGameId, setJoinGameId] = useState('')
   const [dialogs, setDialogs] = useState({
     join: false,
@@ -296,7 +301,12 @@ export function LandingPage({
 
               <h1 className="text-text-primary mb-6 text-5xl md:text-7xl lg:text-8xl">
                 Play Magic
-                <span className="mt-2 block bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+                <span
+                  className="mt-2 block bg-clip-text text-transparent"
+                  style={{
+                    backgroundImage: `linear-gradient(to right, var(--gradient-from), var(--gradient-to))`,
+                  }}
+                >
                   Anywhere.
                 </span>
               </h1>
@@ -538,7 +548,7 @@ export function LandingPage({
               <div className="animate-float relative h-full w-full">
                 <div className="bg-brand/20 absolute inset-0 animate-pulse rounded-full blur-3xl" />
                 <img
-                  src={logo}
+                  src={logoSrc}
                   alt="Spell Coven Logo"
                   className="relative z-10 h-full w-full object-contain"
                   style={{
@@ -794,9 +804,6 @@ export function LandingPage({
           id="how-it-works"
           className="container relative mx-auto overflow-hidden px-4 py-24"
         >
-          {/* Background decoration */}
-          <div className="bg-brand-muted pointer-events-none absolute left-0 top-1/2 -z-10 h-96 w-full -translate-y-1/2 blur-[120px]" />
-
           <div className="mx-auto max-w-6xl">
             <h2 className="text-text-primary mb-20 text-center text-4xl md:text-5xl">
               How It Works
