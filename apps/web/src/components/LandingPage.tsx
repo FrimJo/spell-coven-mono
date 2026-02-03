@@ -9,6 +9,7 @@ import {
   Camera,
   ChevronDown,
   Gamepad2,
+  Github,
   Heart,
   Loader2,
   LogOut,
@@ -937,7 +938,7 @@ export function LandingPage({
           <div className="container mx-auto px-4 py-12">
             <div
               className={`grid gap-8 ${
-                supportUrl ? 'md:grid-cols-5' : 'md:grid-cols-4'
+                supportUrl ? 'md:grid-cols-6' : 'md:grid-cols-5'
               }`}
             >
               <div className="col-span-2 space-y-4">
@@ -1009,6 +1010,24 @@ export function LandingPage({
                     </a>
                   </li>
                 </ul>
+              </div>
+
+              <div>
+                <h4 className="text-text-primary mb-4 text-sm font-semibold">
+                  Open Source
+                </h4>
+                <p className="text-text-muted mb-4 text-sm">
+                  Spell Coven is open source. Contribute or star us on GitHub!
+                </p>
+                <a
+                  href="https://github.com/FrimJo/spell-coven-mono"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2 hover:text-text-primary inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors"
+                >
+                  <Github className="h-4 w-4" />
+                  View on GitHub
+                </a>
               </div>
 
               {supportUrl && (
