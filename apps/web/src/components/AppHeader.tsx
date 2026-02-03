@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   Check,
   Copy,
+  Github,
   LogIn,
   LogOut,
   Menu,
@@ -189,6 +190,17 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
             </a>
           ))}
 
+          <a
+            href="https://github.com/FrimJo/spell-coven-mono"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-text-secondary hover:text-text-primary flex items-center gap-1.5 transition-colors"
+            title="View on GitHub"
+          >
+            <Github className="h-5 w-5" />
+            <span className="sr-only">GitHub</span>
+          </a>
+
           <ThemeToggle />
 
           {/* Auth section */}
@@ -243,6 +255,17 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                     {item.label}
                   </a>
                 ))}
+
+                {/* GitHub link in mobile menu */}
+                <a
+                  href="https://github.com/FrimJo/spell-coven-mono"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-text-secondary hover:bg-surface-2 hover:text-text-primary flex items-center gap-3 rounded-lg px-4 py-3 text-lg font-medium transition-colors"
+                >
+                  <Github className="h-5 w-5" />
+                  GitHub
+                </a>
 
                 {/* Theme toggle in mobile menu */}
                 <div className="flex items-center justify-between rounded-lg px-4 py-3">
