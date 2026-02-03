@@ -26,7 +26,7 @@ The following features are currently available and working:
 - ✅ **Room System**: Create and join game rooms with real-time player presence
 - ✅ **Multi-party Video/Audio Chat**: WebRTC-powered video and audio communication between players
 - ✅ **Webcam Integration**: Use your webcam as an overhead camera for your playmat
-- ✅ **User Authentication**: Sign in with Clerk authentication
+- ✅ **User Authentication**: Sign in with Convex authentication
 - ✅ **Life Total Tracking**: Keep track of life totals for all players
 - ✅ **Commander Damage Tracking**: Track commander damage across multiple opponents
 - ✅ **Invite by URL**: Share a link to invite friends to your game room
@@ -57,64 +57,28 @@ Spell Coven is designed for Magic: The Gathering players who want to play with t
 - **Game State Tracking**: Keep track of life totals and commander damage
 - **Flexible Setup**: Use any webcam or smartphone as an overhead camera—no special equipment needed
 
-### Competitive Landscape
-
-**SpellTable** (by Wizards of the Coast) is the current market leader, offering:
-- Free browser-based platform for remote paper Magic
-- Multi-party video chat (2-4 players)
-- Card recognition with click-to-identify
-- Built-in life/commander damage tracking
-- Timers
-- Mobile device support as overhead cameras
-
-**Spell Coven's Differentiators** (planned):
-- Advanced AI-powered card recognition using state-of-the-art CLIP models
-- Open-source and community-driven development
-- Extensible architecture for custom features and integrations
-- Privacy-focused with optional self-hosting capabilities
-
 ## Quick Start
 
 1. **Install dependencies:**
+
    ```sh
    bun install
    ```
 
-2. **Start the development server:**
+2. **Start the Convex development server:**
+
+   ```sh
+   bun run convex:dev
+   ```
+
+3. **Start the Web development server:**
+
    ```sh
    bun run dev
    ```
 
-3. **Open the app:**
+4. **Open the app:**
    Navigate to https://localhost:1234 to get started.
-
-## Git LFS Setup
-
-This repository uses **Git LFS** to manage large binary files (embeddings, models, images). If you haven't already, set up Git LFS:
-
-1. **Install Git LFS:**
-   ```sh
-   brew install git-lfs  # macOS
-   # or for other systems, see https://git-lfs.github.com/
-   ```
-
-2. **Initialize Git LFS in the repository:**
-   ```sh
-   git lfs install
-   ```
-
-3. **Clone or pull with LFS files:**
-   ```sh
-   git clone <repo-url>
-   git lfs pull
-   ```
-
-Large files tracked by LFS include:
-- `*.i8bin` and `*.f32bin` - FAISS embedding indices
-- `*.onnx` - ML model files
-- Large images in `apps/web/public/data/mtg-embeddings/`
-
-Without Git LFS, these files will be replaced with pointer files and the application won't work correctly.
 
 ## What's inside?
 
@@ -141,20 +105,24 @@ Each package/app is 100% [TypeScript](https://www.typescriptlang.org/) (Python f
 ### Key Technologies
 
 **Frontend**:
+
 - React 19, TanStack Router, Tailwind CSS
 - Vite with TypeScript
-- Clerk for authentication
+- Convex for authentication
 
 **Real-time Communication**:
+
 - WebRTC for peer-to-peer video/audio
 - Convex for real-time data sync and room management
 
 **Card Recognition** (in development):
+
 - CLIP (via [@huggingface/transformers](https://huggingface.co/docs/transformers.js)) for image feature extraction
 - OpenCV.js for real-time card boundary detection
 - FAISS for efficient similarity search
 
 **Infrastructure**:
+
 - Turborepo managed with Bun workspaces
 - Python data pipeline with PyTorch, FAISS, Scryfall API
 
@@ -171,14 +139,12 @@ This Turborepo has some additional tools already setup for you:
 To build all apps and packages, run the following command:
 
 ```
-cd my-turborepo
+cd spell-coven-mono
 
 # With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
 turbo build
 
 # Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
 bunx turbo run build
 ```
 
@@ -189,42 +155,13 @@ You can build a specific package by using a [filter](https://turborepo.com/docs/
 turbo build --filter=docs
 
 # Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
 bunx turbo run build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-bunx turbo run dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-bunx turbo run dev --filter=web
 ```
 
 ## Contributing
 
 This is an open-source project and contributions are welcome! Whether you're interested in:
+
 - Adding new features (game tools, UI improvements)
 - Improving card recognition accuracy
 - Optimizing performance
