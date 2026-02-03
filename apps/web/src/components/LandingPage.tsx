@@ -42,6 +42,10 @@ import { Label } from '@repo/ui/components/label'
 import { Toaster } from '@repo/ui/components/sonner'
 
 import type { CreatorInviteState } from '../lib/session-storage.js'
+import logoBlue from '../assets/logo_1024_blue.png'
+import logoDeath from '../assets/logo_1024_death.png'
+import logoFire from '../assets/logo_1024_fire.png'
+import logoGreen from '../assets/logo_1024_green.png'
 import logoWarmGold from '../assets/logo_1024_warmgold.png'
 import logo from '../assets/logo_1024x1024.png'
 import { useTheme } from '../contexts/ThemeContext.js'
@@ -72,8 +76,19 @@ export function LandingPage({
   const navigate = useNavigate()
   const { mtgTheme } = useTheme()
   const supportUrl = env.VITE_SUPPORT_URL
-  // Use warm gold logo for White theme, default logo otherwise
-  const logoSrc = mtgTheme === 'white' ? logoWarmGold : logo
+  // Use theme-specific logos
+  const logoSrc =
+    mtgTheme === 'white'
+      ? logoWarmGold
+      : mtgTheme === 'red'
+        ? logoFire
+        : mtgTheme === 'blue'
+          ? logoBlue
+          : mtgTheme === 'black'
+            ? logoDeath
+            : mtgTheme === 'green'
+              ? logoGreen
+              : logo
   const [joinGameId, setJoinGameId] = useState('')
   const [dialogs, setDialogs] = useState({
     join: false,
