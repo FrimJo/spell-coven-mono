@@ -6,7 +6,7 @@
  */
 
 import { isThemeToggleEnabled } from '@/env'
-import { Palette } from 'lucide-react'
+import { Palette, Settings } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
 import {
@@ -59,23 +59,37 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
           value={mtgTheme}
           onValueChange={(value) => setMtgTheme(value as MtgColorTheme)}
         >
-          {(Object.keys(MTG_THEMES) as MtgColorTheme[]).map((key) => (
-            <DropdownMenuRadioItem
-              key={key}
-              value={key}
-              className="text-text-secondary focus:bg-surface-2 focus:text-foreground cursor-pointer"
-            >
-              <span className="mr-2 w-4 text-center">
-                {MTG_THEMES[key].emoji}
-              </span>
-              <span className="flex-1">{MTG_THEMES[key].label}</span>
-              {key !== 'none' && (
-                <span className="text-text-muted ml-2 hidden text-xs sm:inline">
-                  {MTG_THEMES[key].description.split(',')[0]}
+          {(Object.keys(MTG_THEMES) as MtgColorTheme[]).map((key) => {
+            const theme = MTG_THEMES[key]
+            const iconSvg = theme.iconSvg
+            const iconColor = theme.iconColor
+            return (
+              <DropdownMenuRadioItem
+                key={key}
+                value={key}
+                className="text-text-secondary focus:bg-surface-2 focus:text-foreground cursor-pointer"
+              >
+                <span className="mr-2 flex w-4 items-center justify-center">
+                  {iconSvg && iconColor ? (
+                    <span
+                      className="h-4 w-4 shrink-0 overflow-hidden [&_svg]:block [&_svg]:size-full"
+                      style={{ color: iconColor }}
+                      title={`${theme.label} mana`}
+                      dangerouslySetInnerHTML={{ __html: iconSvg }}
+                    />
+                  ) : (
+                    <Settings className="h-4 w-4" aria-label="Default theme" />
+                  )}
                 </span>
-              )}
-            </DropdownMenuRadioItem>
-          ))}
+                <span className="flex-1">{theme.label}</span>
+                {key !== 'none' && (
+                  <span className="text-text-muted ml-2 hidden text-xs sm:inline">
+                    {theme.description.split(',')[0]}
+                  </span>
+                )}
+              </DropdownMenuRadioItem>
+            )
+          })}
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>

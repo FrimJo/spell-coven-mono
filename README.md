@@ -4,6 +4,8 @@
 
 A browser-based platform for playing paper Magic: The Gathering remotely with friends. Spell Coven enables MTG players to play their physical cards online through video chat, card recognition, and game management tools—all running in your browser with no downloads required.
 
+Production: [https://spell-coven.vercel.app](https://spell-coven.vercel.app)
+
 ## About This Project
 
 **This is a hobby project.** I'm a full-time web developer, and Spell Coven is my playground for exploring cutting-edge AI tools and staying in the loop with what's possible in modern web development. It's a passion project born from my love of Magic: The Gathering and curiosity about emerging technologies like browser-based machine learning, WebRTC, and computer vision.
@@ -157,6 +159,10 @@ turbo build --filter=docs
 # Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
 bunx turbo run build --filter=docs
 ```
+
+## Credits
+
+- Mana symbol vectors sourced from [Mana & Card Icons](https://mana.andrewgioia.com/icons.html) made by [Andrew Gioia](https://andrewgioia.com/).
 
 ## Contributing
 
