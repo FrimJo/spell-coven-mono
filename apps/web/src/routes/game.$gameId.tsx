@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { AuthRequiredDialog } from '@/components/AuthRequiredDialog'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
+import { RoomFullDialog } from '@/components/RoomFullDialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { convex } from '@/integrations/convex/provider'
 import { loadEmbeddingsAndMetaFromPackage } from '@/lib/clip-search'
@@ -15,6 +16,7 @@ import {
   useNavigate,
 } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
+import { useQuery } from 'convex/react'
 import { Loader2 } from 'lucide-react'
 import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
@@ -102,21 +104,14 @@ export const Route = createFileRoute('/game/$gameId')({
       })
     }
 
-    // Check if room exists, user is not banned, and room has capacity
+    // Check if room exists and user is not banned
+    // Note: "full" check is done in component to show dialog instead of redirect
     const roomAccess = await checkRoomAccess(params.gameId)
     if (roomAccess.status === 'not_found' || roomAccess.status === 'banned') {
       // Show same error for both 'not_found' and 'banned' (security - don't reveal ban status)
       throw notFound()
     }
-    if (roomAccess.status === 'full') {
-      // Room is full - redirect with error message
-      throw redirect({
-        to: '/',
-        search: {
-          error: `Room is full (Room ${params.gameId})`,
-        },
-      })
-    }
+    // Room full check is handled in the component to show RoomFullDialog
   },
   loaderDeps: ({ search }) => ({ detector: search.detector }),
   loader: async ({ deps }) => {
@@ -175,6 +170,9 @@ function GameRoomRoute() {
   const navigate = useNavigate()
   const { user, isLoading: isAuthLoading, isAuthenticated, signIn } = useAuth()
 
+  // Check room access for capacity (reactive query)
+  const roomAccess = useQuery(api.rooms.checkRoomAccess, { roomId: gameId })
+
   const handleLeaveGame = () => {
     sessionStorage.clearGameState()
     navigate({ to: '/', reloadDocument: true }) // reloadDocument: true is needed to ensure the browser releases the camera/mic indicator
@@ -220,6 +218,40 @@ function GameRoomRoute() {
           onSignIn={handleSignIn}
           onClose={handleClose}
           message="You need to sign in with Discord to join this game room."
+        />
+      </div>
+    )
+  }
+
+  // Show loading state while room access is being checked
+  if (roomAccess === undefined) {
+    return (
+      <div className="bg-surface-0 flex h-screen items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="relative">
+            <div className="bg-brand/20 flex h-16 w-16 items-center justify-center rounded-full">
+              <Loader2 className="text-brand-muted-foreground h-8 w-8 animate-spin" />
+            </div>
+            <div className="bg-brand/10 absolute inset-0 animate-ping rounded-full" />
+          </div>
+          <div className="space-y-1 text-center">
+            <h2 className="text-text-secondary text-lg font-medium">
+              Checking room availability...
+            </h2>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show room full dialog if room is at capacity
+  if (roomAccess.status === 'full') {
+    return (
+      <div className="bg-surface-0 h-screen">
+        <RoomFullDialog
+          open={true}
+          onClose={handleClose}
+          message={`Room is full (Room ${gameId})`}
         />
       </div>
     )
