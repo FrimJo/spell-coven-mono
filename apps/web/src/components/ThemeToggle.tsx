@@ -1,12 +1,12 @@
 /**
- * ThemeToggle - A dropdown menu for selecting light/dark/system theme
- * and MTG color themes (White, Blue, Black, Red, Green)
+ * ThemeToggle - A dropdown menu for selecting MTG color themes
+ * (White, Blue, Black, Red, Green)
  *
- * Features animated sun/moon icons and MTG-inspired styling.
+ * Features a palette icon representing theme/color selection.
  */
 
 import { isThemeToggleEnabled } from '@/env'
-import { Monitor, Moon, Palette, Sun } from 'lucide-react'
+import { Palette } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
 import {
@@ -15,11 +15,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@repo/ui/components/dropdown-menu'
 
-import type { MtgColorTheme, Theme } from '../contexts/ThemeContext.js'
+import type { MtgColorTheme } from '../contexts/ThemeContext.js'
 import { MTG_THEMES, useTheme } from '../contexts/ThemeContext.js'
 
 interface ThemeToggleProps {
@@ -28,7 +27,7 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ className }: ThemeToggleProps) {
-  const { theme, resolvedTheme, setTheme, mtgTheme, setMtgTheme } = useTheme()
+  const { mtgTheme, setMtgTheme } = useTheme()
 
   if (!isThemeToggleEnabled) return null
 
@@ -42,22 +41,8 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
           title="Toggle theme"
           data-testid="theme-toggle-button"
         >
-          {/* Sun icon - visible in light mode */}
-          <Sun
-            className={`h-4 w-4 transition-all duration-300 ${
-              resolvedTheme === 'light'
-                ? 'rotate-0 scale-100'
-                : 'rotate-90 scale-0'
-            } absolute`}
-          />
-          {/* Moon icon - visible in dark mode */}
-          <Moon
-            className={`h-4 w-4 transition-all duration-300 ${
-              resolvedTheme === 'dark'
-                ? 'rotate-0 scale-100'
-                : '-rotate-90 scale-0'
-            } absolute`}
-          />
+          {/* Palette icon - represents theme/color selection */}
+          <Palette className="h-4 w-4 transition-all duration-300" />
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
@@ -65,41 +50,9 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
         align="end"
         className="border-surface-3 bg-surface-1 w-56"
       >
-        <DropdownMenuLabel className="text-text-muted text-xs font-normal">
-          Mode
-        </DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          value={theme}
-          onValueChange={(value) => setTheme(value as Theme)}
-        >
-          <DropdownMenuRadioItem
-            value="light"
-            className="text-text-secondary focus:bg-surface-2 focus:text-foreground cursor-pointer"
-          >
-            <Sun className="mr-2 h-4 w-4" />
-            Light
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem
-            value="dark"
-            className="text-text-secondary focus:bg-surface-2 focus:text-foreground cursor-pointer"
-          >
-            <Moon className="mr-2 h-4 w-4" />
-            Dark
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem
-            value="system"
-            className="text-text-secondary focus:bg-surface-2 focus:text-foreground cursor-pointer"
-          >
-            <Monitor className="mr-2 h-4 w-4" />
-            System
-          </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-
-        <DropdownMenuSeparator className="bg-surface-3" />
-
         <DropdownMenuLabel className="text-text-muted flex items-center gap-1 text-xs font-normal">
           <Palette className="h-3 w-3" />
-          MTG Color Theme
+          Theme
         </DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={mtgTheme}

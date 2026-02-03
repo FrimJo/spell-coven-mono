@@ -32,7 +32,13 @@ import {
   SheetTrigger,
 } from '@repo/ui/components/sheet'
 
+import logoBlue from '../assets/logo_1024_blue.png'
+import logoDeath from '../assets/logo_1024_death.png'
+import logoFire from '../assets/logo_1024_fire.png'
+import logoGreen from '../assets/logo_1024_green.png'
+import logoWarmGold from '../assets/logo_1024_warmgold.png'
 import logo from '../assets/logo_1024x1024.png'
+import { useTheme } from '../contexts/ThemeContext.js'
 import { ThemeToggle } from './ThemeToggle.js'
 
 // ============================================================================
@@ -74,14 +80,28 @@ interface AppHeaderProps {
 // ============================================================================
 
 function Logo({ size = 'default' }: { size?: 'default' | 'small' }) {
+  const { mtgTheme } = useTheme()
   const sizeClasses = size === 'small' ? 'h-8 w-8' : 'h-10 w-10'
   const textClasses = size === 'small' ? 'text-lg' : 'text-xl'
   const roundedClasses = size === 'small' ? 'rounded-lg' : 'rounded-xl'
+  // Use theme-specific logos
+  const logoSrc =
+    mtgTheme === 'white'
+      ? logoWarmGold
+      : mtgTheme === 'red'
+        ? logoFire
+        : mtgTheme === 'blue'
+          ? logoBlue
+          : mtgTheme === 'black'
+            ? logoDeath
+            : mtgTheme === 'green'
+              ? logoGreen
+              : logo
 
   return (
     <div className="flex items-center gap-2">
       <img
-        src={logo}
+        src={logoSrc}
         alt="Spell Coven Logo"
         className={`${sizeClasses} ${roundedClasses} object-contain`}
       />

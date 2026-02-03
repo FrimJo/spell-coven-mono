@@ -374,70 +374,65 @@
 /* ⚫ Black --- Power, Death, Ambition */
 [data-mtg-theme='black'].dark {
   /* Core Colors */
-  --background: #0a0a0a; /* Near obsidian */
-  --foreground: #c9c1b6; /* Bone */
-  --card: #121212; /* Obsidian */
-  --card-foreground: #c9c1b6;
-  --popover: #121212;
-  --popover-foreground: #c9c1b6;
-  --primary: #c9c1b6; /* Bone */
-  --primary-foreground: #121212;
-  --secondary: #1c1c1f; /* Void */
-  --secondary-foreground: #c9c1b6;
-  --muted: #1c1c1f;
-  --muted-foreground: #7a7570;
-  --accent: #7a1e1e; /* Blood accent */
-  --accent-foreground: #c9c1b6;
-  --destructive: #7a1e1e;
-  --destructive-foreground: #c9c1b6;
+  --background: #030304; /* Abyssal black */
+  --foreground: #9a938c; /* Faded bone */
+  --card: #080809; /* Deep void */
+  --card-foreground: #9a938c;
+  --popover: #080809;
+  --popover-foreground: #9a938c;
+  --primary: #5c3d99; /* Muted necrotic purple - decay */
+  --primary-foreground: #9a938c;
+  --secondary: #0c0c0e; /* Shadow */
+  --secondary-foreground: #9a938c;
+  --muted: #0c0c0e;
+  --muted-foreground: #5a5550;
+  --accent: #4a2d80; /* Deep violet - suffering */
+  --accent-foreground: #9a938c;
+  --destructive: #5c2845; /* Dark dried blood */
+  --destructive-foreground: #9a938c;
 
   /* Borders & Inputs */
-  --border: #3a3a3a; /* Ash gray */
-  --input: #2a2a2a;
-  --ring: #7a1e1e;
+  --border: #18181c; /* Cold void */
+  --input: #0e0e10;
+  --ring: #4a2d80;
 
-  /* Brand (Black/Blood theme) */
-  --brand: #7a1e1e;
-  --brand-foreground: #c9c1b6;
-  --brand-muted: rgba(122, 30, 30, 0.3);
-  --brand-muted-foreground: #b84040;
-  --brand-glow: rgba(
-    122,
-    30,
-    30,
-    0.6
-  ); /* Brand color with 60% opacity for glow effects */
+  /* Brand (Black/Death theme) */
+  --brand: #4a2d80; /* Deep violet - misery */
+  --brand-foreground: #9a938c;
+  --brand-muted: rgba(74, 45, 128, 0.25);
+  --brand-muted-foreground: #6b4a9e;
+  --brand-glow: rgba(74, 45, 128, 0.4); /* Subdued glow for somber feel */
   /* Gradient colors for text effects */
-  --gradient-from: #7a1e1e; /* Dark red */
-  --gradient-to: #b84040; /* Lighter red */
+  --gradient-from: #4a2d80; /* Deep violet */
+  --gradient-to: #5c3d99; /* Muted purple */
 
   /* Surface levels */
-  --surface-0: #050505;
-  --surface-1: #0a0a0a;
-  --surface-2: #121212;
-  --surface-3: #1c1c1f;
+  --surface-0: #010102; /* The void */
+  --surface-1: #030304;
+  --surface-2: #080809;
+  --surface-3: #0e0e10;
 
   /* Text levels */
-  --text-primary: #c9c1b6; /* Bone */
-  --text-secondary: #a8a299;
-  --text-tertiary: #7a7570;
-  --text-muted: #5a5550;
-  --text-placeholder: #3a3a3a;
+  --text-primary: #9a938c; /* Weathered bone */
+  --text-secondary: #7a7570;
+  --text-tertiary: #5a5550;
+  --text-muted: #3a3835;
+  --text-placeholder: #252528;
 
   /* Border levels */
-  --border-default: #2a2a2a;
-  --border-muted: #1c1c1f;
-  --border-strong: #3a3a3a;
+  --border-default: #18181c;
+  --border-muted: #0e0e10;
+  --border-strong: #222228;
 
   /* Sidebar */
-  --sidebar: #121212;
-  --sidebar-foreground: #c9c1b6;
-  --sidebar-primary: #7a1e1e;
-  --sidebar-primary-foreground: #c9c1b6;
-  --sidebar-accent: #1c1c1f;
-  --sidebar-accent-foreground: #c9c1b6;
-  --sidebar-border: #2a2a2a;
-  --sidebar-ring: #7a1e1e;
+  --sidebar: #080809;
+  --sidebar-foreground: #9a938c;
+  --sidebar-primary: #4a2d80;
+  --sidebar-primary-foreground: #9a938c;
+  --sidebar-accent: #0c0c0e;
+  --sidebar-accent-foreground: #9a938c;
+  --sidebar-border: #18181c;
+  --sidebar-ring: #4a2d80;
 }
 
 /* 🔴 Red --- Chaos, Speed, Emotion */
