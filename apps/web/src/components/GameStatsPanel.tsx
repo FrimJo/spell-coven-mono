@@ -2,6 +2,7 @@ import type { ScryfallCard } from '@/lib/scryfall'
 import type { Participant } from '@/types/participant'
 import type { Doc } from '@convex/_generated/dataModel'
 import { useCallback, useEffect, useEffectEvent, useState } from 'react'
+import { usePresence } from '@/contexts/PresenceContext'
 import { useDeltaDisplay } from '@/hooks/useDeltaDisplay'
 import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
 import { getCardByName, getCommanderImageUrl } from '@/lib/scryfall'
@@ -36,9 +37,6 @@ import {
 import { CommanderSearchInput } from './CommanderSearchInput'
 import { DeltaBubble } from './DeltaBubble'
 
-/** Maximum players in a Commander game */
-const MAX_PLAYERS = 4
-
 interface GameStatsPanelProps {
   isOpen: boolean
   onClose: () => void
@@ -64,6 +62,8 @@ export function GameStatsPanel({
   const isViewingOwnStats = viewedPlayer.id === currentUser.id
   // Use roomId as-is - roomPlayers table stores bare roomId (e.g., "ABC123")
   const convexRoomId = roomId
+  // Get seat count from presence context
+  const { roomSeatCount } = usePresence()
 
   // Determine if viewed player has any commanders set
   const viewedPlayerHasCommanders =
@@ -394,7 +394,7 @@ export function GameStatsPanel({
   }
 
   // Build the slots: joined players first, then vacant slots
-  const vacantSlotsCount = Math.max(0, MAX_PLAYERS - participants.length)
+  const vacantSlotsCount = Math.max(0, roomSeatCount - participants.length)
   const vacantSlots = Array.from({ length: vacantSlotsCount }, (_, i) => ({
     type: 'vacant' as const,
     index: i,
@@ -720,7 +720,7 @@ export function GameStatsPanel({
               >
                 <div className="text-text-muted flex items-center gap-2">
                   <User className="h-5 w-5" />
-                  <span className="font-medium">Empty Seat</span>
+                  <span className="font-medium">Open seat</span>
                 </div>
                 <p className="text-text-muted mt-2 text-sm">
                   Waiting for player to join...

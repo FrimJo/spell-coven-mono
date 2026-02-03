@@ -45,6 +45,8 @@ export default defineSchema({
     status: roomStatusValues,
     /** When the room was created */
     createdAt: v.number(),
+    /** Number of player seats (1-4, default 4) */
+    seatCount: v.optional(v.number()),
   })
     .index('by_roomId', ['roomId'])
     .index('by_ownerId', ['ownerId'])

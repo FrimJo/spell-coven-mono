@@ -189,7 +189,7 @@ function SidebarContent({
   onToggleMutePlayer,
 }: GameRoomSidebarProps) {
   // Get game room participants from context (already deduplicated)
-  const { uniqueParticipants } = usePresence()
+  const { uniqueParticipants, roomSeatCount, setRoomSeatCount } = usePresence()
   const { user } = useAuth()
   const { state, history, setResultWithoutHistory, clearResult, clearHistory } =
     useCardQueryContext()
@@ -277,6 +277,22 @@ function SidebarContent({
     setSelectedPlayerId(null)
   }, [])
 
+  // Handler to change seat count
+  const handleChangeSeatCount = useCallback(
+    (delta: number) => {
+      const newCount = Math.max(
+        uniqueParticipants.length,
+        Math.min(4, roomSeatCount + delta),
+      )
+      if (newCount !== roomSeatCount) {
+        setRoomSeatCount(newCount).catch((err) => {
+          console.error('[GameRoomSidebar] Failed to set seat count:', err)
+        })
+      }
+    },
+    [roomSeatCount, uniqueParticipants.length, setRoomSeatCount],
+  )
+
   return (
     <>
       <div className="w-64 flex-shrink-0 space-y-4 overflow-y-auto">
@@ -290,6 +306,8 @@ function SidebarContent({
           mutedPlayers={mutedPlayers}
           onToggleMutePlayer={onToggleMutePlayer}
           onViewCommanders={handleViewCommanders}
+          seatCount={roomSeatCount}
+          onChangeSeatCount={isLobbyOwner ? handleChangeSeatCount : undefined}
         />
         <CardPreview playerName={playerName} onClose={clearResult} />
         <CardHistoryList

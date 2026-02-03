@@ -16,6 +16,7 @@ import { DEFAULT_HEALTH } from './constants'
 import {
   BannedFromRoomError,
   MissingUserIdError,
+  RoomFullError,
   RoomNotFoundError,
 } from './errors'
 
@@ -124,6 +125,36 @@ export const joinRoom = mutation({
         q.eq('roomId', roomId).eq('userId', userId),
       )
       .first()
+
+    // If user has no existing sessions in this room, check capacity
+    if (!existingUserSession) {
+      const presenceThreshold = now - PRESENCE_THRESHOLD_MS
+      const activePlayers = await ctx.db
+        .query('roomPlayers')
+        .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+        .filter((q) =>
+          q.and(
+            q.neq(q.field('status'), 'left'),
+            q.gt(q.field('lastSeenAt'), presenceThreshold),
+          ),
+        )
+        .collect()
+
+      // Deduplicate by userId to count unique players
+      const uniqueUserIds = new Set<string>()
+      for (const player of activePlayers) {
+        uniqueUserIds.add(player.userId)
+      }
+      const currentPlayerCount = uniqueUserIds.size
+
+      // Get seat count from room (defaults to 4 if not set)
+      const seatCount = room.seatCount ?? 4
+
+      // Check if room is full
+      if (currentPlayerCount >= seatCount) {
+        throw new RoomFullError(`Room is full (Room ${roomId})`)
+      }
+    }
 
     const health = existingUserSession?.health ?? DEFAULT_HEALTH
     const poison = existingUserSession?.poison ?? 0

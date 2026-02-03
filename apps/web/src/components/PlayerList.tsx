@@ -3,7 +3,9 @@ import { motion } from 'framer-motion'
 import {
   Ban,
   Crown,
+  Minus,
   MoreVertical,
+  Plus,
   Swords,
   Unplug,
   Users,
@@ -53,6 +55,10 @@ interface PlayerListProps {
   mutedPlayers: Set<string>
   onToggleMutePlayer: (playerId: string) => void
   onViewCommanders?: (playerId: string) => void
+  /** Current seat count (1-4) */
+  seatCount: number
+  /** Callback to change seat count (owner only) */
+  onChangeSeatCount?: (delta: number) => void
 }
 
 type RemovalAction = 'kick' | 'ban'
@@ -67,6 +73,8 @@ export function PlayerList({
   mutedPlayers,
   onToggleMutePlayer,
   onViewCommanders,
+  seatCount,
+  onChangeSeatCount,
 }: PlayerListProps) {
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
@@ -89,10 +97,48 @@ export function PlayerList({
   const openConfirmDialog = (player: Player, action: RemovalAction) => {
     setConfirmDialog({ open: true, player, action })
   }
+
+  // Compute bounds for seat count controls
+  const canDecrease =
+    isLobbyOwner && seatCount > players.length && seatCount > 1
+  const canIncrease = isLobbyOwner && seatCount < 4
+
+  // Header action for seat count controls (owner only)
+  const headerAction =
+    isLobbyOwner && onChangeSeatCount ? (
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onChangeSeatCount(-1)}
+          disabled={!canDecrease}
+          className="text-text-muted hover:text-text-secondary disabled:text-text-muted/30 h-5 w-5 p-0"
+          title="Remove seat"
+        >
+          <Minus className="h-3 w-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onChangeSeatCount(1)}
+          disabled={!canIncrease}
+          className="text-text-muted hover:text-text-secondary disabled:text-text-muted/30 h-5 w-5 p-0"
+          title="Add seat"
+        >
+          <Plus className="h-3 w-3" />
+        </Button>
+      </div>
+    ) : undefined
+
   return (
-    <SidebarCard icon={Users} title="Players" count={`${players.length}/4`}>
+    <SidebarCard
+      icon={Users}
+      title="Players"
+      count={`${players.length}/${seatCount}`}
+      headerAction={headerAction}
+    >
       <div className="space-y-2 p-2">
-        {Array.from({ length: 4 }).map((_, index) => {
+        {Array.from({ length: seatCount }).map((_, index) => {
           const player = players[index]
 
           // Empty slot

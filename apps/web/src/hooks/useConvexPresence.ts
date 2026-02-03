@@ -52,6 +52,10 @@ interface UseConvexPresenceReturn {
   hasDuplicateSession: boolean
   /** Transfer session to this tab (kicks other tabs) */
   transferSession: () => Promise<void>
+  /** Room seat count (1-4, defaults to 4 if not set) */
+  roomSeatCount: number
+  /** Set the room seat count (owner only) */
+  setRoomSeatCount: (seatCount: number) => Promise<{ seatCount: number }>
 }
 
 /**
@@ -121,6 +125,7 @@ export function useConvexPresence({
   const heartbeatMutation = useMutation(api.players.heartbeat)
   const kickMutation = useMutation(api.bans.kickPlayer)
   const banMutation = useMutation(api.bans.banPlayer)
+  const setSeatCountMutation = useMutation(api.rooms.setRoomSeatCount)
 
   // Use refs to store mutation functions for stable references
   const joinRoomRef = useRef(joinRoomMutation)
@@ -128,6 +133,7 @@ export function useConvexPresence({
   const heartbeatRef = useRef(heartbeatMutation)
   const kickMutationRef = useRef(kickMutation)
   const banMutationRef = useRef(banMutation)
+  const setSeatCountRef = useRef(setSeatCountMutation)
 
   // Keep refs up to date
   useEffect(() => {
@@ -136,6 +142,7 @@ export function useConvexPresence({
     heartbeatRef.current = heartbeatMutation
     kickMutationRef.current = kickMutation
     banMutationRef.current = banMutation
+    setSeatCountRef.current = setSeatCountMutation
   })
 
   // Convex queries - reactive subscriptions
@@ -162,6 +169,7 @@ export function useConvexPresence({
 
   // Extract stable values from queries
   const roomOwnerId = roomQuery?.ownerId
+  const roomSeatCount = roomQuery?.seatCount ?? 4
   const allSessionsData = allSessionsQuery
   const activePlayersData = activePlayersQuery
   const isBanned = isBannedQuery === true
@@ -203,7 +211,6 @@ export function useConvexPresence({
 
     // If we had joined but our session no longer exists, we were removed
     if (hasJoined && mySession === null) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing internal state with external Convex query state
       setHasJoined(false)
 
       // Check why we were removed:
@@ -288,7 +295,7 @@ export function useConvexPresence({
           .catch((err) => {
             console.error('[ConvexPresence] Failed to leave room:', err)
           })
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when hook becomes disabled
+
         setHasJoined(false)
       }
       return
@@ -451,6 +458,21 @@ export function useConvexPresence({
     }
   }, [convexRoomId, userId, duplicateSessions])
 
+  // Set room seat count (owner only)
+  const setRoomSeatCount = useCallback(
+    async (seatCount: number): Promise<{ seatCount: number }> => {
+      if (!convexRoomId) {
+        throw new Error('Cannot set seat count: not connected to room')
+      }
+
+      return await setSeatCountRef.current({
+        roomId: convexRoomId,
+        seatCount,
+      })
+    },
+    [convexRoomId],
+  )
+
   // Determine loading state
   const isLoading = activePlayersData === undefined || roomQuery === undefined
 
@@ -466,5 +488,7 @@ export function useConvexPresence({
     sessionId,
     hasDuplicateSession,
     transferSession,
+    roomSeatCount,
+    setRoomSeatCount,
   }
 }

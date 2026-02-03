@@ -19,6 +19,7 @@ export const ErrorCode = {
   NOT_ROOM_OWNER: 'NOT_ROOM_OWNER',
   BANNED_FROM_ROOM: 'BANNED_FROM_ROOM',
   CANNOT_TARGET_SELF: 'CANNOT_TARGET_SELF',
+  ROOM_FULL: 'ROOM_FULL',
 
   // Not Found
   ROOM_NOT_FOUND: 'ROOM_NOT_FOUND',
@@ -74,6 +75,13 @@ export class BannedFromRoomError extends AppError {
   constructor(message = 'You are banned from this room') {
     super(ErrorCode.BANNED_FROM_ROOM, message)
     this.name = 'BannedFromRoomError'
+  }
+}
+
+export class RoomFullError extends AppError {
+  constructor(message = 'Room is full') {
+    super(ErrorCode.ROOM_FULL, message)
+    this.name = 'RoomFullError'
   }
 }
 

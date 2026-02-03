@@ -54,11 +54,16 @@ const MEDIA_DEVICES_KEY = 'mtg-selected-media-devices'
 
 /**
  * Check if the user can access the room.
- * Returns the access status: 'ok', 'not_found', or 'banned'.
+ * Returns the access status: 'ok', 'not_found', 'banned', or 'full'.
  */
 async function checkRoomAccess(
   roomId: string,
-): Promise<{ status: 'ok' | 'not_found' | 'banned' }> {
+): Promise<
+  | { status: 'ok' }
+  | { status: 'not_found' }
+  | { status: 'banned' }
+  | { status: 'full'; currentCount: number; maxCount: number }
+> {
   return await convex.query(api.rooms.checkRoomAccess, { roomId })
 }
 
@@ -97,11 +102,20 @@ export const Route = createFileRoute('/game/$gameId')({
       })
     }
 
-    // Check if room exists and user is not banned
+    // Check if room exists, user is not banned, and room has capacity
     const roomAccess = await checkRoomAccess(params.gameId)
-    if (roomAccess.status !== 'ok') {
+    if (roomAccess.status === 'not_found' || roomAccess.status === 'banned') {
       // Show same error for both 'not_found' and 'banned' (security - don't reveal ban status)
       throw notFound()
+    }
+    if (roomAccess.status === 'full') {
+      // Room is full - redirect with error message
+      throw redirect({
+        to: '/',
+        search: {
+          error: `Room is full (Room ${params.gameId})`,
+        },
+      })
     }
   },
   loaderDeps: ({ search }) => ({ detector: search.detector }),

@@ -45,6 +45,7 @@ import type { CreatorInviteState } from '../lib/session-storage.js'
 import logo from '../assets/logo_1024x1024.png'
 import { AppHeader } from './AppHeader.js'
 import { CreateGameDialog } from './CreateGameDialog.js'
+import { RoomFullDialog } from './RoomFullDialog.js'
 import { RoomNotFoundDialog } from './RoomNotFoundDialog.js'
 import SpotlightCard from './SpotlightCard'
 
@@ -75,11 +76,17 @@ export function LandingPage({
     create: false,
   })
   const [error, setError] = useState<string | null>(
-    // Don't show room_not_found as banner error - it's shown in a dialog
-    initialError === 'room_not_found' ? null : initialError || null,
+    // Don't show room_not_found or room_full as banner error - they are shown in dialogs
+    initialError === 'room_not_found' ||
+      initialError?.startsWith('Room is full')
+      ? null
+      : initialError || null,
   )
   const [showRoomNotFoundDialog, setShowRoomNotFoundDialog] = useState(
     initialError === 'room_not_found',
+  )
+  const [showRoomFullDialog, setShowRoomFullDialog] = useState(
+    !!initialError?.startsWith('Room is full'),
   )
   const [gameCreation, setGameCreation] = useState<{
     isCreating: boolean
@@ -218,6 +225,12 @@ export function LandingPage({
 
   const handleRoomNotFoundDialogClose = () => {
     setShowRoomNotFoundDialog(false)
+    // Clear the error from URL search params
+    navigate({ to: '/', search: {} })
+  }
+
+  const handleRoomFullDialogClose = () => {
+    setShowRoomFullDialog(false)
     // Clear the error from URL search params
     navigate({ to: '/', search: {} })
   }
@@ -1023,6 +1036,12 @@ export function LandingPage({
       <RoomNotFoundDialog
         open={showRoomNotFoundDialog}
         onClose={handleRoomNotFoundDialogClose}
+      />
+
+      <RoomFullDialog
+        open={showRoomFullDialog}
+        onClose={handleRoomFullDialogClose}
+        message={initialError || undefined}
       />
     </div>
   )

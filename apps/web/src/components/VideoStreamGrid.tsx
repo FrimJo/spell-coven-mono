@@ -437,6 +437,7 @@ export function VideoStreamGrid({
   const {
     uniqueParticipants: gameRoomParticipants,
     isLoading: isPresenceLoading,
+    roomSeatCount,
   } = usePresence()
 
   // Presence is ready when not loading (channel has been set up with correct key)
@@ -565,8 +566,8 @@ export function VideoStreamGrid({
     return 'grid-cols-1 grid-rows-2 lg:grid-cols-2 lg:grid-rows-2'
   }
 
-  // Calculate empty slots needed (total 4 slots: 1 local + up to 3 remote)
-  const maxRemoteSlots = 3
+  // Calculate empty slots needed (total seatCount slots: 1 local + up to seatCount-1 remote)
+  const maxRemoteSlots = roomSeatCount - 1
   const emptySlots = Math.max(0, maxRemoteSlots - players.length)
 
   // Store refs for remote video elements
@@ -770,7 +771,7 @@ export function VideoStreamGrid({
                 </motion.div>
                 <div className="space-y-1">
                   <p className="text-text-muted text-sm font-medium">
-                    Open Slot
+                    Open seat
                   </p>
                   <p className="text-text-muted/60 text-xs">
                     Waiting for player...
