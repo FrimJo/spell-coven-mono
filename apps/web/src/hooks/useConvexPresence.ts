@@ -52,6 +52,8 @@ interface UseConvexPresenceReturn {
   hasDuplicateSession: boolean
   /** Transfer session to this tab (kicks other tabs) */
   transferSession: () => Promise<void>
+  /** Explicitly leave the room (call before navigating away) */
+  leaveRoom: () => Promise<void>
   /** Room seat count (1-4, defaults to 4 if not set) */
   roomSeatCount: number
   /** Set the room seat count (owner only) */
@@ -473,6 +475,33 @@ export function useConvexPresence({
     [convexRoomId],
   )
 
+  // Explicitly leave the room (call before navigating away)
+  const leaveRoom = useCallback(async (): Promise<void> => {
+    if (!convexRoomId || !sessionId) {
+      console.warn(
+        '[ConvexPresence] Cannot leave room: missing roomId or sessionId',
+      )
+      return
+    }
+
+    if (!hasJoined) {
+      console.log('[ConvexPresence] Not joined, skipping leave')
+      return
+    }
+
+    console.log('[ConvexPresence] Explicitly leaving room')
+    try {
+      await leaveRoomRef.current({ roomId: convexRoomId, sessionId })
+      setHasJoined(false)
+      console.log('[ConvexPresence] Successfully left room')
+    } catch (err) {
+      console.error('[ConvexPresence] Failed to leave room:', err)
+      // Still mark as not joined even if mutation fails
+      setHasJoined(false)
+      throw err
+    }
+  }, [convexRoomId, sessionId, hasJoined])
+
   // Determine loading state
   const isLoading = activePlayersData === undefined || roomQuery === undefined
 
@@ -488,6 +517,7 @@ export function useConvexPresence({
     sessionId,
     hasDuplicateSession,
     transferSession,
+    leaveRoom,
     roomSeatCount,
     setRoomSeatCount,
   }

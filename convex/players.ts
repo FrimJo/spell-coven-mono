@@ -193,6 +193,11 @@ export const joinRoom = mutation({
       })
     }
 
+    // Update room activity (only if this is a new user joining, not just a new session)
+    if (!existingUserSession) {
+      await ctx.db.patch(room._id, { lastActivityAt: now })
+    }
+
     return { playerId }
   },
 })
@@ -258,12 +263,17 @@ export const leaveRoom = mutation({
         .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
         .first()
 
-      if (room && room.ownerId === player.userId) {
-        // Only transfer if user has no other active sessions
-        if (!otherActiveSessions) {
-          await ctx.runMutation(internal.rooms.transferOwnerIfNeeded, {
-            roomId,
-          })
+      if (room) {
+        // Update room activity when a player leaves
+        await ctx.db.patch(room._id, { lastActivityAt: now })
+
+        if (room.ownerId === player.userId) {
+          // Only transfer if user has no other active sessions
+          if (!otherActiveSessions) {
+            await ctx.runMutation(internal.rooms.transferOwnerIfNeeded, {
+              roomId,
+            })
+          }
         }
       }
     }

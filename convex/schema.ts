@@ -47,6 +47,8 @@ export default defineSchema({
     createdAt: v.number(),
     /** Number of player seats (1-4, default 4) */
     seatCount: v.optional(v.number()),
+    /** Last time any activity occurred in the room (joins, leaves, state changes) */
+    lastActivityAt: v.optional(v.number()),
   })
     .index('by_roomId', ['roomId'])
     .index('by_ownerId', ['ownerId'])

@@ -35,4 +35,17 @@ crons.interval(
   internal.rooms.checkAllRoomOwners,
 )
 
+/**
+ * Clean up inactive rooms every 10 minutes.
+ *
+ * Deletes rooms that have been inactive for more than 1 hour and have
+ * no active players. Also cleans up all related data (roomPlayers, roomBans,
+ * roomSignals, userActiveRooms).
+ */
+crons.interval(
+  'cleanup inactive rooms',
+  { minutes: 10 },
+  internal.rooms.cleanupInactiveRooms,
+)
+
 export default crons

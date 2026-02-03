@@ -101,6 +101,9 @@ export const banPlayer = mutation({
     if (pointer && pointer.roomId === roomId) {
       await ctx.db.delete(pointer._id)
     }
+
+    // Update room activity
+    await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
   },
 })
 
@@ -152,6 +155,9 @@ export const kickPlayer = mutation({
     for (const session of playerSessions) {
       await ctx.db.patch(session._id, { status: 'left' })
     }
+
+    // Update room activity
+    await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
   },
 })
 
@@ -196,6 +202,8 @@ export const unbanPlayer = mutation({
 
     if (ban) {
       await ctx.db.delete(ban._id)
+      // Update room activity
+      await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
     }
   },
 })

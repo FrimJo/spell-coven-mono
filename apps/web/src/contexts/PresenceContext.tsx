@@ -53,6 +53,8 @@ interface PresenceContextValue {
   connect: () => void
   /** Disconnect from presence */
   disconnect: (reason: DisconnectReason) => void
+  /** Explicitly leave the room (call before navigating away) */
+  leaveRoom: () => Promise<void>
   /** Kick a player (temporary - they can rejoin) */
   kickPlayer: (playerId: string) => Promise<void>
   /** Ban a player (persistent - they cannot rejoin until unbanned) */
@@ -148,12 +150,14 @@ export function PresenceProvider({
   // Memoize actions separately to prevent recreation
   const actions = useMemo(
     () => ({
+      leaveRoom: presence.leaveRoom,
       kickPlayer: presence.kickPlayer,
       banPlayer: presence.banPlayer,
       transferSession: presence.transferSession,
       setRoomSeatCount: presence.setRoomSeatCount,
     }),
     [
+      presence.leaveRoom,
       presence.kickPlayer,
       presence.banPlayer,
       presence.transferSession,
@@ -176,7 +180,11 @@ export function PresenceProvider({
       disconnectReason,
       connect,
       disconnect,
-      ...actions,
+      leaveRoom: actions.leaveRoom,
+      kickPlayer: actions.kickPlayer,
+      banPlayer: actions.banPlayer,
+      transferSession: actions.transferSession,
+      setRoomSeatCount: actions.setRoomSeatCount,
     }),
     [
       presence.participants,
@@ -192,7 +200,11 @@ export function PresenceProvider({
       disconnectReason,
       connect,
       disconnect,
-      actions,
+      actions.leaveRoom,
+      actions.kickPlayer,
+      actions.banPlayer,
+      actions.transferSession,
+      actions.setRoomSeatCount,
     ],
   )
 
