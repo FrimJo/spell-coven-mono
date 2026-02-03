@@ -38,8 +38,6 @@ interface LocalVideoCardProps {
   currentUser?: Participant
   participants?: Participant[]
   gridIndex?: number
-  overlayActions?: React.ReactNode
-  onExpandToggle?: () => void
 }
 
 export const LocalVideoCard = memo(function LocalVideoCard({
@@ -53,8 +51,6 @@ export const LocalVideoCard = memo(function LocalVideoCard({
   currentUser,
   participants,
   gridIndex = 0,
-  overlayActions,
-  onExpandToggle,
 }: LocalVideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -145,7 +141,7 @@ export const LocalVideoCard = memo(function LocalVideoCard({
     videoEnabled && stream && stream.getVideoTracks().length > 0
 
   return (
-    <PlayerVideoCard onDoubleClick={onExpandToggle}>
+    <PlayerVideoCard>
       {hasVideoStream ? (
         <>
           <video
@@ -186,12 +182,6 @@ export const LocalVideoCard = memo(function LocalVideoCard({
           participant={participant}
           participants={participants}
         />
-      )}
-
-      {overlayActions && (
-        <div className="absolute right-3 top-3 z-20 flex gap-2">
-          {overlayActions}
-        </div>
       )}
 
       {/* Media Controls */}
