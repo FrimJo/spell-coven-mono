@@ -4,6 +4,7 @@ import { Card } from '@repo/ui/components/card'
 
 interface PlayerVideoCardProps {
   children?: React.ReactNode
+  onDoubleClick?: () => void
 }
 
 /**
@@ -25,9 +26,13 @@ interface PlayerVideoCardProps {
  */
 export const PlayerVideoCard = memo(function PlayerVideoCard({
   children,
+  onDoubleClick,
 }: PlayerVideoCardProps) {
   return (
-    <Card className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden">
+    <Card
+      className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden"
+      onDoubleClick={onDoubleClick}
+    >
       <div className="relative min-h-0 flex-1 bg-black">{children}</div>
     </Card>
   )
