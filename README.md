@@ -4,7 +4,24 @@
 
 A browser-based platform for playing paper Magic: The Gathering remotely with friends. Spell Coven enables MTG players to play their physical cards online through video chat, card recognition, and game management tools—all running in your browser with no downloads required.
 
+License: [PolyForm Noncommercial 1.0.0 (non-commercial use only)](./LICENSE)
+
 Production: [https://spell-coven.vercel.app](https://spell-coven.vercel.app)
+
+## License
+
+This project is licensed under the **PolyForm Noncommercial License 1.0.0**.
+
+You are free to use, modify, and distribute this software for **non-commercial purposes only**.
+Commercial use — including selling, paid hosting, offering it as a paid service, or bundling it into a commercial product — is **prohibited** without a separate commercial license from the copyright holder.
+
+See [LICENSE](./LICENSE) for full terms.
+
+### Commercial licensing
+
+If you want to use this project commercially, contact the maintainer to obtain a commercial license.
+
+- Open a GitHub issue labeled `commercial-license`.
 
 ## About This Project
 
