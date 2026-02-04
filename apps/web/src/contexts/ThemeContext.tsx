@@ -20,7 +20,6 @@ import gSvgRaw from '@/assets/g.svg?raw'
 import rSvgRaw from '@/assets/r.svg?raw'
 import uSvgRaw from '@/assets/u.svg?raw'
 import wSvgRaw from '@/assets/w.svg?raw'
-import { isThemeToggleEnabled } from '@/env'
 
 /** Prepare raw SVG for inline use: currentColor fill and full size in container */
 function svgForInline(raw: string) {
@@ -168,7 +167,6 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   // Initialize theme from localStorage or default
   const [theme, setThemeState] = useState<Theme>(() => {
-    if (!isThemeToggleEnabled) return 'dark'
     if (typeof window === 'undefined') return defaultTheme
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
@@ -179,7 +177,6 @@ export function ThemeProvider({
 
   // Initialize MTG theme from localStorage
   const [mtgTheme, setMtgThemeState] = useState<MtgColorTheme>(() => {
-    if (!isThemeToggleEnabled) return 'none'
     if (typeof window === 'undefined') return 'none'
     const stored = localStorage.getItem(MTG_THEME_STORAGE_KEY)
     if (
@@ -197,7 +194,6 @@ export function ThemeProvider({
 
   // Compute effective theme - when flag is disabled, always use 'dark'
   const effectiveTheme = useMemo<Theme>(() => {
-    if (!isThemeToggleEnabled) return 'dark'
     return theme
   }, [theme])
 
@@ -208,7 +204,6 @@ export function ThemeProvider({
 
   // Compute resolved theme - use memo for most cases, state for system theme updates
   const resolvedTheme = useMemo<ResolvedTheme>(() => {
-    if (!isThemeToggleEnabled) return 'dark'
     if (theme === 'system') {
       return systemResolvedTheme
     }
@@ -227,7 +222,6 @@ export function ThemeProvider({
 
   // Listen for system theme changes when theme is set to 'system'
   useEffect(() => {
-    if (!isThemeToggleEnabled) return
     if (theme !== 'system') return
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -243,28 +237,16 @@ export function ThemeProvider({
   }, [theme])
 
   const setTheme = useCallback((newTheme: Theme) => {
-    if (!isThemeToggleEnabled) {
-      setThemeState('dark')
-      return
-    }
     setThemeState(newTheme)
     localStorage.setItem(STORAGE_KEY, newTheme)
   }, [])
 
   const setMtgTheme = useCallback((newMtgTheme: MtgColorTheme) => {
-    if (!isThemeToggleEnabled) {
-      setMtgThemeState('none')
-      return
-    }
     setMtgThemeState(newMtgTheme)
     localStorage.setItem(MTG_THEME_STORAGE_KEY, newMtgTheme)
   }, [])
 
   const toggleTheme = useCallback(() => {
-    if (!isThemeToggleEnabled) {
-      setTheme('dark')
-      return
-    }
     // Toggle between light and dark only (not system)
     const newTheme: Theme = resolvedTheme === 'dark' ? 'light' : 'dark'
     setTheme(newTheme)
