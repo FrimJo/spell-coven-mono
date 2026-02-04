@@ -11,13 +11,14 @@ import {
   waitForEmbeddings,
   warmModel,
 } from './clip-search.js'
+import { selectCardAtClick } from './detectors/click-selection.js'
 import {
   captureVideoFrame,
-  cropAndCenterToSquare,
   normalizedBoxToCropRegion,
 } from './detectors/geometry/crop.js'
 // Removed: refineBoundingBoxToCorners and warpCardToCanonical - perspective warp disabled
 import { createDetector } from './detectors/index.js'
+import { prepareCardQueryCanvas } from './query-preprocessing.js'
 
 // ============================================================================
 // Debug Blob URL Helpers
@@ -330,8 +331,6 @@ async function cropCardAt(
 
   // Find best card at click position
   // Priority: 1) Click inside box, 2) Nearest center, 3) Highest confidence, 4) Smaller box
-  let bestIndex = -1
-  let bestScore = -Infinity
 
   // Use video dimensions for coordinate conversion (matches detection canvas)
   const frameWidth = ctx.videoEl.videoWidth || ctx.overlayEl.width
@@ -343,58 +342,14 @@ async function cropCardAt(
     'color: #999;',
   )
 
-  // Second pass: find best detection at click
-  for (let i = 0; i < detectedCards.length; i++) {
-    const card = detectedCards[i]
-    if (!card) continue
-    const box = card.box
+  const selection = selectCardAtClick(
+    detectedCards,
+    { x, y },
+    frameWidth,
+    frameHeight,
+  )
 
-    // Convert normalized box to pixel coordinates (using video dimensions)
-    const boxXMin = box.xmin * frameWidth
-    const boxYMin = box.ymin * frameHeight
-    const boxXMax = box.xmax * frameWidth
-    const boxYMax = box.ymax * frameHeight
-
-    // Check if click is inside this box
-    const isInside =
-      x >= boxXMin && x <= boxXMax && y >= boxYMin && y <= boxYMax
-
-    if (!isInside) continue
-
-    // Calculate box area (smaller is better for cards)
-    const boxWidth = boxXMax - boxXMin
-    const boxHeight = boxYMax - boxYMin
-    const area = boxWidth * boxHeight
-    const canvasArea = frameWidth * frameHeight
-
-    // Distance from click to box center (closer is better)
-    const centerX = boxXMin + boxWidth / 2
-    const centerY = boxYMin + boxHeight / 2
-    const dx = x - centerX
-    const dy = y - centerY
-    const distance = Math.hypot(dx, dy)
-    const maxDistance = Math.hypot(frameWidth, frameHeight)
-    const distanceScore = (1 - distance / maxDistance) * 200000
-
-    // Score: balance between proximity, confidence, and size
-    // Use percentage of canvas area - smaller boxes get exponentially higher scores
-    const areaPercentage = area / canvasArea
-
-    // Exponential penalty for large boxes
-    const sizeScore = Math.pow(1 - areaPercentage, 3) * 100000
-
-    // Weight confidence heavily to prefer high-confidence detections
-    const confidenceScore = card.score * 1000000
-
-    const totalScore = distanceScore + sizeScore + confidenceScore
-
-    if (totalScore > bestScore) {
-      bestScore = totalScore
-      bestIndex = i
-    }
-  }
-
-  if (bestIndex === -1) {
+  if (!selection) {
     console.log(
       '%c[DEBUG cropCardAt] Click was not inside any detected bounding box',
       'color: #ff9800;',
@@ -402,10 +357,7 @@ async function cropCardAt(
     return false
   }
 
-  const card = detectedCards[bestIndex]
-  if (!card) {
-    throw new Error(`setupCardDetector: Card not found at index ${bestIndex}`)
-  }
+  const { card, index: bestIndex } = selection
 
   console.log(
     `%c[DEBUG cropCardAt] Selected card ${bestIndex + 1} (score: ${card.score.toFixed(3)})`,
@@ -445,25 +397,22 @@ async function cropCardAt(
 
   // Fallback: Simple bounding box crop (when perspective warp is disabled)
   // Use source canvas dimensions (video native resolution) for coordinate conversion
-  const targetSize = getQueryTargetSize()
   const region = normalizedBoxToCropRegion(
     card.box,
     sourceCanvas.width,
     sourceCanvas.height,
   )
 
-  const croppedResult = cropAndCenterToSquare(sourceCanvas, region, {
-    targetSize,
-    highQuality: true,
+  const processedCanvas = prepareCardQueryCanvas(sourceCanvas, region, {
     debugLabel: 'Fallback bbox crop (no perspective warp)',
     debugStage: 99,
     debugColor: '#F44336',
   })
 
   // Copy result to the instance's cropped canvas
-  ctx.croppedCanvas.width = croppedResult.width
-  ctx.croppedCanvas.height = croppedResult.height
-  ctx.croppedCtx.drawImage(croppedResult, 0, 0)
+  ctx.croppedCanvas.width = processedCanvas.width
+  ctx.croppedCanvas.height = processedCanvas.height
+  ctx.croppedCtx.drawImage(processedCanvas, 0, 0)
 
   return true
 }

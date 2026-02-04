@@ -1,0 +1,16 @@
+{
+  "369_156.png": {
+    "referenceCardName": "Birds of Paradise",
+    "detections": [
+      {
+        "box": {
+          "xmin": 0,
+          "ymin": 0,
+          "xmax": 1,
+          "ymax": 1
+        },
+        "score": 0.95
+      }
+    ]
+  }
+}
