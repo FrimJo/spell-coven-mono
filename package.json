@@ -63,7 +63,7 @@
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,css,md,mjs}": [
-      "prettier --write"
+      "prettier --write --ignore-path .prettierignore --ignore-path .gitignore"
     ]
   }
 }

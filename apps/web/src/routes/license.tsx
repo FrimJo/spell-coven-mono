@@ -25,7 +25,7 @@ function LicenseRoute() {
           — non-commercial use only.
         </p>
         <a
-          className="text-brand-muted-foreground text-sm hover:text-brand"
+          className="text-brand-muted-foreground hover:text-brand text-sm"
           href={githubLicenseUrl}
           rel="noreferrer"
           target="_blank"
