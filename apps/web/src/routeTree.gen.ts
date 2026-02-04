@@ -8,16 +8,13 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import type { createStart } from '@tanstack/react-start'
-
-import type { getRouter } from './router.tsx'
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SetupRouteImport } from './routes/setup'
+import { Route as LicenseRouteImport } from './routes/license'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as GameGameIdRouteImport } from './routes/game.$gameId'
 import { Route as DebugSessionStorageRouteImport } from './routes/debug/session-storage'
 import { Route as DebugVoiceChannelChannelIdRouteImport } from './routes/debug/voice-channel.$channelId'
-import { Route as GameGameIdRouteImport } from './routes/game.$gameId'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as LicenseRouteImport } from './routes/license'
-import { Route as SetupRouteImport } from './routes/setup'
 
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
@@ -171,6 +168,8 @@ export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
 
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
