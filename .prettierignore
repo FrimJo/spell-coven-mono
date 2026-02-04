@@ -1,5 +1,3 @@
-# Generated files
-**/*.gen.ts
 convex/_generated/
 
 # Build outputs
