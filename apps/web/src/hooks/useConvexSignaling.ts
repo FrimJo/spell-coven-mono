@@ -77,7 +77,6 @@ export function useConvexSignaling({
     enabled && localPeerId
       ? {
           roomId: convexRoomId,
-          userId: localPeerId,
           since: 0, // Get all recent signals; we filter processed ones client-side
         }
       : 'skip',
@@ -182,7 +181,6 @@ export function useConvexSignaling({
       try {
         await sendSignalRef.current({
           roomId: convexRoomId,
-          fromUserId: validatedSignal.from,
           toUserId: validatedSignal.to,
           payload: {
             type: validatedSignal.type,

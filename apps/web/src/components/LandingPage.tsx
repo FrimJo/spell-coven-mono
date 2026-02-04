@@ -113,7 +113,7 @@ export function LandingPage({
   const createRoom = useMutation(api.rooms.createRoom)
   const activeRoomQuery = useQuery(
     api.players.getActiveRoomForUser,
-    user ? { userId: user.id } : 'skip',
+    user ? {} : 'skip',
   )
   const onlineUsers = liveStatsQuery?.onlineUsers
   const activeRooms = liveStatsQuery?.activeRooms

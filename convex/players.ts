@@ -8,14 +8,16 @@
  * getAuthUserId from Convex Auth for proper authorization.
  */
 
+import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 
 import { internal } from './_generated/api'
 import { mutation, query } from './_generated/server'
 import { DEFAULT_HEALTH } from './constants'
 import {
+  AuthRequiredError,
+  AuthMismatchError,
   BannedFromRoomError,
-  MissingUserIdError,
   RoomFullError,
   RoomNotFoundError,
 } from './errors'
@@ -27,6 +29,35 @@ import {
  * Presence timeout threshold in milliseconds (30 seconds)
  */
 const PRESENCE_THRESHOLD_MS = 30_000
+
+async function requireActiveRoomMember(
+  ctx: Parameters<typeof query>[0]['handler'] extends (
+    ctx: infer Ctx,
+    ...args: never
+  ) => unknown
+    ? Ctx
+    : never,
+  roomId: string,
+  userId: string,
+): Promise<void> {
+  const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
+  const member = await ctx.db
+    .query('roomPlayers')
+    .withIndex('by_roomId_userId', (q) =>
+      q.eq('roomId', roomId).eq('userId', userId),
+    )
+    .filter((q) =>
+      q.and(
+        q.neq(q.field('status'), 'left'),
+        q.gt(q.field('lastSeenAt'), presenceThreshold),
+      ),
+    )
+    .first()
+
+  if (!member) {
+    throw new AuthRequiredError('Active room membership required')
+  }
+}
 
 /**
  * Join a room as a player
@@ -43,16 +74,11 @@ export const joinRoom = mutation({
     sessionId: v.string(),
     username: v.string(),
     avatar: v.optional(v.string()),
-    userId: v.optional(v.string()), // Optional for backward compat, will use auth in Phase 5
   },
-  handler: async (
-    ctx,
-    { roomId, sessionId, username, avatar, userId: passedUserId },
-  ) => {
-    // For Phase 3, use passed userId. Phase 5 will use getAuthUserId
-    const userId = passedUserId
+  handler: async (ctx, { roomId, sessionId, username, avatar }) => {
+    const userId = await getAuthUserId(ctx)
     if (!userId) {
-      throw new MissingUserIdError()
+      throw new AuthRequiredError()
     }
 
     // Check if room exists
@@ -215,6 +241,11 @@ export const leaveRoom = mutation({
     sessionId: v.string(),
   },
   handler: async (ctx, { roomId, sessionId }) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new AuthRequiredError()
+    }
+
     const player = await ctx.db
       .query('roomPlayers')
       .withIndex('by_roomId_sessionId', (q) =>
@@ -223,6 +254,10 @@ export const leaveRoom = mutation({
       .first()
 
     if (player) {
+      if (player.userId !== userId) {
+        throw new AuthMismatchError()
+      }
+
       const now = Date.now()
       await ctx.db.patch(player._id, {
         status: 'left',
@@ -292,6 +327,11 @@ export const heartbeat = mutation({
     sessionId: v.string(),
   },
   handler: async (ctx, { roomId, sessionId }) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new AuthRequiredError()
+    }
+
     const player = await ctx.db
       .query('roomPlayers')
       .withIndex('by_roomId_sessionId', (q) =>
@@ -301,6 +341,10 @@ export const heartbeat = mutation({
 
     // Don't resurrect 'left' sessions - they were kicked/banned
     if (player && player.status !== 'left') {
+      if (player.userId !== userId) {
+        throw new AuthMismatchError()
+      }
+
       const now = Date.now()
       await ctx.db.patch(player._id, {
         lastSeenAt: now,
@@ -335,6 +379,13 @@ export const heartbeat = mutation({
 export const listActivePlayers = query({
   args: { roomId: v.string() },
   handler: async (ctx, { roomId }) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new AuthRequiredError()
+    }
+
+    await requireActiveRoomMember(ctx, roomId, userId)
+
     const now = Date.now()
     const presenceThreshold = now - PRESENCE_THRESHOLD_MS
 
@@ -374,6 +425,13 @@ export const listActivePlayers = query({
 export const listAllPlayerSessions = query({
   args: { roomId: v.string() },
   handler: async (ctx, { roomId }) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new AuthRequiredError()
+    }
+
+    await requireActiveRoomMember(ctx, roomId, userId)
+
     const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
 
     const players = await ctx.db
@@ -403,6 +461,13 @@ export const getPlayer = query({
     userId: v.string(),
   },
   handler: async (ctx, { roomId, userId }) => {
+    const callerId = await getAuthUserId(ctx)
+    if (!callerId) {
+      throw new AuthRequiredError()
+    }
+
+    await requireActiveRoomMember(ctx, roomId, callerId)
+
     const player = await ctx.db
       .query('roomPlayers')
       .withIndex('by_roomId_userId', (q) =>
@@ -423,10 +488,13 @@ export const getPlayer = query({
  * Otherwise returns null.
  */
 export const getActiveRoomForUser = query({
-  args: {
-    userId: v.string(),
-  },
-  handler: async (ctx, { userId }) => {
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new AuthRequiredError()
+    }
+
     const pointer = await ctx.db
       .query('userActiveRooms')
       .withIndex('by_userId', (q) => q.eq('userId', userId))

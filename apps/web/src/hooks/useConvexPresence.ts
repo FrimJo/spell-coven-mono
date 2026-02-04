@@ -155,18 +155,18 @@ export function useConvexPresence({
 
   const allSessionsQuery = useQuery(
     api.players.listAllPlayerSessions,
-    enabled ? { roomId: convexRoomId } : 'skip',
+    enabled && hasJoined ? { roomId: convexRoomId } : 'skip',
   )
 
   const activePlayersQuery = useQuery(
     api.players.listActivePlayers,
-    enabled ? { roomId: convexRoomId } : 'skip',
+    enabled && hasJoined ? { roomId: convexRoomId } : 'skip',
   )
 
   // Check if current user is banned (for kick vs ban detection)
   const isBannedQuery = useQuery(
     api.bans.isBanned,
-    enabled && userId ? { roomId: convexRoomId, userId } : 'skip',
+    enabled && userId ? { roomId: convexRoomId } : 'skip',
   )
 
   // Extract stable values from queries
@@ -262,7 +262,6 @@ export function useConvexPresence({
         sessionId,
         username,
         avatar: avatar ?? undefined,
-        userId, // Pass userId for Phase 3 (before Convex Auth migration)
       })
       .then(() => {
         console.log('[ConvexPresence] Successfully joined room')

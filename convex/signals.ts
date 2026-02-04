@@ -7,14 +7,46 @@
  * Phase 5 will use getAuthUserId for proper authorization.
  */
 
+import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 
 import { internalMutation, mutation, query } from './_generated/server'
+import { AuthRequiredError } from './errors'
 
 /**
  * Signal TTL in milliseconds (60 seconds)
  */
 const SIGNAL_TTL_MS = 60_000
+const PRESENCE_THRESHOLD_MS = 30_000
+
+async function requireActiveRoomMember(
+  ctx: Parameters<typeof mutation>[0]['handler'] extends (
+    ctx: infer Ctx,
+    ...args: never
+  ) => unknown
+    ? Ctx
+    : never,
+  roomId: string,
+  userId: string,
+): Promise<void> {
+  const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
+  const member = await ctx.db
+    .query('roomPlayers')
+    .withIndex('by_roomId_userId', (q) =>
+      q.eq('roomId', roomId).eq('userId', userId),
+    )
+    .filter((q) =>
+      q.and(
+        q.neq(q.field('status'), 'left'),
+        q.gt(q.field('lastSeenAt'), presenceThreshold),
+      ),
+    )
+    .first()
+
+  if (!member) {
+    throw new AuthRequiredError('Active room membership required')
+  }
+}
 
 /**
  * Send a signaling message
@@ -27,11 +59,17 @@ const SIGNAL_TTL_MS = 60_000
 export const sendSignal = mutation({
   args: {
     roomId: v.string(),
-    fromUserId: v.string(),
     toUserId: v.union(v.string(), v.null()),
     payload: v.any(),
   },
-  handler: async (ctx, { roomId, fromUserId, toUserId, payload }) => {
+  handler: async (ctx, { roomId, toUserId, payload }) => {
+    const fromUserId = await getAuthUserId(ctx)
+    if (!fromUserId) {
+      throw new AuthRequiredError()
+    }
+
+    await requireActiveRoomMember(ctx, roomId, fromUserId)
+
     await ctx.db.insert('roomSignals', {
       roomId,
       fromUserId,
@@ -56,13 +94,15 @@ export const sendSignal = mutation({
 export const listSignals = query({
   args: {
     roomId: v.string(),
-    userId: v.string(),
     since: v.optional(v.number()),
   },
-  handler: async (ctx, { roomId, userId, since = 0 }) => {
+  handler: async (ctx, { roomId, since = 0 }) => {
+    const userId = await getAuthUserId(ctx)
     if (!userId) {
-      return []
+      throw new AuthRequiredError()
     }
+
+    await requireActiveRoomMember(ctx, roomId, userId)
 
     const signals = await ctx.db
       .query('roomSignals')
