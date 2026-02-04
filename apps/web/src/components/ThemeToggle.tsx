@@ -5,7 +5,6 @@
  * Features a palette icon representing theme/color selection.
  */
 
-import { isThemeToggleEnabled } from '@/env'
 import { Palette, Settings } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
@@ -28,8 +27,6 @@ interface ThemeToggleProps {
 
 export function ThemeToggle({ className }: ThemeToggleProps) {
   const { mtgTheme, setMtgTheme } = useTheme()
-
-  if (!isThemeToggleEnabled) return null
 
   return (
     <DropdownMenu>
