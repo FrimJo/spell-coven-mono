@@ -27,9 +27,7 @@ const defaultValues = {
 }
 
 const gameSearchSchema = z.object({
-  detector: z
-    .enum(['opencv', 'detr', 'owl-vit', 'slimsam', 'yolov8'])
-    .optional(),
+  detector: z.enum(['opencv', 'detr', 'owl-vit', 'yolov8']).optional(),
   usePerspectiveWarp: z
     .boolean()
     .default(defaultValues.usePerspectiveWarp)

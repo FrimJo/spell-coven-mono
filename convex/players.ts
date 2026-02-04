@@ -11,12 +11,13 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 
+import type { MutationCtx, QueryCtx } from './_generated/server'
 import { internal } from './_generated/api'
 import { mutation, query } from './_generated/server'
 import { DEFAULT_HEALTH } from './constants'
 import {
-  AuthRequiredError,
   AuthMismatchError,
+  AuthRequiredError,
   BannedFromRoomError,
   RoomFullError,
   RoomNotFoundError,
@@ -31,12 +32,7 @@ import {
 const PRESENCE_THRESHOLD_MS = 30_000
 
 async function requireActiveRoomMember(
-  ctx: Parameters<typeof query>[0]['handler'] extends (
-    ctx: infer Ctx,
-    ...args: never
-  ) => unknown
-    ? Ctx
-    : never,
+  ctx: MutationCtx | QueryCtx,
   roomId: string,
   userId: string,
 ): Promise<void> {

@@ -309,7 +309,7 @@ function SidebarContent({
           seatCount={roomSeatCount}
           onChangeSeatCount={isLobbyOwner ? handleChangeSeatCount : undefined}
         />
-        <CardPreview playerName={playerName} onClose={clearResult} />
+        <CardPreview onClose={clearResult} />
         <CardHistoryList
           history={history}
           onSelect={handleHistorySelect}
