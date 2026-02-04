@@ -8,16 +8,25 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
+import type { createStart } from '@tanstack/react-start'
+
+import type { getRouter } from './router.tsx'
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SetupRouteImport } from './routes/setup'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as GameGameIdRouteImport } from './routes/game.$gameId'
 import { Route as DebugSessionStorageRouteImport } from './routes/debug/session-storage'
 import { Route as DebugVoiceChannelChannelIdRouteImport } from './routes/debug/voice-channel.$channelId'
+import { Route as GameGameIdRouteImport } from './routes/game.$gameId'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as LicenseRouteImport } from './routes/license'
+import { Route as SetupRouteImport } from './routes/setup'
 
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LicenseRoute = LicenseRouteImport.update({
+  id: '/license',
+  path: '/license',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -44,6 +53,7 @@ const DebugVoiceChannelChannelIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/license': typeof LicenseRoute
   '/setup': typeof SetupRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
@@ -51,6 +61,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/license': typeof LicenseRoute
   '/setup': typeof SetupRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
@@ -59,6 +70,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/license': typeof LicenseRoute
   '/setup': typeof SetupRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof GameGameIdRoute
@@ -68,6 +80,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/license'
     | '/setup'
     | '/debug/session-storage'
     | '/game/$gameId'
@@ -75,6 +88,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/license'
     | '/setup'
     | '/debug/session-storage'
     | '/game/$gameId'
@@ -82,6 +96,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/license'
     | '/setup'
     | '/debug/session-storage'
     | '/game/$gameId'
@@ -90,6 +105,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LicenseRoute: typeof LicenseRoute
   SetupRoute: typeof SetupRoute
   DebugSessionStorageRoute: typeof DebugSessionStorageRoute
   GameGameIdRoute: typeof GameGameIdRoute
@@ -103,6 +119,13 @@ declare module '@tanstack/react-router' {
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/license': {
+      id: '/license'
+      path: '/license'
+      fullPath: '/license'
+      preLoaderRoute: typeof LicenseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -138,6 +161,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LicenseRoute: LicenseRoute,
   SetupRoute: SetupRoute,
   DebugSessionStorageRoute: DebugSessionStorageRoute,
   GameGameIdRoute: GameGameIdRoute,
@@ -147,8 +171,6 @@ export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
 
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
