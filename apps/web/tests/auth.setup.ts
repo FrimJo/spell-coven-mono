@@ -17,6 +17,7 @@ import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import { test as setup } from '@playwright/test'
 import { ConvexHttpClient } from 'convex/browser'
+import z from 'zod'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -83,35 +84,16 @@ async function signInWithPassword(
       params: { email, password, flow: 'signIn' },
     })
 
-    if (signInResult.tokens) {
-      return signInResult.tokens
-    }
+    return z
+      .object({ token: z.string(), refreshToken: z.string() })
+      .parse(signInResult.tokens)
   } catch (_error: unknown) {
+    console.warn(_error)
     // Account might not exist, try signUp
-    console.log('Sign-in failed, attempting sign-up...')
+    throw new Error('Failed to obtain auth tokens after signIn', {
+      cause: _error,
+    })
   }
-
-  // Try signUp
-  const signUpResult = await client.action('auth:signIn' as any, {
-    provider: 'password',
-    params: { email, password, flow: 'signUp' },
-  })
-
-  if (signUpResult.tokens) {
-    return signUpResult.tokens
-  }
-
-  // If signUp didn't return tokens directly, try signIn again
-  const retryResult = await client.action('auth:signIn' as any, {
-    provider: 'password',
-    params: { email, password, flow: 'signIn' },
-  })
-
-  if (!retryResult.tokens) {
-    throw new Error('Failed to obtain auth tokens after signUp')
-  }
-
-  return retryResult.tokens
 }
 
 setup('authenticate with Convex Password provider', async ({ baseURL }) => {

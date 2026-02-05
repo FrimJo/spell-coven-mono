@@ -9,7 +9,22 @@ export default defineConfig({
   testDir: 'tests',
   testMatch: '**/*.spec.ts',
   timeout: 60_000,
-  retries: 0,
+  /* Run tests in files in parallel */
+  fullyParallel: true,
+  /* Fail the build on CI if you accidentally left test.only in the source code. */
+  forbidOnly: !!process.env.CI,
+  /* Retry on CI only */
+  retries: process.env.CI ? 2 : 0,
+  /* Opt out of parallel tests on CI. */
+  workers: process.env.CI ? 1 : undefined,
+  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+  reporter: process.env.CI
+    ? [
+        ['github'],
+        ['junit', { outputFile: 'results.xml' }],
+        ['html', { open: 'never' }],
+      ]
+    : [['list']],
   use: {
     baseURL: 'https://localhost:1234',
     trace: 'on-first-retry',
@@ -33,14 +48,26 @@ export default defineConfig({
       dependencies: ['setup'],
     },
   ],
-  webServer: {
-    // Use Vite dev server for e2e tests
-    command: 'bun run dev',
-    url: 'https://localhost:1234',
-    timeout: 60_000,
-    reuseExistingServer: true,
-    stdout: 'ignore',
-    stderr: 'pipe',
-    ignoreHTTPSErrors: true,
-  },
+  webServer: [
+    {
+      command:
+        'cd ../.. && CONVEX_AUTH_TEST_MODE=true bun run convex:dev -- --local"',
+      port: 3210,
+      timeout: process.env.CI ? 120_000 : 60_000,
+      reuseExistingServer: !process.env.CI,
+      stdout: 'ignore',
+      stderr: 'pipe',
+      ignoreHTTPSErrors: true,
+    },
+    {
+      command: 'bun run dev',
+      url: 'https://localhost:1234',
+      port: 1234,
+      timeout: process.env.CI ? 120_000 : 60_000,
+      reuseExistingServer: !process.env.CI,
+      stdout: 'ignore',
+      stderr: 'pipe',
+      ignoreHTTPSErrors: true,
+    },
+  ],
 })
