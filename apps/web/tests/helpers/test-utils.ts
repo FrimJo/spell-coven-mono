@@ -1,7 +1,8 @@
-import { existsSync, readFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import type { Page } from '@playwright/test'
+import { expect } from '@playwright/test'
 
 /**
  * Shared test utilities for e2e tests.
@@ -26,7 +27,7 @@ export const AUTH_STATE_PATH = resolve(
   __dirname,
   '../../.playwright-storage/state.json',
 )
-const ROOM_STATE_PATH = resolve(
+export const ROOM_STATE_PATH = resolve(
   __dirname,
   '../../.playwright-storage/room.json',
 )
@@ -42,18 +43,94 @@ export function hasAuthStorageState(): boolean {
  * Read the most recently created room ID from room.setup.ts.
  */
 export function getRoomId(): string {
-  if (!existsSync(ROOM_STATE_PATH)) {
+  const cached = readCachedRoomId()
+  if (!cached) {
     throw new Error(
       `Room state file not found at ${ROOM_STATE_PATH}. Did room.setup.ts run?`,
     )
   }
+  return cached
+}
 
-  const content = readFileSync(ROOM_STATE_PATH, 'utf-8')
-  const parsed = JSON.parse(content) as { roomId?: string }
-  if (!parsed.roomId) {
-    throw new Error(`Room state file missing roomId at ${ROOM_STATE_PATH}.`)
+/**
+ * Read cached room id from room.setup.ts if available.
+ */
+export function readCachedRoomId(): string | null {
+  if (!existsSync(ROOM_STATE_PATH)) {
+    return null
   }
-  return parsed.roomId
+
+  try {
+    const content = readFileSync(ROOM_STATE_PATH, 'utf-8')
+    const parsed = JSON.parse(content) as { roomId?: string }
+    return parsed.roomId ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Persist a room id to the shared room state file.
+ */
+export function writeRoomState(roomId: string): void {
+  const storageDir = resolve(ROOM_STATE_PATH, '..')
+  if (!existsSync(storageDir)) {
+    mkdirSync(storageDir, { recursive: true })
+  }
+
+  writeFileSync(
+    ROOM_STATE_PATH,
+    JSON.stringify({ roomId, createdAt: Date.now() }, null, 2),
+  )
+}
+
+/**
+ * Create a room via the landing page UI.
+ */
+export async function createRoomViaUI(page: Page): Promise<string> {
+  await page.goto('/')
+
+  const createButton = page.getByTestId('create-game-button')
+  await expect(createButton).toBeVisible({ timeout: 10000 })
+  await createButton.click()
+
+  await expect(page.getByText('Game room created successfully!')).toBeVisible({
+    timeout: 20000,
+  })
+
+  const shareLinkLocator = page.getByText(/\/game\/[A-Z0-9]{6}/)
+  const shareLinkText = (await shareLinkLocator.first().textContent()) ?? ''
+  const match = shareLinkText.match(/\/game\/([A-Z0-9]{6})/)
+
+  if (!match) {
+    throw new Error(
+      `Room creation failed to capture game ID from: "${shareLinkText}"`,
+    )
+  }
+
+  return match[1]
+}
+
+/**
+ * Get a room id from cache or create a new one.
+ */
+export async function getOrCreateRoomId(
+  page: Page,
+  options?: { fresh?: boolean; persist?: boolean },
+): Promise<string> {
+  const fresh = options?.fresh ?? false
+  const persist = options?.persist ?? true
+
+  if (!fresh) {
+    const cached = readCachedRoomId()
+    if (cached) return cached
+  }
+
+  const roomId = await createRoomViaUI(page)
+  if (persist) {
+    writeRoomState(roomId)
+  }
+  return roomId
 }
 
 /**
