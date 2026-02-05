@@ -22,11 +22,11 @@
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
-    "@repo/typescript-config": "workspace:*",
     "@repo/prettier-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "eslint": "^9.34.0",
+    "eslint": "^9.39.2",
     "shadcn": "^3.4.0",
     "tailwindcss": "catalog:",
     "tsup": "^8.5.0",

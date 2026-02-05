@@ -7,6 +7,7 @@
   "engineStrict": true,
   "packageManager": "bun@1.1.30",
   "scripts": {
+    "postinstall": "bunx sherif@latest -f",
     "build": "bunx turbo run build",
     "dev": "bunx turbo run dev",
     "convex:dev": "bunx convex dev",
@@ -19,10 +20,13 @@
     "preflight": "bunx turbo run typecheck && bunx turbo run lint && bunx turbo run format"
   },
   "devDependencies": {
+    "@auth/core": "^0.37.0",
+    "@convex-dev/auth": "^0.0.90",
     "@eslint/js": "^9.39.2",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "@vercel/blob": "^2.0.0",
     "bun-types": "^1.3.1",
+    "convex": "^1.31.4",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-unused-imports": "^4.3.0",
@@ -56,14 +60,10 @@
       "tailwindcss": "^4.1.11"
     }
   },
-  "dependencies": {
-    "@auth/core": "^0.37.0",
-    "@convex-dev/auth": "^0.0.90",
-    "convex": "^1.31.4"
-  },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,css,md,mjs}": [
       "prettier --write --ignore-path .prettierignore --ignore-path .gitignore"
     ]
-  }
+  },
+  "private": true
 }
