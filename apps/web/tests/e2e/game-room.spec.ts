@@ -40,7 +40,7 @@ test.describe('Game Room', () => {
 
   test.beforeEach(async ({ page }) => {
     if (!hasAuthStorageState()) {
-      test.skip(
+      test(
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }
@@ -255,7 +255,12 @@ test.describe('Game Room', () => {
       const shareButton = page.getByTestId('copy-share-link-button')
       await shareButton.click({ force: true })
 
-      // Read clipboard content
+      // Wait for clipboard to be updated
+      await page.waitForFunction(async (expected) => {
+        const text = await navigator.clipboard.readText()
+        return text.includes(expected as string)
+      }, `/game/${roomId}`)
+
       const clipboardContent = await page.evaluate(() =>
         navigator.clipboard.readText(),
       )
@@ -285,9 +290,8 @@ test.describe('Game Room', () => {
   })
 
   test.describe('Leave Game Flow', () => {
-    // Skip these tests due to dialog overlay blocking interaction in headless test environment
     // The game room shows a connection dialog that persists during testing
-    test.skip('should open LeaveGameDialog when clicking Leave button', async ({
+    test('should open LeaveGameDialog when clicking Leave button', async ({
       page,
     }) => {
       await navigateToTestGame(page, roomId, {
@@ -307,7 +311,7 @@ test.describe('Game Room', () => {
       ).toBeVisible()
     })
 
-    test.skip('should return to landing page when confirming leave', async ({
+    test('should return to landing page when confirming leave', async ({
       page,
     }) => {
       await navigateToTestGame(page, roomId, {
@@ -334,7 +338,7 @@ test.describe('Game Room', () => {
       await expect(page).toHaveURL('/')
     })
 
-    test.skip('should stay in game room when canceling leave dialog', async ({
+    test('should stay in game room when canceling leave dialog', async ({
       page,
     }) => {
       await navigateToTestGame(page, roomId, {
@@ -381,8 +385,7 @@ test.describe('Game Room', () => {
       await expect(page.getByTestId('media-setup-dialog')).toBeVisible()
     })
 
-    test.skip('should close dialog when clicking cancel', async ({ page }) => {
-      // Skip: Dialog overlay blocks interaction in headless test environment
+    test('should close dialog when clicking cancel', async ({ page }) => {
       await navigateToTestGame(page, roomId, {
         handleDuplicateSession: 'transfer',
       })
@@ -439,10 +442,7 @@ test.describe('Game Room', () => {
       await expect(videoSwitch).toBeVisible()
     })
 
-    test.skip('should have audio toggle in settings dialog', async ({
-      page,
-    }) => {
-      // Skip: Dialog overlay blocks interaction in headless test environment
+    test('should have audio toggle in settings dialog', async ({ page }) => {
       await navigateToTestGame(page, roomId, {
         handleDuplicateSession: 'transfer',
       })
