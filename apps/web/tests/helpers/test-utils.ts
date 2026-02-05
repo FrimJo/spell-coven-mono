@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'fs'
+import { dirname, resolve } from 'path'
+import { fileURLToPath } from 'url'
 import type { Page } from '@playwright/test'
 
 /**
@@ -17,13 +20,67 @@ export const STORAGE_KEYS = {
   PERMISSION_PREFS: 'spell-coven:media-permission-prefs',
 } as const
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+const ROOM_STATE_PATH = resolve(__dirname, '../.playwright-storage/room.json')
+
+/**
+ * Read the most recently created room ID from room.setup.ts.
+ */
+export function getRoomId(): string {
+  if (!existsSync(ROOM_STATE_PATH)) {
+    throw new Error(
+      `Room state file not found at ${ROOM_STATE_PATH}. Did room.setup.ts run?`,
+    )
+  }
+
+  const content = readFileSync(ROOM_STATE_PATH, 'utf-8')
+  const parsed = JSON.parse(content) as { roomId?: string }
+  if (!parsed.roomId) {
+    throw new Error(`Room state file missing roomId at ${ROOM_STATE_PATH}.`)
+  }
+  return parsed.roomId
+}
+
 /**
  * Navigate to a test game room (bypasses authentication).
  */
 export async function navigateToTestGame(
   page: Page,
-  gameId = TEST_GAME_ID,
+  gameId = getRoomId(),
+  options?: { ensureMediaSetup?: boolean },
 ): Promise<void> {
+  const ensureMediaSetup = options?.ensureMediaSetup ?? true
+
+  if (ensureMediaSetup) {
+    await page.addInitScript((key) => {
+      try {
+        const existing = localStorage.getItem(key)
+        if (existing) {
+          const parsed = JSON.parse(existing)
+          if (parsed?.timestamp) return
+          localStorage.setItem(
+            key,
+            JSON.stringify({ ...parsed, timestamp: Date.now() }),
+          )
+          return
+        }
+      } catch {
+        // Ignore parse errors and fall back to a clean value.
+      }
+
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          videoinput: 'mock-camera-1',
+          audioinput: 'mock-mic-1',
+          audiooutput: 'mock-speaker-1',
+          timestamp: Date.now(),
+        }),
+      )
+    }, STORAGE_KEYS.MEDIA_DEVICES)
+  }
+
   await page.goto(`/game/${gameId}`)
 }
 

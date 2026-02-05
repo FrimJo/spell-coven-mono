@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test'
 
 import {
+  getRoomId,
   mockGetUserMedia,
   mockMediaDevices,
   navigateToTestGame,
-  TEST_GAME_ID,
 } from '../helpers/test-utils'
 
 /**
@@ -13,9 +13,11 @@ import {
  * including commander viewing and selection flows.
  */
 test.describe('Game Room Visual Tests', () => {
-  test.use({ permissions: ['camera'] })
+  let roomId: string
+  test.use({ permissions: ['camera', 'microphone'] })
 
   test.beforeEach(async ({ page }) => {
+    roomId = getRoomId()
     // Mock media devices before navigating
     await mockMediaDevices(page)
     await mockGetUserMedia(page)
@@ -26,7 +28,7 @@ test.describe('Game Room Visual Tests', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000) // Allow video streams and UI to stabilize
 
@@ -41,7 +43,7 @@ test.describe('Game Room Visual Tests', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(500)
 
@@ -58,7 +60,7 @@ test.describe('Game Room Visual Tests', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
@@ -79,7 +81,7 @@ test.describe('Game Room Visual Tests', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
@@ -105,7 +107,7 @@ test.describe('Game Room Visual Tests', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
@@ -135,7 +137,7 @@ test.describe('Game Room Visual Tests', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
@@ -167,7 +169,7 @@ test.describe('Game Room Visual Tests', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
@@ -206,7 +208,7 @@ test.describe('Game Room Visual Tests', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
@@ -246,7 +248,7 @@ test.describe('Game Room Visual Tests', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(500)
 

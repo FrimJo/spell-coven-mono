@@ -228,6 +228,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Open navigation menu"
                 className="text-text-secondary hover:bg-surface-2 hover:text-text-primary"
               >
                 <Menu className="h-6 w-6" />

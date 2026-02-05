@@ -228,28 +228,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <ConvexProvider>
             <AuthProvider>
               {children}
-              <footer className="border-border-muted bg-surface-0 border-t">
-                <div className="text-text-muted mx-auto flex max-w-5xl flex-col items-center gap-2 px-4 py-3 text-center text-xs sm:flex-row sm:justify-center">
-                  <span>
-                    Licensed{' '}
-                    <a
-                      className="text-brand-muted-foreground hover:text-brand"
-                      href="https://polyformproject.org/licenses/noncommercial/1.0.0/"
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      PolyForm Noncommercial 1.0.0
-                    </a>{' '}
-                    — non-commercial use only.
-                  </span>
-                  <a
-                    className="text-brand-muted-foreground hover:text-brand"
-                    href="/license"
-                  >
-                    License
-                  </a>
-                </div>
-              </footer>
               <Suspense fallback={null}>
                 {showDevtools && (
                   <TanStackDevtoolsProduction

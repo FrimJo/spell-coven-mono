@@ -4,12 +4,12 @@ import {
   clearStorage,
   getGameState,
   getMediaPreferences,
+  getRoomId,
   mockGetUserMedia,
   mockMediaDevices,
   navigateToTestGame,
   setMediaPreferences,
   STORAGE_KEYS,
-  TEST_GAME_ID,
 } from '../helpers/test-utils'
 
 /**
@@ -17,9 +17,11 @@ import {
  * Tests cover game state persistence, media preferences, and storage behavior.
  */
 test.describe('Session Storage', () => {
-  test.use({ permissions: ['camera'] })
+  let roomId: string
+  test.use({ permissions: ['camera', 'microphone'] })
 
   test.beforeEach(async ({ page }) => {
+    roomId = getRoomId()
     // Mock media devices
     await mockMediaDevices(page)
     await mockGetUserMedia(page)
@@ -54,13 +56,13 @@ test.describe('Session Storage', () => {
             }),
           )
         },
-        { gameId: TEST_GAME_ID, key: STORAGE_KEYS.GAME_STATE },
+        { gameId: roomId, key: STORAGE_KEYS.GAME_STATE },
       )
 
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Check sessionStorage for game state - it should still exist
       const gameState = await getGameState(page)
@@ -97,13 +99,13 @@ test.describe('Session Storage', () => {
             }),
           )
         },
-        { gameId: TEST_GAME_ID, key: STORAGE_KEYS.GAME_STATE },
+        { gameId: roomId, key: STORAGE_KEYS.GAME_STATE },
       )
 
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Wait for any dialogs/overlays to settle
       await page.waitForTimeout(2000)
@@ -150,20 +152,20 @@ test.describe('Session Storage', () => {
             }),
           )
         },
-        { gameId: TEST_GAME_ID, key: STORAGE_KEYS.GAME_STATE },
+        { gameId: roomId, key: STORAGE_KEYS.GAME_STATE },
       )
 
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // sessionStorage persists across refreshes by default
       // Refresh the page
       await page.reload()
 
       // Wait for game room to reload
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Game state should still exist (sessionStorage survives refresh)
       const refreshedState = await getGameState(page)
@@ -303,13 +305,13 @@ test.describe('Session Storage', () => {
             }),
           )
         },
-        { gameId: TEST_GAME_ID, key: STORAGE_KEYS.GAME_STATE },
+        { gameId: roomId, key: STORAGE_KEYS.GAME_STATE },
       )
 
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Check that the correct key is used (game state was pre-populated)
       const hasCorrectKey = await page.evaluate((key) => {

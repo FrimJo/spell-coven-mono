@@ -110,13 +110,13 @@ setup('authenticate with Convex Password provider', async ({ baseURL }) => {
   const convexUrl = env.VITE_CONVEX_URL
 
   if (!email || !password) {
-    console.log('⚠️ E2E_AUTH_EMAIL/E2E_AUTH_PASSWORD not found, skipping auth')
-    return setup.skip()
+    throw new Error(
+      'E2E_AUTH_EMAIL/E2E_AUTH_PASSWORD not found. Set them to run auth.setup.ts.',
+    )
   }
 
   if (!convexUrl) {
-    console.log('⚠️ VITE_CONVEX_URL not found, skipping auth')
-    return setup.skip()
+    throw new Error('VITE_CONVEX_URL not found. Set it to run auth.setup.ts.')
   }
 
   console.log('🚀 Authenticating via Convex Password provider...')

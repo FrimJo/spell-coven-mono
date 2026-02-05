@@ -7,7 +7,7 @@ const __dirname = dirname(__filename)
 
 export default defineConfig({
   testDir: 'tests',
-  testMatch: '**/*.spec.ts',
+  testMatch: ['e2e/**/*.spec.ts', 'visual/**/*.spec.ts', '**/*.setup.ts'],
   timeout: 60_000,
   /* Run tests in files in parallel */
   fullyParallel: true,
@@ -28,24 +28,35 @@ export default defineConfig({
   use: {
     baseURL: 'https://localhost:1234',
     trace: 'on-first-retry',
-    permissions: ['camera'],
+    permissions: ['camera', 'microphone'],
     video: 'retain-on-failure',
     ignoreHTTPSErrors: true,
     viewport: { width: 1920, height: 1080 },
   },
   projects: [
     {
-      name: 'setup',
-      testMatch: /.*\.setup\.ts/,
+      name: 'auth-setup',
+      testMatch: '**/auth.setup.ts',
     },
     {
-      name: 'chromium',
+      name: 'room-setup',
+      testMatch: '**/room.setup.ts',
       use: {
         ...devices['Desktop Chrome'],
         permissions: ['microphone', 'camera'],
         storageState: resolve(__dirname, './.playwright-storage/state.json'),
       },
-      dependencies: ['setup'],
+      dependencies: ['auth-setup'],
+    },
+    {
+      name: 'chromium',
+      testMatch: ['e2e/**/*.spec.ts', 'visual/**/*.spec.ts'],
+      use: {
+        ...devices['Desktop Chrome'],
+        permissions: ['microphone', 'camera'],
+        storageState: resolve(__dirname, './.playwright-storage/state.json'),
+      },
+      dependencies: ['room-setup'],
     },
   ],
   webServer: [

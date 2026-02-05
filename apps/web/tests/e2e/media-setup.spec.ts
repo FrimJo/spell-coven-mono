@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test'
 import {
   clearStorage,
   getMediaPreferences,
+  getRoomId,
   mockGetUserMedia,
   mockMediaDevices,
   STORAGE_KEYS,
@@ -13,7 +14,7 @@ import {
  * Tests cover device selection UI, toggle behaviors, cancel flow, and persistence.
  */
 test.describe('Media Setup Page', () => {
-  test.use({ permissions: ['camera'] })
+  test.use({ permissions: ['camera', 'microphone'] })
 
   test.beforeEach(async ({ page }) => {
     // Mock media devices before navigating
@@ -56,7 +57,7 @@ test.describe('Media Setup Page', () => {
       page,
     }) => {
       // Skip: This test requires real camera permissions which are not available in headless browsers
-      const returnPath = '/game/TEST01'
+      const returnPath = `/game/${getRoomId()}`
       await page.goto(`/setup?returnTo=${encodeURIComponent(returnPath)}`)
 
       // Wait for page to load

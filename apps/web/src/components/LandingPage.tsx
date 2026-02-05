@@ -1009,6 +1009,14 @@ export function LandingPage({
                       Cookie Policy
                     </a>
                   </li>
+                  <li>
+                    <a
+                      href="/license"
+                      className="hover:text-brand-muted-foreground"
+                    >
+                      License
+                    </a>
+                  </li>
                 </ul>
               </div>
 
@@ -1058,6 +1066,18 @@ export function LandingPage({
                 Content Policy. Not approved/endorsed by Wizards. Portions of
                 the materials used are property of Wizards of the Coast.
                 ©Wizards of the Coast LLC.
+              </p>
+              <p className="mt-3">
+                Licensed under{' '}
+                <a
+                  className="text-brand-muted-foreground hover:text-brand"
+                  href="https://polyformproject.org/licenses/noncommercial/1.0.0/"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  PolyForm Noncommercial 1.0.0
+                </a>{' '}
+                — non-commercial use only.
               </p>
             </div>
           </div>

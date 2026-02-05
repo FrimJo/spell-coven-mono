@@ -1,6 +1,23 @@
+import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
 import { setDesktopViewport, setMobileViewport } from '../helpers/test-utils'
+
+const MTG_THEME_BRAND_COLORS = {
+  white: '#d4af37',
+  blue: '#1f4fd8',
+  black: '#4a2d80',
+  red: '#c62828',
+  green: '#2e7d32',
+} as const
+
+const MTG_THEME_LABELS: Record<keyof typeof MTG_THEME_BRAND_COLORS, string> = {
+  white: 'White',
+  blue: 'Blue',
+  black: 'Black',
+  red: 'Red',
+  green: 'Green',
+}
 
 /**
  * Landing page e2e tests.
@@ -59,9 +76,6 @@ test.describe('Landing Page', () => {
       const featuresLink = page.locator('nav').getByText('Features')
       await featuresLink.click()
 
-      // Wait for smooth scroll
-      await page.waitForTimeout(500)
-
       // Check that the Features section is now visible in viewport
       const featuresSection = page.locator('#features')
       await expect(featuresSection).toBeInViewport()
@@ -75,9 +89,6 @@ test.describe('Landing Page', () => {
       // Click the How It Works nav link
       const howItWorksLink = page.locator('nav').getByText('How It Works')
       await howItWorksLink.click()
-
-      // Wait for smooth scroll
-      await page.waitForTimeout(500)
 
       // Check that the How It Works section is now visible in viewport
       const howItWorksSection = page.locator('#how-it-works')
@@ -136,7 +147,9 @@ test.describe('Landing Page', () => {
       await setMobileViewport(page)
 
       // Mobile menu button should be visible
-      const menuButton = page.getByRole('button', { name: '' }).first()
+      const menuButton = page.getByRole('button', {
+        name: /open navigation menu/i,
+      })
       await expect(menuButton).toBeVisible()
 
       // Click to open mobile menu
@@ -151,11 +164,10 @@ test.describe('Landing Page', () => {
       await setMobileViewport(page)
 
       // Open mobile menu
-      const menuButton = page.getByRole('button', { name: '' }).first()
+      const menuButton = page.getByRole('button', {
+        name: /open navigation menu/i,
+      })
       await menuButton.click()
-
-      // Wait for sheet to open
-      await page.waitForTimeout(300)
 
       // Navigation links should be visible in the sheet
       await expect(page.getByRole('dialog').getByText('Features')).toBeVisible()
@@ -177,11 +189,10 @@ test.describe('Landing Page', () => {
       await setMobileViewport(page)
 
       // Open mobile menu
-      const menuButton = page.getByRole('button', { name: '' }).first()
+      const menuButton = page.getByRole('button', {
+        name: /open navigation menu/i,
+      })
       await menuButton.click()
-
-      // Wait for sheet to open
-      await page.waitForTimeout(300)
 
       // Sign in button should be visible in the mobile menu sheet
       await expect(
@@ -189,6 +200,22 @@ test.describe('Landing Page', () => {
       ).toBeVisible()
 
       await context.close()
+    })
+
+    test('should navigate to Features from mobile menu link', async ({
+      page,
+    }) => {
+      await setMobileViewport(page)
+
+      const menuButton = page.getByRole('button', {
+        name: /open navigation menu/i,
+      })
+      await menuButton.click()
+
+      const featuresLink = page.getByRole('dialog').getByText('Features')
+      await featuresLink.click()
+
+      await expect(page.locator('#features')).toBeInViewport()
     })
   })
 
@@ -199,9 +226,6 @@ test.describe('Landing Page', () => {
       // Click Features link in footer
       const footerFeaturesLink = page.locator('footer').getByText('Features')
       await footerFeaturesLink.click()
-
-      // Wait for smooth scroll
-      await page.waitForTimeout(500)
 
       // Features section should be in viewport
       await expect(page.locator('#features')).toBeInViewport()
@@ -216,11 +240,41 @@ test.describe('Landing Page', () => {
         .getByText('How It Works')
       await footerHowItWorksLink.click()
 
-      // Wait for smooth scroll
-      await page.waitForTimeout(500)
-
       // How It Works section should be in viewport
       await expect(page.locator('#how-it-works')).toBeInViewport()
+    })
+  })
+
+  test.describe('Footer Content', () => {
+    test('should include license and PolyForm links', async ({ page }) => {
+      const footer = page.locator('footer')
+
+      await expect(
+        footer.getByRole('link', { name: 'License' }),
+      ).toHaveAttribute('href', '/license')
+      await expect(
+        footer.getByRole('link', { name: /PolyForm Noncommercial/i }),
+      ).toHaveAttribute(
+        'href',
+        'https://polyformproject.org/licenses/noncommercial/1.0.0/',
+      )
+    })
+
+    test('should link to the GitHub repository', async ({ page }) => {
+      const footer = page.locator('footer')
+      const githubLink = footer.getByRole('link', { name: /View on GitHub/i })
+
+      await expect(githubLink).toHaveAttribute(
+        'href',
+        'https://github.com/FrimJo/spell-coven-mono',
+      )
+      await expect(githubLink).toHaveAttribute('target', '_blank')
+    })
+
+    test('should display copyright text', async ({ page }) => {
+      await expect(
+        page.locator('footer').getByText(/Spell Coven ©/i),
+      ).toBeVisible()
     })
   })
 
@@ -265,13 +319,84 @@ test.describe('Landing Page', () => {
       await learnMoreButton.scrollIntoViewIfNeeded()
       await learnMoreButton.click()
 
-      // Wait for smooth scroll
-      await page.waitForTimeout(500)
-
       // How It Works section should be in viewport
       await expect(page.locator('#how-it-works')).toBeInViewport()
 
       await context.close()
+    })
+  })
+
+  test.describe('Theme Switcher', () => {
+    const themes = Object.keys(
+      MTG_THEME_BRAND_COLORS,
+    ) as (keyof typeof MTG_THEME_BRAND_COLORS)[]
+
+    const expectThemeApplied = async (
+      page: Page,
+      theme: keyof typeof MTG_THEME_BRAND_COLORS,
+    ) => {
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-mtg-theme',
+        theme,
+      )
+      const brandColor = await page.evaluate(() =>
+        getComputedStyle(document.documentElement)
+          .getPropertyValue('--brand')
+          .trim(),
+      )
+      expect(brandColor.toLowerCase()).toBe(MTG_THEME_BRAND_COLORS[theme])
+    }
+
+    test('should apply each theme from the desktop toggle and persist on reload', async ({
+      page,
+    }) => {
+      await setDesktopViewport(page)
+
+      const toggleButton = page
+        .locator('nav')
+        .getByTestId('theme-toggle-button')
+
+      for (const theme of themes) {
+        await toggleButton.click()
+        await page
+          .getByRole('menuitemradio', { name: MTG_THEME_LABELS[theme] })
+          .click()
+        await expectThemeApplied(page, theme)
+      }
+
+      await page.reload()
+      await expectThemeApplied(page, themes[themes.length - 1])
+    })
+
+    test('should apply each theme from the mobile menu and persist on reload', async ({
+      page,
+    }) => {
+      await setMobileViewport(page)
+
+      const openMobileMenu = async () => {
+        const menuButton = page.getByRole('button', {
+          name: /open navigation menu/i,
+        })
+        await menuButton.click()
+        await expect(page.getByRole('dialog')).toBeVisible()
+      }
+
+      await openMobileMenu()
+
+      const toggleButton = page
+        .getByRole('dialog')
+        .getByTestId('theme-toggle-button')
+
+      for (const theme of themes) {
+        await toggleButton.click()
+        await page
+          .getByRole('menuitemradio', { name: MTG_THEME_LABELS[theme] })
+          .click()
+        await expectThemeApplied(page, theme)
+      }
+
+      await page.reload()
+      await expectThemeApplied(page, themes[themes.length - 1])
     })
   })
 })

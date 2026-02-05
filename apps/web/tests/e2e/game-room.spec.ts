@@ -1,11 +1,30 @@
+import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
 import {
+  clearStorage,
+  getRoomId,
   mockGetUserMedia,
   mockMediaDevices,
   navigateToTestGame,
-  TEST_GAME_ID,
+  setDesktopViewport,
 } from '../helpers/test-utils'
+
+const MTG_THEME_BRAND_COLORS = {
+  white: '#d4af37',
+  blue: '#1f4fd8',
+  black: '#4a2d80',
+  red: '#c62828',
+  green: '#2e7d32',
+} as const
+
+const MTG_THEME_LABELS: Record<keyof typeof MTG_THEME_BRAND_COLORS, string> = {
+  white: 'White',
+  blue: 'Blue',
+  black: 'Black',
+  red: 'Red',
+  green: 'Green',
+}
 
 /**
  * Game room e2e tests.
@@ -13,39 +32,124 @@ import {
  * Note: These tests require authentication setup as test IDs no longer bypass auth.
  */
 test.describe('Game Room', () => {
-  test.use({ permissions: ['camera'] })
+  let roomId: string
+  test.use({ permissions: ['camera', 'microphone'] })
 
   test.beforeEach(async ({ page }) => {
+    roomId = getRoomId()
     // Mock media devices before navigating
     await mockMediaDevices(page)
     await mockGetUserMedia(page)
   })
 
+  const generateRoomId = () => {
+    const base = Math.random().toString(36).toUpperCase()
+    const cleaned = base.replace(/[^A-Z0-9]/g, '')
+    return cleaned.padEnd(6, 'Z').slice(0, 6)
+  }
+
+  const findMissingRoomId = async (page: Page): Promise<string> => {
+    const maxAttempts = 5
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const candidate = generateRoomId()
+      await navigateToTestGame(page, candidate)
+
+      const notFound = page.getByText('404')
+      const gameHeader = page.getByTestId('game-id-display')
+
+      try {
+        await notFound.waitFor({ timeout: 5000 })
+        return candidate
+      } catch {
+        if (await gameHeader.isVisible()) {
+          continue
+        }
+      }
+    }
+
+    throw new Error('Failed to find a missing room ID after several attempts.')
+  }
+
   test.describe('Route Access', () => {
-    test('should load game room page for test game IDs without authentication', async ({
+    test('should show 404 for missing room even when media is not configured', async ({
       page,
     }) => {
-      await navigateToTestGame(page)
+      const missingRoomId = await findMissingRoomId(page)
+      await clearStorage(page)
+      await page.goto(`/game/${missingRoomId}`)
 
-      // Should load the game room, not redirect to home
-      await expect(page).toHaveURL(`/game/${TEST_GAME_ID}`)
-
-      // Game room should be visible (look for game ID in header)
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page).toHaveURL(`/game/${missingRoomId}`)
+      await expect(page.getByText('404')).toBeVisible({ timeout: 10000 })
     })
 
-    test('should display player name in game room', async ({ page }) => {
-      await navigateToTestGame(page)
+    test('should redirect to /setup when media is not configured', async ({
+      page,
+    }) => {
+      await page.goto(`/game/${roomId}`)
 
-      // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page).toHaveURL(
+        `/setup?returnTo=${encodeURIComponent(`/game/${roomId}`)}`,
+      )
+      await expect(page.getByText('Setup Audio & Video')).toBeVisible({
+        timeout: 10000,
+      })
+    })
 
-      // The authenticated user's name should be visible somewhere in the game room
-      // For test mode with auth, the Discord username is used
-      // Just verify the game room is loaded with player list visible
+    test('should return to game room after completing setup', async ({
+      page,
+    }) => {
+      await page.goto(`/game/${roomId}`)
+
+      await expect(page).toHaveURL(
+        `/setup?returnTo=${encodeURIComponent(`/game/${roomId}`)}`,
+      )
+
+      const completeButton = page.getByTestId('media-setup-complete-button')
+      await expect(completeButton).toBeEnabled({ timeout: 10000 })
+      await completeButton.click()
+
+      await expect(page).toHaveURL(`/game/${roomId}`)
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
+    })
+
+    test('should show 404 for a non-existent room', async ({ page }) => {
+      const missingRoomId = await findMissingRoomId(page)
+      await navigateToTestGame(page, missingRoomId)
+
+      await expect(page).toHaveURL(`/game/${missingRoomId}`)
+      await expect(page.getByText('404')).toBeVisible({ timeout: 10000 })
       await expect(
-        page.locator('[data-testid="leave-game-button"]'),
+        page.getByRole('button', { name: /Return Home/i }),
       ).toBeVisible()
+    })
+
+    test('should return to landing page when clicking "Return Home"', async ({
+      page,
+    }) => {
+      const missingRoomId = await findMissingRoomId(page)
+      await navigateToTestGame(page, missingRoomId)
+
+      await expect(page).toHaveURL(`/game/${missingRoomId}`)
+      await page.getByRole('button', { name: /Return Home/i }).click()
+
+      await expect(page).toHaveURL('/')
+    })
+
+    test('should go back to the previous page when clicking "Go Back"', async ({
+      page,
+    }) => {
+      const missingRoomId = await findMissingRoomId(page)
+
+      await navigateToTestGame(page)
+      await expect(page).toHaveURL(`/game/${roomId}`)
+
+      await page.goto(`/game/${missingRoomId}`)
+      await expect(page).toHaveURL(`/game/${missingRoomId}`)
+      await expect(page.getByText('404')).toBeVisible({ timeout: 10000 })
+
+      await page.getByRole('button', { name: /Go Back/i }).click()
+      await expect(page).toHaveURL(`/game/${roomId}`)
     })
   })
 
@@ -54,7 +158,7 @@ test.describe('Game Room', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Leave button should be visible
       const leaveButton = page.getByTestId('leave-game-button')
@@ -67,14 +171,14 @@ test.describe('Game Room', () => {
       // Game ID should be visible in header
       const gameIdDisplay = page.getByTestId('game-id-display')
       await expect(gameIdDisplay).toBeVisible({ timeout: 10000 })
-      await expect(gameIdDisplay).toContainText(TEST_GAME_ID)
+      await expect(gameIdDisplay).toContainText(roomId)
     })
 
     test('should display Settings button', async ({ page }) => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Settings button should be visible
       const settingsButton = page.getByTestId('settings-button')
@@ -85,7 +189,7 @@ test.describe('Game Room', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Player count should be visible (format: X/4 Players)
       await expect(page.getByText(/\d\/4 Players/)).toBeVisible()
@@ -97,7 +201,7 @@ test.describe('Game Room', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Share button should be visible
       const shareButton = page.getByTestId('copy-share-link-button')
@@ -115,7 +219,7 @@ test.describe('Game Room', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Wait for any dialogs to settle
       await page.waitForTimeout(2000)
@@ -130,7 +234,7 @@ test.describe('Game Room', () => {
       )
 
       // Should contain the game URL
-      expect(clipboardContent).toContain(`/game/${TEST_GAME_ID}`)
+      expect(clipboardContent).toContain(`/game/${roomId}`)
     })
 
     test.skip('should show toast notification after copying', async ({
@@ -140,7 +244,7 @@ test.describe('Game Room', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Wait for any dialogs/overlays to close
       await page.waitForTimeout(1000)
@@ -163,7 +267,7 @@ test.describe('Game Room', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Click Leave button
       const leaveButton = page.getByTestId('leave-game-button')
@@ -181,7 +285,7 @@ test.describe('Game Room', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Click Leave button
       const leaveButton = page.getByTestId('leave-game-button')
@@ -206,7 +310,7 @@ test.describe('Game Room', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Click Leave button
       const leaveButton = page.getByTestId('leave-game-button')
@@ -222,7 +326,7 @@ test.describe('Game Room', () => {
       await cancelButton.click()
 
       // Should still be on game page
-      await expect(page).toHaveURL(`/game/${TEST_GAME_ID}`)
+      await expect(page).toHaveURL(`/game/${roomId}`)
     })
   })
 
@@ -233,7 +337,7 @@ test.describe('Game Room', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Click Settings button
       const settingsButton = page.getByTestId('settings-button')
@@ -248,7 +352,7 @@ test.describe('Game Room', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Wait for any loading dialogs to settle
       await page.waitForTimeout(2000)
@@ -280,7 +384,7 @@ test.describe('Game Room', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Open settings dialog
       const settingsButton = page.getByTestId('settings-button')
@@ -304,7 +408,7 @@ test.describe('Game Room', () => {
       await navigateToTestGame(page)
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Wait for any loading dialogs to settle
       await page.waitForTimeout(2000)
@@ -322,6 +426,51 @@ test.describe('Game Room', () => {
         .getByRole('switch')
         .count()
       expect(switchCount).toBeGreaterThan(0)
+    })
+  })
+
+  test.describe('Theme Switcher', () => {
+    const themes = Object.keys(
+      MTG_THEME_BRAND_COLORS,
+    ) as (keyof typeof MTG_THEME_BRAND_COLORS)[]
+
+    const expectThemeApplied = async (
+      page: Page,
+      theme: keyof typeof MTG_THEME_BRAND_COLORS,
+    ) => {
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-mtg-theme',
+        theme,
+      )
+      const brandColor = await page.evaluate(() =>
+        getComputedStyle(document.documentElement)
+          .getPropertyValue('--brand')
+          .trim(),
+      )
+      expect(brandColor.toLowerCase()).toBe(MTG_THEME_BRAND_COLORS[theme])
+    }
+
+    test('should apply each theme from the header toggle and persist on reload', async ({
+      page,
+    }) => {
+      await setDesktopViewport(page)
+      await navigateToTestGame(page)
+
+      // Wait for game room to load
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
+
+      const toggleButton = page.getByTestId('theme-toggle-button')
+
+      for (const theme of themes) {
+        await toggleButton.click()
+        await page
+          .getByRole('menuitemradio', { name: MTG_THEME_LABELS[theme] })
+          .click()
+        await expectThemeApplied(page, theme)
+      }
+
+      await page.reload()
+      await expectThemeApplied(page, themes[themes.length - 1])
     })
   })
 })
