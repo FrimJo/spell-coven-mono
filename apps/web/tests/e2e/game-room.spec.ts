@@ -2,8 +2,10 @@ import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
 import {
+  AUTH_STATE_PATH,
   clearStorage,
   getRoomId,
+  hasAuthStorageState,
   mockGetUserMedia,
   mockMediaDevices,
   navigateToTestGame,
@@ -33,9 +35,15 @@ const MTG_THEME_LABELS: Record<keyof typeof MTG_THEME_BRAND_COLORS, string> = {
  */
 test.describe('Game Room', () => {
   let roomId: string
+  test.use({ storageState: AUTH_STATE_PATH })
   test.use({ permissions: ['camera', 'microphone'] })
 
   test.beforeEach(async ({ page }) => {
+    if (!hasAuthStorageState()) {
+      test.skip(
+        'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
+      )
+    }
     roomId = getRoomId()
     // Mock media devices before navigating
     await mockMediaDevices(page)

@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test'
 
 import {
+  AUTH_STATE_PATH,
   clearStorage,
   getGameState,
   getMediaPreferences,
   getRoomId,
+  hasAuthStorageState,
   mockGetUserMedia,
   mockMediaDevices,
   navigateToTestGame,
@@ -18,9 +20,15 @@ import {
  */
 test.describe('Session Storage', () => {
   let roomId: string
+  test.use({ storageState: AUTH_STATE_PATH })
   test.use({ permissions: ['camera', 'microphone'] })
 
   test.beforeEach(async ({ page }) => {
+    if (!hasAuthStorageState()) {
+      test.skip(
+        'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
+      )
+    }
     roomId = getRoomId()
     // Mock media devices
     await mockMediaDevices(page)

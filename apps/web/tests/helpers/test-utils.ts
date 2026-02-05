@@ -22,7 +22,21 @@ export const STORAGE_KEYS = {
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-const ROOM_STATE_PATH = resolve(__dirname, '../.playwright-storage/room.json')
+export const AUTH_STATE_PATH = resolve(
+  __dirname,
+  '../../.playwright-storage/state.json',
+)
+const ROOM_STATE_PATH = resolve(
+  __dirname,
+  '../../.playwright-storage/room.json',
+)
+
+/**
+ * Check whether Playwright auth storage state exists.
+ */
+export function hasAuthStorageState(): boolean {
+  return existsSync(AUTH_STATE_PATH)
+}
 
 /**
  * Read the most recently created room ID from room.setup.ts.
@@ -43,7 +57,7 @@ export function getRoomId(): string {
 }
 
 /**
- * Navigate to a test game room (bypasses authentication).
+ * Navigate to a test game room.
  */
 export async function navigateToTestGame(
   page: Page,
