@@ -51,7 +51,7 @@ export function MediaSetupDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="border-surface-2 bg-surface-1 sm:max-w-[700px] [&>button]:hidden"
+        className="border-surface-2 bg-surface-1 flex h-[85vh] max-h-[85vh] flex-col sm:max-w-[700px] [&>button]:hidden"
         data-testid="media-setup-dialog"
       >
         {/* Hidden header for accessibility - visual header is in MediaSetupPanel */}

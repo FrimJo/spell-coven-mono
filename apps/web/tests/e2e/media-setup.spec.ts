@@ -21,7 +21,7 @@ test.describe('Media Setup Page', () => {
 
   test.beforeEach(async ({ page }) => {
     if (!hasAuthStorageState()) {
-      test.skip(
+      test(
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }
@@ -61,10 +61,7 @@ test.describe('Media Setup Page', () => {
       await expect(page).toHaveURL('/')
     })
 
-    test.skip('should redirect to returnTo path on completion', async ({
-      page,
-    }) => {
-      // Skip: This test requires real camera permissions which are not available in headless browsers
+    test('should redirect to returnTo path on completion', async ({ page }) => {
       const returnPath = `/game/${getRoomId()}`
       await page.goto(`/setup?returnTo=${encodeURIComponent(returnPath)}`)
 
@@ -300,10 +297,9 @@ test.describe('Media Setup Page', () => {
       await expect(completeButton).toBeVisible()
     })
 
-    test.skip('should enable Complete Setup when video is enabled', async ({
+    test('should enable Complete Setup when video is enabled', async ({
       page,
     }) => {
-      // Skip: This test requires real camera permissions which are not available in headless browsers
       await page.goto('/setup')
 
       // Wait for page to load
