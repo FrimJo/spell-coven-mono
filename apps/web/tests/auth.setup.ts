@@ -44,8 +44,13 @@ const rootEnv = loadEnvFile(resolve(__dirname, '../../../.env.development'))
 const rootEnvLocal = loadEnvFile(
   resolve(__dirname, '../../../.env.development.local'),
 )
+const rootTestEnv = loadEnvFile(resolve(__dirname, '../../../.env.test'))
+const rootTestEnvLocal = loadEnvFile(
+  resolve(__dirname, '../../../.env.test.local'),
+)
 const appEnv = loadEnvFile(resolve(__dirname, '../.env.development'))
 const appEnvLocal = loadEnvFile(resolve(__dirname, '../.env.development.local'))
+const appTestEnv = loadEnvFile(resolve(__dirname, '../.env.test'))
 const testEnv = loadEnvFile(resolve(__dirname, '../.env.test.local'))
 
 // Merge env files (later files override earlier ones)
@@ -54,6 +59,9 @@ const env = {
   ...rootEnvLocal,
   ...appEnv,
   ...appEnvLocal,
+  ...rootTestEnv,
+  ...rootTestEnvLocal,
+  ...appTestEnv,
   ...testEnv,
 }
 

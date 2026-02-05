@@ -83,8 +83,8 @@ export function useConvexAuthHook(): UseConvexAuthReturn {
   // Sign in with Discord OAuth
   const signIn = useCallback(async () => {
     try {
-      // redirectTo is handled by Convex Auth based on SITE_URL config
       await convexSignIn('discord')
+      // redirectTo is handled by Convex Auth based on SITE_URL config
     } catch (error) {
       console.error('[ConvexAuth] Sign in failed:', error)
       throw error
