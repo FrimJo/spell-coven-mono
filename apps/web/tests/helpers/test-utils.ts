@@ -139,9 +139,13 @@ export async function getOrCreateRoomId(
 export async function navigateToTestGame(
   page: Page,
   gameId = getRoomId(),
-  options?: { ensureMediaSetup?: boolean },
+  options?: {
+    ensureMediaSetup?: boolean
+    handleDuplicateSession?: 'transfer' | 'home'
+  },
 ): Promise<void> {
   const ensureMediaSetup = options?.ensureMediaSetup ?? true
+  const handleDuplicateSession = options?.handleDuplicateSession
 
   if (ensureMediaSetup) {
     await page.addInitScript((key) => {
@@ -173,6 +177,23 @@ export async function navigateToTestGame(
   }
 
   await page.goto(`/game/${gameId}`)
+
+  if (handleDuplicateSession) {
+    // If a duplicate-session dialog appears, optionally auto-handle it.
+    const duplicateDialogTitle = page.getByText('Already Connected', {
+      exact: true,
+    })
+    const dialogVisible = await duplicateDialogTitle
+      .waitFor({ state: 'visible', timeout: 1500 })
+      .then(() => true)
+      .catch(() => false)
+    if (dialogVisible) {
+      const actionLabel =
+        handleDuplicateSession === 'home' ? 'Return to Home' : 'Transfer here'
+      await page.getByRole('button', { name: actionLabel }).click()
+      await expect(duplicateDialogTitle).toBeHidden({ timeout: 5000 })
+    }
+  }
 }
 
 /**

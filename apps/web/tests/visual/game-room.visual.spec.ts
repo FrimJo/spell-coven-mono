@@ -33,7 +33,9 @@ test.describe('Game Room Visual Tests', () => {
 
   test.describe('Game Room Layout', () => {
     test('game room - initial state', async ({ page }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
@@ -48,7 +50,9 @@ test.describe('Game Room Visual Tests', () => {
     })
 
     test('game room - header controls', async ({ page }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
@@ -65,7 +69,9 @@ test.describe('Game Room Visual Tests', () => {
 
   test.describe('Player Stats Overlay', () => {
     test('player stats overlay - visible state', async ({ page }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
@@ -86,7 +92,9 @@ test.describe('Game Room Visual Tests', () => {
 
   test.describe('Commander Panel', () => {
     test('commander panel - opened state', async ({ page }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
@@ -112,7 +120,9 @@ test.describe('Game Room Visual Tests', () => {
     })
 
     test('commander panel - setup tab', async ({ page }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
@@ -142,7 +152,9 @@ test.describe('Game Room Visual Tests', () => {
     })
 
     test('commander panel - damage tab', async ({ page }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
@@ -174,7 +186,9 @@ test.describe('Game Room Visual Tests', () => {
 
   test.describe('Commander Selection Flow', () => {
     test('commander search input - focused state', async ({ page }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
@@ -213,7 +227,9 @@ test.describe('Game Room Visual Tests', () => {
     })
 
     test('commander search - with results', async ({ page }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
@@ -253,7 +269,9 @@ test.describe('Game Room Visual Tests', () => {
 
   test.describe('Settings Dialog', () => {
     test('media settings dialog - open state', async ({ page }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })

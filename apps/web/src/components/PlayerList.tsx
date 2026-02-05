@@ -135,6 +135,7 @@ export function PlayerList({
       icon={Users}
       title="Players"
       count={`${players.length}/${seatCount}`}
+      countTestId="players-count"
       headerAction={headerAction}
     >
       <div className="space-y-2 p-2">
