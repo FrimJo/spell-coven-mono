@@ -29,8 +29,8 @@
     "@repo/tailwind-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@repo/ui": "workspace:*",
-    "@sentry/react": "^8.45.0",
-    "@sentry/replay": "^8.45.0",
+    "@sentry/react": "^10.38.0",
+    "@sentry/replay": "^7.116.0",
     "@t3-oss/env-core": "^0.13.8",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/react-devtools": "^0.7.0",
@@ -74,7 +74,8 @@
     "vitest": "^3.2.0",
     "web-vitals": "^4.2.4",
     "xstate": "^5.26.0",
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "@sentry/vite-plugin": "^4.9.0"
   },
   "prettier": "@repo/prettier-config"
 }
