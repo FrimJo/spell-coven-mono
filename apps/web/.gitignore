@@ -26,6 +26,6 @@ test-results/
 certificates/
 
 .playwright-storage/
-
+playwright-report/
 
 public/latest-dev/
