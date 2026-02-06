@@ -36,6 +36,30 @@ const ROOM_CREATION_COOLDOWN_MS = 10_000
  */
 const ROOM_INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000
 
+async function requireActiveRoomMember(
+  ctx: MutationCtx,
+  roomId: string,
+  userId: string,
+): Promise<void> {
+  const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
+  const member = await ctx.db
+    .query('roomPlayers')
+    .withIndex('by_roomId_userId', (q) =>
+      q.eq('roomId', roomId).eq('userId', userId),
+    )
+    .filter((q) =>
+      q.and(
+        q.neq(q.field('status'), 'left'),
+        q.gt(q.field('lastSeenAt'), presenceThreshold),
+      ),
+    )
+    .first()
+
+  if (!member) {
+    throw new AuthRequiredError('Active room membership required')
+  }
+}
+
 /**
  * Update the lastActivityAt timestamp for a room
  */
@@ -315,9 +339,13 @@ export const updateRoomStatus = mutation({
       v.literal('playing'),
       v.literal('finished'),
     ),
-    callerId: v.optional(v.string()),
   },
-  handler: async (ctx, { roomId, status, callerId }) => {
+  handler: async (ctx, { roomId, status }) => {
+    const callerId = await getAuthUserId(ctx)
+    if (!callerId) {
+      throw new AuthRequiredError()
+    }
+
     const room = await ctx.db
       .query('rooms')
       .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
@@ -327,7 +355,7 @@ export const updateRoomStatus = mutation({
       throw new RoomNotFoundError()
     }
 
-    if (callerId && room.ownerId !== callerId) {
+    if (room.ownerId !== callerId) {
       throw new NotRoomOwnerError('change room status')
     }
 
@@ -518,6 +546,13 @@ export const updatePlayerHealth = mutation({
     delta: v.number(),
   },
   handler: async (ctx, { roomId, userId, delta }) => {
+    const callerId = await getAuthUserId(ctx)
+    if (!callerId) {
+      throw new AuthRequiredError()
+    }
+
+    await requireActiveRoomMember(ctx, roomId, callerId)
+
     // Find player record (any active session for this user)
     const player = await ctx.db
       .query('roomPlayers')
@@ -562,6 +597,13 @@ export const updatePlayerPoison = mutation({
     delta: v.number(),
   },
   handler: async (ctx, { roomId, userId, delta }) => {
+    const callerId = await getAuthUserId(ctx)
+    if (!callerId) {
+      throw new AuthRequiredError()
+    }
+
+    await requireActiveRoomMember(ctx, roomId, callerId)
+
     const player = await ctx.db
       .query('roomPlayers')
       .withIndex('by_roomId_userId', (q) =>
@@ -611,6 +653,13 @@ export const setPlayerCommanders = mutation({
     ),
   },
   handler: async (ctx, { roomId, userId, commanders }) => {
+    const callerId = await getAuthUserId(ctx)
+    if (!callerId) {
+      throw new AuthRequiredError()
+    }
+
+    await requireActiveRoomMember(ctx, roomId, callerId)
+
     const player = await ctx.db
       .query('roomPlayers')
       .withIndex('by_roomId_userId', (q) =>
@@ -654,6 +703,13 @@ export const updateCommanderDamage = mutation({
     delta: v.number(),
   },
   handler: async (ctx, { roomId, userId, ownerUserId, commanderId, delta }) => {
+    const callerId = await getAuthUserId(ctx)
+    if (!callerId) {
+      throw new AuthRequiredError()
+    }
+
+    await requireActiveRoomMember(ctx, roomId, callerId)
+
     const player = await ctx.db
       .query('roomPlayers')
       .withIndex('by_roomId_userId', (q) =>

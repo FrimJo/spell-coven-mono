@@ -1,8 +1,10 @@
-import { expect, test } from '@playwright/test'
-
+import { expect, test } from '../helpers/fixtures'
 import {
   clearStorage,
+  ensureAuthWarm,
   getMediaPreferences,
+  getRoomId,
+  hasAuthStorageState,
   mockGetUserMedia,
   mockMediaDevices,
   STORAGE_KEYS,
@@ -13,9 +15,15 @@ import {
  * Tests cover device selection UI, toggle behaviors, cancel flow, and persistence.
  */
 test.describe('Media Setup Page', () => {
-  test.use({ permissions: ['camera'] })
+  test.use({ permissions: ['camera', 'microphone'] })
 
   test.beforeEach(async ({ page }) => {
+    if (!hasAuthStorageState()) {
+      test.skip(
+        true,
+        'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
+      )
+    }
     // Mock media devices before navigating
     await mockMediaDevices(page)
     await mockGetUserMedia(page)
@@ -23,6 +31,7 @@ test.describe('Media Setup Page', () => {
 
   test.describe('Navigation', () => {
     test('should display media setup page at /setup', async ({ page }) => {
+      await ensureAuthWarm(page)
       await page.goto('/setup')
 
       // Should show the media setup panel
@@ -52,11 +61,8 @@ test.describe('Media Setup Page', () => {
       await expect(page).toHaveURL('/')
     })
 
-    test.skip('should redirect to returnTo path on completion', async ({
-      page,
-    }) => {
-      // Skip: This test requires real camera permissions which are not available in headless browsers
-      const returnPath = '/game/TEST01'
+    test('should redirect to returnTo path on completion', async ({ page }) => {
+      const returnPath = `/game/${getRoomId()}`
       await page.goto(`/setup?returnTo=${encodeURIComponent(returnPath)}`)
 
       // Wait for page to load
@@ -225,7 +231,7 @@ test.describe('Media Setup Page', () => {
     }) => {
       await page.goto('/setup')
 
-      // Clear storage first
+      // Clear storage first (preserve auth)
       await clearStorage(page)
 
       // Wait for page to load
@@ -237,8 +243,16 @@ test.describe('Media Setup Page', () => {
       const videoSwitch = page.getByRole('switch').first()
       await videoSwitch.click()
 
-      // Wait for preference to be saved
-      await page.waitForTimeout(1000)
+      // Wait for stream to initialize and permissions to be granted
+      await page.waitForTimeout(2000)
+
+      // Complete setup to commit preferences to localStorage
+      const completeButton = page.getByTestId('media-setup-complete-button')
+      await expect(completeButton).toBeEnabled({ timeout: 10000 })
+      await completeButton.click()
+
+      // Wait for navigation after completion
+      await expect(page).toHaveURL('/')
 
       // Check localStorage
       const prefs = await getMediaPreferences(page)
@@ -291,10 +305,9 @@ test.describe('Media Setup Page', () => {
       await expect(completeButton).toBeVisible()
     })
 
-    test.skip('should enable Complete Setup when video is enabled', async ({
+    test('should enable Complete Setup when video is enabled', async ({
       page,
     }) => {
-      // Skip: This test requires real camera permissions which are not available in headless browsers
       await page.goto('/setup')
 
       // Wait for page to load

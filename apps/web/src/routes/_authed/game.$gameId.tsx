@@ -1,5 +1,4 @@
 import { Suspense } from 'react'
-import { AuthRequiredDialog } from '@/components/AuthRequiredDialog'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
 import { RoomFullDialog } from '@/components/RoomFullDialog'
@@ -27,9 +26,7 @@ const defaultValues = {
 }
 
 const gameSearchSchema = z.object({
-  detector: z
-    .enum(['opencv', 'detr', 'owl-vit', 'slimsam', 'yolov8'])
-    .optional(),
+  detector: z.enum(['opencv', 'detr', 'owl-vit', 'yolov8']).optional(),
   usePerspectiveWarp: z
     .boolean()
     .default(defaultValues.usePerspectiveWarp)
@@ -91,7 +88,7 @@ function isMediaConfigured(): boolean {
   return false
 }
 
-export const Route = createFileRoute('/game/$gameId')({
+export const Route = createFileRoute('/_authed/game/$gameId')({
   component: GameRoomRoute,
   beforeLoad: async ({ location, params }) => {
     // Check if media devices are configured before entering game room
@@ -161,14 +158,11 @@ export const Route = createFileRoute('/game/$gameId')({
   },
 })
 
-// Key for storing the return URL after OAuth
-const AUTH_RETURN_TO_KEY = 'auth-return-to'
-
 function GameRoomRoute() {
   const { gameId } = Route.useParams()
   const { detector, usePerspectiveWarp, testStream } = Route.useSearch()
   const navigate = useNavigate()
-  const { user, isLoading: isAuthLoading, isAuthenticated, signIn } = useAuth()
+  const { user } = useAuth()
 
   // Check room access for capacity (reactive query)
   const roomAccess = useQuery(api.rooms.checkRoomAccess, { roomId: gameId })
@@ -178,49 +172,8 @@ function GameRoomRoute() {
     navigate({ to: '/', reloadDocument: true }) // reloadDocument: true is needed to ensure the browser releases the camera/mic indicator
   }
 
-  const handleSignIn = async () => {
-    // Store the current game room path so we can return after OAuth
-    window.sessionStorage.setItem(AUTH_RETURN_TO_KEY, `/game/${gameId}`)
-    await signIn()
-  }
-
   const handleClose = () => {
     navigate({ to: '/' })
-  }
-
-  // Show loading state while auth is being determined
-  if (isAuthLoading) {
-    return (
-      <div className="bg-surface-0 flex h-screen items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="relative">
-            <div className="bg-brand/20 flex h-16 w-16 items-center justify-center rounded-full">
-              <Loader2 className="text-brand-muted-foreground h-8 w-8 animate-spin" />
-            </div>
-            <div className="bg-brand/10 absolute inset-0 animate-ping rounded-full" />
-          </div>
-          <div className="space-y-1 text-center">
-            <h2 className="text-text-secondary text-lg font-medium">
-              Checking authentication...
-            </h2>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Show auth dialog if not authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="bg-surface-0 h-screen">
-        <AuthRequiredDialog
-          open={true}
-          onSignIn={handleSignIn}
-          onClose={handleClose}
-          message="You need to sign in with Discord to join this game room."
-        />
-      </div>
-    )
   }
 
   // Show loading state while room access is being checked

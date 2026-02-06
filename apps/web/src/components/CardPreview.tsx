@@ -16,11 +16,10 @@ import { Button } from '@repo/ui/components/button'
 import { SidebarCard } from './GameRoomSidebar'
 
 interface CardPreviewProps {
-  playerName: string
   onClose: () => void
 }
 
-export function CardPreview({ playerName, onClose }: CardPreviewProps) {
+export function CardPreview({ onClose }: CardPreviewProps) {
   const { state, history, isDismissed } = useCardQueryContext()
 
   // Don't show preview if dismissed
@@ -36,7 +35,7 @@ export function CardPreview({ playerName, onClose }: CardPreviewProps) {
   // Prefer state.result (current selection), fallback to history[0] (latest in history)
   const displayResult: CardQueryResult | null =
     state.result ??
-    (history.length > 0 && hasActiveInteraction
+    (history[0] && hasActiveInteraction
       ? {
           name: history[0].name,
           set: history[0].set,

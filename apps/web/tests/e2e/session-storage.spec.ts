@@ -1,15 +1,16 @@
-import { expect, test } from '@playwright/test'
-
+import { expect, test } from '../helpers/fixtures'
 import {
   clearStorage,
+  ensureAuthWarm,
   getGameState,
   getMediaPreferences,
+  getRoomId,
+  hasAuthStorageState,
   mockGetUserMedia,
   mockMediaDevices,
   navigateToTestGame,
   setMediaPreferences,
   STORAGE_KEYS,
-  TEST_GAME_ID,
 } from '../helpers/test-utils'
 
 /**
@@ -17,9 +18,17 @@ import {
  * Tests cover game state persistence, media preferences, and storage behavior.
  */
 test.describe('Session Storage', () => {
-  test.use({ permissions: ['camera'] })
+  let roomId: string
+  test.use({ permissions: ['camera', 'microphone'] })
 
   test.beforeEach(async ({ page }) => {
+    if (!hasAuthStorageState()) {
+      test.skip(
+        true,
+        'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
+      )
+    }
+    roomId = getRoomId()
     // Mock media devices
     await mockMediaDevices(page)
     await mockGetUserMedia(page)
@@ -54,13 +63,15 @@ test.describe('Session Storage', () => {
             }),
           )
         },
-        { gameId: TEST_GAME_ID, key: STORAGE_KEYS.GAME_STATE },
+        { gameId: roomId, key: STORAGE_KEYS.GAME_STATE },
       )
 
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Check sessionStorage for game state - it should still exist
       const gameState = await getGameState(page)
@@ -68,10 +79,7 @@ test.describe('Session Storage', () => {
       expect(gameState).not.toBeNull()
     })
 
-    test.skip('should clear game state when leaving a game', async ({
-      page,
-    }) => {
-      // Skip: Dialog overlay blocks interaction in headless test environment
+    test('should clear game state when leaving a game', async ({ page }) => {
       // Set up media preferences
       await page.addInitScript((key) => {
         localStorage.setItem(
@@ -88,6 +96,8 @@ test.describe('Session Storage', () => {
       // Pre-populate game state
       await page.addInitScript(
         ({ gameId, key }) => {
+          const seedKey = '__e2e_game_state_seeded'
+          if (sessionStorage.getItem(seedKey)) return
           sessionStorage.setItem(
             key,
             JSON.stringify({
@@ -96,14 +106,17 @@ test.describe('Session Storage', () => {
               timestamp: Date.now(),
             }),
           )
+          sessionStorage.setItem(seedKey, 'true')
         },
-        { gameId: TEST_GAME_ID, key: STORAGE_KEYS.GAME_STATE },
+        { gameId: roomId, key: STORAGE_KEYS.GAME_STATE },
       )
 
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Wait for any dialogs/overlays to settle
       await page.waitForTimeout(2000)
@@ -125,6 +138,7 @@ test.describe('Session Storage', () => {
     })
 
     test('should maintain game state on page refresh', async ({ page }) => {
+      await ensureAuthWarm(page)
       // Set up media preferences
       await page.addInitScript((key) => {
         localStorage.setItem(
@@ -150,20 +164,22 @@ test.describe('Session Storage', () => {
             }),
           )
         },
-        { gameId: TEST_GAME_ID, key: STORAGE_KEYS.GAME_STATE },
+        { gameId: roomId, key: STORAGE_KEYS.GAME_STATE },
       )
 
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // sessionStorage persists across refreshes by default
       // Refresh the page
       await page.reload()
 
       // Wait for game room to reload
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Game state should still exist (sessionStorage survives refresh)
       const refreshedState = await getGameState(page)
@@ -187,14 +203,22 @@ test.describe('Session Storage', () => {
       const videoSwitch = page.getByRole('switch').first()
       await videoSwitch.click()
 
-      // Wait for preference to be saved
+      // Wait for stream to initialize and permissions to be granted
       await page.waitForTimeout(2000)
+
+      // Complete setup to commit preferences to localStorage
+      const completeButton = page.getByTestId('media-setup-complete-button')
+      await expect(completeButton).toBeEnabled({ timeout: 10000 })
+      await completeButton.click()
+
+      // Wait for navigation after completion
+      await expect(page).toHaveURL('/')
 
       // Check localStorage - videoEnabled should be set
       const prefs = await getMediaPreferences(page)
       expect(prefs).not.toBeNull()
-      // videoEnabled will be true after clicking the switch
-      expect(prefs?.videoEnabled).toBeDefined()
+      // Storage should include a commit timestamp
+      expect(prefs?.timestamp).toBeDefined()
     })
 
     test('should restore device selections on page reload', async ({
@@ -222,10 +246,9 @@ test.describe('Session Storage', () => {
       expect(state).toBe('checked')
     })
 
-    test.skip('should persist preferences after completing setup', async ({
+    test('should persist preferences after completing setup', async ({
       page,
     }) => {
-      // Skip: This test requires real camera permissions which are not available in headless browsers
       await page.goto('/setup')
       await clearStorage(page)
 
@@ -303,13 +326,15 @@ test.describe('Session Storage', () => {
             }),
           )
         },
-        { gameId: TEST_GAME_ID, key: STORAGE_KEYS.GAME_STATE },
+        { gameId: roomId, key: STORAGE_KEYS.GAME_STATE },
       )
 
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Check that the correct key is used (game state was pre-populated)
       const hasCorrectKey = await page.evaluate((key) => {

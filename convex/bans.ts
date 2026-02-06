@@ -214,9 +214,13 @@ export const unbanPlayer = mutation({
 export const isBanned = query({
   args: {
     roomId: v.string(),
-    userId: v.string(),
   },
-  handler: async (ctx, { roomId, userId }) => {
+  handler: async (ctx, { roomId }) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new AuthRequiredError()
+    }
+
     const ban = await ctx.db
       .query('roomBans')
       .withIndex('by_roomId_userId', (q) =>
@@ -234,6 +238,24 @@ export const isBanned = query({
 export const listBans = query({
   args: { roomId: v.string() },
   handler: async (ctx, { roomId }) => {
+    const callerId = await getAuthUserId(ctx)
+    if (!callerId) {
+      throw new AuthRequiredError()
+    }
+
+    const room = await ctx.db
+      .query('rooms')
+      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+      .first()
+
+    if (!room) {
+      throw new RoomNotFoundError()
+    }
+
+    if (room.ownerId !== callerId) {
+      throw new NotRoomOwnerError('view bans')
+    }
+
     const bans = await ctx.db
       .query('roomBans')
       .withIndex('by_roomId', (q) => q.eq('roomId', roomId))

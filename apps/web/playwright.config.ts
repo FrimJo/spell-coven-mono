@@ -7,40 +7,71 @@ const __dirname = dirname(__filename)
 
 export default defineConfig({
   testDir: 'tests',
-  testMatch: '**/*.spec.ts',
+  testMatch: ['e2e/**/*.spec.ts', 'visual/**/*.spec.ts', '**/*.setup.ts'],
   timeout: 60_000,
-  retries: 0,
+  globalTeardown: './tests/global-teardown.ts',
+  /* Run tests in files in parallel */
+  fullyParallel: true,
+  /* Fail the build on CI if you accidentally left test.only in the source code. */
+  forbidOnly: !!process.env.CI,
+  /* Retry on CI only */
+  retries: process.env.CI ? 2 : 0,
+  /* Opt out of parallel tests on CI. */
+  workers: process.env.CI ? 1 : undefined,
+  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+  reporter: process.env.CI
+    ? [
+        ['github'],
+        ['junit', { outputFile: 'results.xml' }],
+        ['html', { open: 'never' }],
+      ]
+    : [['list']],
   use: {
     baseURL: 'https://localhost:1234',
     trace: 'on-first-retry',
-    permissions: ['camera'],
+    permissions: ['camera', 'microphone'],
     video: 'retain-on-failure',
     ignoreHTTPSErrors: true,
     viewport: { width: 1920, height: 1080 },
   },
   projects: [
     {
-      name: 'setup',
-      testMatch: /.*\.setup\.ts/,
-    },
-    {
-      name: 'chromium',
+      name: 'room-setup',
+      testMatch: '**/room.setup.ts',
       use: {
         ...devices['Desktop Chrome'],
         permissions: ['microphone', 'camera'],
-        storageState: resolve(__dirname, './.playwright-storage/state.json'),
       },
-      dependencies: ['setup'],
+    },
+    {
+      name: 'chromium',
+      testMatch: ['e2e/**/*.spec.ts', 'visual/**/*.spec.ts'],
+      use: {
+        ...devices['Desktop Chrome'],
+        permissions: ['microphone', 'camera'],
+      },
+      dependencies: ['room-setup'],
     },
   ],
-  webServer: {
-    // Use Vite dev server for e2e tests
-    command: 'bun run dev',
-    url: 'https://localhost:1234',
-    timeout: 60_000,
-    reuseExistingServer: true,
-    stdout: 'ignore',
-    stderr: 'pipe',
-    ignoreHTTPSErrors: true,
-  },
+  webServer: [
+    {
+      command: 'bun run convex:test',
+      cwd: resolve(__dirname, '../..'),
+      url: 'http://127.0.0.1:3210',
+      timeout: process.env.CI ? 120_000 : 90_000,
+      reuseExistingServer: !process.env.CI,
+      stdout: 'pipe',
+      stderr: 'pipe',
+      ignoreHTTPSErrors: true,
+    },
+    {
+      command: 'bun run dev:test',
+      url: 'https://localhost:1234',
+      timeout: process.env.CI ? 120_000 : 90_000,
+      reuseExistingServer: !process.env.CI,
+      stdout: 'pipe',
+      stderr: 'pipe',
+      ignoreHTTPSErrors: true,
+    },
+  ],
 })

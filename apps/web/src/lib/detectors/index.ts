@@ -20,7 +20,6 @@ export type {
 export { OpenCVDetector, type OpenCVConfig } from './opencv-detector.js'
 export { DETRDetector } from './detr-detector.js'
 export { OWLViTDetector, type OWLViTConfig } from './owl-vit-detector.js'
-export { SlimSAMDetector } from './slimsam-detector.js'
 
 // Factory
 export { createDetector } from './factory.js'

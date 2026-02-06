@@ -1,9 +1,8 @@
 name: Web E2E
 
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: [main, develop]
 
 concurrency:
   group: web-e2e-${{ github.ref }}
@@ -22,13 +21,25 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.1.30"
+          bun-version: '1.3.8'
 
       - name: Install root dependencies
         run: |
           bun install --frozen-lockfile
         working-directory: .
 
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
       - name: Run E2E tests
-        run: |
-          bun run e2e
+        run: bun run e2e
+        env:
+          CI: '1'
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7

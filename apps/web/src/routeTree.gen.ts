@@ -9,21 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SetupRouteImport } from './routes/setup'
 import { Route as LicenseRouteImport } from './routes/license'
+import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as GameGameIdRouteImport } from './routes/game.$gameId'
 import { Route as DebugSessionStorageRouteImport } from './routes/debug/session-storage'
+import { Route as AuthedSetupRouteImport } from './routes/_authed/setup'
 import { Route as DebugVoiceChannelChannelIdRouteImport } from './routes/debug/voice-channel.$channelId'
+import { Route as AuthedGameGameIdRouteImport } from './routes/_authed/game.$gameId'
 
-const SetupRoute = SetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LicenseRoute = LicenseRouteImport.update({
   id: '/license',
   path: '/license',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedRoute = AuthedRouteImport.update({
+  id: '/_authed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -31,15 +31,15 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GameGameIdRoute = GameGameIdRouteImport.update({
-  id: '/game/$gameId',
-  path: '/game/$gameId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DebugSessionStorageRoute = DebugSessionStorageRouteImport.update({
   id: '/debug/session-storage',
   path: '/debug/session-storage',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedSetupRoute = AuthedSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const DebugVoiceChannelChannelIdRoute =
   DebugVoiceChannelChannelIdRouteImport.update({
@@ -47,30 +47,36 @@ const DebugVoiceChannelChannelIdRoute =
     path: '/debug/voice-channel/$channelId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthedGameGameIdRoute = AuthedGameGameIdRouteImport.update({
+  id: '/game/$gameId',
+  path: '/game/$gameId',
+  getParentRoute: () => AuthedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/license': typeof LicenseRoute
-  '/setup': typeof SetupRoute
+  '/setup': typeof AuthedSetupRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
-  '/game/$gameId': typeof GameGameIdRoute
+  '/game/$gameId': typeof AuthedGameGameIdRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/license': typeof LicenseRoute
-  '/setup': typeof SetupRoute
+  '/setup': typeof AuthedSetupRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
-  '/game/$gameId': typeof GameGameIdRoute
+  '/game/$gameId': typeof AuthedGameGameIdRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authed': typeof AuthedRouteWithChildren
   '/license': typeof LicenseRoute
-  '/setup': typeof SetupRoute
+  '/_authed/setup': typeof AuthedSetupRoute
   '/debug/session-storage': typeof DebugSessionStorageRoute
-  '/game/$gameId': typeof GameGameIdRoute
+  '/_authed/game/$gameId': typeof AuthedGameGameIdRoute
   '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
 export interface FileRouteTypes {
@@ -93,36 +99,36 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/_authed'
     | '/license'
-    | '/setup'
+    | '/_authed/setup'
     | '/debug/session-storage'
-    | '/game/$gameId'
+    | '/_authed/game/$gameId'
     | '/debug/voice-channel/$channelId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthedRoute: typeof AuthedRouteWithChildren
   LicenseRoute: typeof LicenseRoute
-  SetupRoute: typeof SetupRoute
   DebugSessionStorageRoute: typeof DebugSessionStorageRoute
-  GameGameIdRoute: typeof GameGameIdRoute
   DebugVoiceChannelChannelIdRoute: typeof DebugVoiceChannelChannelIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/setup': {
-      id: '/setup'
-      path: '/setup'
-      fullPath: '/setup'
-      preLoaderRoute: typeof SetupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/license': {
       id: '/license'
       path: '/license'
       fullPath: '/license'
       preLoaderRoute: typeof LicenseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authed': {
+      id: '/_authed'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AuthedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -132,19 +138,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/game/$gameId': {
-      id: '/game/$gameId'
-      path: '/game/$gameId'
-      fullPath: '/game/$gameId'
-      preLoaderRoute: typeof GameGameIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/debug/session-storage': {
       id: '/debug/session-storage'
       path: '/debug/session-storage'
       fullPath: '/debug/session-storage'
       preLoaderRoute: typeof DebugSessionStorageRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authed/setup': {
+      id: '/_authed/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof AuthedSetupRouteImport
+      parentRoute: typeof AuthedRoute
     }
     '/debug/voice-channel/$channelId': {
       id: '/debug/voice-channel/$channelId'
@@ -153,15 +159,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DebugVoiceChannelChannelIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/game/$gameId': {
+      id: '/_authed/game/$gameId'
+      path: '/game/$gameId'
+      fullPath: '/game/$gameId'
+      preLoaderRoute: typeof AuthedGameGameIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
+interface AuthedRouteChildren {
+  AuthedSetupRoute: typeof AuthedSetupRoute
+  AuthedGameGameIdRoute: typeof AuthedGameGameIdRoute
+}
+
+const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedSetupRoute: AuthedSetupRoute,
+  AuthedGameGameIdRoute: AuthedGameGameIdRoute,
+}
+
+const AuthedRouteWithChildren =
+  AuthedRoute._addFileChildren(AuthedRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthedRoute: AuthedRouteWithChildren,
   LicenseRoute: LicenseRoute,
-  SetupRoute: SetupRoute,
   DebugSessionStorageRoute: DebugSessionStorageRoute,
-  GameGameIdRoute: GameGameIdRoute,
   DebugVoiceChannelChannelIdRoute: DebugVoiceChannelChannelIdRoute,
 }
 export const routeTree = rootRouteImport

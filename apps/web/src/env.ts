@@ -51,8 +51,6 @@ export const env = createEnv({
     VITE_EMBEDDINGS_VERSION: import.meta.env.VITE_EMBEDDINGS_VERSION,
     VITE_BLOB_STORAGE_URL: import.meta.env.VITE_BLOB_STORAGE_URL,
     VITE_SUPPORT_URL: import.meta.env.VITE_SUPPORT_URL,
-    VITE_CAMERA_FOCUS_CONTROLS_ENABLED: import.meta.env
-      .VITE_CAMERA_FOCUS_CONTROLS_ENABLED,
   },
 
   /**
