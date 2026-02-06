@@ -37,7 +37,8 @@
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "turbo": "^2.5.8",
-    "typescript-eslint": "^8.53.0"
+    "typescript-eslint": "^8.53.0",
+    "@sentry/node": "^8.45.0"
   },
   "workspaces": {
     "packages": [

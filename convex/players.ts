@@ -22,6 +22,12 @@ import {
   RoomFullError,
   RoomNotFoundError,
 } from './errors'
+import {
+  sentryMutation,
+  sentryQuery,
+  withComputationSpan,
+  withDbSpan,
+} from './sentry'
 
 /**
  * Default starting health for Commander format
@@ -64,165 +70,217 @@ async function requireActiveRoomMember(
  * NOTE: userId is passed as parameter for Phase 3. In Phase 5, we'll use
  * getAuthUserId from Convex Auth instead.
  */
-export const joinRoom = mutation({
-  args: {
-    roomId: v.string(),
-    sessionId: v.string(),
-    username: v.string(),
-    avatar: v.optional(v.string()),
-  },
-  handler: async (ctx, { roomId, sessionId, username, avatar }) => {
-    const userId = await getAuthUserId(ctx)
-    if (!userId) {
-      throw new AuthRequiredError()
-    }
+export const joinRoom = mutation(
+  sentryMutation(
+    'players.joinRoom',
+    {
+      args: {
+        roomId: v.string(),
+        sessionId: v.string(),
+        username: v.string(),
+        avatar: v.optional(v.string()),
+      },
+      handler: async (ctx, { roomId, sessionId, username, avatar }) => {
+        const userId = await getAuthUserId(ctx)
+        if (!userId) {
+          throw new AuthRequiredError()
+        }
 
-    // Check if room exists
-    const room = await ctx.db
-      .query('rooms')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .first()
-
-    if (!room) {
-      throw new RoomNotFoundError()
-    }
-
-    // Check if user is banned
-    const ban = await ctx.db
-      .query('roomBans')
-      .withIndex('by_roomId_userId', (q) =>
-        q.eq('roomId', roomId).eq('userId', userId),
-      )
-      .first()
-
-    if (ban) {
-      throw new BannedFromRoomError()
-    }
-
-    // Check if this session already exists
-    const existingSession = await ctx.db
-      .query('roomPlayers')
-      .withIndex('by_roomId_sessionId', (q) =>
-        q.eq('roomId', roomId).eq('sessionId', sessionId),
-      )
-      .first()
-
-    const now = Date.now()
-
-    if (existingSession) {
-      // Update last seen and return
-      await ctx.db.patch(existingSession._id, {
-        lastSeenAt: now,
-        status: 'active',
-        username,
-        avatar,
-        poison: existingSession.poison ?? 0,
-        commanders: existingSession.commanders ?? [],
-        commanderDamage: existingSession.commanderDamage ?? {},
-      })
-
-      // Upsert the userActiveRooms pointer
-      const existingPointer = await ctx.db
-        .query('userActiveRooms')
-        .withIndex('by_userId', (q) => q.eq('userId', userId))
-        .first()
-
-      if (existingPointer) {
-        await ctx.db.patch(existingPointer._id, { roomId, lastSeenAt: now })
-      } else {
-        await ctx.db.insert('userActiveRooms', {
-          userId,
-          roomId,
-          lastSeenAt: now,
-        })
-      }
-
-      return { playerId: existingSession._id }
-    }
-
-    // Check if user has other sessions - get their health
-    const existingUserSession = await ctx.db
-      .query('roomPlayers')
-      .withIndex('by_roomId_userId', (q) =>
-        q.eq('roomId', roomId).eq('userId', userId),
-      )
-      .first()
-
-    // If user has no existing sessions in this room, check capacity
-    if (!existingUserSession) {
-      const presenceThreshold = now - PRESENCE_THRESHOLD_MS
-      const activePlayers = await ctx.db
-        .query('roomPlayers')
-        .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-        .filter((q) =>
-          q.and(
-            q.neq(q.field('status'), 'left'),
-            q.gt(q.field('lastSeenAt'), presenceThreshold),
-          ),
+        // Check if room exists
+        const room = await withDbSpan('rooms.by_roomId', () =>
+          ctx.db
+            .query('rooms')
+            .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+            .first(),
         )
-        .collect()
 
-      // Deduplicate by userId to count unique players
-      const uniqueUserIds = new Set<string>()
-      for (const player of activePlayers) {
-        uniqueUserIds.add(player.userId)
-      }
-      const currentPlayerCount = uniqueUserIds.size
+        if (!room) {
+          throw new RoomNotFoundError()
+        }
 
-      // Get seat count from room (defaults to 4 if not set)
-      const seatCount = room.seatCount ?? 4
+        // Check if user is banned
+        const ban = await withDbSpan('roomBans.by_roomId_userId', () =>
+          ctx.db
+            .query('roomBans')
+            .withIndex('by_roomId_userId', (q) =>
+              q.eq('roomId', roomId).eq('userId', userId),
+            )
+            .first(),
+        )
 
-      // Check if room is full
-      if (currentPlayerCount >= seatCount) {
-        throw new RoomFullError(`Room is full (Room ${roomId})`)
-      }
-    }
+        if (ban) {
+          throw new BannedFromRoomError()
+        }
 
-    const health = existingUserSession?.health ?? DEFAULT_HEALTH
-    const poison = existingUserSession?.poison ?? 0
-    const commanders = existingUserSession?.commanders ?? []
-    const commanderDamage = existingUserSession?.commanderDamage ?? {}
+        // Check if this session already exists
+        const existingSession = await withDbSpan(
+          'roomPlayers.by_roomId_sessionId',
+          () =>
+            ctx.db
+              .query('roomPlayers')
+              .withIndex('by_roomId_sessionId', (q) =>
+                q.eq('roomId', roomId).eq('sessionId', sessionId),
+              )
+              .first(),
+        )
 
-    // Create new player session
-    const playerId = await ctx.db.insert('roomPlayers', {
-      roomId,
-      userId,
-      sessionId,
-      username,
-      avatar,
-      health,
-      poison,
-      commanders,
-      commanderDamage,
-      status: 'active',
-      joinedAt: now,
-      lastSeenAt: now,
-    })
+        const now = Date.now()
 
-    // Upsert the userActiveRooms pointer
-    const existingPointer = await ctx.db
-      .query('userActiveRooms')
-      .withIndex('by_userId', (q) => q.eq('userId', userId))
-      .first()
+        if (existingSession) {
+          // Update last seen and return
+          await withDbSpan('roomPlayers.patch_existingSession', () =>
+            ctx.db.patch(existingSession._id, {
+              lastSeenAt: now,
+              status: 'active',
+              username,
+              avatar,
+              poison: existingSession.poison ?? 0,
+              commanders: existingSession.commanders ?? [],
+              commanderDamage: existingSession.commanderDamage ?? {},
+            }),
+          )
 
-    if (existingPointer) {
-      await ctx.db.patch(existingPointer._id, { roomId, lastSeenAt: now })
-    } else {
-      await ctx.db.insert('userActiveRooms', {
-        userId,
-        roomId,
-        lastSeenAt: now,
-      })
-    }
+          // Upsert the userActiveRooms pointer
+          const existingPointer = await withDbSpan(
+            'userActiveRooms.by_userId',
+            () =>
+              ctx.db
+                .query('userActiveRooms')
+                .withIndex('by_userId', (q) => q.eq('userId', userId))
+                .first(),
+          )
 
-    // Update room activity (only if this is a new user joining, not just a new session)
-    if (!existingUserSession) {
-      await ctx.db.patch(room._id, { lastActivityAt: now })
-    }
+          if (existingPointer) {
+            await withDbSpan('userActiveRooms.patch', () =>
+              ctx.db.patch(existingPointer._id, { roomId, lastSeenAt: now }),
+            )
+          } else {
+            await withDbSpan('userActiveRooms.insert', () =>
+              ctx.db.insert('userActiveRooms', {
+                userId,
+                roomId,
+                lastSeenAt: now,
+              }),
+            )
+          }
 
-    return { playerId }
-  },
-})
+          return { playerId: existingSession._id }
+        }
+
+        // Check if user has other sessions - get their health
+        const existingUserSession = await withDbSpan(
+          'roomPlayers.by_roomId_userId',
+          () =>
+            ctx.db
+              .query('roomPlayers')
+              .withIndex('by_roomId_userId', (q) =>
+                q.eq('roomId', roomId).eq('userId', userId),
+              )
+              .first(),
+        )
+
+        // If user has no existing sessions in this room, check capacity
+        if (!existingUserSession) {
+          const presenceThreshold = now - PRESENCE_THRESHOLD_MS
+          const activePlayers = await withDbSpan(
+            'roomPlayers.activePlayers',
+            () =>
+              ctx.db
+                .query('roomPlayers')
+                .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+                .filter((q) =>
+                  q.and(
+                    q.neq(q.field('status'), 'left'),
+                    q.gt(q.field('lastSeenAt'), presenceThreshold),
+                  ),
+                )
+                .collect(),
+          )
+
+          // Deduplicate by userId to count unique players
+          const currentPlayerCount = await withComputationSpan(
+            'players.count_unique_users',
+            () => {
+              const uniqueUserIds = new Set<string>()
+              for (const player of activePlayers) {
+                uniqueUserIds.add(player.userId)
+              }
+              return uniqueUserIds.size
+            },
+          )
+
+          // Get seat count from room (defaults to 4 if not set)
+          const seatCount = room.seatCount ?? 4
+
+          // Check if room is full
+          if (currentPlayerCount >= seatCount) {
+            throw new RoomFullError(`Room is full (Room ${roomId})`)
+          }
+        }
+
+        const health = existingUserSession?.health ?? DEFAULT_HEALTH
+        const poison = existingUserSession?.poison ?? 0
+        const commanders = existingUserSession?.commanders ?? []
+        const commanderDamage = existingUserSession?.commanderDamage ?? {}
+
+        // Create new player session
+        const playerId = await withDbSpan('roomPlayers.insert', () =>
+          ctx.db.insert('roomPlayers', {
+            roomId,
+            userId,
+            sessionId,
+            username,
+            avatar,
+            health,
+            poison,
+            commanders,
+            commanderDamage,
+            status: 'active',
+            joinedAt: now,
+            lastSeenAt: now,
+          }),
+        )
+
+        // Upsert the userActiveRooms pointer
+        const existingPointer = await withDbSpan(
+          'userActiveRooms.by_userId',
+          () =>
+            ctx.db
+              .query('userActiveRooms')
+              .withIndex('by_userId', (q) => q.eq('userId', userId))
+              .first(),
+        )
+
+        if (existingPointer) {
+          await withDbSpan('userActiveRooms.patch', () =>
+            ctx.db.patch(existingPointer._id, { roomId, lastSeenAt: now }),
+          )
+        } else {
+          await withDbSpan('userActiveRooms.insert', () =>
+            ctx.db.insert('userActiveRooms', {
+              userId,
+              roomId,
+              lastSeenAt: now,
+            }),
+          )
+        }
+
+        // Update room activity (only if this is a new user joining, not just a new session)
+        if (!existingUserSession) {
+          await withDbSpan('rooms.patch_lastActivity', () =>
+            ctx.db.patch(room._id, { lastActivityAt: now }),
+          )
+        }
+
+        return { playerId }
+      },
+    },
+    {
+      safeArgs: ['roomId'],
+      tags: { domain: 'players' },
+    },
+  ),
+)
 
 /**
  * Leave a room
@@ -372,44 +430,61 @@ export const heartbeat = mutation({
  * Returns players with lastSeenAt within the presence threshold,
  * deduplicated by userId (returns oldest session per user).
  */
-export const listActivePlayers = query({
-  args: { roomId: v.string() },
-  handler: async (ctx, { roomId }) => {
-    const userId = await getAuthUserId(ctx)
-    if (!userId) {
-      throw new AuthRequiredError()
-    }
+export const listActivePlayers = query(
+  sentryQuery(
+    'players.listActivePlayers',
+    {
+      args: { roomId: v.string() },
+      handler: async (ctx, { roomId }) => {
+        const userId = await getAuthUserId(ctx)
+        if (!userId) {
+          throw new AuthRequiredError()
+        }
 
-    await requireActiveRoomMember(ctx, roomId, userId)
+        await requireActiveRoomMember(ctx, roomId, userId)
 
-    const now = Date.now()
-    const presenceThreshold = now - PRESENCE_THRESHOLD_MS
+        const now = Date.now()
+        const presenceThreshold = now - PRESENCE_THRESHOLD_MS
 
-    const players = await ctx.db
-      .query('roomPlayers')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .filter((q) =>
-        q.and(
-          q.neq(q.field('status'), 'left'),
-          q.gt(q.field('lastSeenAt'), presenceThreshold),
-        ),
-      )
-      .collect()
+        const players = await withDbSpan('roomPlayers.activePlayers', () =>
+          ctx.db
+            .query('roomPlayers')
+            .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+            .filter((q) =>
+              q.and(
+                q.neq(q.field('status'), 'left'),
+                q.gt(q.field('lastSeenAt'), presenceThreshold),
+              ),
+            )
+            .collect(),
+        )
 
-    // Sort by joinedAt
-    players.sort((a, b) => a.joinedAt - b.joinedAt)
+        // Sort by joinedAt
+        players.sort((a, b) => a.joinedAt - b.joinedAt)
 
-    // Deduplicate by userId (keep oldest session)
-    const uniquePlayersMap = new Map<string, (typeof players)[number]>()
-    for (const player of players) {
-      if (!uniquePlayersMap.has(player.userId)) {
-        uniquePlayersMap.set(player.userId, player)
-      }
-    }
+        // Deduplicate by userId (keep oldest session)
+        const uniquePlayers = await withComputationSpan(
+          'players.deduplicate_active',
+          () => {
+            const uniquePlayersMap = new Map<string, (typeof players)[number]>()
+            for (const player of players) {
+              if (!uniquePlayersMap.has(player.userId)) {
+                uniquePlayersMap.set(player.userId, player)
+              }
+            }
+            return Array.from(uniquePlayersMap.values())
+          },
+        )
 
-    return Array.from(uniquePlayersMap.values())
-  },
-})
+        return uniquePlayers
+      },
+    },
+    {
+      safeArgs: ['roomId'],
+      tags: { domain: 'players' },
+    },
+  ),
+)
 
 /**
  * Get all active player sessions in a room (including duplicates per user)

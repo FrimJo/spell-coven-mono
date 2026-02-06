@@ -115,3 +115,16 @@ Convex automatically deploys when you push to production. To manually deploy:
 ```bash
 bunx convex deploy
 ```
+
+## Observability (Sentry)
+
+The backend uses Sentry for error tracking and tracing. Set the following
+environment variables in the Convex dashboard:
+
+```
+SENTRY_DSN=...
+SENTRY_ENVIRONMENT=development
+SENTRY_RELEASE=local-dev
+```
+
+Use the `triggerSentryError` mutation (development only) to verify ingestion.

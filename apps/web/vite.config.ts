@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
@@ -10,10 +11,22 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig(({ mode }) => {
   const isNotProd = mode !== 'production'
+  const release =
+    process.env.SENTRY_RELEASE ??
+    process.env.VERCEL_GIT_COMMIT_SHA ??
+    process.env.GITHUB_SHA ??
+    process.env.BUILD_NUMBER
+
+  const enableSentryUpload = Boolean(
+    process.env.SENTRY_AUTH_TOKEN &&
+      process.env.SENTRY_ORG &&
+      process.env.SENTRY_PROJECT,
+  )
 
   return {
     // 🔴 important: include the trailing slash
     base: '/',
+    envPrefix: ['VITE_', 'SENTRY_'],
     plugins: [
       viteTsConfigPaths({ projects: ['./tsconfig.json'] }),
       // mkcert is only needed for local HTTPS development
@@ -21,6 +34,17 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       tanstackStart({ spa: { enabled: true } }),
       viteReact(), // Must come after tanstackStart()
+      enableSentryUpload &&
+        sentryVitePlugin({
+          authToken: process.env.SENTRY_AUTH_TOKEN,
+          org: process.env.SENTRY_ORG,
+          project: process.env.SENTRY_PROJECT,
+          release,
+          telemetry: false,
+          sourcemaps: {
+            assets: './dist/**',
+          },
+        }),
     ].filter(Boolean),
     resolve: {
       alias: {
@@ -36,6 +60,9 @@ export default defineConfig(({ mode }) => {
     ssr: {
       external: [],
       noExternal: [],
+    },
+    build: {
+      sourcemap: true,
     },
     // (optional) if you import files from ../../packages during dev:
     preview: {
