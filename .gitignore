@@ -38,5 +38,3 @@ yarn-error.log*
 .windsurf/.windsurfstate
 
 .prettiercache
-
-bun.lock
