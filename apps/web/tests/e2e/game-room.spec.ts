@@ -231,9 +231,14 @@ test.describe('Game Room', () => {
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
-      // Share button should be visible
+      // Wait for header to be ready (share button is in header; avoids flakiness when body renders first)
+      await expect(page.getByTestId('leave-game-button')).toBeVisible({
+        timeout: 10000,
+      })
+
+      // Share button should be visible (longer timeout for slower local runs)
       const shareButton = page.getByTestId('copy-share-link-button')
-      await expect(shareButton).toBeVisible()
+      await expect(shareButton).toBeVisible({ timeout: 10000 })
     })
 
     test('should copy game room link to clipboard when clicking share button', async ({
