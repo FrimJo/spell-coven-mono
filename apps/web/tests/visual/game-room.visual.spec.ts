@@ -1,8 +1,7 @@
 import type { Page } from '@playwright/test'
-import { expect, test } from '@playwright/test'
 
+import { expect, test } from '../helpers/fixtures'
 import {
-  AUTH_STATE_PATH,
   getOrCreateRoomId,
   hasAuthStorageState,
   mockGetUserMedia,
@@ -17,7 +16,6 @@ import {
  */
 test.describe('Game Room Visual Tests', () => {
   let roomId: string
-  test.use({ storageState: AUTH_STATE_PATH })
   test.use({ permissions: ['camera', 'microphone'] })
 
   async function openCommandersPanel(page: Page): Promise<void> {
@@ -35,6 +33,7 @@ test.describe('Game Room Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
     if (!hasAuthStorageState()) {
       test.skip(
+        true,
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }

@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url'
 import type { Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 
+import { hasAuthCredentials } from './auth-storage'
+
 /**
  * Shared test utilities for e2e tests.
  * These utilities help with common testing patterns and mock setups.
@@ -36,7 +38,7 @@ export const ROOM_STATE_PATH = resolve(
  * Check whether Playwright auth storage state exists.
  */
 export function hasAuthStorageState(): boolean {
-  return existsSync(AUTH_STATE_PATH)
+  return existsSync(AUTH_STATE_PATH) || hasAuthCredentials()
 }
 
 /**
@@ -189,12 +191,25 @@ export async function navigateToTestGame(
 }
 
 /**
+ * Ensure auth state is applied by loading the app once (landing page).
+ * Use before direct page.goto() to /game/... or /setup so the _authed layout
+ * sees the Convex JWT; otherwise the first load of a protected route can
+ * show the sign-in dialog.
+ */
+export async function ensureAuthWarm(page: Page): Promise<void> {
+  await page.goto('/')
+  await expect(page.getByTestId('create-game-button')).toBeVisible({
+    timeout: 10000,
+  })
+}
+
+/**
  * Dismiss duplicate-session dialog if it appears.
  */
 export async function ensureNoDuplicateDialog(
   page: Page,
   action: 'home' | 'transfer' = 'transfer',
-  timeoutMs = 1000,
+  timeoutMs = 5000,
 ): Promise<void> {
   const duplicateDialogTitle = page.getByText('Already Connected', {
     exact: true,

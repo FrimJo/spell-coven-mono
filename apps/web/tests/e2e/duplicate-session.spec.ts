@@ -1,7 +1,5 @@
-import { expect, test } from '@playwright/test'
-
+import { expect, test } from '../helpers/fixtures'
 import {
-  AUTH_STATE_PATH,
   getRoomId,
   hasAuthStorageState,
   mockGetUserMedia,
@@ -18,18 +16,20 @@ test.describe('Duplicate Session Dialog', () => {
   test('transfer here keeps the new tab and closes the original', async ({
     browser,
     baseURL,
+    storageStatePath,
   }) => {
     if (!hasAuthStorageState()) {
       test.skip(
+        true,
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }
     if (!baseURL) {
-      test.skip('Playwright baseURL is not configured.')
+      test.skip(true, 'Playwright baseURL is not configured.')
     }
 
     const context = await browser.newContext({
-      storageState: AUTH_STATE_PATH,
+      storageState: storageStatePath,
       baseURL,
     })
     const page1 = await context.newPage()
@@ -65,18 +65,20 @@ test.describe('Duplicate Session Dialog', () => {
   test('return to home keeps the original tab connected', async ({
     browser,
     baseURL,
+    storageStatePath,
   }) => {
     if (!hasAuthStorageState()) {
       test.skip(
+        true,
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }
     if (!baseURL) {
-      test.skip('Playwright baseURL is not configured.')
+      test.skip(true, 'Playwright baseURL is not configured.')
     }
 
     const context = await browser.newContext({
-      storageState: AUTH_STATE_PATH,
+      storageState: storageStatePath,
       baseURL,
     })
     const page1 = await context.newPage()

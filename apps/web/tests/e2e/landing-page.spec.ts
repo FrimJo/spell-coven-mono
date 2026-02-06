@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
-import { expect, test } from '@playwright/test'
 
+import { expect, test } from '../helpers/fixtures'
 import { setDesktopViewport, setMobileViewport } from '../helpers/test-utils'
 
 const MTG_THEME_BRAND_COLORS = {
@@ -97,11 +97,13 @@ test.describe('Landing Page', () => {
   })
 
   test.describe('Authentication UI (unauthenticated)', () => {
-    test.use({ storageState: { cookies: [], origins: [] } })
-
     test('should display "Sign in with Discord" button when not authenticated', async ({
-      page,
+      browser,
     }) => {
+      const context = await browser.newContext({
+        storageState: { cookies: [], origins: [] },
+      })
+      const page = await context.newPage()
       await setDesktopViewport(page)
       await page.goto('/')
 
@@ -110,11 +112,16 @@ test.describe('Landing Page', () => {
         .locator('nav')
         .getByRole('button', { name: /Sign in with Discord/i })
       await expect(navSignInButton).toBeVisible()
+      await context.close()
     })
 
     test('should show Discord sign-in button in hero section', async ({
-      page,
+      browser,
     }) => {
+      const context = await browser.newContext({
+        storageState: { cookies: [], origins: [] },
+      })
+      const page = await context.newPage()
       await setDesktopViewport(page)
       await page.goto('/')
 
@@ -124,11 +131,16 @@ test.describe('Landing Page', () => {
         .getByRole('button', { name: /Sign in with Discord/i })
         .first()
       await expect(heroSignInButton).toBeVisible()
+      await context.close()
     })
 
     test('should not show Create Game / Join Game buttons when unauthenticated', async ({
-      page,
+      browser,
     }) => {
+      const context = await browser.newContext({
+        storageState: { cookies: [], origins: [] },
+      })
+      const page = await context.newPage()
       await setDesktopViewport(page)
 
       // Create Game and Join Game buttons should not be visible
@@ -139,6 +151,7 @@ test.describe('Landing Page', () => {
 
       await expect(createGameButton).not.toBeVisible()
       await expect(joinGameButton).not.toBeVisible()
+      await context.close()
     })
   })
 
@@ -365,7 +378,7 @@ test.describe('Landing Page', () => {
       }
 
       await page.reload()
-      await expectThemeApplied(page, themes[themes.length - 1])
+      await expectThemeApplied(page, themes[themes.length - 1]!)
     })
 
     test('should apply each theme from the mobile menu and persist on reload', async ({
@@ -396,7 +409,7 @@ test.describe('Landing Page', () => {
       }
 
       await page.reload()
-      await expectThemeApplied(page, themes[themes.length - 1])
+      await expectThemeApplied(page, themes[themes.length - 1]!)
     })
   })
 })

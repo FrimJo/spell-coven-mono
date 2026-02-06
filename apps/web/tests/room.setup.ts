@@ -3,14 +3,17 @@
  *
  * Creates a game room through the UI and stores the room ID for tests.
  *
- * Depends on auth.setup.ts (storage state with auth tokens).
+ * Uses per-worker auth storage state to authenticate.
  */
 
-import { existsSync } from 'fs'
 import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import { test as setup } from '@playwright/test'
 
+import {
+  ensureWorkerStorageState,
+  hasAuthCredentials,
+} from './helpers/auth-storage'
 import {
   createRoomViaUI,
   readCachedRoomId,
@@ -20,21 +23,31 @@ import {
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const STORAGE_DIR = resolve(__dirname, '../.playwright-storage')
-const AUTH_STATE_PATH = resolve(STORAGE_DIR, 'state.json')
+setup(
+  'create a game room via the landing page',
+  async ({ browser, baseURL }) => {
+    if (!hasAuthCredentials()) {
+      throw new Error(
+        'Auth env vars missing. Set E2E_AUTH_EMAIL, E2E_AUTH_PASSWORD, and VITE_CONVEX_URL.',
+      )
+    }
+    if (!baseURL) {
+      throw new Error('Playwright baseURL is not configured.')
+    }
 
-setup('create a game room via the landing page', async ({ page }) => {
-  if (!existsSync(AUTH_STATE_PATH)) {
-    throw new Error(
-      `Auth storage state not found at ${AUTH_STATE_PATH}. Run auth.setup.ts or set E2E_AUTH_EMAIL/E2E_AUTH_PASSWORD and VITE_CONVEX_URL.`,
-    )
-  }
+    const cached = readCachedRoomId()
+    if (cached) {
+      return
+    }
 
-  const cached = readCachedRoomId()
-  if (cached) {
-    return
-  }
-
-  const roomId = await createRoomViaUI(page)
-  writeRoomState(roomId)
-})
+    const storageStatePath = await ensureWorkerStorageState(0, baseURL)
+    const context = await browser.newContext({
+      storageState: storageStatePath,
+      baseURL,
+    })
+    const page = await context.newPage()
+    const roomId = await createRoomViaUI(page)
+    await context.close()
+    writeRoomState(roomId)
+  },
+)

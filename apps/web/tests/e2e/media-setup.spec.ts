@@ -1,8 +1,7 @@
-import { expect, test } from '@playwright/test'
-
+import { expect, test } from '../helpers/fixtures'
 import {
-  AUTH_STATE_PATH,
   clearStorage,
+  ensureAuthWarm,
   getMediaPreferences,
   getRoomId,
   hasAuthStorageState,
@@ -16,12 +15,12 @@ import {
  * Tests cover device selection UI, toggle behaviors, cancel flow, and persistence.
  */
 test.describe('Media Setup Page', () => {
-  test.use({ storageState: AUTH_STATE_PATH })
   test.use({ permissions: ['camera', 'microphone'] })
 
   test.beforeEach(async ({ page }) => {
     if (!hasAuthStorageState()) {
       test.skip(
+        true,
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }
@@ -32,6 +31,7 @@ test.describe('Media Setup Page', () => {
 
   test.describe('Navigation', () => {
     test('should display media setup page at /setup', async ({ page }) => {
+      await ensureAuthWarm(page)
       await page.goto('/setup')
 
       // Should show the media setup panel

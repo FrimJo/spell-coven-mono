@@ -85,7 +85,6 @@ async function signInWithPassword(
   email: string,
   password: string,
 ): Promise<{ token: string; refreshToken: string }> {
-  // Try signIn first
   try {
     const signInResult = await client.action('auth:signIn' as any, {
       provider: 'password',
@@ -96,11 +95,14 @@ async function signInWithPassword(
       .object({ token: z.string(), refreshToken: z.string() })
       .parse(signInResult.tokens)
   } catch (_error: unknown) {
-    console.warn(_error)
-    // Account might not exist, try signUp
-    throw new Error('Failed to obtain auth tokens after signIn', {
-      cause: _error,
+    const signUpResult = await client.action('auth:signIn' as any, {
+      provider: 'password',
+      params: { email, password, flow: 'signUp' },
     })
+
+    return z
+      .object({ token: z.string(), refreshToken: z.string() })
+      .parse(signUpResult.tokens)
   }
 }
 

@@ -1,9 +1,9 @@
 import type { Page } from '@playwright/test'
-import { expect, test } from '@playwright/test'
 
+import { expect, test } from '../helpers/fixtures'
 import {
-  AUTH_STATE_PATH,
   clearStorage,
+  ensureAuthWarm,
   getRoomId,
   hasAuthStorageState,
   mockGetUserMedia,
@@ -35,12 +35,12 @@ const MTG_THEME_LABELS: Record<keyof typeof MTG_THEME_BRAND_COLORS, string> = {
  */
 test.describe('Game Room', () => {
   let roomId: string
-  test.use({ storageState: AUTH_STATE_PATH })
   test.use({ permissions: ['camera', 'microphone'] })
 
   test.beforeEach(async ({ page }) => {
     if (!hasAuthStorageState()) {
       test.skip(
+        true,
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }
@@ -96,6 +96,7 @@ test.describe('Game Room', () => {
     test('should redirect to /setup when media is not configured', async ({
       page,
     }) => {
+      await ensureAuthWarm(page)
       await page.goto(`/game/${roomId}`)
 
       await expect(page).toHaveURL(
@@ -171,6 +172,7 @@ test.describe('Game Room', () => {
 
   test.describe('Header Controls', () => {
     test('should display Leave button in header', async ({ page }) => {
+      await ensureAuthWarm(page)
       await navigateToTestGame(page, roomId, {
         handleDuplicateSession: 'transfer',
       })
@@ -386,6 +388,7 @@ test.describe('Game Room', () => {
     })
 
     test('should close dialog when clicking cancel', async ({ page }) => {
+      await ensureAuthWarm(page)
       await navigateToTestGame(page, roomId, {
         handleDuplicateSession: 'transfer',
       })
@@ -512,7 +515,7 @@ test.describe('Game Room', () => {
       }
 
       await page.reload()
-      await expectThemeApplied(page, themes[themes.length - 1])
+      await expectThemeApplied(page, themes[themes.length - 1]!)
     })
   })
 })

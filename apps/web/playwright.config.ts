@@ -9,6 +9,7 @@ export default defineConfig({
   testDir: 'tests',
   testMatch: ['e2e/**/*.spec.ts', 'visual/**/*.spec.ts', '**/*.setup.ts'],
   timeout: 60_000,
+  globalTeardown: './tests/global-teardown.ts',
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -35,18 +36,12 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'auth-setup',
-      testMatch: '**/auth.setup.ts',
-    },
-    {
       name: 'room-setup',
       testMatch: '**/room.setup.ts',
       use: {
         ...devices['Desktop Chrome'],
         permissions: ['microphone', 'camera'],
-        storageState: resolve(__dirname, './.playwright-storage/state.json'),
       },
-      dependencies: ['auth-setup'],
     },
     {
       name: 'chromium',
@@ -54,7 +49,6 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         permissions: ['microphone', 'camera'],
-        storageState: resolve(__dirname, './.playwright-storage/state.json'),
       },
       dependencies: ['room-setup'],
     },

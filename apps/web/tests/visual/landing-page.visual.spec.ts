@@ -1,11 +1,12 @@
-import { expect, test } from '@playwright/test'
-
+import { expect, test } from '../helpers/fixtures'
 import { setDesktopViewport } from '../helpers/test-utils'
 
 /**
  * Visual regression tests for the landing page.
  * These tests capture and compare screenshots to detect unintended UI changes.
  */
+test.use({ useAuth: false })
+
 test.describe('Landing Page Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
     // Use unauthenticated state for consistent visuals
@@ -17,8 +18,6 @@ test.describe('Landing Page Visual Tests', () => {
   })
 
   test.describe('Full Page Screenshots', () => {
-    test.use({ storageState: { cookies: [], origins: [] } })
-
     test('landing page - full page (unauthenticated)', async ({ page }) => {
       await setDesktopViewport(page)
       await page.goto('/')
@@ -45,8 +44,6 @@ test.describe('Landing Page Visual Tests', () => {
   })
 
   test.describe('Section Screenshots', () => {
-    test.use({ storageState: { cookies: [], origins: [] } })
-
     test('header section', async ({ page }) => {
       await setDesktopViewport(page)
       await page.goto('/')

@@ -1,0 +1,20 @@
+<testsuites id="" name="" tests="2" failures="0" skipped="0" errors="0" time="4.532496999999974">
+<testsuite name="room.setup.ts" timestamp="2026-02-06T02:18:39.789Z" hostname="room-setup" tests="1" failures="0" skipped="0" time="0.002" errors="0">
+<testcase name="create a game room via the landing page" classname="room.setup.ts" time="0.002">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|test-results/room.setup.ts-create-a-game-room-via-the-landing-page-room-setup/trace.zip]]
+]]>
+</system-out>
+</testcase>
+</testsuite>
+<testsuite name="e2e/game-room.spec.ts" timestamp="2026-02-06T02:18:39.789Z" hostname="chromium" tests="1" failures="0" skipped="0" time="2.694" errors="0">
+<testcase name="Game Room › Route Access › should redirect to /setup when media is not configured" classname="e2e/game-room.spec.ts" time="2.694">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|test-results/e2e-game-room-Game-Room-Ro-1851b-hen-media-is-not-configured-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

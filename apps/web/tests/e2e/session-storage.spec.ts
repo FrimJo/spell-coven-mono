@@ -1,8 +1,7 @@
-import { expect, test } from '@playwright/test'
-
+import { expect, test } from '../helpers/fixtures'
 import {
-  AUTH_STATE_PATH,
   clearStorage,
+  ensureAuthWarm,
   getGameState,
   getMediaPreferences,
   getRoomId,
@@ -20,12 +19,12 @@ import {
  */
 test.describe('Session Storage', () => {
   let roomId: string
-  test.use({ storageState: AUTH_STATE_PATH })
   test.use({ permissions: ['camera', 'microphone'] })
 
   test.beforeEach(async ({ page }) => {
     if (!hasAuthStorageState()) {
       test.skip(
+        true,
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }
@@ -139,6 +138,7 @@ test.describe('Session Storage', () => {
     })
 
     test('should maintain game state on page refresh', async ({ page }) => {
+      await ensureAuthWarm(page)
       // Set up media preferences
       await page.addInitScript((key) => {
         localStorage.setItem(
