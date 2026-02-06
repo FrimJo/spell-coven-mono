@@ -1,6 +1,14 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { Participant } from '@/types/participant'
-import { memo, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  memo,
+  Suspense,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { usePresence } from '@/contexts/PresenceContext'
 import { useCardDetector } from '@/hooks/useCardDetector'
@@ -314,23 +322,22 @@ const TestStreamSlot = memo(function TestStreamSlot({
   const videoRef = useRef<HTMLVideoElement>(null)
   const [testStream, setTestStream] = useState<MediaStream | null>(null)
 
-  // Create the test stream on mount
-  useEffect(() => {
+  // Effect Event: create synthetic test stream (mount-only setup)
+  const initTestStream = useEffectEvent((): MediaStream => {
     console.log('[TestStreamSlot] Creating synthetic test stream')
-
-    // Create video and audio streams
     const videoStream = createSyntheticVideoStream()
     const audioStream = createSilentAudioStream()
-
-    // Combine into a single stream
     const combinedStream = new MediaStream([
       ...videoStream.getVideoTracks(),
       ...audioStream.getAudioTracks(),
     ])
-
     setTestStream(combinedStream)
+    return combinedStream
+  })
 
-    // Cleanup on unmount
+  // Create the test stream on mount
+  useEffect(() => {
+    const combinedStream = initTestStream()
     return () => {
       console.log('[TestStreamSlot] Cleaning up test stream')
       combinedStream.getTracks().forEach((track) => track.stop())

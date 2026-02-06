@@ -66,9 +66,6 @@ let detectionInterval: number | null = null
 let detectedCards: DetectedCard[] = []
 let isDetecting = false // Prevent overlapping detections
 
-// Feature flags
-let enablePerspectiveWarp = true
-
 // Current frame canvas for click handling
 let currentFrameCanvas: HTMLCanvasElement | null = null
 let currentFullResCanvas: HTMLCanvasElement | null = null

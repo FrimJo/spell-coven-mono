@@ -1,11 +1,32 @@
-import { expect, test } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
+import { expect, test } from '../helpers/fixtures'
 import {
+  clearStorage,
+  ensureAuthWarm,
+  getRoomId,
+  hasAuthStorageState,
   mockGetUserMedia,
   mockMediaDevices,
   navigateToTestGame,
-  TEST_GAME_ID,
+  setDesktopViewport,
 } from '../helpers/test-utils'
+
+const MTG_THEME_BRAND_COLORS = {
+  white: '#d4af37',
+  blue: '#1f4fd8',
+  black: '#4a2d80',
+  red: '#c62828',
+  green: '#2e7d32',
+} as const
+
+const MTG_THEME_LABELS: Record<keyof typeof MTG_THEME_BRAND_COLORS, string> = {
+  white: 'White',
+  blue: 'Blue',
+  black: 'Black',
+  red: 'Red',
+  green: 'Green',
+}
 
 /**
  * Game room e2e tests.
@@ -13,48 +34,151 @@ import {
  * Note: These tests require authentication setup as test IDs no longer bypass auth.
  */
 test.describe('Game Room', () => {
-  test.use({ permissions: ['camera'] })
+  let roomId: string
+  test.use({ permissions: ['camera', 'microphone'] })
 
   test.beforeEach(async ({ page }) => {
+    if (!hasAuthStorageState()) {
+      test.skip(
+        true,
+        'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
+      )
+    }
+    roomId = getRoomId()
     // Mock media devices before navigating
     await mockMediaDevices(page)
     await mockGetUserMedia(page)
   })
 
+  const generateRoomId = () => {
+    const base = Math.random().toString(36).toUpperCase()
+    const cleaned = base.replace(/[^A-Z0-9]/g, '')
+    return cleaned.padEnd(6, 'Z').slice(0, 6)
+  }
+
+  const findMissingRoomId = async (page: Page): Promise<string> => {
+    const maxAttempts = 5
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const candidate = generateRoomId()
+      await navigateToTestGame(page, candidate, {
+        handleDuplicateSession: 'transfer',
+      })
+
+      const notFound = page.getByText('404')
+      const gameHeader = page.getByTestId('game-id-display')
+
+      try {
+        await notFound.waitFor({ timeout: 5000 })
+        return candidate
+      } catch {
+        if (await gameHeader.isVisible()) {
+          continue
+        }
+      }
+    }
+
+    throw new Error('Failed to find a missing room ID after several attempts.')
+  }
+
   test.describe('Route Access', () => {
-    test('should load game room page for test game IDs without authentication', async ({
+    test('should show 404 for missing room even when media is not configured', async ({
       page,
     }) => {
-      await navigateToTestGame(page)
+      const missingRoomId = await findMissingRoomId(page)
+      await clearStorage(page)
+      await page.goto(`/game/${missingRoomId}`)
 
-      // Should load the game room, not redirect to home
-      await expect(page).toHaveURL(`/game/${TEST_GAME_ID}`)
-
-      // Game room should be visible (look for game ID in header)
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page).toHaveURL(`/game/${missingRoomId}`)
+      await expect(page.getByText('404')).toBeVisible({ timeout: 10000 })
     })
 
-    test('should display player name in game room', async ({ page }) => {
-      await navigateToTestGame(page)
+    test('should redirect to /setup when media is not configured', async ({
+      page,
+    }) => {
+      await ensureAuthWarm(page)
+      await page.goto(`/game/${roomId}`)
 
-      // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page).toHaveURL(
+        `/setup?returnTo=${encodeURIComponent(`/game/${roomId}`)}`,
+      )
+      await expect(page.getByText('Setup Audio & Video')).toBeVisible({
+        timeout: 10000,
+      })
+    })
 
-      // The authenticated user's name should be visible somewhere in the game room
-      // For test mode with auth, the Discord username is used
-      // Just verify the game room is loaded with player list visible
+    test('should return to game room after completing setup', async ({
+      page,
+    }) => {
+      await page.goto(`/game/${roomId}`)
+
+      await expect(page).toHaveURL(
+        `/setup?returnTo=${encodeURIComponent(`/game/${roomId}`)}`,
+      )
+
+      const completeButton = page.getByTestId('media-setup-complete-button')
+      await expect(completeButton).toBeEnabled({ timeout: 10000 })
+      await completeButton.click()
+
+      await expect(page).toHaveURL(`/game/${roomId}`)
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
+    })
+
+    test('should show 404 for a non-existent room', async ({ page }) => {
+      const missingRoomId = await findMissingRoomId(page)
+      await navigateToTestGame(page, missingRoomId, {
+        handleDuplicateSession: 'transfer',
+      })
+
+      await expect(page).toHaveURL(`/game/${missingRoomId}`)
+      await expect(page.getByText('404')).toBeVisible({ timeout: 10000 })
       await expect(
-        page.locator('[data-testid="leave-game-button"]'),
+        page.getByRole('button', { name: /Return Home/i }),
       ).toBeVisible()
+    })
+
+    test('should return to landing page when clicking "Return Home"', async ({
+      page,
+    }) => {
+      const missingRoomId = await findMissingRoomId(page)
+      await navigateToTestGame(page, missingRoomId, {
+        handleDuplicateSession: 'transfer',
+      })
+
+      await expect(page).toHaveURL(`/game/${missingRoomId}`)
+      await page.getByRole('button', { name: /Return Home/i }).click()
+
+      await expect(page).toHaveURL('/')
+    })
+
+    test('should go back to the previous page when clicking "Go Back"', async ({
+      page,
+    }) => {
+      const missingRoomId = await findMissingRoomId(page)
+
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
+      await expect(page).toHaveURL(`/game/${roomId}`)
+
+      await page.goto(`/game/${missingRoomId}`)
+      await expect(page).toHaveURL(`/game/${missingRoomId}`)
+      await expect(page.getByText('404')).toBeVisible({ timeout: 10000 })
+
+      await page.getByRole('button', { name: /Go Back/i }).click()
+      await expect(page).toHaveURL(`/game/${roomId}`)
     })
   })
 
   test.describe('Header Controls', () => {
     test('should display Leave button in header', async ({ page }) => {
-      await navigateToTestGame(page)
+      await ensureAuthWarm(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Leave button should be visible
       const leaveButton = page.getByTestId('leave-game-button')
@@ -62,19 +186,23 @@ test.describe('Game Room', () => {
     })
 
     test('should display game ID in header', async ({ page }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Game ID should be visible in header
       const gameIdDisplay = page.getByTestId('game-id-display')
       await expect(gameIdDisplay).toBeVisible({ timeout: 10000 })
-      await expect(gameIdDisplay).toContainText(TEST_GAME_ID)
+      await expect(gameIdDisplay).toContainText(roomId)
     })
 
     test('should display Settings button', async ({ page }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Settings button should be visible
       const settingsButton = page.getByTestId('settings-button')
@@ -82,40 +210,50 @@ test.describe('Game Room', () => {
     })
 
     test('should display player count', async ({ page }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
-      // Player count should be visible (format: X/4 Players)
-      await expect(page.getByText(/\d\/4 Players/)).toBeVisible()
+      // Player count should be visible in the Players sidebar header (format: X/4)
+      await expect(page.getByTestId('players-count')).toHaveText(/\d\/4/)
     })
   })
 
   test.describe('Share Link', () => {
     test('should have a share/copy button', async ({ page }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
-      // Share button should be visible
+      // Wait for header to be ready (share button is in header; avoids flakiness when body renders first)
+      await expect(page.getByTestId('leave-game-button')).toBeVisible({
+        timeout: 10000,
+      })
+
+      // Share button should be visible (longer timeout for slower local runs)
       const shareButton = page.getByTestId('copy-share-link-button')
-      await expect(shareButton).toBeVisible()
+      await expect(shareButton).toBeVisible({ timeout: 10000 })
     })
 
-    test.skip('should copy game room link to clipboard when clicking share button', async ({
+    test('should copy game room link to clipboard when clicking share button', async ({
       page,
       context,
     }) => {
-      // Skip: Dialog overlay blocks interaction in headless test environment
       // Grant clipboard permissions
       await context.grantPermissions(['clipboard-read', 'clipboard-write'])
 
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Wait for any dialogs to settle
       await page.waitForTimeout(2000)
@@ -124,23 +262,27 @@ test.describe('Game Room', () => {
       const shareButton = page.getByTestId('copy-share-link-button')
       await shareButton.click({ force: true })
 
-      // Read clipboard content
+      // Wait for clipboard to be updated
+      await page.waitForFunction(async (expected) => {
+        const text = await navigator.clipboard.readText()
+        return text.includes(expected as string)
+      }, `/game/${roomId}`)
+
       const clipboardContent = await page.evaluate(() =>
         navigator.clipboard.readText(),
       )
 
       // Should contain the game URL
-      expect(clipboardContent).toContain(`/game/${TEST_GAME_ID}`)
+      expect(clipboardContent).toContain(`/game/${roomId}`)
     })
 
-    test.skip('should show toast notification after copying', async ({
-      page,
-    }) => {
-      // Skip: Dialog overlay blocks interaction in headless test environment
-      await navigateToTestGame(page)
+    test('should show toast notification after copying', async ({ page }) => {
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Wait for any dialogs/overlays to close
       await page.waitForTimeout(1000)
@@ -155,15 +297,16 @@ test.describe('Game Room', () => {
   })
 
   test.describe('Leave Game Flow', () => {
-    // Skip these tests due to dialog overlay blocking interaction in headless test environment
     // The game room shows a connection dialog that persists during testing
-    test.skip('should open LeaveGameDialog when clicking Leave button', async ({
+    test('should open LeaveGameDialog when clicking Leave button', async ({
       page,
     }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Click Leave button
       const leaveButton = page.getByTestId('leave-game-button')
@@ -175,13 +318,15 @@ test.describe('Game Room', () => {
       ).toBeVisible()
     })
 
-    test.skip('should return to landing page when confirming leave', async ({
+    test('should return to landing page when confirming leave', async ({
       page,
     }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Click Leave button
       const leaveButton = page.getByTestId('leave-game-button')
@@ -200,13 +345,15 @@ test.describe('Game Room', () => {
       await expect(page).toHaveURL('/')
     })
 
-    test.skip('should stay in game room when canceling leave dialog', async ({
+    test('should stay in game room when canceling leave dialog', async ({
       page,
     }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Click Leave button
       const leaveButton = page.getByTestId('leave-game-button')
@@ -222,7 +369,7 @@ test.describe('Game Room', () => {
       await cancelButton.click()
 
       // Should still be on game page
-      await expect(page).toHaveURL(`/game/${TEST_GAME_ID}`)
+      await expect(page).toHaveURL(`/game/${roomId}`)
     })
   })
 
@@ -230,10 +377,12 @@ test.describe('Game Room', () => {
     test('should open MediaSetupDialog when clicking Settings button', async ({
       page,
     }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Click Settings button
       const settingsButton = page.getByTestId('settings-button')
@@ -243,12 +392,14 @@ test.describe('Game Room', () => {
       await expect(page.getByTestId('media-setup-dialog')).toBeVisible()
     })
 
-    test.skip('should close dialog when clicking cancel', async ({ page }) => {
-      // Skip: Dialog overlay blocks interaction in headless test environment
-      await navigateToTestGame(page)
+    test('should close dialog when clicking cancel', async ({ page }) => {
+      await ensureAuthWarm(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Wait for any loading dialogs to settle
       await page.waitForTimeout(2000)
@@ -277,10 +428,12 @@ test.describe('Game Room', () => {
 
   test.describe('Video Controls', () => {
     test('should have video toggle in settings dialog', async ({ page }) => {
-      await navigateToTestGame(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Open settings dialog
       const settingsButton = page.getByTestId('settings-button')
@@ -297,14 +450,13 @@ test.describe('Game Room', () => {
       await expect(videoSwitch).toBeVisible()
     })
 
-    test.skip('should have audio toggle in settings dialog', async ({
-      page,
-    }) => {
-      // Skip: Dialog overlay blocks interaction in headless test environment
-      await navigateToTestGame(page)
+    test('should have audio toggle in settings dialog', async ({ page }) => {
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
 
       // Wait for game room to load
-      await expect(page.getByText(TEST_GAME_ID)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
       // Wait for any loading dialogs to settle
       await page.waitForTimeout(2000)
@@ -322,6 +474,53 @@ test.describe('Game Room', () => {
         .getByRole('switch')
         .count()
       expect(switchCount).toBeGreaterThan(0)
+    })
+  })
+
+  test.describe('Theme Switcher', () => {
+    const themes = Object.keys(
+      MTG_THEME_BRAND_COLORS,
+    ) as (keyof typeof MTG_THEME_BRAND_COLORS)[]
+
+    const expectThemeApplied = async (
+      page: Page,
+      theme: keyof typeof MTG_THEME_BRAND_COLORS,
+    ) => {
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-mtg-theme',
+        theme,
+      )
+      const brandColor = await page.evaluate(() =>
+        getComputedStyle(document.documentElement)
+          .getPropertyValue('--brand')
+          .trim(),
+      )
+      expect(brandColor.toLowerCase()).toBe(MTG_THEME_BRAND_COLORS[theme])
+    }
+
+    test('should apply each theme from the header toggle and persist on reload', async ({
+      page,
+    }) => {
+      await setDesktopViewport(page)
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
+
+      // Wait for game room to load
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
+
+      const toggleButton = page.getByTestId('theme-toggle-button')
+
+      for (const theme of themes) {
+        await toggleButton.click()
+        await page
+          .getByRole('menuitemradio', { name: MTG_THEME_LABELS[theme] })
+          .click()
+        await expectThemeApplied(page, theme)
+      }
+
+      await page.reload()
+      await expectThemeApplied(page, themes[themes.length - 1]!)
     })
   })
 })

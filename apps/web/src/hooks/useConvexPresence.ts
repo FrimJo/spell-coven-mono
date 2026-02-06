@@ -7,7 +7,14 @@
 
 import type { Participant } from '@/types/participant'
 import type { Doc } from '@convex/_generated/dataModel'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { api } from '@convex/_generated/api'
 import { useMutation, useQuery } from 'convex/react'
 
@@ -155,18 +162,18 @@ export function useConvexPresence({
 
   const allSessionsQuery = useQuery(
     api.players.listAllPlayerSessions,
-    enabled ? { roomId: convexRoomId } : 'skip',
+    enabled && hasJoined ? { roomId: convexRoomId } : 'skip',
   )
 
   const activePlayersQuery = useQuery(
     api.players.listActivePlayers,
-    enabled ? { roomId: convexRoomId } : 'skip',
+    enabled && hasJoined ? { roomId: convexRoomId } : 'skip',
   )
 
   // Check if current user is banned (for kick vs ban detection)
   const isBannedQuery = useQuery(
     api.bans.isBanned,
-    enabled && userId ? { roomId: convexRoomId, userId } : 'skip',
+    enabled && userId ? { roomId: convexRoomId } : 'skip',
   )
 
   // Extract stable values from queries
@@ -205,6 +212,31 @@ export function useConvexPresence({
     )
   }, [allSessionsData, userId, sessionId])
 
+  // Effect Event: run removal handling with latest callbacks (avoids callback refs in deps)
+  const onRemovalDetected = useEffectEvent(() => {
+    setHasJoined(false)
+    // Check why we were removed:
+    // 1. If user has another active session → session was transferred to another tab
+    // 2. If user is banned → they were banned
+    // 3. Otherwise → they were kicked
+    if (userHasOtherActiveSession) {
+      console.log(
+        '[ConvexPresence] Session transferred - user has another active session',
+      )
+      onSessionTransferred?.()
+    } else if (isBanned) {
+      console.log(
+        '[ConvexPresence] Detected ban - session removed and user is banned',
+      )
+      onBanned?.()
+    } else {
+      console.log(
+        '[ConvexPresence] Detected kick - session removed but not banned',
+      )
+      onKicked?.()
+    }
+  })
+
   // Detect if we were kicked, banned, or had session transferred
   // Convex is the source of truth - if we joined but our session is gone, we were removed
   useEffect(() => {
@@ -213,56 +245,19 @@ export function useConvexPresence({
 
     // If we had joined but our session no longer exists, we were removed
     if (hasJoined && mySession === null) {
-      setHasJoined(false)
-
-      // Check why we were removed:
-      // 1. If user has another active session → session was transferred to another tab
-      // 2. If user is banned → they were banned
-      // 3. Otherwise → they were kicked
-      if (userHasOtherActiveSession) {
-        console.log(
-          '[ConvexPresence] Session transferred - user has another active session',
-        )
-        onSessionTransferred?.()
-      } else if (isBanned) {
-        console.log(
-          '[ConvexPresence] Detected ban - session removed and user is banned',
-        )
-        onBanned?.()
-      } else {
-        console.log(
-          '[ConvexPresence] Detected kick - session removed but not banned',
-        )
-        onKicked?.()
-      }
+      onRemovalDetected()
     }
-  }, [
-    allSessionsData,
-    hasJoined,
-    mySession,
-    isBanned,
-    isBannedQueryLoaded,
-    userHasOtherActiveSession,
-    onKicked,
-    onBanned,
-    onSessionTransferred,
-  ])
+  }, [allSessionsData, hasJoined, mySession, isBannedQueryLoaded])
 
-  // Join room on mount (when enabled)
-  useEffect(() => {
-    if (!enabled || !userId || !username || !sessionId || hasJoined) {
-      return
-    }
-
+  // Effect Event: join attempt with latest onError (avoids onError in deps)
+  const onJoinAttempt = useEffectEvent(() => {
     console.log('[ConvexPresence] Joining room:', convexRoomId)
-
     joinRoomRef
       .current({
         roomId: convexRoomId,
         sessionId,
         username,
         avatar: avatar ?? undefined,
-        userId, // Pass userId for Phase 3 (before Convex Auth migration)
       })
       .then(() => {
         console.log('[ConvexPresence] Successfully joined room')
@@ -275,38 +270,32 @@ export function useConvexPresence({
         setError(error)
         onError?.(error)
       })
-  }, [
-    enabled,
-    convexRoomId,
-    userId,
-    username,
-    avatar,
-    sessionId,
-    onError,
-    hasJoined,
-  ])
+  })
+
+  // Join room on mount (when enabled)
+  useEffect(() => {
+    if (!enabled || !userId || !username || !sessionId || hasJoined) return
+    onJoinAttempt()
+  }, [enabled, convexRoomId, userId, username, avatar, sessionId, hasJoined])
+
+  // Effect Event: leave when disabled (defers setState to avoid sync setState in effect)
+  const onLeaveWhenDisabled = useEffectEvent(() => {
+    console.log('[ConvexPresence] Leaving room (disabled)')
+    leaveRoomRef.current({ roomId: convexRoomId, sessionId }).catch((err) => {
+      console.error('[ConvexPresence] Failed to leave room:', err)
+    })
+    queueMicrotask(() => setHasJoined(false))
+  })
 
   // Leave room on unmount or when disabled
   useEffect(() => {
     if (!enabled) {
-      // If becoming disabled and we had joined, leave
-      if (hasJoined) {
-        console.log('[ConvexPresence] Leaving room (disabled)')
-        leaveRoomRef
-          .current({ roomId: convexRoomId, sessionId })
-          .catch((err) => {
-            console.error('[ConvexPresence] Failed to leave room:', err)
-          })
-
-        setHasJoined(false)
-      }
+      if (hasJoined) onLeaveWhenDisabled()
       return
     }
 
     // Cleanup on unmount
     return () => {
-      // Note: We check hasJoined but can't update state in cleanup
-      // The mutation will still fire to notify server
       if (hasJoined) {
         console.log('[ConvexPresence] Leaving room (unmount)')
         leaveRoomRef
@@ -318,10 +307,8 @@ export function useConvexPresence({
     }
   }, [enabled, convexRoomId, sessionId, hasJoined])
 
-  // Heartbeat interval to maintain presence
-  useEffect(() => {
-    if (!enabled || !hasJoined) return
-
+  // Effect Event: start heartbeat loop (reads latest roomId/sessionId when invoked)
+  const startHeartbeatLoop = useEffectEvent(() => {
     const sendHeartbeat = () => {
       console.log('[ConvexPresence] Sending heartbeat...')
       heartbeatRef
@@ -333,16 +320,15 @@ export function useConvexPresence({
           console.error('[ConvexPresence] Heartbeat failed:', err)
         })
     }
-
-    // Send initial heartbeat
     sendHeartbeat()
+    return setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS)
+  })
 
-    // Set up interval
-    const intervalId = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS)
-
-    return () => {
-      clearInterval(intervalId)
-    }
+  // Heartbeat interval to maintain presence
+  useEffect(() => {
+    if (!enabled || !hasJoined) return
+    const intervalId = startHeartbeatLoop()
+    return () => clearInterval(intervalId)
   }, [enabled, convexRoomId, sessionId, hasJoined])
 
   // Convert Convex players to Participant format

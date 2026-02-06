@@ -14,7 +14,8 @@
     "SUPABASE_SERVICE_ROLE_KEY",
     "CONVEX_DEPLOYMENT",
     "VITE_CONVEX_URL",
-    "CONVEX_DEPLOY_KEY"
+    "CONVEX_DEPLOY_KEY",
+    "CONVEX_AUTH_TEST_MODE"
   ],
   "tasks": {
     "build": {

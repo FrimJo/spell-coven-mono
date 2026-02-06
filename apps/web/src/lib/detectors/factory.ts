@@ -16,7 +16,6 @@ import {
 import { DETRDetector } from './detr-detector.js'
 import { OpenCVDetector } from './opencv-detector.js'
 import { OWLViTDetector } from './owl-vit-detector.js'
-import { SlimSAMDetector } from './slimsam-detector.js'
 import { YOLOv8Detector } from './yolov8-detector.js'
 
 /**
@@ -38,13 +37,6 @@ const DEFAULT_CONFIGS: Record<DetectorType, Partial<DetectorConfig>> = {
   'owl-vit': {
     modelId: 'Xenova/owlvit-base-patch32',
     confidenceThreshold: 0.01, // Extremely low threshold to catch all possible detections
-    detectionIntervalMs: DETECTION_INTERVAL_MS,
-    device: 'auto',
-    dtype: 'fp16',
-  },
-  slimsam: {
-    modelId: 'Xenova/slimsam-77-uniform',
-    confidenceThreshold: 0.5,
     detectionIntervalMs: DETECTION_INTERVAL_MS,
     device: 'auto',
     dtype: 'fp16',
@@ -111,9 +103,6 @@ export function createDetector(
       return new OWLViTDetector({
         ...finalConfig,
       })
-
-    case 'slimsam':
-      return new SlimSAMDetector(finalConfig)
 
     case 'yolov8':
       return new YOLOv8Detector(finalConfig)

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /**
  * Contour detection and polygon approximation
  *
@@ -231,15 +232,6 @@ export function orderQuadPoints(points: Point[]): CardQuad {
   for (const edge of edges) {
     adjacent.get(edge.i)!.push(edge.j)
     adjacent.get(edge.j)!.push(edge.i)
-  }
-
-  // Each point should have exactly 2 adjacent points (forming a quadrilateral)
-  // Find the edge lengths for each point pair
-  const getEdgeLength = (i: number, j: number): number => {
-    const edge = edges.find(
-      (e) => (e.i === i && e.j === j) || (e.i === j && e.j === i),
-    )
-    return edge ? edge.dist : 0
   }
 
   // Start from point 0, traverse the quad to get ordered points

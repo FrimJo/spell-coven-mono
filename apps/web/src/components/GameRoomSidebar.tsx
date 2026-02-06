@@ -33,6 +33,7 @@ export function SidebarCard({
   onScrollToTop,
   scrollTrigger,
   headerAction,
+  countTestId,
 }: {
   icon: React.ComponentType<{ className?: string }>
   title: string
@@ -42,6 +43,7 @@ export function SidebarCard({
   onScrollToTop?: boolean
   scrollTrigger?: number
   headerAction?: React.ReactNode
+  countTestId?: string
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const prevScrollTriggerRef = useRef(scrollTrigger ?? 0)
@@ -74,7 +76,9 @@ export function SidebarCard({
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-text-muted text-xs">{count}</span>
+          <span className="text-text-muted text-xs" data-testid={countTestId}>
+            {count}
+          </span>
           {headerAction}
         </div>
       </div>
@@ -309,7 +313,7 @@ function SidebarContent({
           seatCount={roomSeatCount}
           onChangeSeatCount={isLobbyOwner ? handleChangeSeatCount : undefined}
         />
-        <CardPreview playerName={playerName} onClose={clearResult} />
+        <CardPreview onClose={clearResult} />
         <CardHistoryList
           history={history}
           onSelect={handleHistorySelect}

@@ -786,9 +786,9 @@ export function MediaSetupPanel({
   // ───────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col">
+    <div className="flex h-full flex-col">
       {showHeader && (
-        <div className="mb-4 flex items-start justify-between">
+        <div className="mb-4 flex shrink-0 items-start justify-between">
           <div>
             <h2 className="text-text-primary text-lg font-semibold">
               Setup Audio & Video
@@ -809,7 +809,7 @@ export function MediaSetupPanel({
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className="flex-1 space-y-6 overflow-y-auto pr-1">
         {permissionError && hasPermissions && (
           <Alert className="border-destructive/30 bg-destructive/50 text-destructive-foreground">
             <AlertCircle className="text-destructive h-4 w-4" />
@@ -883,7 +883,7 @@ export function MediaSetupPanel({
                   </Select>
 
                   {/* Video Preview */}
-                  <div className="border-border-default bg-surface-0 relative aspect-video overflow-hidden rounded-lg border">
+                  <div className="border-border-default bg-surface-0 relative aspect-video max-h-[40vh] min-h-[180px] w-full overflow-hidden rounded-lg border">
                     <video
                       ref={videoRefCallback}
                       playsInline
@@ -1275,7 +1275,7 @@ export function MediaSetupPanel({
       </div>
 
       {showFooter && (
-        <div className="mt-6 flex justify-between gap-2">
+        <div className="mt-6 flex shrink-0 justify-between gap-2">
           <Button
             variant="ghost"
             onClick={handleCancel}

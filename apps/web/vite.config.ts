@@ -9,7 +9,7 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 // SPA mode - static CDN deployment
 
 export default defineConfig(({ mode }) => {
-  const isDev = mode === 'development'
+  const isNotProd = mode !== 'production'
 
   return {
     // 🔴 important: include the trailing slash
@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       viteTsConfigPaths({ projects: ['./tsconfig.json'] }),
       // mkcert is only needed for local HTTPS development
-      isDev && mkcert({ savePath: './certificates' }),
+      isNotProd && mkcert({ savePath: './certificates' }),
       tailwindcss(),
       tanstackStart({ spa: { enabled: true } }),
       viteReact(), // Must come after tanstackStart()
