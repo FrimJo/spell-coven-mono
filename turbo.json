@@ -17,7 +17,8 @@
     "CONVEX_DEPLOY_KEY",
     "CONVEX_AUTH_TEST_MODE",
     "VITE_SUPPORT_URL",
-    "VITE_THEME_TOGGLE_ENABLED"
+    "VITE_THEME_TOGGLE_ENABLED",
+    "SENTRY_AUTH_TOKEN"
   ],
   "tasks": {
     "build": {

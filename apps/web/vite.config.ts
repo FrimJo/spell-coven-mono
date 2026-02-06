@@ -8,25 +8,24 @@ import mkcert from 'vite-plugin-mkcert'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 
 // SPA mode - static CDN deployment
-
 export default defineConfig(({ mode }) => {
   const isNotProd = mode !== 'production'
   const release =
-    process.env.SENTRY_RELEASE ??
-    process.env.VERCEL_GIT_COMMIT_SHA ??
-    process.env.GITHUB_SHA ??
-    process.env.BUILD_NUMBER
+    process.env.VITE_SENTRY_RELEASE ??
+    process.env.VITE_VERCEL_GIT_COMMIT_SHA ??
+    process.env.VITE_GITHUB_SHA ??
+    process.env.VITE_BUILD_NUMBER
 
   const enableSentryUpload = Boolean(
     process.env.SENTRY_AUTH_TOKEN &&
-      process.env.SENTRY_ORG &&
-      process.env.SENTRY_PROJECT,
+      process.env.VITE_SENTRY_ORG &&
+      process.env.VITE_SENTRY_PROJECT,
   )
 
   return {
     // 🔴 important: include the trailing slash
     base: '/',
-    envPrefix: ['VITE_', 'SENTRY_'],
+    envPrefix: ['VITE_'],
     plugins: [
       viteTsConfigPaths({ projects: ['./tsconfig.json'] }),
       // mkcert is only needed for local HTTPS development
@@ -37,9 +36,11 @@ export default defineConfig(({ mode }) => {
       enableSentryUpload &&
         sentryVitePlugin({
           authToken: process.env.SENTRY_AUTH_TOKEN,
-          org: process.env.SENTRY_ORG,
-          project: process.env.SENTRY_PROJECT,
-          release,
+          org: process.env.VITE_SENTRY_ORG,
+          project: process.env.VITE_SENTRY_PROJECT,
+          release: {
+            name: release,
+          },
           telemetry: false,
           sourcemaps: {
             assets: './dist/**',

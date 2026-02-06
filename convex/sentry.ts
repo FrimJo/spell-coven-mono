@@ -14,18 +14,18 @@ const DEVELOPMENT_TRACES_SAMPLE_RATE = 1
 const SENTRY_ENVIRONMENT =
   process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? 'development'
 
-const SENTRY_RELEASE =
-  process.env.SENTRY_RELEASE ??
-  process.env.VERCEL_GIT_COMMIT_SHA ??
-  process.env.GITHUB_SHA ??
-  process.env.BUILD_NUMBER
+const VITE_SENTRY_RELEASE =
+  process.env.VITE_SENTRY_RELEASE ??
+  process.env.VITE_VERCEL_GIT_COMMIT_SHA ??
+  process.env.VITE_GITHUB_SHA ??
+  process.env.VITE_BUILD_NUMBER
 
 const IS_PRODUCTION = SENTRY_ENVIRONMENT === 'production'
 
 export const sentryConfig = {
   dsn: process.env.SENTRY_DSN,
   environment: SENTRY_ENVIRONMENT,
-  release: SENTRY_RELEASE,
+  release: VITE_SENTRY_RELEASE,
 }
 
 function parseSampleRate(value: string | undefined, fallback: number): number {

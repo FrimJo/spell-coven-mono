@@ -124,7 +124,7 @@ environment variables in the Convex dashboard:
 ```
 SENTRY_DSN=...
 SENTRY_ENVIRONMENT=development
-SENTRY_RELEASE=local-dev
+VITE_SENTRY_RELEASE=local-dev
 ```
 
 Use the `triggerSentryError` mutation (development only) to verify ingestion.

@@ -1,7 +1,6 @@
+import { env } from '@/env'
 import * as Sentry from '@sentry/react'
 import { replayIntegration } from '@sentry/replay'
-
-import { env } from '@/env'
 
 const globalForSentry = globalThis as typeof globalThis & {
   __spellCovenSentryInitialized?: boolean
@@ -99,7 +98,7 @@ export function initializeSentry() {
   const environment =
     import.meta.env.SENTRY_ENVIRONMENT ?? import.meta.env.MODE ?? 'development'
   const release =
-    import.meta.env.SENTRY_RELEASE ?? import.meta.env.VITE_SENTRY_RELEASE
+    import.meta.env.VITE_SENTRY_RELEASE ?? import.meta.env.VITE_SENTRY_RELEASE
   const isProduction = import.meta.env.PROD
   const dsn = import.meta.env.SENTRY_DSN
 
@@ -134,7 +133,9 @@ export function initializeSentry() {
     integrations,
     tracesSampleRate: parseSampleRate(
       import.meta.env.SENTRY_TRACES_SAMPLE_RATE,
-      isProduction ? DEFAULT_TRACES_SAMPLE_RATE : DEVELOPMENT_TRACES_SAMPLE_RATE,
+      isProduction
+        ? DEFAULT_TRACES_SAMPLE_RATE
+        : DEVELOPMENT_TRACES_SAMPLE_RATE,
     ),
     replaysSessionSampleRate: isProduction
       ? parseSampleRate(

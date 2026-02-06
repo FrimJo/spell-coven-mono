@@ -8,27 +8,27 @@ separation, session replay, source maps upload, and data scrubbing.
 
 ### Required (all environments)
 
-| Variable | Description |
-| --- | --- |
-| `SENTRY_DSN` | Sentry DSN used by both the Convex backend and the web client. |
-| `SENTRY_ENVIRONMENT` | Environment name (`development`, `staging`, `production`). Defaults to `development` locally. |
-| `SENTRY_RELEASE` | Release identifier shared across backend and frontend (use git SHA or CI build number). |
+| Variable              | Description                                                                                   |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| `SENTRY_DSN`          | Sentry DSN used by both the Convex backend and the web client.                                |
+| `SENTRY_ENVIRONMENT`  | Environment name (`development`, `staging`, `production`). Defaults to `development` locally. |
+| `VITE_SENTRY_RELEASE` | Release identifier shared across backend and frontend (use git SHA or CI build number).       |
 
 ### Optional tuning
 
-| Variable | Description | Default |
-| --- | --- | --- |
-| `SENTRY_TRACES_SAMPLE_RATE` | Overrides tracing sample rate for both backend and web. | `1` in development, `0.2` in production |
-| `SENTRY_REPLAY_SESSION_SAMPLE_RATE` | Web session replay sampling in production. | `0.05` |
-| `SENTRY_REPLAY_ERROR_SAMPLE_RATE` | Web replay sampling for error sessions in production. | `1` |
+| Variable                            | Description                                             | Default                                 |
+| ----------------------------------- | ------------------------------------------------------- | --------------------------------------- |
+| `SENTRY_TRACES_SAMPLE_RATE`         | Overrides tracing sample rate for both backend and web. | `1` in development, `0.2` in production |
+| `SENTRY_REPLAY_SESSION_SAMPLE_RATE` | Web session replay sampling in production.              | `0.05`                                  |
+| `SENTRY_REPLAY_ERROR_SAMPLE_RATE`   | Web replay sampling for error sessions in production.   | `1`                                     |
 
 ### CI-only (source maps)
 
-| Variable | Description |
-| --- | --- |
-| `SENTRY_AUTH_TOKEN` | Auth token used by the Sentry Vite plugin for source map upload. |
-| `SENTRY_ORG` | Sentry org slug. |
-| `SENTRY_PROJECT` | Sentry project slug for the web client. |
+| Variable              | Description                                                      |
+| --------------------- | ---------------------------------------------------------------- |
+| `SENTRY_AUTH_TOKEN`   | Auth token used by the Sentry Vite plugin for source map upload. |
+| `VITE_SENTRY_ORG`     | Sentry org slug.                                                 |
+| `VITE_SENTRY_PROJECT` | Sentry project slug for the web client.                          |
 
 ## Local setup
 
@@ -37,7 +37,7 @@ separation, session replay, source maps upload, and data scrubbing.
    ```bash
    SENTRY_DSN=...
    SENTRY_ENVIRONMENT=development
-   SENTRY_RELEASE=local-dev
+   VITE_SENTRY_RELEASE=local-dev
    ```
 
 2. Start Convex and the web app as usual. Both will initialize Sentry automatically when the DSN is
@@ -46,14 +46,14 @@ separation, session replay, source maps upload, and data scrubbing.
 ## CI setup for source maps
 
 The web build uses `@sentry/vite-plugin` to upload source maps when the CI environment provides
-`SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT`.
+`SENTRY_AUTH_TOKEN`, `VITE_SENTRY_ORG`, and `VITE_SENTRY_PROJECT`.
 
 Recommended steps in your CI workflow:
 
 1. Export release metadata (shared across backend + web):
 
    ```bash
-   export SENTRY_RELEASE=${GITHUB_SHA}
+   export VITE_SENTRY_RELEASE=${VITE_GITHUB_SHA}
    export SENTRY_ENVIRONMENT=production
    ```
 
@@ -61,8 +61,8 @@ Recommended steps in your CI workflow:
 
    ```bash
    export SENTRY_AUTH_TOKEN=...
-   export SENTRY_ORG=your-org
-   export SENTRY_PROJECT=spell-coven-web
+   export VITE_SENTRY_ORG=your-org
+   export VITE_SENTRY_PROJECT=spell-coven-web
    ```
 
 3. Run the web build (`bun run build` in `apps/web`). The plugin uploads the source maps.
@@ -92,7 +92,7 @@ Create Sentry alerts for:
 
 ## Verification checklist
 
-- [ ] Confirm `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, and `SENTRY_RELEASE` are set in local dev.
+- [ ] Confirm `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, and `VITE_SENTRY_RELEASE` are set in local dev.
 - [ ] Trigger `/debug/sentry` and verify events in the Sentry project.
 - [ ] Call `triggerSentryError` in Convex to verify backend ingestion.
 - [ ] Validate release tags match across backend and web.
