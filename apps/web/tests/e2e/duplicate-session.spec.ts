@@ -1,4 +1,3 @@
-import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
 import {
@@ -14,18 +13,6 @@ import {
  * Duplicate session dialog e2e tests.
  */
 test.describe('Duplicate Session Dialog', () => {
-  async function ensureNoDuplicateDialog(page: Page): Promise<void> {
-    const dialogTitle = page.getByText('Already Connected', { exact: true })
-    const dialogVisible = await dialogTitle
-      .waitFor({ state: 'visible', timeout: 1000 })
-      .then(() => true)
-      .catch(() => false)
-    if (dialogVisible) {
-      await page.getByRole('button', { name: 'Transfer here' }).click()
-      await expect(dialogTitle).toBeHidden({ timeout: 10000 })
-    }
-  }
-
   test.use({ permissions: ['camera', 'microphone'] })
 
   test('transfer here keeps the new tab and closes the original', async ({
@@ -55,11 +42,12 @@ test.describe('Duplicate Session Dialog', () => {
 
     const roomId = getRoomId()
 
-    await navigateToTestGame(page1, roomId)
+    await navigateToTestGame(page1, roomId, {
+      handleDuplicateSession: 'transfer',
+    })
     await expect(page1.getByTestId('leave-game-button')).toBeVisible({
       timeout: 10000,
     })
-    await ensureNoDuplicateDialog(page1)
     await navigateToTestGame(page2, roomId)
 
     const dialogTitle = page2.getByText('Already Connected', { exact: true })
@@ -101,11 +89,12 @@ test.describe('Duplicate Session Dialog', () => {
 
     const roomId = getRoomId()
 
-    await navigateToTestGame(page1, roomId)
+    await navigateToTestGame(page1, roomId, {
+      handleDuplicateSession: 'transfer',
+    })
     await expect(page1.getByTestId('leave-game-button')).toBeVisible({
       timeout: 10000,
     })
-    await ensureNoDuplicateDialog(page1)
     await navigateToTestGame(page2, roomId)
 
     const dialogTitle = page2.getByText('Already Connected', { exact: true })
@@ -115,8 +104,6 @@ test.describe('Duplicate Session Dialog', () => {
 
     await expect(page2).toHaveURL(/\/$/, { timeout: 10000 })
     await expect(page1).toHaveURL(new RegExp(`/game/${roomId}$`))
-
-    await ensureNoDuplicateDialog(page1)
 
     await context.close()
   })

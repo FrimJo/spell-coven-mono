@@ -7,6 +7,7 @@ import {
   mockGetUserMedia,
   mockMediaDevices,
   navigateToTestGame,
+  readCachedRoomId,
 } from '../helpers/test-utils'
 
 /**
@@ -25,7 +26,11 @@ test.describe('Game Room Visual Tests', () => {
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }
-    roomId = getRoomId()
+    const cachedRoomId = readCachedRoomId()
+    if (!cachedRoomId) {
+      test.skip('Room state missing. Run room.setup.ts first.')
+    }
+    roomId = cachedRoomId ?? getRoomId()
     // Mock media devices before navigating
     await mockMediaDevices(page)
     await mockGetUserMedia(page)

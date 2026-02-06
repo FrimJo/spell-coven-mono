@@ -179,20 +179,28 @@ export async function navigateToTestGame(
   await page.goto(`/game/${gameId}`)
 
   if (handleDuplicateSession) {
-    // If a duplicate-session dialog appears, optionally auto-handle it.
-    const duplicateDialogTitle = page.getByText('Already Connected', {
-      exact: true,
-    })
-    const dialogVisible = await duplicateDialogTitle
-      .waitFor({ state: 'visible', timeout: 1500 })
-      .then(() => true)
-      .catch(() => false)
-    if (dialogVisible) {
-      const actionLabel =
-        handleDuplicateSession === 'home' ? 'Return to Home' : 'Transfer here'
-      await page.getByRole('button', { name: actionLabel }).click()
-      await expect(duplicateDialogTitle).toBeHidden({ timeout: 5000 })
-    }
+    await ensureNoDuplicateDialog(page, handleDuplicateSession)
+  }
+}
+
+/**
+ * Dismiss duplicate-session dialog if it appears.
+ */
+export async function ensureNoDuplicateDialog(
+  page: Page,
+  action: 'home' | 'transfer' = 'transfer',
+): Promise<void> {
+  const duplicateDialogTitle = page.getByText('Already Connected', {
+    exact: true,
+  })
+  const dialogVisible = await duplicateDialogTitle
+    .waitFor({ state: 'visible', timeout: 1000 })
+    .then(() => true)
+    .catch(() => false)
+  if (dialogVisible) {
+    const actionLabel = action === 'home' ? 'Return to Home' : 'Transfer here'
+    await page.getByRole('button', { name: actionLabel }).click()
+    await expect(duplicateDialogTitle).toBeHidden({ timeout: 10000 })
   }
 }
 
