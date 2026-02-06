@@ -15,7 +15,9 @@
     "CONVEX_DEPLOYMENT",
     "VITE_CONVEX_URL",
     "CONVEX_DEPLOY_KEY",
-    "CONVEX_AUTH_TEST_MODE"
+    "CONVEX_AUTH_TEST_MODE",
+    "VITE_SUPPORT_URL",
+    "VITE_THEME_TOGGLE_ENABLED"
   ],
   "tasks": {
     "build": {
