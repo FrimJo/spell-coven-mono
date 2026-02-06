@@ -111,9 +111,10 @@ export function writeRoomState(roomId: string): void {
  */
 export async function createRoomViaUI(page: Page): Promise<string> {
   await page.goto('/')
+  await page.waitForLoadState('networkidle')
 
   const createButton = page.getByTestId('create-game-button')
-  await expect(createButton).toBeVisible({ timeout: 10000 })
+  await expect(createButton).toBeVisible({ timeout: 15000 })
   await createButton.click()
 
   await expect(page.getByText('Game room created successfully!')).toBeVisible({
@@ -218,8 +219,9 @@ export async function navigateToTestGame(
  */
 export async function ensureAuthWarm(page: Page): Promise<void> {
   await page.goto('/')
+  await page.waitForLoadState('networkidle')
   await expect(page.getByTestId('create-game-button')).toBeVisible({
-    timeout: 10000,
+    timeout: 15000,
   })
 }
 

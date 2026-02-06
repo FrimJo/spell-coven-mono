@@ -14,9 +14,8 @@ test.describe('Duplicate Session Dialog', () => {
   test.use({ permissions: ['camera', 'microphone'] })
 
   test('transfer here keeps the new tab and closes the original', async ({
-    browser,
-    baseURL,
-    storageStatePath,
+    page: page1,
+    context,
   }) => {
     if (!hasAuthStorageState()) {
       test.skip(
@@ -24,15 +23,7 @@ test.describe('Duplicate Session Dialog', () => {
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }
-    if (!baseURL) {
-      test.skip(true, 'Playwright baseURL is not configured.')
-    }
 
-    const context = await browser.newContext({
-      storageState: storageStatePath,
-      baseURL,
-    })
-    const page1 = await context.newPage()
     const page2 = await context.newPage()
 
     await mockMediaDevices(page1)
@@ -45,6 +36,8 @@ test.describe('Duplicate Session Dialog', () => {
     await navigateToTestGame(page1, roomId, {
       handleDuplicateSession: 'transfer',
     })
+    // Wait for game room to load before checking header controls
+    await expect(page1.getByText(roomId)).toBeVisible({ timeout: 10000 })
     await expect(page1.getByTestId('leave-game-button')).toBeVisible({
       timeout: 10000,
     })
@@ -58,14 +51,11 @@ test.describe('Duplicate Session Dialog', () => {
 
     await expect(page2).toHaveURL(new RegExp(`/game/${roomId}$`))
     await expect(page1).toHaveURL(/\/$/, { timeout: 10000 })
-
-    await context.close()
   })
 
   test('return to home keeps the original tab connected', async ({
-    browser,
-    baseURL,
-    storageStatePath,
+    page: page1,
+    context,
   }) => {
     if (!hasAuthStorageState()) {
       test.skip(
@@ -73,15 +63,7 @@ test.describe('Duplicate Session Dialog', () => {
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }
-    if (!baseURL) {
-      test.skip(true, 'Playwright baseURL is not configured.')
-    }
 
-    const context = await browser.newContext({
-      storageState: storageStatePath,
-      baseURL,
-    })
-    const page1 = await context.newPage()
     const page2 = await context.newPage()
 
     await mockMediaDevices(page1)
@@ -94,6 +76,8 @@ test.describe('Duplicate Session Dialog', () => {
     await navigateToTestGame(page1, roomId, {
       handleDuplicateSession: 'transfer',
     })
+    // Wait for game room to load before checking header controls
+    await expect(page1.getByText(roomId)).toBeVisible({ timeout: 10000 })
     await expect(page1.getByTestId('leave-game-button')).toBeVisible({
       timeout: 10000,
     })
@@ -106,7 +90,5 @@ test.describe('Duplicate Session Dialog', () => {
 
     await expect(page2).toHaveURL(/\/$/, { timeout: 10000 })
     await expect(page1).toHaveURL(new RegExp(`/game/${roomId}$`))
-
-    await context.close()
   })
 })

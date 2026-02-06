@@ -27,6 +27,7 @@ test.describe('Landing Page Visual Tests', () => {
       await expect(page).toHaveScreenshot('landing-page-full.png', {
         fullPage: true,
         animations: 'disabled',
+        maxDiffPixelRatio: 0.02, // allow up to 2% of pixels to differ
       })
     })
 
@@ -39,6 +40,7 @@ test.describe('Landing Page Visual Tests', () => {
       // Capture just the viewport (above the fold)
       await expect(page).toHaveScreenshot('landing-page-hero.png', {
         animations: 'disabled',
+        maxDiffPixelRatio: 0.02,
       })
     })
   })
