@@ -237,6 +237,8 @@ export function PlayerList({
                       variant="ghost"
                       size="sm"
                       className="text-text-muted hover:bg-surface-3 hover:text-text-secondary h-6 w-6 p-0"
+                      aria-label="Player actions"
+                      data-testid="player-actions-button"
                     >
                       <MoreVertical className="h-3 w-3" />
                     </Button>
@@ -250,6 +252,7 @@ export function PlayerList({
                         onClick={() => onViewCommanders(player.id)}
                         className="text-text-secondary focus:bg-surface-3 focus:text-white"
                         title="View and edit commanders"
+                        data-testid="player-commanders-menu-item"
                       >
                         <Swords className="mr-2 h-4 w-4" />
                         Commanders

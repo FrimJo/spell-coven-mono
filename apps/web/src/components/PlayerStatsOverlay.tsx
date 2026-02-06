@@ -200,7 +200,10 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
 
   return (
     <>
-      <div className="hover:border-surface-2 hover:bg-surface-0/90 group absolute left-3 top-3 z-10 flex flex-col gap-1.5 rounded-lg border border-transparent bg-transparent p-2 transition-all hover:backdrop-blur-sm">
+      <div
+        className="hover:border-surface-2 hover:bg-surface-0/90 group absolute left-3 top-3 z-10 flex flex-col gap-1.5 rounded-lg border border-transparent bg-transparent p-2 transition-all hover:backdrop-blur-sm"
+        data-testid="player-stats-overlay"
+      >
         {/* Life */}
         <div className="flex items-center justify-between gap-3">
           <div className="text-destructive flex items-center gap-1.5">

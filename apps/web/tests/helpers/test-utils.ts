@@ -102,7 +102,7 @@ export async function createRoomViaUI(page: Page): Promise<string> {
   const shareLinkText = (await shareLinkLocator.first().textContent()) ?? ''
   const match = shareLinkText.match(/\/game\/([A-Z0-9]{6})/)
 
-  if (!match) {
+  if (!match?.[1]) {
     throw new Error(
       `Room creation failed to capture game ID from: "${shareLinkText}"`,
     )
@@ -142,6 +142,7 @@ export async function navigateToTestGame(
   options?: {
     ensureMediaSetup?: boolean
     handleDuplicateSession?: 'transfer' | 'home'
+    timeoutMs?: number
   },
 ): Promise<void> {
   const ensureMediaSetup = options?.ensureMediaSetup ?? true
@@ -179,7 +180,11 @@ export async function navigateToTestGame(
   await page.goto(`/game/${gameId}`)
 
   if (handleDuplicateSession) {
-    await ensureNoDuplicateDialog(page, handleDuplicateSession)
+    await ensureNoDuplicateDialog(
+      page,
+      handleDuplicateSession,
+      options?.timeoutMs,
+    )
   }
 }
 
@@ -189,12 +194,13 @@ export async function navigateToTestGame(
 export async function ensureNoDuplicateDialog(
   page: Page,
   action: 'home' | 'transfer' = 'transfer',
+  timeoutMs = 1000,
 ): Promise<void> {
   const duplicateDialogTitle = page.getByText('Already Connected', {
     exact: true,
   })
   const dialogVisible = await duplicateDialogTitle
-    .waitFor({ state: 'visible', timeout: 1000 })
+    .waitFor({ state: 'visible', timeout: timeoutMs })
     .then(() => true)
     .catch(() => false)
   if (dialogVisible) {

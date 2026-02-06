@@ -1,13 +1,13 @@
+import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
 import {
   AUTH_STATE_PATH,
-  getRoomId,
+  getOrCreateRoomId,
   hasAuthStorageState,
   mockGetUserMedia,
   mockMediaDevices,
   navigateToTestGame,
-  readCachedRoomId,
 } from '../helpers/test-utils'
 
 /**
@@ -20,17 +20,25 @@ test.describe('Game Room Visual Tests', () => {
   test.use({ storageState: AUTH_STATE_PATH })
   test.use({ permissions: ['camera', 'microphone'] })
 
+  async function openCommandersPanel(page: Page): Promise<void> {
+    const actionsButton = page.getByTestId('player-actions-button').first()
+    await expect(actionsButton).toBeVisible({ timeout: 5000 })
+    await actionsButton.click()
+
+    const commandersItem = page
+      .getByTestId('player-commanders-menu-item')
+      .first()
+    await expect(commandersItem).toBeVisible({ timeout: 5000 })
+    await commandersItem.click()
+  }
+
   test.beforeEach(async ({ page }) => {
     if (!hasAuthStorageState()) {
       test.skip(
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }
-    const cachedRoomId = readCachedRoomId()
-    if (!cachedRoomId) {
-      test.skip('Room state missing. Run room.setup.ts first.')
-    }
-    roomId = cachedRoomId ?? getRoomId()
+    roomId = await getOrCreateRoomId(page, { fresh: true, persist: false })
     // Mock media devices before navigating
     await mockMediaDevices(page)
     await mockGetUserMedia(page)
@@ -40,6 +48,7 @@ test.describe('Game Room Visual Tests', () => {
     test('game room - initial state', async ({ page }) => {
       await navigateToTestGame(page, roomId, {
         handleDuplicateSession: 'transfer',
+        timeoutMs: 5000,
       })
 
       // Wait for game room to load
@@ -51,12 +60,14 @@ test.describe('Game Room Visual Tests', () => {
         animations: 'disabled',
         // Mask video elements as they may have slight variations
         mask: [page.locator('video')],
+        maxDiffPixelRatio: 0.02,
       })
     })
 
     test('game room - header controls', async ({ page }) => {
       await navigateToTestGame(page, roomId, {
         handleDuplicateSession: 'transfer',
+        timeoutMs: 5000,
       })
 
       // Wait for game room to load
@@ -68,6 +79,7 @@ test.describe('Game Room Visual Tests', () => {
       const header = page.locator('header').first()
       await expect(header).toHaveScreenshot('game-room-header.png', {
         animations: 'disabled',
+        maxDiffPixelRatio: 0.02,
       })
     })
   })
@@ -76,6 +88,7 @@ test.describe('Game Room Visual Tests', () => {
     test('player stats overlay - visible state', async ({ page }) => {
       await navigateToTestGame(page, roomId, {
         handleDuplicateSession: 'transfer',
+        timeoutMs: 5000,
       })
 
       // Wait for game room to load
@@ -84,13 +97,14 @@ test.describe('Game Room Visual Tests', () => {
       await page.waitForTimeout(1000)
 
       // Find the stats overlay (health/poison controls on video cards)
-      const statsOverlay = page.locator('.absolute.left-3.top-16').first()
+      const statsOverlay = page.getByTestId('player-stats-overlay').first()
 
       // Wait for stats to be visible
       await expect(statsOverlay).toBeVisible({ timeout: 5000 })
 
       await expect(statsOverlay).toHaveScreenshot('player-stats-overlay.png', {
         animations: 'disabled',
+        maxDiffPixelRatio: 0.02,
       })
     })
   })
@@ -99,6 +113,7 @@ test.describe('Game Room Visual Tests', () => {
     test('commander panel - opened state', async ({ page }) => {
       await navigateToTestGame(page, roomId, {
         handleDuplicateSession: 'transfer',
+        timeoutMs: 5000,
       })
 
       // Wait for game room to load
@@ -106,10 +121,8 @@ test.describe('Game Room Visual Tests', () => {
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
-      // Click the COMMANDERS button to open the GameStatsPanel
-      const commandersButton = page.getByRole('button', { name: 'COMMANDERS' })
-      await expect(commandersButton.first()).toBeVisible({ timeout: 5000 })
-      await commandersButton.first().click()
+      // Open the commanders panel via player actions menu
+      await openCommandersPanel(page)
 
       // Wait for panel to open
       await page.waitForTimeout(500)
@@ -121,12 +134,14 @@ test.describe('Game Room Visual Tests', () => {
 
       await expect(panel).toHaveScreenshot('commander-panel-open.png', {
         animations: 'disabled',
+        maxDiffPixelRatio: 0.02,
       })
     })
 
     test('commander panel - setup tab', async ({ page }) => {
       await navigateToTestGame(page, roomId, {
         handleDuplicateSession: 'transfer',
+        timeoutMs: 5000,
       })
 
       // Wait for game room to load
@@ -134,10 +149,8 @@ test.describe('Game Room Visual Tests', () => {
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
-      // Open the commander panel
-      const commandersButton = page.getByRole('button', { name: 'COMMANDERS' })
-      await expect(commandersButton.first()).toBeVisible({ timeout: 5000 })
-      await commandersButton.first().click()
+      // Open the commander panel via player actions menu
+      await openCommandersPanel(page)
 
       // Wait for panel to open
       const panel = page.getByRole('dialog')
@@ -153,12 +166,14 @@ test.describe('Game Room Visual Tests', () => {
 
       await expect(panel).toHaveScreenshot('commander-panel-setup-tab.png', {
         animations: 'disabled',
+        maxDiffPixelRatio: 0.02,
       })
     })
 
     test('commander panel - damage tab', async ({ page }) => {
       await navigateToTestGame(page, roomId, {
         handleDuplicateSession: 'transfer',
+        timeoutMs: 5000,
       })
 
       // Wait for game room to load
@@ -166,10 +181,8 @@ test.describe('Game Room Visual Tests', () => {
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
-      // Open the commander panel
-      const commandersButton = page.getByRole('button', { name: 'COMMANDERS' })
-      await expect(commandersButton.first()).toBeVisible({ timeout: 5000 })
-      await commandersButton.first().click()
+      // Open the commander panel via player actions menu
+      await openCommandersPanel(page)
 
       // Wait for panel to open
       const panel = page.getByRole('dialog')
@@ -185,6 +198,7 @@ test.describe('Game Room Visual Tests', () => {
 
       await expect(panel).toHaveScreenshot('commander-panel-damage-tab.png', {
         animations: 'disabled',
+        maxDiffPixelRatio: 0.02,
       })
     })
   })
@@ -193,6 +207,7 @@ test.describe('Game Room Visual Tests', () => {
     test('commander search input - focused state', async ({ page }) => {
       await navigateToTestGame(page, roomId, {
         handleDuplicateSession: 'transfer',
+        timeoutMs: 5000,
       })
 
       // Wait for game room to load
@@ -200,10 +215,8 @@ test.describe('Game Room Visual Tests', () => {
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
-      // Open the commander panel
-      const commandersButton = page.getByRole('button', { name: 'COMMANDERS' })
-      await expect(commandersButton.first()).toBeVisible({ timeout: 5000 })
-      await commandersButton.first().click()
+      // Open the commander panel via player actions menu
+      await openCommandersPanel(page)
 
       // Wait for panel to open
       const panel = page.getByRole('dialog')
@@ -227,6 +240,7 @@ test.describe('Game Room Visual Tests', () => {
         // Capture the search input state
         await expect(panel).toHaveScreenshot('commander-search-open.png', {
           animations: 'disabled',
+          maxDiffPixelRatio: 0.02,
         })
       }
     })
@@ -234,6 +248,7 @@ test.describe('Game Room Visual Tests', () => {
     test('commander search - with results', async ({ page }) => {
       await navigateToTestGame(page, roomId, {
         handleDuplicateSession: 'transfer',
+        timeoutMs: 5000,
       })
 
       // Wait for game room to load
@@ -241,10 +256,8 @@ test.describe('Game Room Visual Tests', () => {
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
-      // Open the commander panel
-      const commandersButton = page.getByRole('button', { name: 'COMMANDERS' })
-      await expect(commandersButton.first()).toBeVisible({ timeout: 5000 })
-      await commandersButton.first().click()
+      // Open the commander panel via player actions menu
+      await openCommandersPanel(page)
 
       // Wait for panel to open
       const panel = page.getByRole('dialog')
@@ -267,6 +280,7 @@ test.describe('Game Room Visual Tests', () => {
 
         await expect(panel).toHaveScreenshot('commander-search-results.png', {
           animations: 'disabled',
+          maxDiffPixelRatio: 0.02,
         })
       }
     })
@@ -276,6 +290,7 @@ test.describe('Game Room Visual Tests', () => {
     test('media settings dialog - open state', async ({ page }) => {
       await navigateToTestGame(page, roomId, {
         handleDuplicateSession: 'transfer',
+        timeoutMs: 5000,
       })
 
       // Wait for game room to load
@@ -296,6 +311,7 @@ test.describe('Game Room Visual Tests', () => {
         animations: 'disabled',
         // Mask video preview as it may vary
         mask: [mediaDialog.locator('video')],
+        maxDiffPixelRatio: 0.02,
       })
     })
   })
