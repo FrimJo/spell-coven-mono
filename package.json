@@ -11,7 +11,7 @@
     "build": "bunx turbo run build",
     "dev": "bunx turbo run dev",
     "convex:dev": "bunx convex dev",
-    "convex:test": "CONVEX_DEPLOYMENT=local:local-ifrim-spell_coven_mono CONVEX_URL=http://127.0.0.1:3210 bun run convex:dev -- --local",
+    "convex:test": "CONVEX_DEPLOYMENT= CONVEX_AUTH_TEST_MODE=true CONVEX_URL=http://127.0.0.1:3210 bun run convex:dev -- --local",
     "test": "bunx turbo run test",
     "lint": "bunx turbo run lint",
     "lint:fix": "bunx turbo run lint -- --fix",
