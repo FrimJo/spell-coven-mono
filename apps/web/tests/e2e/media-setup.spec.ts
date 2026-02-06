@@ -21,7 +21,7 @@ test.describe('Media Setup Page', () => {
 
   test.beforeEach(async ({ page }) => {
     if (!hasAuthStorageState()) {
-      test(
+      test.skip(
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }
@@ -231,7 +231,7 @@ test.describe('Media Setup Page', () => {
     }) => {
       await page.goto('/setup')
 
-      // Clear storage first
+      // Clear storage first (preserve auth)
       await clearStorage(page)
 
       // Wait for page to load
@@ -243,8 +243,16 @@ test.describe('Media Setup Page', () => {
       const videoSwitch = page.getByRole('switch').first()
       await videoSwitch.click()
 
-      // Wait for preference to be saved
-      await page.waitForTimeout(1000)
+      // Wait for stream to initialize and permissions to be granted
+      await page.waitForTimeout(2000)
+
+      // Complete setup to commit preferences to localStorage
+      const completeButton = page.getByTestId('media-setup-complete-button')
+      await expect(completeButton).toBeEnabled({ timeout: 10000 })
+      await completeButton.click()
+
+      // Wait for navigation after completion
+      await expect(page).toHaveURL('/')
 
       // Check localStorage
       const prefs = await getMediaPreferences(page)

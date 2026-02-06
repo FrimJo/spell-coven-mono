@@ -80,10 +80,7 @@ test.describe('Session Storage', () => {
       expect(gameState).not.toBeNull()
     })
 
-    test.skip('should clear game state when leaving a game', async ({
-      page,
-    }) => {
-      // Skip: Dialog overlay blocks interaction in headless test environment
+    test('should clear game state when leaving a game', async ({ page }) => {
       // Set up media preferences
       await page.addInitScript((key) => {
         localStorage.setItem(
@@ -100,6 +97,8 @@ test.describe('Session Storage', () => {
       // Pre-populate game state
       await page.addInitScript(
         ({ gameId, key }) => {
+          const seedKey = '__e2e_game_state_seeded'
+          if (sessionStorage.getItem(seedKey)) return
           sessionStorage.setItem(
             key,
             JSON.stringify({
@@ -108,6 +107,7 @@ test.describe('Session Storage', () => {
               timestamp: Date.now(),
             }),
           )
+          sessionStorage.setItem(seedKey, 'true')
         },
         { gameId: roomId, key: STORAGE_KEYS.GAME_STATE },
       )
@@ -203,14 +203,22 @@ test.describe('Session Storage', () => {
       const videoSwitch = page.getByRole('switch').first()
       await videoSwitch.click()
 
-      // Wait for preference to be saved
+      // Wait for stream to initialize and permissions to be granted
       await page.waitForTimeout(2000)
+
+      // Complete setup to commit preferences to localStorage
+      const completeButton = page.getByTestId('media-setup-complete-button')
+      await expect(completeButton).toBeEnabled({ timeout: 10000 })
+      await completeButton.click()
+
+      // Wait for navigation after completion
+      await expect(page).toHaveURL('/')
 
       // Check localStorage - videoEnabled should be set
       const prefs = await getMediaPreferences(page)
       expect(prefs).not.toBeNull()
-      // videoEnabled will be true after clicking the switch
-      expect(prefs?.videoEnabled).toBeDefined()
+      // Storage should include a commit timestamp
+      expect(prefs?.timestamp).toBeDefined()
     })
 
     test('should restore device selections on page reload', async ({
@@ -238,10 +246,9 @@ test.describe('Session Storage', () => {
       expect(state).toBe('checked')
     })
 
-    test.skip('should persist preferences after completing setup', async ({
+    test('should persist preferences after completing setup', async ({
       page,
     }) => {
-      // Skip: This test requires real camera permissions which are not available in headless browsers
       await page.goto('/setup')
       await clearStorage(page)
 

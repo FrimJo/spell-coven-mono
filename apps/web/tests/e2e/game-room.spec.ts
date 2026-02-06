@@ -40,7 +40,7 @@ test.describe('Game Room', () => {
 
   test.beforeEach(async ({ page }) => {
     if (!hasAuthStorageState()) {
-      test(
+      test.skip(
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }

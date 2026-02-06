@@ -343,11 +343,39 @@ export async function getGameState(
 /**
  * Clear all storage for a clean test state.
  */
-export async function clearStorage(page: Page): Promise<void> {
-  await page.evaluate(() => {
+export async function clearStorage(
+  page: Page,
+  options?: { clearAuth?: boolean },
+): Promise<void> {
+  const clearAuth = options?.clearAuth ?? false
+
+  await page.evaluate((shouldClearAuth) => {
+    const AUTH_PREFIX = '__convexAuth'
+
+    if (!shouldClearAuth) {
+      const authEntries: Array<[string, string]> = []
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith(AUTH_PREFIX)) {
+          const value = localStorage.getItem(key)
+          if (value !== null) {
+            authEntries.push([key, value])
+          }
+        }
+      }
+
+      localStorage.clear()
+      sessionStorage.clear()
+
+      for (const [key, value] of authEntries) {
+        localStorage.setItem(key, value)
+      }
+      return
+    }
+
     localStorage.clear()
     sessionStorage.clear()
-  })
+  }, clearAuth)
 }
 
 /**
