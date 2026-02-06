@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'fs'
 import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import type { Page } from '@playwright/test'
@@ -38,7 +44,21 @@ export const ROOM_STATE_PATH = resolve(
  * Check whether Playwright auth storage state exists.
  */
 export function hasAuthStorageState(): boolean {
-  return existsSync(AUTH_STATE_PATH) || hasAuthCredentials()
+  if (existsSync(AUTH_STATE_PATH)) return true
+
+  const storageDir = resolve(__dirname, '../../.playwright-storage')
+  if (existsSync(storageDir)) {
+    try {
+      const files = readdirSync(storageDir)
+      if (files.some((file) => file.startsWith('state.worker-'))) {
+        return true
+      }
+    } catch {
+      // Ignore read errors and fall back to credential check.
+    }
+  }
+
+  return hasAuthCredentials()
 }
 
 /**

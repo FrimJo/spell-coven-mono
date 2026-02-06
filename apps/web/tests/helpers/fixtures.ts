@@ -44,14 +44,19 @@ export const test = base.extend<{}, WorkerFixtures>({
         }
         const originState = state.origins?.find((o) => o.origin === origin)
         if (originState?.localStorage?.length) {
-          await context.addInitScript(
-            ({ items }) => {
-              for (const { name, value } of items) {
-                localStorage.setItem(name, value)
-              }
-            },
-            { items: originState.localStorage },
+          const authItems = originState.localStorage.filter((item) =>
+            item.name.startsWith('__convexAuth'),
           )
+          if (authItems.length) {
+            await context.addInitScript(
+              ({ items }) => {
+                for (const { name, value } of items) {
+                  localStorage.setItem(name, value)
+                }
+              },
+              { items: authItems },
+            )
+          }
         }
       }
     }
