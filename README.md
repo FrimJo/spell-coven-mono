@@ -49,6 +49,7 @@ The following features are currently available and working:
 - ✅ **Life Total Tracking**: Keep track of life totals for all players
 - ✅ **Commander Damage Tracking**: Track commander damage across multiple opponents
 - ✅ **Invite by URL**: Share a link to invite friends to your game room
+- ✅ **Card Search + History**: Search for MTG cards and save them to your history list
 
 ## Coming Soon
 
