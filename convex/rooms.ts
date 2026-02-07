@@ -20,12 +20,6 @@ import {
   PlayerNotFoundError,
   RoomNotFoundError,
 } from './errors'
-import {
-  sentryMutation,
-  sentryQuery,
-  withComputationSpan,
-  withDbSpan,
-} from './sentry'
 
 /**
  * Presence timeout threshold in milliseconds (30 seconds)
@@ -73,17 +67,13 @@ async function updateRoomActivity(
   ctx: MutationCtx,
   roomId: string,
 ): Promise<void> {
-  const room = await withDbSpan('rooms.by_roomId', () =>
-    ctx.db
-      .query('rooms')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .first(),
-  )
+  const room = await ctx.db
+    .query('rooms')
+    .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+    .first()
 
   if (room) {
-    await withDbSpan('rooms.patch_lastActivity', () =>
-      ctx.db.patch(room._id, { lastActivityAt: Date.now() }),
-    )
+    await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
   }
 }
 
@@ -145,130 +135,96 @@ function toBase32Code(num: number, minLength = 6): string {
  * @param ownerId - The user ID of the room creator (must match authenticated user)
  * @returns { roomId, waitMs } - roomId is null if throttled, waitMs indicates retry delay
  */
-export const createRoom = mutation(
-  sentryMutation(
-    'rooms.createRoom',
-    {
-      args: {
-        ownerId: v.string(), // Must match authenticated user ID
-      },
-      handler: async (ctx, { ownerId }) => {
-        const userId = await getAuthUserId(ctx)
-        if (!userId) {
-          throw new AuthRequiredError()
-        }
+export const createRoom = mutation({
+  args: {
+    ownerId: v.string(), // Must match authenticated user ID
+  },
+  handler: async (ctx, { ownerId }) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new AuthRequiredError()
+    }
 
-        if (ownerId !== userId) {
-          throw new AuthMismatchError()
-        }
+    if (ownerId !== userId) {
+      throw new AuthMismatchError()
+    }
 
-        const now = Date.now()
+    const now = Date.now()
 
-        // Check throttle: find user's most recent room creation
-        const lastRoom = await withDbSpan('rooms.by_ownerId_createdAt', () =>
-          ctx.db
-            .query('rooms')
-            .withIndex('by_ownerId_createdAt', (q) => q.eq('ownerId', userId))
-            .order('desc')
-            .first(),
-        )
+    // Check throttle: find user's most recent room creation
+    const lastRoom = await ctx.db
+      .query('rooms')
+      .withIndex('by_ownerId_createdAt', (q) => q.eq('ownerId', userId))
+      .order('desc')
+      .first()
 
-        if (lastRoom) {
-          const timeSinceLastCreation = now - lastRoom.createdAt
-          if (timeSinceLastCreation < ROOM_CREATION_COOLDOWN_MS) {
-            const waitMs = ROOM_CREATION_COOLDOWN_MS - timeSinceLastCreation
-            return { roomId: null, waitMs }
-          }
-        }
+    if (lastRoom) {
+      const timeSinceLastCreation = now - lastRoom.createdAt
+      if (timeSinceLastCreation < ROOM_CREATION_COOLDOWN_MS) {
+        const waitMs = ROOM_CREATION_COOLDOWN_MS - timeSinceLastCreation
+        return { roomId: null, waitMs }
+      }
+    }
 
-        // Get or create counter for rooms
-        let counter = await withDbSpan('counters.by_name', () =>
-          ctx.db
-            .query('counters')
-            .withIndex('by_name', (q) => q.eq('name', 'rooms'))
-            .first(),
-        )
+    // Get or create counter for rooms
+    let counter = await ctx.db
+      .query('counters')
+      .withIndex('by_name', (q) => q.eq('name', 'rooms'))
+      .first()
 
-        if (!counter) {
-          await withDbSpan('counters.insert', () =>
-            ctx.db.insert('counters', { name: 'rooms', count: 0 }),
-          )
-          // Query again to get the full document with _creationTime
-          counter = await withDbSpan('counters.by_name', () =>
-            ctx.db
-              .query('counters')
-              .withIndex('by_name', (q) => q.eq('name', 'rooms'))
-              .first(),
-          )
-          if (!counter) {
-            throw new Error('Failed to create counter')
-          }
-        }
+    if (!counter) {
+      await ctx.db.insert('counters', { name: 'rooms', count: 0 })
+      // Query again to get the full document with _creationTime
+      counter = await ctx.db
+        .query('counters')
+        .withIndex('by_name', (q) => q.eq('name', 'rooms'))
+        .first()
+      if (!counter) {
+        throw new Error('Failed to create counter')
+      }
+    }
 
-        // Increment counter atomically
-        const newCount = counter.count + 1
-        await withDbSpan('counters.patch', () =>
-          ctx.db.patch(counter._id, { count: newCount }),
-        )
+    // Increment counter atomically
+    const newCount = counter.count + 1
+    await ctx.db.patch(counter._id, { count: newCount })
 
-        // Generate sequential room code (newCount - 1 because we want 0-indexed)
-        const roomId = await withComputationSpan('rooms.generate_room_code', () =>
-          toBase32Code(newCount - 1),
-        )
+    // Generate sequential room code (newCount - 1 because we want 0-indexed)
+    const roomId = toBase32Code(newCount - 1)
 
-        // Create room with default seat count
-        await withDbSpan('rooms.insert', () =>
-          ctx.db.insert('rooms', {
-            roomId,
-            ownerId: userId,
-            status: 'waiting',
-            createdAt: now,
-            seatCount: 4,
-            lastActivityAt: now,
-          }),
-        )
+    // Create room with default seat count
+    await ctx.db.insert('rooms', {
+      roomId,
+      ownerId: userId,
+      status: 'waiting',
+      createdAt: now,
+      seatCount: 4,
+      lastActivityAt: now,
+    })
 
-        return { roomId, waitMs: null }
-      },
-    },
-    {
-      safeArgs: ['ownerId'],
-      tags: { domain: 'rooms' },
-    },
-  ),
-)
+    return { roomId, waitMs: null }
+  },
+})
 
 /**
  * Get a room by its short code
  */
-export const getRoom = query(
-  sentryQuery(
-    'rooms.getRoom',
-    {
-      args: { roomId: v.string() },
-      handler: async (ctx, { roomId }) => {
-        const room = await withDbSpan('rooms.by_roomId', () =>
-          ctx.db
-            .query('rooms')
-            .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-            .first(),
-        )
+export const getRoom = query({
+  args: { roomId: v.string() },
+  handler: async (ctx, { roomId }) => {
+    const room = await ctx.db
+      .query('rooms')
+      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+      .first()
 
-        if (!room) {
-          return null
-        }
+    if (!room) {
+      return null
+    }
 
-        return {
-          ...room,
-        }
-      },
-    },
-    {
-      safeArgs: ['roomId'],
-      tags: { domain: 'rooms' },
-    },
-  ),
-)
+    return {
+      ...room,
+    }
+  },
+})
 
 /**
  * Check if a user can access a room
