@@ -139,6 +139,32 @@ export default defineSchema({
     .index('by_roomId_userId', ['roomId', 'userId']),
 
   /**
+   * roomDiceRolls - Dice roll history for a room
+   *
+   * Stores authoritative roll results from the server.
+   */
+  roomDiceRolls: defineTable({
+    /** Reference to room */
+    roomId: v.string(),
+    /** Discord user ID */
+    userId: v.string(),
+    /** Player display name */
+    username: v.string(),
+    /** Number of sides on the die */
+    sides: v.number(),
+    /** Number of dice rolled */
+    count: v.number(),
+    /** Individual die results */
+    results: v.array(v.number()),
+    /** Sum of results */
+    total: v.number(),
+    /** When the roll happened */
+    createdAt: v.number(),
+  })
+    .index('by_roomId', ['roomId'])
+    .index('by_roomId_createdAt', ['roomId', 'createdAt']),
+
+  /**
    * counters - Sequential counters for generating IDs
    *
    * Used to track total counts for various entities (e.g., rooms).

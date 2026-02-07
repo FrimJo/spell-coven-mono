@@ -889,6 +889,15 @@ export const cleanupInactiveRooms = internalMutation({
           await ctx.db.delete(signal._id)
         }
 
+        // Delete all roomDiceRolls records for this room
+        const allDiceRolls = await ctx.db
+          .query('roomDiceRolls')
+          .withIndex('by_roomId', (q) => q.eq('roomId', room.roomId))
+          .collect()
+        for (const roll of allDiceRolls) {
+          await ctx.db.delete(roll._id)
+        }
+
         // Delete userActiveRooms pointers pointing to this room
         const allUserActiveRooms = await ctx.db
           .query('userActiveRooms')

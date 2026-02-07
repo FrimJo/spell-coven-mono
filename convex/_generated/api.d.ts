@@ -12,6 +12,7 @@ import type * as auth from "../auth.js";
 import type * as bans from "../bans.js";
 import type * as constants from "../constants.js";
 import type * as crons from "../crons.js";
+import type * as dice from "../dice.js";
 import type * as errors from "../errors.js";
 import type * as http from "../http.js";
 import type * as players from "../players.js";
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   bans: typeof bans;
   constants: typeof constants;
   crons: typeof crons;
+  dice: typeof dice;
   errors: typeof errors;
   http: typeof http;
   players: typeof players;
