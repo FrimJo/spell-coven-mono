@@ -889,6 +889,17 @@ export const cleanupInactiveRooms = internalMutation({
           await ctx.db.delete(signal._id)
         }
 
+        // Delete all roomChat records for this room
+        const allChatMessages = await ctx.db
+          .query('roomChat')
+          .withIndex('by_roomId_createdAt', (q) =>
+            q.eq('roomId', room.roomId),
+          )
+          .collect()
+        for (const message of allChatMessages) {
+          await ctx.db.delete(message._id)
+        }
+
         // Delete userActiveRooms pointers pointing to this room
         const allUserActiveRooms = await ctx.db
           .query('userActiveRooms')
