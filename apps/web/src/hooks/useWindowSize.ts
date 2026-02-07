@@ -1,24 +1,84 @@
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
+
+interface WindowSize {
+  width: number
+  height: number
+}
+
+const windowSizeStore = {
+  value: {
+    width: 0,
+    height: 0,
+  } as WindowSize,
+  listeners: new Set<() => void>(),
+}
+
+const handleResize = () => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const nextValue = {
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }
+
+  if (
+    nextValue.width === windowSizeStore.value.width &&
+    nextValue.height === windowSizeStore.value.height
+  ) {
+    return
+  }
+
+  windowSizeStore.value = nextValue
+  windowSizeStore.listeners.forEach((listener) => listener())
+}
+
+const subscribe = (listener: () => void) => {
+  if (typeof window === 'undefined') {
+    return () => undefined
+  }
+
+  if (windowSizeStore.listeners.size === 0) {
+    handleResize()
+    window.addEventListener('resize', handleResize)
+  }
+
+  windowSizeStore.listeners.add(listener)
+
+  return () => {
+    windowSizeStore.listeners.delete(listener)
+    if (windowSizeStore.listeners.size === 0) {
+      window.removeEventListener('resize', handleResize)
+    }
+  }
+}
+
+const getSnapshot = (): WindowSize => {
+  if (typeof window === 'undefined') {
+    return windowSizeStore.value
+  }
+
+  const nextValue = {
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }
+
+  if (
+    nextValue.width !== windowSizeStore.value.width ||
+    nextValue.height !== windowSizeStore.value.height
+  ) {
+    windowSizeStore.value = nextValue
+  }
+
+  return windowSizeStore.value
+}
+
+const getServerSnapshot = (): WindowSize => ({
+  width: 0,
+  height: 0,
+})
 
 export function useWindowSize() {
-  const [windowSize, setWindowSize] = useState({
-    width: typeof window !== 'undefined' ? window.innerWidth : 0,
-    height: typeof window !== 'undefined' ? window.innerHeight : 0,
-  })
-
-  useEffect(() => {
-    function handleResize() {
-      setWindowSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      })
-    }
-
-    window.addEventListener('resize', handleResize)
-    handleResize() // Initial call to set size
-
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  return windowSize
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 }
