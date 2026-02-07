@@ -638,8 +638,6 @@ export const updatePlayerPoison = mutation({
 
 /**
  * Set a player's commander list
- *
- * NOTE: No auth check for Phase 3. Phase 5 will add proper authorization.
  */
 export const setPlayerCommanders = mutation({
   args: {
@@ -660,6 +658,10 @@ export const setPlayerCommanders = mutation({
 
     await requireActiveRoomMember(ctx, roomId, callerId)
 
+    if (callerId !== userId) {
+      throw new AuthMismatchError()
+    }
+
     const player = await ctx.db
       .query('roomPlayers')
       .withIndex('by_roomId_userId', (q) =>
@@ -679,8 +681,17 @@ export const setPlayerCommanders = mutation({
       .collect()
 
     for (const session of allSessions) {
+      const commanderTax = session.commanderTax ?? {}
+      const commanderIds = new Set(commanders.map((cmd) => cmd.id))
+      const nextCommanderTax = Object.fromEntries(
+        Object.entries(commanderTax).filter(([commanderId]) =>
+          commanderIds.has(commanderId),
+        ),
+      )
+
       await ctx.db.patch(session._id, {
         commanders,
+        commanderTax: nextCommanderTax,
       })
     }
 
@@ -691,8 +702,6 @@ export const setPlayerCommanders = mutation({
 
 /**
  * Update commander damage for a player
- *
- * NOTE: No auth check for Phase 3. Phase 5 will add proper authorization.
  */
 export const updateCommanderDamage = mutation({
   args: {
@@ -709,6 +718,10 @@ export const updateCommanderDamage = mutation({
     }
 
     await requireActiveRoomMember(ctx, roomId, callerId)
+
+    if (callerId !== userId) {
+      throw new AuthMismatchError()
+    }
 
     const player = await ctx.db
       .query('roomPlayers')
@@ -740,6 +753,63 @@ export const updateCommanderDamage = mutation({
         commanderDamage: {
           ...(session.commanderDamage ?? {}),
           [key]: nextDamage,
+        },
+      })
+    }
+
+    // Update room activity
+    await updateRoomActivity(ctx, roomId)
+  },
+})
+
+/**
+ * Update commander tax (cast count) for a player's own commander
+ */
+export const updateCommanderTax = mutation({
+  args: {
+    roomId: v.string(),
+    userId: v.string(),
+    commanderId: v.string(),
+    delta: v.number(),
+  },
+  handler: async (ctx, { roomId, userId, commanderId, delta }) => {
+    const callerId = await getAuthUserId(ctx)
+    if (!callerId) {
+      throw new AuthRequiredError()
+    }
+
+    if (callerId !== userId) {
+      throw new AuthMismatchError()
+    }
+
+    await requireActiveRoomMember(ctx, roomId, callerId)
+
+    const player = await ctx.db
+      .query('roomPlayers')
+      .withIndex('by_roomId_userId', (q) =>
+        q.eq('roomId', roomId).eq('userId', userId),
+      )
+      .first()
+
+    if (!player) {
+      throw new PlayerNotFoundError()
+    }
+
+    const currentTax = player.commanderTax?.[commanderId] ?? 0
+    const nextTax = Math.max(0, currentTax + delta)
+
+    const allSessions = await ctx.db
+      .query('roomPlayers')
+      .withIndex('by_roomId_userId', (q) =>
+        q.eq('roomId', roomId).eq('userId', userId),
+      )
+      .collect()
+
+    for (const session of allSessions) {
+      await ctx.db.patch(session._id, {
+        commanderTax: {
+          ...(session.commanderTax ?? {}),
+          [commanderId]: nextTax,
         },
       })
     }

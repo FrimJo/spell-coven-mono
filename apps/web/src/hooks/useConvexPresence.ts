@@ -347,6 +347,7 @@ export function useConvexPresence({
         poison: player.poison ?? 0,
         commanders: player.commanders ?? [],
         commanderDamage: player.commanderDamage ?? {},
+        commanderTax: player.commanderTax ?? {},
         lastSeenAt: player.lastSeenAt,
       }))
       .sort((a: Participant, b: Participant) => a.joinedAt - b.joinedAt)

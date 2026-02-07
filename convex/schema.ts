@@ -84,6 +84,8 @@ export default defineSchema({
     ),
     /** Per-commander damage taken, keyed by ownerUserId:commanderId */
     commanderDamage: v.record(v.string(), v.number()),
+    /** Per-commander cast count for tax tracking, keyed by commanderId */
+    commanderTax: v.record(v.string(), v.number()),
     /** Player status */
     status: playerStatusValues,
     /** When player joined */

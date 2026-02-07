@@ -119,6 +119,7 @@ export const joinRoom = mutation({
         poison: existingSession.poison ?? 0,
         commanders: existingSession.commanders ?? [],
         commanderDamage: existingSession.commanderDamage ?? {},
+        commanderTax: existingSession.commanderTax ?? {},
       })
 
       // Upsert the userActiveRooms pointer
@@ -182,6 +183,7 @@ export const joinRoom = mutation({
     const poison = existingUserSession?.poison ?? 0
     const commanders = existingUserSession?.commanders ?? []
     const commanderDamage = existingUserSession?.commanderDamage ?? {}
+    const commanderTax = existingUserSession?.commanderTax ?? {}
 
     // Create new player session
     const playerId = await ctx.db.insert('roomPlayers', {
@@ -194,6 +196,7 @@ export const joinRoom = mutation({
       poison,
       commanders,
       commanderDamage,
+      commanderTax,
       status: 'active',
       joinedAt: now,
       lastSeenAt: now,

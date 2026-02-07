@@ -187,6 +187,28 @@ export function GameStatsPanel({
     )
   })
 
+  const updateCommanderTax = useConvexMutation(
+    api.rooms.updateCommanderTax,
+  ).withOptimisticUpdate((localStore, args) => {
+    updatePlayerQueriesOptimistically(
+      localStore,
+      args.roomId,
+      args.userId,
+      (player) => {
+        const currentTax = player.commanderTax?.[args.commanderId] ?? 0
+        const nextTax = Math.max(0, currentTax + args.delta)
+
+        return {
+          ...player,
+          commanderTax: {
+            ...(player.commanderTax ?? {}),
+            [args.commanderId]: nextTax,
+          },
+        }
+      },
+    )
+  })
+
   // Mutation variables type includes which commander triggered the save
   type SaveCommandersInput = {
     userId: string
@@ -390,6 +412,17 @@ export function GameStatsPanel({
       delta,
     }).catch(() => {
       toast.error('Failed to update commander damage')
+    })
+  }
+
+  const handleUpdateTax = (commanderId: string, delta: number) => {
+    updateCommanderTax({
+      roomId: convexRoomId,
+      userId: currentUser.id,
+      commanderId,
+      delta,
+    }).catch(() => {
+      toast.error('Failed to update commander tax')
     })
   }
 
@@ -641,6 +674,12 @@ export function GameStatsPanel({
                             ] ?? 0)
                           : 0
                       }
+                      taxCount={
+                        player.commanders[0]
+                          ? (player.commanderTax?.[player.commanders[0].id] ?? 0)
+                          : 0
+                      }
+                      canEditTax={isCurrentUser}
                       isEditing={isEditingThisPlayer}
                       isViewedPlayer={isViewedPlayer}
                       getCommanderImageUrl={getCommanderImageUrl}
@@ -651,6 +690,10 @@ export function GameStatsPanel({
                           player.commanders[0].id,
                           delta,
                         )
+                      }
+                      onTaxChange={(delta) =>
+                        player.commanders[0] &&
+                        handleUpdateTax(player.commanders[0].id, delta)
                       }
                       onStartEdit={() => handleStartEditing(player)}
                       onClear={() => handleClearCommander(player, 1)}
@@ -682,6 +725,14 @@ export function GameStatsPanel({
                               ] ?? 0)
                             : 0
                         }
+                        taxCount={
+                          player.commanders[1]
+                            ? (player.commanderTax?.[
+                                player.commanders[1].id
+                              ] ?? 0)
+                            : 0
+                        }
+                        canEditTax={isCurrentUser}
                         isEditing={isEditingThisPlayer}
                         isViewedPlayer={isViewedPlayer}
                         getCommanderImageUrl={getCommanderImageUrl}
@@ -692,6 +743,10 @@ export function GameStatsPanel({
                             player.commanders[1].id,
                             delta,
                           )
+                        }
+                        onTaxChange={(delta) =>
+                          player.commanders[1] &&
+                          handleUpdateTax(player.commanders[1].id, delta)
                         }
                         onStartEdit={() => handleStartEditing(player)}
                         onClear={() => handleClearCommander(player, 2)}
@@ -742,10 +797,13 @@ interface CommanderSlotProps {
   slotNumber: 1 | 2
   commander?: { id: string; name: string }
   damage: number
+  taxCount: number
+  canEditTax: boolean
   isEditing: boolean
   isViewedPlayer: boolean
   getCommanderImageUrl: (id: string) => string | null
   onDamageChange: (delta: number) => void
+  onTaxChange: (delta: number) => void
   onStartEdit: () => void
   onClear: () => void
   // Edit mode props
@@ -767,10 +825,13 @@ function CommanderSlot({
   slotNumber,
   commander,
   damage,
+  taxCount,
+  canEditTax,
   isEditing,
   isViewedPlayer: _isViewedPlayer,
   getCommanderImageUrl,
   onDamageChange,
+  onTaxChange,
   onStartEdit: _onStartEdit,
   onClear,
   inputValue,
@@ -810,6 +871,14 @@ function CommanderSlot({
     immediateDelta: 1,
     repeatDelta: 10,
   })
+
+  const handleTaxChange = useCallback(
+    (delta: number) => {
+      if (!canEditTax) return
+      onTaxChange(delta)
+    },
+    [canEditTax, onTaxChange],
+  )
 
   // Empty slot - hide if not set and not editing
   if (!commander && !isEditing) {
@@ -925,13 +994,48 @@ function CommanderSlot({
         </div>
       )}
 
-      <div className="relative z-10 flex items-center justify-between p-3">
+      <div className="relative z-10 flex items-center justify-between gap-3 p-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="text-shadow-sm text-text-secondary text-sm font-medium shadow-black">
               {commander.name}
             </span>
           </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="border-border-default bg-surface-1/70 rounded-md border px-2 py-1 text-right text-[10px] backdrop-blur-sm">
+            <div className="text-text-muted uppercase tracking-wide">
+              Commander Tax
+            </div>
+            <div className="text-text-secondary text-sm font-semibold">
+              +{taxCount * 2}
+            </div>
+            <div className="text-text-muted">Casts: {taxCount}</div>
+          </div>
+          {canEditTax && (
+            <div className="flex items-center gap-1">
+              <Button
+                size="icon"
+                variant="outline"
+                className="border-border-default bg-surface-1/80 text-text-secondary hover:bg-surface-2 h-7 w-7 backdrop-blur-sm hover:text-white"
+                onClick={() => handleTaxChange(-1)}
+                disabled={taxCount <= 0}
+                title="Decrease commander tax"
+              >
+                -
+              </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="border-border-default bg-surface-1/80 text-text-secondary hover:bg-surface-2 h-7 w-7 backdrop-blur-sm hover:text-white"
+                onClick={() => handleTaxChange(1)}
+                title="Increase commander tax"
+              >
+                +
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Damage counter */}
