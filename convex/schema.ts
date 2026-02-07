@@ -47,6 +47,10 @@ export default defineSchema({
     createdAt: v.number(),
     /** Number of player seats (1-4, default 4) */
     seatCount: v.optional(v.number()),
+    /** User ID of the selected starting player */
+    startingPlayerId: v.optional(v.string()),
+    /** When the starting player was selected */
+    startingPlayerSelectedAt: v.optional(v.number()),
     /** Last time any activity occurred in the room (joins, leaves, state changes) */
     lastActivityAt: v.optional(v.number()),
   })

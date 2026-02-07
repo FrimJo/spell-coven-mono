@@ -47,6 +47,10 @@ interface PresenceContextValue {
   disconnectReason: DisconnectReason | null
   /** Room seat count (1-4, defaults to 4) */
   roomSeatCount: number
+  /** Selected starting player (if any) */
+  startingPlayerId: string | null
+  /** Timestamp when the starting player was selected */
+  startingPlayerSelectedAt: number | null
 
   // Actions
   /** Connect to presence (rejoin) */
@@ -63,6 +67,11 @@ interface PresenceContextValue {
   transferSession: () => Promise<void>
   /** Set room seat count (owner only) */
   setRoomSeatCount: (seatCount: number) => Promise<{ seatCount: number }>
+  /** Randomize the starting player (owner only) */
+  randomizeStartingPlayer: () => Promise<{
+    startingPlayerId: string
+    startingPlayerName: string
+  }>
 }
 
 const PresenceContext = createContext<PresenceContextValue | null>(null)
@@ -155,6 +164,7 @@ export function PresenceProvider({
       banPlayer: presence.banPlayer,
       transferSession: presence.transferSession,
       setRoomSeatCount: presence.setRoomSeatCount,
+      randomizeStartingPlayer: presence.randomizeStartingPlayer,
     }),
     [
       presence.leaveRoom,
@@ -162,6 +172,7 @@ export function PresenceProvider({
       presence.banPlayer,
       presence.transferSession,
       presence.setRoomSeatCount,
+      presence.randomizeStartingPlayer,
     ],
   )
 
@@ -176,6 +187,8 @@ export function PresenceProvider({
       sessionId: presence.sessionId,
       hasDuplicateSession: presence.hasDuplicateSession,
       roomSeatCount: presence.roomSeatCount,
+      startingPlayerId: presence.startingPlayerId,
+      startingPlayerSelectedAt: presence.startingPlayerSelectedAt,
       isConnected,
       disconnectReason,
       connect,
@@ -185,6 +198,7 @@ export function PresenceProvider({
       banPlayer: actions.banPlayer,
       transferSession: actions.transferSession,
       setRoomSeatCount: actions.setRoomSeatCount,
+      randomizeStartingPlayer: actions.randomizeStartingPlayer,
     }),
     [
       presence.participants,
@@ -196,6 +210,8 @@ export function PresenceProvider({
       presence.sessionId,
       presence.hasDuplicateSession,
       presence.roomSeatCount,
+      presence.startingPlayerId,
+      presence.startingPlayerSelectedAt,
       isConnected,
       disconnectReason,
       connect,
@@ -205,6 +221,7 @@ export function PresenceProvider({
       actions.banPlayer,
       actions.transferSession,
       actions.setRoomSeatCount,
+      actions.randomizeStartingPlayer,
     ],
   )
 
