@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+import * as Sentry from '@sentry/react'
 import { useNavigate } from '@tanstack/react-router'
 import { AlertTriangle, Home, RefreshCw, Sparkles } from 'lucide-react'
 
@@ -10,6 +12,16 @@ interface ErrorPageProps {
 
 export function ErrorPage({ error, reset }: ErrorPageProps) {
   const navigate = useNavigate()
+  const reportedRef = useRef(false)
+
+  useEffect(() => {
+    if (error && !reportedRef.current) {
+      reportedRef.current = true
+      Sentry.captureException(error, {
+        tags: { source: 'router_default_error' },
+      })
+    }
+  }, [error])
 
   const handleReturnHome = () => {
     // Use replace: true to properly handle navigation from error states

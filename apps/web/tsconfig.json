@@ -11,11 +11,18 @@
   ],
   "exclude": [],
   "compilerOptions": {
-    "types": ["bun-types", "vite/client"],
+    "types": [
+      "bun-types",
+      "vite/client"
+    ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@convex/*": ["../../convex/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@convex/*": [
+        "../../convex/*"
+      ]
     }
   }
 }

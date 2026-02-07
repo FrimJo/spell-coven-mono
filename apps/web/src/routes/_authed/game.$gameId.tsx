@@ -1,4 +1,5 @@
-import { Suspense } from 'react'
+import type { ReactNode } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
 import { RoomFullDialog } from '@/components/RoomFullDialog'
@@ -7,6 +8,7 @@ import { convex } from '@/integrations/convex/provider'
 import { loadEmbeddingsAndMetaFromPackage } from '@/lib/clip-search'
 import { sessionStorage } from '@/lib/session-storage'
 import { api } from '@convex/_generated/api'
+import * as Sentry from '@sentry/react'
 import {
   createFileRoute,
   notFound,
@@ -88,6 +90,26 @@ function isMediaConfigured(): boolean {
   return false
 }
 
+/** Reports route-level errors to Sentry once, then renders children (e.g. ErrorFallback). */
+function RouteErrorReporter({
+  error,
+  children,
+}: {
+  error: Error | unknown
+  children: ReactNode
+}) {
+  const reportedRef = useRef(false)
+  useEffect(() => {
+    if (error && !reportedRef.current) {
+      reportedRef.current = true
+      Sentry.captureException(error, {
+        tags: { source: 'router_route_error' },
+      })
+    }
+  }, [error])
+  return <>{children}</>
+}
+
 export const Route = createFileRoute('/_authed/game/$gameId')({
   component: GameRoomRoute,
   beforeLoad: async ({ location, params }) => {
@@ -147,7 +169,9 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
     </div>
   ),
   errorComponent: ({ error, reset }) => (
-    <ErrorFallback error={error} resetErrorBoundary={reset} />
+    <RouteErrorReporter error={error}>
+      <ErrorFallback error={error} resetErrorBoundary={reset} />
+    </RouteErrorReporter>
   ),
   validateSearch: zodValidator(gameSearchSchema),
   search: {

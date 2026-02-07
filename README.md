@@ -99,6 +99,12 @@ Spell Coven is designed for Magic: The Gathering players who want to play with t
 4. **Open the app:**
    Navigate to https://localhost:1234 to get started.
 
+## Observability
+
+Sentry is integrated across the Convex backend and web client. See
+[`docs/sentry.md`](./docs/sentry.md) for configuration, CI setup, and verification
+steps.
+
 ## What's inside?
 
 This Turborepo monorepo houses all applications and packages needed to drive the Spell Coven platform:
