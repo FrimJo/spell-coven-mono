@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
@@ -7,9 +8,33 @@ import mkcert from 'vite-plugin-mkcert'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 
 // SPA mode - static CDN deployment
-
 export default defineConfig(({ mode }) => {
   const isNotProd = mode !== 'production'
+  const release =
+    process.env.VITE_VERCEL_GIT_COMMIT_SHA ??
+    process.env.VITE_GITHUB_SHA ??
+    process.env.VITE_BUILD_NUMBER
+
+  const enableSentryUpload = Boolean(
+    process.env.SENTRY_AUTH_TOKEN &&
+      process.env.VITE_SENTRY_ORG &&
+      process.env.VITE_SENTRY_PROJECT,
+  )
+
+  const sentryPlugin = enableSentryUpload
+    ? sentryVitePlugin({
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        org: process.env.VITE_SENTRY_ORG,
+        project: process.env.VITE_SENTRY_PROJECT,
+        release: {
+          name: release,
+        },
+        telemetry: false,
+        sourcemaps: {
+          assets: './dist/**',
+        },
+      })
+    : false
 
   return {
     // 🔴 important: include the trailing slash
@@ -17,11 +42,12 @@ export default defineConfig(({ mode }) => {
     plugins: [
       viteTsConfigPaths({ projects: ['./tsconfig.json'] }),
       // mkcert is only needed for local HTTPS development
-      isNotProd && mkcert({ savePath: './certificates' }),
+      ...(isNotProd ? [mkcert({ savePath: './certificates' })] : []),
       tailwindcss(),
       tanstackStart({ spa: { enabled: true } }),
       viteReact(), // Must come after tanstackStart()
-    ].filter(Boolean),
+      ...(sentryPlugin ? [sentryPlugin] : []),
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
@@ -36,6 +62,9 @@ export default defineConfig(({ mode }) => {
     ssr: {
       external: [],
       noExternal: [],
+    },
+    build: {
+      sourcemap: true,
     },
     // (optional) if you import files from ../../packages during dev:
     preview: {

@@ -1,8 +1,10 @@
 import { StartClient } from '@tanstack/react-start/client'
+import * as Sentry from '@sentry/react'
 import { hydrateRoot } from 'react-dom/client'
 import { ErrorBoundary } from 'react-error-boundary'
 
 import { ErrorFallback } from './components/ErrorFallback.js'
+import { initializeSentry } from './integrations/sentry/client.js'
 
 // Lazy load mock media module only in non-production environments
 // This allows testing webcam UI in browsers that block media device access
@@ -13,6 +15,8 @@ if (import.meta.env.MODE !== 'production') {
   })
 }
 
+initializeSentry()
+
 hydrateRoot(
   document,
   // TODO: Re-enable StrictMode after fixing the "Maximum update depth exceeded" error
@@ -21,6 +25,15 @@ hydrateRoot(
     fallbackRender={({ error, resetErrorBoundary }) => (
       <ErrorFallback error={error} resetErrorBoundary={resetErrorBoundary} />
     )}
+    onError={(error, info) => {
+      Sentry.captureException(error, {
+        contexts: {
+          react: {
+            componentStack: info.componentStack,
+          },
+        },
+      })
+    }}
     onReset={() => window.location.reload()}
   >
     <StartClient />

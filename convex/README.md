@@ -1,117 +1,92 @@
-# Convex Backend
+# Welcome to your Convex functions directory!
 
-This directory contains the Convex backend for Spell Coven.
+Write your Convex functions here.
+See https://docs.convex.dev/functions for more.
 
-## Setup
+A query function that takes two arguments looks like:
 
-### 1. Create Convex Project
+```ts
+// convex/myFunctions.ts
+import { v } from 'convex/values'
 
-Run the following command and follow the prompts:
+import { query } from './_generated/server'
 
-```bash
-bunx convex dev
+export const myQueryFunction = query({
+  // Validators for arguments.
+  args: {
+    first: v.number(),
+    second: v.string(),
+  },
+
+  // Function implementation.
+  handler: async (ctx, args) => {
+    // Read the database as many times as you need here.
+    // See https://docs.convex.dev/database/reading-data.
+    const documents = await ctx.db.query('tablename').collect()
+
+    // Arguments passed from the client are properties of the args object.
+    console.log(args.first, args.second)
+
+    // Write arbitrary JavaScript here: filter, aggregate, build derived data,
+    // remove non-public properties, or create new objects.
+    return documents
+  },
+})
 ```
 
-This will:
+Using this query function in a React component looks like:
 
-- Prompt you to log in to Convex (creates account if needed)
-- Create a new Convex project
-- Generate the `_generated/` folder with types
-- Start watching for changes
-
-### 2. Configure Discord OAuth
-
-After creating the project, configure Discord OAuth in the Convex dashboard:
-
-1. Go to [Convex Dashboard](https://dashboard.convex.dev)
-2. Select your project
-3. Go to **Settings** → **Environment Variables**
-4. Add the following environment variables:
-
-```
-AUTH_DISCORD_ID=<your-discord-client-id>
-AUTH_DISCORD_SECRET=<your-discord-client-secret>
+```ts
+const data = useQuery(api.myFunctions.myQueryFunction, {
+  first: 10,
+  second: 'hello',
+})
 ```
 
-5. In your Discord Developer Portal, add the Convex callback URL:
-   - `https://<your-convex-deployment>.convex.site/api/auth/callback/discord`
+A mutation function looks like:
 
-### 3. Add Convex URL to Local Env
+```ts
+// convex/myFunctions.ts
+import { v } from 'convex/values'
 
-Copy the Convex URL from the dashboard and add to your `.env.development.local`:
+import { mutation } from './_generated/server'
 
-```
-VITE_CONVEX_URL=https://<your-deployment>.convex.cloud
-```
+export const myMutationFunction = mutation({
+  // Validators for arguments.
+  args: {
+    first: v.string(),
+    second: v.string(),
+  },
 
-## Directory Structure
+  // Function implementation.
+  handler: async (ctx, args) => {
+    // Insert or modify documents in the database here.
+    // Mutations can also read from the database like queries.
+    // See https://docs.convex.dev/database/writing-data.
+    const message = { body: args.first, author: args.second }
+    const id = await ctx.db.insert('messages', message)
 
-```
-convex/
-├── _generated/     # Auto-generated types (do not edit)
-├── auth.ts         # Discord OAuth configuration
-├── bans.ts         # Player ban mutations/queries
-├── http.ts         # HTTP router for auth callbacks
-├── players.ts      # Player join/leave/presence
-├── rooms.ts        # Room creation/state management
-├── schema.ts       # Database schema
-├── signals.ts      # WebRTC signaling
-└── tsconfig.json   # TypeScript configuration
-```
-
-## Tables
-
-| Table         | Purpose                                   |
-| ------------- | ----------------------------------------- |
-| `rooms`       | Room metadata (owner, status)             |
-| `roomPlayers` | Players in rooms (also used for presence) |
-| `roomSignals` | WebRTC signaling messages                 |
-| `roomBans`    | Persistent ban records                    |
-
-See `SUPABASE_TO_CONVEX_PLAN.md` for the full data model.
-
-## Development
-
-```bash
-# Start Convex dev server (watches for changes)
-bunx convex dev
-
-# Run in separate terminal
-bun run dev
+    // Optionally, return a value from your mutation.
+    return await ctx.db.get('messages', id)
+  },
+})
 ```
 
-## Migration Status (Phase 3)
+Using this mutation function in a React component looks like:
 
-The Convex backend is currently in **Phase 3** of the Supabase → Convex migration:
-
-| Feature   | Status     | Notes                    |
-| --------- | ---------- | ------------------------ |
-| Schema    | ✅ Done    | All tables defined       |
-| Presence  | ✅ Done    | `useConvexPresence` hook |
-| Signaling | ⏳ Phase 4 | Using Supabase broadcast |
-| Auth      | ⏳ Phase 5 | Using Supabase Auth      |
-
-### Phase 3 Notes
-
-Mutations currently accept `userId`/`callerId` as parameters instead of using
-`getAuthUserId` from Convex Auth. This is intentional for Phase 3 (presence
-migration) since we're still using Supabase Auth.
-
-**In Phase 5**, all mutations will be updated to use `getAuthUserId` for proper
-authorization.
-
-### Feature Flag
-
-To revert presence to Supabase, edit `apps/web/src/contexts/PresenceContext.tsx`:
-
-```typescript
-const USE_CONVEX_PRESENCE = false // Set to false to use Supabase
+```ts
+const mutation = useMutation(api.myFunctions.myMutationFunction)
+function handleButtonPress() {
+  // fire and forget, the most common way to use mutations
+  mutation({ first: 'Hello!', second: 'me' })
+  // OR
+  // use the result once the mutation has completed
+  mutation({ first: 'Hello!', second: 'me' }).then((result) =>
+    console.log(result),
+  )
+}
 ```
 
-## Deployment
-
-Convex automatically deploys when you push to production. To manually deploy:
-
-```bash
-bunx convex deploy
-```
+Use the Convex CLI to push your functions to a deployment. See everything
+the Convex CLI can do by running `npx convex -h` in your project root
+directory. To learn more, launch the docs with `npx convex docs`.
