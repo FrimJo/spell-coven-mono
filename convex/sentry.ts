@@ -15,7 +15,6 @@ const SENTRY_ENVIRONMENT =
   process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? 'development'
 
 const VITE_SENTRY_RELEASE =
-  process.env.VITE_SENTRY_RELEASE ??
   process.env.VITE_VERCEL_GIT_COMMIT_SHA ??
   process.env.VITE_GITHUB_SHA ??
   process.env.VITE_BUILD_NUMBER

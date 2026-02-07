@@ -40,7 +40,6 @@ export const env = createEnv({
     VITE_CAMERA_FOCUS_CONTROLS_ENABLED: z.coerce.boolean().default(false),
 
     // Sentry
-    VITE_SENTRY_RELEASE: z.string().min(1, 'SENTRY_RELEASE is required'),
     VITE_SENTRY_ORG: z.string().min(1, 'SENTRY_ORG is required'),
     VITE_SENTRY_PROJECT: z.string().min(1, 'SENTRY_PROJECT is required'),
     VITE_GITHUB_SHA: z.string().min(1, 'VITE_GITHUB_SHA is required'),

@@ -12,7 +12,6 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 export default defineConfig(({ mode }) => {
   const isNotProd = mode !== 'production'
   const release =
-    env.VITE_SENTRY_RELEASE ??
     env.VITE_VERCEL_GIT_COMMIT_SHA ??
     env.VITE_GITHUB_SHA ??
     env.VITE_BUILD_NUMBER
@@ -21,30 +20,33 @@ export default defineConfig(({ mode }) => {
     env.SENTRY_AUTH_TOKEN && env.VITE_SENTRY_ORG && env.VITE_SENTRY_PROJECT,
   )
 
+  const sentryPlugin = enableSentryUpload
+    ? sentryVitePlugin({
+        authToken: env.SENTRY_AUTH_TOKEN,
+        org: env.VITE_SENTRY_ORG,
+        project: env.VITE_SENTRY_PROJECT,
+        release: {
+          name: release,
+        },
+        telemetry: false,
+        sourcemaps: {
+          assets: './dist/**',
+        },
+      })
+    : false
+
   return {
     // 🔴 important: include the trailing slash
     base: '/',
     plugins: [
       viteTsConfigPaths({ projects: ['./tsconfig.json'] }),
       // mkcert is only needed for local HTTPS development
-      isNotProd && mkcert({ savePath: './certificates' }),
+      ...(isNotProd ? [mkcert({ savePath: './certificates' })] : []),
       tailwindcss(),
       tanstackStart({ spa: { enabled: true } }),
       viteReact(), // Must come after tanstackStart()
-      enableSentryUpload &&
-        sentryVitePlugin({
-          authToken: env.SENTRY_AUTH_TOKEN,
-          org: env.VITE_SENTRY_ORG,
-          project: env.VITE_SENTRY_PROJECT,
-          release: {
-            name: release,
-          },
-          telemetry: false,
-          sourcemaps: {
-            assets: './dist/**',
-          },
-        }),
-    ].filter(Boolean),
+      ...(sentryPlugin ? [sentryPlugin] : []),
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

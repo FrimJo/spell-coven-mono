@@ -18,7 +18,9 @@
     "CONVEX_AUTH_TEST_MODE",
     "VITE_SUPPORT_URL",
     "VITE_THEME_TOGGLE_ENABLED",
-    "SENTRY_AUTH_TOKEN"
+    "SENTRY_AUTH_TOKEN",
+    "SENTRY_ENVIRONMENT",
+    "SENTRY_DSN"
   ],
   "tasks": {
     "build": {

@@ -1,6 +1,5 @@
 import { env } from '@/env'
 import * as Sentry from '@sentry/react'
-import { replayIntegration } from '@sentry/replay'
 
 const globalForSentry = globalThis as typeof globalThis & {
   __spellCovenSentryInitialized?: boolean
@@ -98,7 +97,9 @@ export function initializeSentry() {
   const environment =
     import.meta.env.SENTRY_ENVIRONMENT ?? import.meta.env.MODE ?? 'development'
   const release =
-    import.meta.env.VITE_SENTRY_RELEASE ?? import.meta.env.VITE_SENTRY_RELEASE
+    import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA ??
+    import.meta.env.VITE_GITHUB_SHA ??
+    import.meta.env.VITE_BUILD_NUMBER
   const isProduction = import.meta.env.PROD
   const dsn = import.meta.env.SENTRY_DSN
 
@@ -118,7 +119,7 @@ export function initializeSentry() {
 
   if (isProduction) {
     integrations.push(
-      replayIntegration({
+      Sentry.replayIntegration({
         maskAllInputs: true,
         blockAllMedia: true,
       }),
