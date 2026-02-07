@@ -3,9 +3,6 @@
  *
  * Handles player joining, leaving, presence heartbeat, and listing.
  *
- * NOTE: These mutations currently accept userId as a parameter for Phase 3
- * (presence migration). In Phase 5 (auth migration), we'll switch to using
- * getAuthUserId from Convex Auth for proper authorization.
  */
 
 import { getAuthUserId } from '@convex-dev/auth/server'
@@ -61,8 +58,6 @@ async function requireActiveRoomMember(
  * Creates a player record with the given session ID.
  * If the user already has a session in this room, returns that session.
  *
- * NOTE: userId is passed as parameter for Phase 3. In Phase 5, we'll use
- * getAuthUserId from Convex Auth instead.
  */
 export const joinRoom = mutation({
   args: {
@@ -119,6 +114,7 @@ export const joinRoom = mutation({
         poison: existingSession.poison ?? 0,
         commanders: existingSession.commanders ?? [],
         commanderDamage: existingSession.commanderDamage ?? {},
+        commanderTax: existingSession.commanderTax ?? {},
       })
 
       // Upsert the userActiveRooms pointer
@@ -182,6 +178,7 @@ export const joinRoom = mutation({
     const poison = existingUserSession?.poison ?? 0
     const commanders = existingUserSession?.commanders ?? []
     const commanderDamage = existingUserSession?.commanderDamage ?? {}
+    const commanderTax = existingUserSession?.commanderTax ?? {}
 
     // Create new player session
     const playerId = await ctx.db.insert('roomPlayers', {
@@ -194,6 +191,7 @@ export const joinRoom = mutation({
       poison,
       commanders,
       commanderDamage,
+      commanderTax,
       status: 'active',
       joinedAt: now,
       lastSeenAt: now,
