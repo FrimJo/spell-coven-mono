@@ -1,5 +1,5 @@
 import type { ObjectType, PropertyValidators } from 'convex/values'
-import * as Sentry from '@sentry/node'
+import * as Sentry from '@sentry/browser'
 
 const globalForSentry = globalThis as typeof globalThis & {
   __spellCovenSentryInitialized?: boolean
@@ -70,7 +70,10 @@ function pickSafeArgs<T extends Record<string, unknown>>(
   return Object.keys(result).length > 0 ? result : undefined
 }
 
-function sanitizeEvent(event: Sentry.Event): Sentry.Event | null {
+function sanitizeEvent(
+  event: Sentry.ErrorEvent,
+  _hint: Sentry.EventHint,
+): Sentry.ErrorEvent | null {
   if (event.request) {
     if (event.request.cookies) {
       delete event.request.cookies

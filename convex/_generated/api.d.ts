@@ -16,6 +16,8 @@ import type * as errors from "../errors.js";
 import type * as http from "../http.js";
 import type * as players from "../players.js";
 import type * as rooms from "../rooms.js";
+import type * as sentry from "../sentry.js";
+import type * as sentryTest from "../sentryTest.js";
 import type * as signals from "../signals.js";
 import type * as users from "../users.js";
 
@@ -34,6 +36,8 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   players: typeof players;
   rooms: typeof rooms;
+  sentry: typeof sentry;
+  sentryTest: typeof sentryTest;
   signals: typeof signals;
   users: typeof users;
 }>;

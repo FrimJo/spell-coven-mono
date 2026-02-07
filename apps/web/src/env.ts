@@ -38,18 +38,6 @@ export const env = createEnv({
     VITE_BLOB_STORAGE_URL: z.url().min(1, 'Blob storage URL is required'),
     VITE_SUPPORT_URL: z.url().optional(),
     VITE_CAMERA_FOCUS_CONTROLS_ENABLED: z.coerce.boolean().default(false),
-
-    // Sentry
-    VITE_SENTRY_ORG: z.string().min(1, 'SENTRY_ORG is required'),
-    VITE_SENTRY_PROJECT: z.string().min(1, 'SENTRY_PROJECT is required'),
-    VITE_GITHUB_SHA: z.string().min(1, 'VITE_GITHUB_SHA is required'),
-    VITE_VERCEL_GIT_COMMIT_SHA: z
-      .string()
-      .min(1, 'VITE_VERCEL_GIT_COMMIT_SHA is required'),
-    VITE_BUILD_NUMBER: z.string().min(1, 'VITE_BUILD_NUMBER is required'),
-  },
-  server: {
-    SENTRY_AUTH_TOKEN: z.string().min(1, 'SENTRY_AUTH_TOKEN is required'),
   },
 
   /**

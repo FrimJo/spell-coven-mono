@@ -68,7 +68,10 @@ function sanitizeBreadcrumb(breadcrumb: Sentry.Breadcrumb): Sentry.Breadcrumb {
   return breadcrumb
 }
 
-function sanitizeEvent(event: Sentry.Event): Sentry.Event | null {
+function sanitizeEvent(
+  event: Sentry.ErrorEvent,
+  _hint: Sentry.EventHint,
+): Sentry.ErrorEvent | null {
   if (event.request?.url) {
     event.request.url = sanitizeUrl(event.request.url)
   }
@@ -111,26 +114,24 @@ export function initializeSentry() {
     /^http:\/\/localhost:1234/i,
   ]
 
-  const integrations: Sentry.Integration[] = [
-    Sentry.browserTracingIntegration({
-      tracePropagationTargets,
-    }),
+  const integrations = [
+    Sentry.browserTracingIntegration(),
+    ...(isProduction
+      ? [
+          Sentry.replayIntegration({
+            maskAllInputs: true,
+            blockAllMedia: true,
+          }),
+        ]
+      : []),
   ]
-
-  if (isProduction) {
-    integrations.push(
-      Sentry.replayIntegration({
-        maskAllInputs: true,
-        blockAllMedia: true,
-      }),
-    )
-  }
 
   Sentry.init({
     dsn,
     environment,
     release,
     enabled: Boolean(dsn),
+    tracePropagationTargets,
     integrations,
     tracesSampleRate: parseSampleRate(
       import.meta.env.SENTRY_TRACES_SAMPLE_RATE,

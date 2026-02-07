@@ -1,5 +1,4 @@
 import path from 'node:path'
-import { env } from '@/env'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
@@ -12,19 +11,21 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 export default defineConfig(({ mode }) => {
   const isNotProd = mode !== 'production'
   const release =
-    env.VITE_VERCEL_GIT_COMMIT_SHA ??
-    env.VITE_GITHUB_SHA ??
-    env.VITE_BUILD_NUMBER
+    process.env.VITE_VERCEL_GIT_COMMIT_SHA ??
+    process.env.VITE_GITHUB_SHA ??
+    process.env.VITE_BUILD_NUMBER
 
   const enableSentryUpload = Boolean(
-    env.SENTRY_AUTH_TOKEN && env.VITE_SENTRY_ORG && env.VITE_SENTRY_PROJECT,
+    process.env.SENTRY_AUTH_TOKEN &&
+      process.env.VITE_SENTRY_ORG &&
+      process.env.VITE_SENTRY_PROJECT,
   )
 
   const sentryPlugin = enableSentryUpload
     ? sentryVitePlugin({
-        authToken: env.SENTRY_AUTH_TOKEN,
-        org: env.VITE_SENTRY_ORG,
-        project: env.VITE_SENTRY_PROJECT,
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        org: process.env.VITE_SENTRY_ORG,
+        project: process.env.VITE_SENTRY_PROJECT,
         release: {
           name: release,
         },
