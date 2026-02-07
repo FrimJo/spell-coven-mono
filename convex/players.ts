@@ -3,9 +3,6 @@
  *
  * Handles player joining, leaving, presence heartbeat, and listing.
  *
- * NOTE: These mutations currently accept userId as a parameter for Phase 3
- * (presence migration). In Phase 5 (auth migration), we'll switch to using
- * getAuthUserId from Convex Auth for proper authorization.
  */
 
 import { getAuthUserId } from '@convex-dev/auth/server'
@@ -61,8 +58,6 @@ async function requireActiveRoomMember(
  * Creates a player record with the given session ID.
  * If the user already has a session in this room, returns that session.
  *
- * NOTE: userId is passed as parameter for Phase 3. In Phase 5, we'll use
- * getAuthUserId from Convex Auth instead.
  */
 export const joinRoom = mutation({
   args: {

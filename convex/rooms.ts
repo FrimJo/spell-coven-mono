@@ -3,8 +3,6 @@
  *
  * Handles room creation, state management, and ownership.
  *
- * NOTE: These mutations currently accept userId/callerId as parameters for Phase 3.
- * In Phase 5 (auth migration), we'll use getAuthUserId for proper authorization.
  */
 
 import { getAuthUserId } from '@convex-dev/auth/server'
@@ -329,7 +327,6 @@ export const checkRoomAccess = query({
 /**
  * Update room status
  *
- * NOTE: callerId is used for Phase 3. Phase 5 will use getAuthUserId.
  */
 export const updateRoomStatus = mutation({
   args: {
@@ -537,7 +534,6 @@ export const transferOwnerIfNeeded = internalMutation({
 /**
  * Update a player's health
  *
- * NOTE: No auth check for Phase 3. Phase 5 will add proper authorization.
  */
 export const updatePlayerHealth = mutation({
   args: {
@@ -588,7 +584,6 @@ export const updatePlayerHealth = mutation({
 /**
  * Update a player's poison counters
  *
- * NOTE: No auth check for Phase 3. Phase 5 will add proper authorization.
  */
 export const updatePlayerPoison = mutation({
   args: {

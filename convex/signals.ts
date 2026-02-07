@@ -3,8 +3,6 @@
  *
  * Handles SDP offers/answers and ICE candidates for peer connections.
  *
- * NOTE: These functions accept userId as parameter for Phase 3.
- * Phase 5 will use getAuthUserId for proper authorization.
  */
 
 import { getAuthUserId } from '@convex-dev/auth/server'
@@ -50,7 +48,6 @@ async function requireActiveRoomMember(
  * @param toUserId - Target user ID, or null for broadcast to all peers
  * @param payload - Signal payload (SDP, ICE candidate, etc.)
  *
- * NOTE: fromUserId is passed as parameter for Phase 3. Phase 5 will use getAuthUserId.
  */
 export const sendSignal = mutation({
   args: {
@@ -84,7 +81,6 @@ export const sendSignal = mutation({
  *
  * Filters out signals from the requesting user.
  *
- * NOTE: userId is passed as parameter for Phase 3. Phase 5 will use getAuthUserId.
  */
 export const listSignals = query({
   args: {
