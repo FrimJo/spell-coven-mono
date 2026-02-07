@@ -11,11 +11,17 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { useCardQueryContext } from '@/contexts/CardQueryContext'
 import { usePresence } from '@/contexts/PresenceContext'
-import { History, Trash2 } from 'lucide-react'
+import { Dices, History, Trash2 } from 'lucide-react'
+import { useMutation, useQuery } from 'convex/react'
+import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
+import { Input } from '@repo/ui/components/input'
 import { Skeleton } from '@repo/ui/components/skeleton'
+import { cn } from '@repo/ui/lib/utils'
+
+import { api } from '@convex/_generated/api'
 
 import { CardPreview } from './CardPreview'
 import { GameStatsPanel } from './GameStatsPanel'
@@ -169,6 +175,9 @@ function CardHistoryList({
  * This is shorter than the 30-second presence threshold that removes them from the list entirely.
  */
 const ONLINE_THRESHOLD_MS = 15_000
+const DICE_PRESETS = [4, 6, 8, 10, 12, 20, 100]
+const DEFAULT_SIDES = 20
+const DEFAULT_COUNT = 1
 
 interface GameRoomSidebarProps {
   roomId: string
@@ -197,6 +206,11 @@ function SidebarContent({
   const { user } = useAuth()
   const { state, history, setResultWithoutHistory, clearResult, clearHistory } =
     useCardQueryContext()
+  const diceHistory = useQuery(api.dice.listRoomDiceRolls, { roomId })
+  const rollDice = useMutation(api.dice.rollDice)
+
+  const [sides, setSides] = useState(DEFAULT_SIDES)
+  const [count, setCount] = useState(DEFAULT_COUNT)
 
   // Determine the currently selected card ID for highlighting
   const selectedCardIdForHighlight = useMemo(() => {
@@ -297,6 +311,21 @@ function SidebarContent({
     [roomSeatCount, uniqueParticipants.length, setRoomSeatCount],
   )
 
+  const handleRollDice = useCallback(async () => {
+    const safeSides = Math.max(2, Math.min(1000, Math.floor(sides)))
+    const safeCount = Math.max(1, Math.min(20, Math.floor(count)))
+
+    setSides(safeSides)
+    setCount(safeCount)
+
+    try {
+      await rollDice({ roomId, sides: safeSides, count: safeCount })
+    } catch (error) {
+      console.error('[GameRoomSidebar] Failed to roll dice:', error)
+      toast.error('Failed to roll dice')
+    }
+  }, [count, roomId, rollDice, sides])
+
   return (
     <>
       <div className="w-64 flex-shrink-0 space-y-4 overflow-y-auto">
@@ -320,6 +349,82 @@ function SidebarContent({
           selectedCardId={selectedCardIdForHighlight}
           onClear={clearHistory}
         />
+        <SidebarCard
+          icon={Dices}
+          title="Dice Roller"
+          count={`(${diceHistory?.length ?? 0})`}
+        >
+          <div className="space-y-3 p-3">
+            <div className="grid grid-cols-3 gap-2">
+              {DICE_PRESETS.map((preset) => (
+                <Button
+                  key={preset}
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  className={cn(
+                    'h-8 px-2 text-xs',
+                    preset === sides && 'border-brand text-brand',
+                  )}
+                  onClick={() => setSides(preset)}
+                >
+                  d{preset}
+                </Button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <div className="flex-1 space-y-1">
+                <label className="text-text-muted text-xs">Sides</label>
+                <Input
+                  type="number"
+                  min={2}
+                  max={1000}
+                  value={sides}
+                  onChange={(event) =>
+                    setSides(Number(event.target.value) || DEFAULT_SIDES)
+                  }
+                />
+              </div>
+              <div className="flex-1 space-y-1">
+                <label className="text-text-muted text-xs">Count</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={count}
+                  onChange={(event) =>
+                    setCount(Number(event.target.value) || DEFAULT_COUNT)
+                  }
+                />
+              </div>
+            </div>
+            <Button className="w-full" onClick={handleRollDice}>
+              Roll Dice
+            </Button>
+          </div>
+          <div className="border-surface-2 max-h-44 overflow-y-auto border-t">
+            {diceHistory?.length ? (
+              diceHistory.map((roll) => (
+                <div
+                  key={roll._id}
+                  className="border-surface-2 space-y-1 border-b px-3 py-2 text-xs last:border-b-0"
+                >
+                  <div className="text-text-secondary">
+                    <span className="font-medium">{roll.username}</span> rolled{' '}
+                    {roll.count}d{roll.sides}
+                  </div>
+                  <div className="text-text-muted">
+                    [{roll.results.join(', ')}] = {roll.total}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-text-muted px-3 py-4 text-xs">
+                No rolls yet.
+              </div>
+            )}
+          </div>
+        </SidebarCard>
       </div>
 
       {/* Commanders Panel */}
