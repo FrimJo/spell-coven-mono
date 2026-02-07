@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useCardQueryContext } from '@/contexts/CardQueryContext'
 import { usePresence } from '@/contexts/PresenceContext'
 import { History, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
@@ -193,7 +194,15 @@ function SidebarContent({
   onToggleMutePlayer,
 }: GameRoomSidebarProps) {
   // Get game room participants from context (already deduplicated)
-  const { uniqueParticipants, roomSeatCount, setRoomSeatCount } = usePresence()
+  const presence = usePresence()
+  const {
+    uniqueParticipants,
+    roomSeatCount,
+    setRoomSeatCount,
+    startingPlayerId,
+    startingPlayerSelectedAt,
+    randomizeStartingPlayer,
+  } = presence
   const { user } = useAuth()
   const { state, history, setResultWithoutHistory, clearResult, clearHistory } =
     useCardQueryContext()
@@ -220,6 +229,7 @@ function SidebarContent({
   // State for commanders panel
   const [panelOpen, setPanelOpen] = useState(false)
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
+  const [isRandomizing, setIsRandomizing] = useState(false)
 
   // Handler to re-select a history entry (doesn't add to history)
   const handleHistorySelect = useCallback(
@@ -297,6 +307,23 @@ function SidebarContent({
     [roomSeatCount, uniqueParticipants.length, setRoomSeatCount],
   )
 
+  const handleRandomizeStartingPlayer = useCallback(async () => {
+    if (!randomizeStartingPlayer) return
+    setIsRandomizing(true)
+    try {
+      const result = await randomizeStartingPlayer()
+      toast.success(`Starting player: ${result.startingPlayerName}`)
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to randomize starting player'
+      toast.error(message)
+    } finally {
+      setIsRandomizing(false)
+    }
+  }, [randomizeStartingPlayer])
+
   return (
     <>
       <div className="w-64 flex-shrink-0 space-y-4 overflow-y-auto">
@@ -312,6 +339,13 @@ function SidebarContent({
           onViewCommanders={handleViewCommanders}
           seatCount={roomSeatCount}
           onChangeSeatCount={isLobbyOwner ? handleChangeSeatCount : undefined}
+          startingPlayerId={startingPlayerId}
+          startingPlayerSelectedAt={startingPlayerSelectedAt}
+          onRandomizeStartingPlayer={
+            isLobbyOwner ? handleRandomizeStartingPlayer : undefined
+          }
+          isRandomizing={isRandomizing}
+          now={now}
         />
         <CardPreview onClose={clearResult} />
         <CardHistoryList

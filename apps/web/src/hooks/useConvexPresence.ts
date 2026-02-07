@@ -65,6 +65,15 @@ interface UseConvexPresenceReturn {
   roomSeatCount: number
   /** Set the room seat count (owner only) */
   setRoomSeatCount: (seatCount: number) => Promise<{ seatCount: number }>
+  /** Selected starting player (if any) */
+  startingPlayerId: string | null
+  /** Timestamp when the starting player was selected */
+  startingPlayerSelectedAt: number | null
+  /** Randomize the starting player (owner only) */
+  randomizeStartingPlayer: () => Promise<{
+    startingPlayerId: string
+    startingPlayerName: string
+  }>
 }
 
 /**
@@ -135,6 +144,9 @@ export function useConvexPresence({
   const kickMutation = useMutation(api.bans.kickPlayer)
   const banMutation = useMutation(api.bans.banPlayer)
   const setSeatCountMutation = useMutation(api.rooms.setRoomSeatCount)
+  const randomizeStartingPlayerMutation = useMutation(
+    api.rooms.randomizeStartingPlayer,
+  )
 
   // Use refs to store mutation functions for stable references
   const joinRoomRef = useRef(joinRoomMutation)
@@ -143,6 +155,7 @@ export function useConvexPresence({
   const kickMutationRef = useRef(kickMutation)
   const banMutationRef = useRef(banMutation)
   const setSeatCountRef = useRef(setSeatCountMutation)
+  const randomizeStartingPlayerRef = useRef(randomizeStartingPlayerMutation)
 
   // Keep refs up to date
   useEffect(() => {
@@ -152,6 +165,7 @@ export function useConvexPresence({
     kickMutationRef.current = kickMutation
     banMutationRef.current = banMutation
     setSeatCountRef.current = setSeatCountMutation
+    randomizeStartingPlayerRef.current = randomizeStartingPlayerMutation
   })
 
   // Convex queries - reactive subscriptions
@@ -179,6 +193,8 @@ export function useConvexPresence({
   // Extract stable values from queries
   const roomOwnerId = roomQuery?.ownerId
   const roomSeatCount = roomQuery?.seatCount ?? 4
+  const startingPlayerId = roomQuery?.startingPlayerId ?? null
+  const startingPlayerSelectedAt = roomQuery?.startingPlayerSelectedAt ?? null
   const allSessionsData = allSessionsQuery
   const activePlayersData = activePlayersQuery
   const isBanned = isBannedQuery === true
@@ -461,6 +477,14 @@ export function useConvexPresence({
     [convexRoomId],
   )
 
+  const randomizeStartingPlayer = useCallback(async () => {
+    if (!convexRoomId) {
+      throw new Error('Cannot randomize starting player: not connected to room')
+    }
+
+    return await randomizeStartingPlayerRef.current({ roomId: convexRoomId })
+  }, [convexRoomId])
+
   // Explicitly leave the room (call before navigating away)
   const leaveRoom = useCallback(async (): Promise<void> => {
     if (!convexRoomId || !sessionId) {
@@ -506,5 +530,8 @@ export function useConvexPresence({
     leaveRoom,
     roomSeatCount,
     setRoomSeatCount,
+    startingPlayerId,
+    startingPlayerSelectedAt,
+    randomizeStartingPlayer,
   }
 }

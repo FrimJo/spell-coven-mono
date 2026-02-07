@@ -817,6 +817,85 @@ export const setRoomSeatCount = mutation({
 })
 
 /**
+ * Randomly select a starting player for the room.
+ *
+ * Only the room owner can randomize. Selection is limited to active players.
+ */
+export const randomizeStartingPlayer = mutation({
+  args: {
+    roomId: v.string(),
+  },
+  handler: async (ctx, { roomId }) => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) {
+      throw new AuthRequiredError()
+    }
+
+    const room = await ctx.db
+      .query('rooms')
+      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+      .first()
+
+    if (!room) {
+      throw new RoomNotFoundError()
+    }
+
+    if (room.ownerId !== userId) {
+      throw new NotRoomOwnerError('randomize the starting player')
+    }
+
+    const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
+    const activePlayers = await ctx.db
+      .query('roomPlayers')
+      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+      .filter((q) =>
+        q.and(
+          q.neq(q.field('status'), 'left'),
+          q.gt(q.field('lastSeenAt'), presenceThreshold),
+        ),
+      )
+      .collect()
+
+    if (activePlayers.length === 0) {
+      throw new PlayerNotFoundError('No active players to randomize')
+    }
+
+    const uniquePlayers = new Map<string, { userId: string; username: string }>()
+    const sortedPlayers = [...activePlayers].sort(
+      (a, b) => a.joinedAt - b.joinedAt,
+    )
+
+    for (const player of sortedPlayers) {
+      if (!uniquePlayers.has(player.userId)) {
+        uniquePlayers.set(player.userId, {
+          userId: player.userId,
+          username: player.username,
+        })
+      }
+    }
+
+    const playerOptions = Array.from(uniquePlayers.values())
+    const selection =
+      playerOptions[Math.floor(Math.random() * playerOptions.length)]
+
+    if (!selection) {
+      throw new PlayerNotFoundError('No eligible players to randomize')
+    }
+
+    await ctx.db.patch(room._id, {
+      startingPlayerId: selection.userId,
+      startingPlayerSelectedAt: Date.now(),
+      lastActivityAt: Date.now(),
+    })
+
+    return {
+      startingPlayerId: selection.userId,
+      startingPlayerName: selection.username,
+    }
+  },
+})
+
+/**
  * Clean up inactive rooms and their related data
  *
  * Deletes rooms that have been inactive for more than ROOM_INACTIVITY_TIMEOUT_MS

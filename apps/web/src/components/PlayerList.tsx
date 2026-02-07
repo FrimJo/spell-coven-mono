@@ -3,10 +3,13 @@ import { motion } from 'framer-motion'
 import {
   Ban,
   Crown,
+  Flag,
   Minus,
   MoreVertical,
   Plus,
+  Shuffle,
   Swords,
+  Sparkles,
   Unplug,
   Users,
   UserX,
@@ -59,9 +62,41 @@ interface PlayerListProps {
   seatCount: number
   /** Callback to change seat count (owner only) */
   onChangeSeatCount?: (delta: number) => void
+  /** Current starting player (if any) */
+  startingPlayerId?: string | null
+  /** When the starting player was selected */
+  startingPlayerSelectedAt?: number | null
+  /** Randomize starting player (owner only) */
+  onRandomizeStartingPlayer?: () => void
+  /** Disable randomize button while in progress */
+  isRandomizing?: boolean
+  /** Current timestamp used for relative time */
+  now?: number
 }
 
 type RemovalAction = 'kick' | 'ban'
+
+function formatRelativeTime(timestamp: number, now: number): string {
+  const diffMs = Math.max(0, now - timestamp)
+  const diffSeconds = Math.floor(diffMs / 1000)
+
+  if (diffSeconds < 60) {
+    return 'just now'
+  }
+
+  const diffMinutes = Math.floor(diffSeconds / 60)
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60)
+  if (diffHours < 24) {
+    return `${diffHours}h ago`
+  }
+
+  const diffDays = Math.floor(diffHours / 24)
+  return `${diffDays}d ago`
+}
 
 export function PlayerList({
   players,
@@ -75,6 +110,11 @@ export function PlayerList({
   onViewCommanders,
   seatCount,
   onChangeSeatCount,
+  startingPlayerId,
+  startingPlayerSelectedAt,
+  onRandomizeStartingPlayer,
+  isRandomizing = false,
+  now,
 }: PlayerListProps) {
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
@@ -103,32 +143,61 @@ export function PlayerList({
     isLobbyOwner && seatCount > players.length && seatCount > 1
   const canIncrease = isLobbyOwner && seatCount < 4
 
+  const formattedStartingTimestamp =
+    startingPlayerSelectedAt && now
+      ? formatRelativeTime(startingPlayerSelectedAt, now)
+      : null
+
   // Header action for seat count controls (owner only)
   const headerAction =
-    isLobbyOwner && onChangeSeatCount ? (
+    isLobbyOwner && (onChangeSeatCount || onRandomizeStartingPlayer) ? (
       <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onChangeSeatCount(-1)}
-          disabled={!canDecrease}
-          className="text-text-muted hover:text-text-secondary disabled:text-text-muted/30 h-5 w-5 p-0"
-          title="Remove seat"
-        >
-          <Minus className="h-3 w-3" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onChangeSeatCount(1)}
-          disabled={!canIncrease}
-          className="text-text-muted hover:text-text-secondary disabled:text-text-muted/30 h-5 w-5 p-0"
-          title="Add seat"
-        >
-          <Plus className="h-3 w-3" />
-        </Button>
+        {onRandomizeStartingPlayer && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRandomizeStartingPlayer}
+            disabled={isRandomizing || players.length === 0}
+            className="text-text-muted hover:text-text-secondary disabled:text-text-muted/30 h-5 w-5 p-0"
+            title="Randomize starting player"
+          >
+            <Shuffle className="h-3 w-3" />
+          </Button>
+        )}
+        {onChangeSeatCount && (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onChangeSeatCount(-1)}
+              disabled={!canDecrease}
+              className="text-text-muted hover:text-text-secondary disabled:text-text-muted/30 h-5 w-5 p-0"
+              title="Remove seat"
+            >
+              <Minus className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onChangeSeatCount(1)}
+              disabled={!canIncrease}
+              className="text-text-muted hover:text-text-secondary disabled:text-text-muted/30 h-5 w-5 p-0"
+              title="Add seat"
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </>
+        )}
       </div>
     ) : undefined
+
+  const startingPlayer =
+    startingPlayerId != null
+      ? players.find((player) => player.id === startingPlayerId)
+      : undefined
+  const startingPlayerName =
+    startingPlayer?.name ??
+    (startingPlayerId ? 'Player left the room' : null)
 
   return (
     <SidebarCard
@@ -139,6 +208,20 @@ export function PlayerList({
       headerAction={headerAction}
     >
       <div className="space-y-2 p-2">
+        <div className="border-surface-3 bg-surface-2/60 flex flex-col gap-1 rounded-lg border px-3 py-2 text-xs">
+          <div className="flex items-center gap-2 text-white">
+            <Sparkles className="text-brand h-3.5 w-3.5" />
+            <span className="text-text-secondary">Starting player</span>
+            <span className="text-white font-medium">
+              {startingPlayerName ?? 'Not selected yet'}
+            </span>
+          </div>
+          <span className="text-text-muted">
+            {startingPlayerId
+              ? `Randomized ${formattedStartingTimestamp ?? 'just now'}`
+              : 'Use shuffle to pick a starting player.'}
+          </span>
+        </div>
         {Array.from({ length: seatCount }).map((_, index) => {
           const player = players[index]
 
@@ -188,10 +271,17 @@ export function PlayerList({
           const isOwner = ownerId ? player.id === ownerId : player.id === '1' // Use provided ownerId or fallback to first player
           const isMuted = mutedPlayers.has(player.id)
 
+          const isStartingPlayer =
+            startingPlayerId != null && player.id === startingPlayerId
+
           return (
             <div
               key={player.id}
-              className="border-surface-2 bg-surface-2/50 flex items-center justify-between rounded-lg border p-2 transition-colors"
+              className={`border-surface-2 flex items-center justify-between rounded-lg border p-2 transition-colors ${
+                isStartingPlayer
+                  ? 'bg-brand/10 border-brand/40'
+                  : 'bg-surface-2/50'
+              }`}
             >
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <div
@@ -207,6 +297,12 @@ export function PlayerList({
                 </span>
                 {isOwner && (
                   <Crown className="text-warning h-3 w-3 flex-shrink-0" />
+                )}
+                {isStartingPlayer && (
+                  <span className="bg-brand/20 text-brand flex flex-shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium">
+                    <Flag className="h-3 w-3" />
+                    Starting
+                  </span>
                 )}
                 {player.isOnline === false && (
                   <Tooltip>
