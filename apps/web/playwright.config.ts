@@ -1,9 +1,4 @@
-import { dirname, resolve } from 'path'
-import { fileURLToPath } from 'url'
 import { defineConfig, devices } from '@playwright/test'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
 
 export default defineConfig({
   testDir: 'tests',
@@ -54,16 +49,6 @@ export default defineConfig({
     },
   ],
   webServer: [
-    {
-      command: 'bun run convex:test',
-      cwd: resolve(__dirname, '../..'),
-      url: 'http://127.0.0.1:3210',
-      timeout: process.env.CI ? 120_000 : 90_000,
-      reuseExistingServer: !process.env.CI,
-      stdout: 'pipe',
-      stderr: 'pipe',
-      ignoreHTTPSErrors: true,
-    },
     {
       command: 'bun run dev:test',
       url: 'https://localhost:1234',

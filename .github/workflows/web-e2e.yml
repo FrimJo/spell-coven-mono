@@ -31,6 +31,38 @@ jobs:
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
 
+      - name: Start Convex backend
+        run: |
+          bun run convex:test > /tmp/convex.log 2>&1 &
+          echo $! > /tmp/convex.pid
+        working-directory: .
+
+      - name: Wait for Convex backend
+        run: |
+          for i in {1..30}; do
+            if nc -z 127.0.0.1 3210; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Convex backend failed to start" >&2
+          exit 1
+        working-directory: .
+
+      - name: Configure Convex env for e2e
+        run: |
+          AUTH_ENV=$(node scripts/generate-convex-auth-env.cjs)
+          printf '%s\n' "$AUTH_ENV" >> "$GITHUB_ENV"
+          while IFS= read -r line; do
+            export "$line"
+          done <<< "$AUTH_ENV"
+
+          CONVEX_URL="${SITE_URL}" bunx convex env set SITE_URL "${SITE_URL}" --local
+          CONVEX_URL="${SITE_URL}" bunx convex env set JWT_PRIVATE_KEY "${JWT_PRIVATE_KEY}" --local
+          CONVEX_URL="${SITE_URL}" bunx convex env set JWKS "${JWKS}" --local
+          CONVEX_URL="${SITE_URL}" bunx convex env set CONVEX_AUTH_TEST_MODE "true" --local
+        working-directory: .
+
       - name: Run E2E tests
         run: bun run e2e
         env:
