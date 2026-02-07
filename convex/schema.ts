@@ -139,6 +139,24 @@ export default defineSchema({
     .index('by_roomId_userId', ['roomId', 'userId']),
 
   /**
+   * roomChat - Chat messages scoped to a room
+   *
+   * Messages are ephemeral and deleted when the room is removed.
+   */
+  roomChat: defineTable({
+    /** Reference to room */
+    roomId: v.string(),
+    /** Discord user ID of the sender */
+    userId: v.string(),
+    /** Sender's display name at time of message */
+    username: v.string(),
+    /** Message content */
+    message: v.string(),
+    /** When the message was created */
+    createdAt: v.number(),
+  }).index('by_roomId_createdAt', ['roomId', 'createdAt']),
+
+  /**
    * counters - Sequential counters for generating IDs
    *
    * Used to track total counts for various entities (e.g., rooms).

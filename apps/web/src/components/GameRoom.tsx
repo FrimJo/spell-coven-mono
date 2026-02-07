@@ -15,6 +15,7 @@ import type { RejoinReason } from './RejoinGameDialog.js'
 import { AppHeader } from './AppHeader.js'
 import { CardSearchCommand } from './CardSearchCommand.js'
 import { DuplicateSessionDialog } from './DuplicateSessionDialog.js'
+import { GameRoomChat } from './GameRoomChat.js'
 import { GameRoomSidebar } from './GameRoomSidebar.js'
 import { LeaveGameDialog } from './LeaveGameDialog.js'
 import { MediaSetupDialog } from './MediaSetupDialog.js'
@@ -262,7 +263,7 @@ function GameRoomContent({
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        <div className="flex h-full gap-4 p-4">
+        <div className="relative flex h-full gap-4 p-4">
           {/* Left Sidebar - Player List */}
           <GameRoomSidebar
             roomId={roomId}
@@ -289,6 +290,8 @@ function GameRoomContent({
               showTestStream={showTestStream}
             />
           </div>
+
+          <GameRoomChat roomId={roomId} />
         </div>
       </div>
     </div>
