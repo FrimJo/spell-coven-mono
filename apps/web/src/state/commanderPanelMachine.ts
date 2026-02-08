@@ -20,6 +20,9 @@ import { assign, fromPromise, setup } from 'xstate'
 export interface CommanderPanelContext {
   // Editing state
   editingPlayerId: string | null
+  /** Independent edit state for each slot when editingPlayerId is set */
+  editingSlot1: boolean
+  editingSlot2: boolean
 
   // Commander pair state
   commander1Name: string
@@ -50,8 +53,10 @@ export type CommanderPanelEvent =
       playerId: string
       commander1Name: string
       commander2Name: string
+      slot?: 1 | 2
     }
   | { type: 'DONE_EDIT' }
+  | { type: 'ENTER_SLOT_EDIT'; slot: 1 | 2 }
   | { type: 'SET_CMD1_NAME'; name: string }
   | { type: 'SET_CMD2_NAME'; name: string }
   | { type: 'CMD1_RESOLVED'; card: ScryfallCard | null }
@@ -176,6 +181,8 @@ export const commanderPanelMachine = setup({
   initial: 'closed',
   context: {
     editingPlayerId: null,
+    editingSlot1: false,
+    editingSlot2: false,
     commander1Name: '',
     commander2Name: '',
     commander1Card: null,
@@ -203,17 +210,22 @@ export const commanderPanelMachine = setup({
         },
         START_EDIT: {
           target: 'editing',
-          actions: assign({
-            editingPlayerId: ({ event }) => event.playerId,
-            commander1Name: ({ event }) => event.commander1Name,
-            commander2Name: ({ event }) => event.commander2Name,
-            commander1Card: null,
-            commander2Card: null,
-            dualKeywords: [],
-            specificPartner: null,
-            allowsSecondCommander: false,
-            commander2Suggestions: [],
-            suggestionsLabel: 'Suggested',
+          actions: assign(({ event }) => {
+            const slot = event.slot
+            return {
+              editingPlayerId: event.playerId,
+              editingSlot1: slot === undefined || slot === 1,
+              editingSlot2: slot === undefined || slot === 2,
+              commander1Name: event.commander1Name,
+              commander2Name: event.commander2Name,
+              commander1Card: null,
+              commander2Card: null,
+              dualKeywords: [] as DualCommanderKeyword[],
+              specificPartner: null,
+              allowsSecondCommander: false,
+              commander2Suggestions: [],
+              suggestionsLabel: 'Suggested',
+            }
           }),
         },
       },
@@ -223,11 +235,27 @@ export const commanderPanelMachine = setup({
       on: {
         DONE_EDIT: {
           target: 'viewing',
-          actions: assign({ editingPlayerId: null }),
+          actions: assign({
+            editingPlayerId: null,
+            editingSlot1: false,
+            editingSlot2: false,
+          }),
         },
         CLOSE_PANEL: {
           target: 'closed',
-          actions: ['clearCommanderState', assign({ editingPlayerId: null })],
+          actions: [
+            'clearCommanderState',
+            assign({
+              editingPlayerId: null,
+              editingSlot1: false,
+              editingSlot2: false,
+            }),
+          ],
+        },
+        ENTER_SLOT_EDIT: {
+          actions: assign(({ event }) =>
+            event.slot === 1 ? { editingSlot1: true } : { editingSlot2: true },
+          ),
         },
         SET_CMD1_NAME: {
           actions: assign({

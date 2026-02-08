@@ -5,7 +5,6 @@ import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useCardDetector } from '@/hooks/useCardDetector'
 import { attachVideoStream } from '@/lib/video-stream-utils'
 
-import { CommanderOverlay } from './CommanderOverlay'
 import { PlayerStatsOverlay } from './PlayerStatsOverlay'
 import { PlayerVideoCard } from './PlayerVideoCard'
 import {
@@ -163,16 +162,6 @@ export const LocalVideoCard = memo(function LocalVideoCard({
         </>
       ) : (
         <VideoDisabledPlaceholder />
-      )}
-
-      {/* Commander Overlay */}
-      {roomId && participant && currentUser && (
-        <CommanderOverlay
-          participant={participant}
-          currentUser={currentUser}
-          roomId={roomId}
-          gridIndex={gridIndex}
-        />
       )}
 
       {/* Stats Overlay */}
