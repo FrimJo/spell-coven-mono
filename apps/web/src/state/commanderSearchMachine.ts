@@ -90,9 +90,10 @@ export const commanderSearchMachine = setup({
   },
   on: {
     SET_EXTERNAL_VALUE: {
-      actions: assign({
-        query: ({ event }) => event.value,
-      }),
+      actions: assign(({ event }) => ({
+        query: event.value,
+        ...(event.value === '' ? { resolvedCard: null } : {}),
+      })),
     },
     SET_SUGGESTIONS: {
       actions: assign({
@@ -134,10 +135,11 @@ export const commanderSearchMachine = setup({
         ],
         INPUT_CHANGED: {
           target: 'debouncing',
-          actions: assign({
-            query: ({ event }) => event.value,
+          actions: assign(({ event }) => ({
+            query: event.value,
             open: true,
-          }),
+            ...(event.value === '' ? { resolvedCard: null } : {}),
+          })),
         },
       },
     },
@@ -165,10 +167,11 @@ export const commanderSearchMachine = setup({
         },
         INPUT_CHANGED: {
           target: 'debouncing',
-          actions: assign({
-            query: ({ event }) => event.value,
+          actions: assign(({ event }) => ({
+            query: event.value,
             open: true,
-          }),
+            ...(event.value === '' ? { resolvedCard: null } : {}),
+          })),
         },
         RESULT_SELECTED: {
           target: 'resolving',
@@ -196,9 +199,10 @@ export const commanderSearchMachine = setup({
         INPUT_CHANGED: {
           target: 'debouncing',
           reenter: true,
-          actions: assign({
-            query: ({ event }) => event.value,
-          }),
+          actions: assign(({ event }) => ({
+            query: event.value,
+            ...(event.value === '' ? { resolvedCard: null } : {}),
+          })),
         },
         BLUR: {
           target: 'closing',
@@ -245,9 +249,10 @@ export const commanderSearchMachine = setup({
       on: {
         INPUT_CHANGED: {
           target: 'debouncing',
-          actions: assign({
-            query: ({ event }) => event.value,
-          }),
+          actions: assign(({ event }) => ({
+            query: event.value,
+            ...(event.value === '' ? { resolvedCard: null } : {}),
+          })),
         },
         BLUR: {
           target: 'closing',
@@ -274,9 +279,10 @@ export const commanderSearchMachine = setup({
       on: {
         INPUT_CHANGED: {
           target: 'debouncing',
-          actions: assign({
-            query: ({ event }) => event.value,
-          }),
+          actions: assign(({ event }) => ({
+            query: event.value,
+            ...(event.value === '' ? { resolvedCard: null } : {}),
+          })),
         },
         BLUR: {
           target: 'closing',
