@@ -28,7 +28,9 @@ import { Button } from '@repo/ui/components/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@repo/ui/components/dropdown-menu'
 import {
@@ -58,6 +60,8 @@ interface PlayerListProps {
   currentUserId?: string
   /** Opens the commanders panel (no-arg; panel shows same content for everyone) */
   onViewCommanders?: () => void
+  /** Opens the commander damage dialog for the given player (e.g. from sidebar menu) */
+  onOpenCommanderDamage?: (playerId: string) => void
   /** Current seat count (1-4) */
   seatCount: number
   /** Callback to change seat count (owner only) */
@@ -77,6 +81,7 @@ export function PlayerList({
   onToggleMutePlayer,
   currentUserId,
   onViewCommanders,
+  onOpenCommanderDamage,
   seatCount,
   onChangeSeatCount,
 }: PlayerListProps) {
@@ -254,15 +259,30 @@ export function PlayerList({
                     {onViewCommanders &&
                       currentUserId !== undefined &&
                       player.id === currentUserId && (
-                        <DropdownMenuItem
-                          onClick={() => onViewCommanders()}
-                          className="text-text-secondary focus:bg-surface-3 focus:text-white"
-                          title="View and edit commanders"
-                          data-testid="player-commanders-menu-item"
-                        >
-                          <Swords className="mr-2 h-4 w-4" />
-                          Commanders
-                        </DropdownMenuItem>
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel className="text-text-muted flex items-center gap-1.5 text-xs font-normal">
+                            <Swords className="h-3.5 w-3.5" />
+                            Commanders
+                          </DropdownMenuLabel>
+                          <DropdownMenuItem
+                            onClick={() => onViewCommanders()}
+                            className="text-text-secondary focus:bg-surface-3 focus:text-white"
+                            title="View and edit the list of commanders"
+                            data-testid="player-commanders-menu-item"
+                          >
+                            View & edit list
+                          </DropdownMenuItem>
+                          {onOpenCommanderDamage && (
+                            <DropdownMenuItem
+                              onClick={() => onOpenCommanderDamage(player.id)}
+                              className="text-text-secondary focus:bg-surface-3 focus:text-white"
+                              title="Edit damage taken from commanders"
+                              data-testid="player-commander-damage-menu-item"
+                            >
+                              Damage taken
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuGroup>
                       )}
                     {!isLocal && (
                       <DropdownMenuItem

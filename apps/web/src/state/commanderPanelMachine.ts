@@ -284,9 +284,12 @@ export const commanderPanelMachine = setup({
         CLEAR_CMD: {
           actions: assign(({ event }) => {
             if (event.slot === 1) {
+              // Clearing commander 1 also clears commander 2 (no partner without commander 1)
               return {
                 commander1Name: '',
                 commander1Card: null,
+                commander2Name: '',
+                commander2Card: null,
                 dualKeywords: [] as DualCommanderKeyword[],
                 specificPartner: null,
                 allowsSecondCommander: false,
