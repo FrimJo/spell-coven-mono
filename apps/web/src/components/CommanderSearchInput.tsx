@@ -194,10 +194,10 @@ export function CommanderSearchInput({
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <Command className="bg-transparent" shouldFilter={false}>
+        <Command className="flex min-h-0 bg-transparent" shouldFilter={false}>
           <div
             ref={listRef}
-            className="max-h-[min(300px,50vh)] overflow-y-auto overflow-x-hidden"
+            className="max-h-[min(300px,50vh)] min-h-0 overflow-y-auto overflow-x-hidden"
           >
             <CommandList className="h-full">
               {effectiveSuggestions.length > 0 && (
