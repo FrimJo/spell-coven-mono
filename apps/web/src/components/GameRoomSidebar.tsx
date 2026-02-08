@@ -207,6 +207,8 @@ interface GameRoomSidebarProps {
   commandersPanelOpen: boolean
   /** Called when the commanders panel should open or close */
   onCommandersPanelOpenChange: (open: boolean) => void
+  /** Called when user wants to copy the shareable game link */
+  onCopyShareLink: () => void
 }
 
 function SidebarContent({
@@ -220,6 +222,7 @@ function SidebarContent({
   onToggleMutePlayer,
   commandersPanelOpen: panelOpen,
   onCommandersPanelOpenChange: setPanelOpen,
+  onCopyShareLink,
 }: GameRoomSidebarProps) {
   // Get game room participants from context (already deduplicated)
   const { uniqueParticipants, roomSeatCount, setRoomSeatCount } = usePresence()
@@ -338,6 +341,7 @@ function SidebarContent({
           onOpenCommanderDamage={commanderDamageDialog?.setOpenForPlayerId}
           seatCount={roomSeatCount}
           onChangeSeatCount={isLobbyOwner ? handleChangeSeatCount : undefined}
+          onCopyShareLink={onCopyShareLink}
         />
         <CardPreview onClose={clearResult} />
         <CardHistoryList

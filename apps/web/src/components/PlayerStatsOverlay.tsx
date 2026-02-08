@@ -1,6 +1,6 @@
 import type { Participant } from '@/types/participant'
 import type { Doc } from '@convex/_generated/dataModel'
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useCommanderDamageDialog } from '@/contexts/CommanderDamageDialogContext'
 import { useCommandersPanel } from '@/contexts/CommandersPanelContext'
 import { useDeltaDisplay } from '@/hooks/useDeltaDisplay'
@@ -138,12 +138,15 @@ interface PlayerStatsOverlayProps {
   roomId: string
   participant: Participant
   participants: Participant[]
+  /** Ref to the video card container - used to center the commander damage dialog */
+  videoContainerRef?: React.RefObject<HTMLElement | null>
 }
 
 export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
   roomId,
   participant,
   participants,
+  videoContainerRef: videoContainerRefProp,
 }: PlayerStatsOverlayProps) {
   // Use roomId as-is - roomPlayers table stores bare roomId (e.g., "ABC123")
   const convexRoomId = roomId
@@ -353,6 +356,11 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
   const commandersPanel = useCommandersPanel()
   const commanderDamageDialog = useCommanderDamageDialog()
   const [commanderDialogOpen, setCommanderDialogOpen] = useState(false)
+  const fallbackContainerRef = useRef<HTMLElement | null>(null)
+  const setStatsOverlayRef = useCallback((el: HTMLDivElement | null) => {
+    fallbackContainerRef.current = el?.parentElement ?? null
+  }, [])
+  const videoContainerRef = videoContainerRefProp ?? fallbackContainerRef
 
   // Open dialog when requested from sidebar menu (e.g. "Damage taken")
   useEffect(() => {
@@ -368,6 +376,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
   return (
     <>
       <div
+        ref={setStatsOverlayRef}
         className="hover:border-surface-2 hover:bg-surface-0/90 group absolute left-3 top-3 z-10 flex flex-col gap-1.5 rounded-lg border border-transparent bg-transparent p-2 transition-all hover:backdrop-blur-sm"
         data-testid="player-stats-overlay"
       >
@@ -490,7 +499,11 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                 </Button>
               </DialogTrigger>
             </div>
-            <DialogContent className="border-surface-2 bg-surface-1 text-text-secondary w-[300px] max-w-[calc(100vw-2rem)] p-0">
+            <DialogContent
+              centerInRef={videoContainerRef}
+              forceReposition={commanderDialogOpen}
+              className="border-surface-2 bg-surface-1 text-text-secondary w-[300px] max-w-[calc(100vw-2rem)] p-0"
+            >
               <DialogTitle className="sr-only">Commander damage</DialogTitle>
               <div className="flex flex-col">
                 {/* Header */}

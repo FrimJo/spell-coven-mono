@@ -2,7 +2,11 @@ import type { ScryfallCard } from '@/lib/scryfall'
 import type { Participant } from '@/types/participant'
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { usePresence } from '@/contexts/PresenceContext'
-import { getCardByName, getCommanderImageUrl } from '@/lib/scryfall'
+import {
+  detectDualCommanderKeywords,
+  getCardByName,
+  getCommanderImageUrl,
+} from '@/lib/scryfall'
 import { commanderPanelMachine } from '@/state/commanderPanelMachine'
 import { api } from '@convex/_generated/api'
 import { useMutation } from '@tanstack/react-query'
@@ -213,7 +217,12 @@ export function GameStatsPanel({
   ) => {
     baseOnCommander1Resolved(card)
     if (card) {
-      saveCommanders(card.name, cmdState.commander2Name, 1, { c1: card.id })
+      // If the new commander 1 does not allow a second (Partner/Background etc.), clear commander 2
+      const commander2ForSave =
+        detectDualCommanderKeywords(card).length > 0
+          ? cmdState.commander2Name
+          : ''
+      saveCommanders(card.name, commander2ForSave, 1, { c1: card.id })
     }
   }
 
@@ -458,7 +467,12 @@ export function GameStatsPanel({
                         <CommanderSlot
                           slotNumber={2}
                           commander={player.commanders[1]}
-                          isEditing={isEditingSlot2}
+                          isEditing={
+                            isEditingSlot2 ||
+                            (isEditingThisPlayer &&
+                              cmdState.allowsSecondCommander &&
+                              !player.commanders[1]?.name)
+                          }
                           getCommanderImageUrl={getCommanderImageUrl}
                           onClear={() => handleClearCommander(player, 2)}
                           inputValue={

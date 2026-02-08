@@ -165,14 +165,57 @@ export const commanderPanelMachine = setup({
           dualKeywords: [] as DualCommanderKeyword[],
           specificPartner: null,
           allowsSecondCommander: false,
+          commander2Name: '',
+          commander2Card: null,
         }
       }
       const dualKeywords = detectDualCommanderKeywords(card)
       const specificPartner = getSpecificPartner(card)
+      const allowsSecondCommander = dualKeywords.length > 0
       return {
         dualKeywords,
         specificPartner,
-        allowsSecondCommander: dualKeywords.length > 0,
+        allowsSecondCommander,
+        // Clear commander 2 when the new commander 1 does not allow a second
+        ...(allowsSecondCommander
+          ? {}
+          : { commander2Name: '', commander2Card: null }),
+      }
+    }),
+    /** CMD1_RESOLVED: set new commander 1 and clear commander 2 if new card has no dual or a different dual type */
+    setCommander1AndMaybeClearCommander2: assign(({ context, event }) => {
+      if (event.type !== 'CMD1_RESOLVED') return {}
+      const oldCard = context.commander1Card
+      const newCard = event.card
+      const oldKeywords = oldCard
+        ? detectDualCommanderKeywords(oldCard)
+        : ([] as DualCommanderKeyword[])
+      const newKeywords = newCard
+        ? detectDualCommanderKeywords(newCard)
+        : ([] as DualCommanderKeyword[])
+      const allowsSecondCommander = newKeywords.length > 0
+      const sameDualType =
+        oldKeywords.length === newKeywords.length &&
+        oldKeywords.every((k) => newKeywords.includes(k))
+      const clearCommander2 = !allowsSecondCommander || !sameDualType
+      if (!newCard) {
+        return {
+          commander1Card: null,
+          dualKeywords: [] as DualCommanderKeyword[],
+          specificPartner: null,
+          allowsSecondCommander: false,
+          commander2Name: '',
+          commander2Card: null,
+        }
+      }
+      return {
+        commander1Card: newCard,
+        dualKeywords: newKeywords,
+        specificPartner: getSpecificPartner(newCard),
+        allowsSecondCommander,
+        ...(clearCommander2
+          ? { commander2Name: '', commander2Card: null }
+          : {}),
       }
     }),
   },
@@ -269,12 +312,7 @@ export const commanderPanelMachine = setup({
         },
         CMD1_RESOLVED: {
           target: '.fetchingSuggestions',
-          actions: [
-            assign({
-              commander1Card: ({ event }) => event.card,
-            }),
-            'updateDerivedFromCard1',
-          ],
+          actions: ['setCommander1AndMaybeClearCommander2'],
         },
         CMD2_RESOLVED: {
           actions: assign({

@@ -1,8 +1,11 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { useCallback, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   Ban,
+  Check,
   Crown,
+  Gamepad2,
+  Link2,
   Minus,
   MoreVertical,
   Plus,
@@ -66,6 +69,8 @@ interface PlayerListProps {
   seatCount: number
   /** Callback to change seat count (owner only) */
   onChangeSeatCount?: (delta: number) => void
+  /** Called when user wants to copy the shareable game link */
+  onCopyShareLink?: () => void
 }
 
 type RemovalAction = 'kick' | 'ban'
@@ -84,12 +89,25 @@ export function PlayerList({
   onOpenCommanderDamage,
   seatCount,
   onChangeSeatCount,
+  onCopyShareLink,
 }: PlayerListProps) {
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
     player: Player | null
     action: RemovalAction
   }>({ open: false, player: null, action: 'kick' })
+
+  const [recentlyCopiedSlot, setRecentlyCopiedSlot] = useState<number | null>(
+    null,
+  )
+  const handleCopyLink = useCallback(
+    (slotIndex: number) => {
+      onCopyShareLink?.()
+      setRecentlyCopiedSlot(slotIndex)
+      setTimeout(() => setRecentlyCopiedSlot(null), 1800)
+    },
+    [onCopyShareLink],
+  )
 
   const handleConfirm = () => {
     if (!confirmDialog.player) return
@@ -151,44 +169,137 @@ export function PlayerList({
         {Array.from({ length: seatCount }).map((_, index) => {
           const player = players[index]
 
-          // Empty slot
+          // Empty slot – show "Open seat" by default, "Copy shareable link" on hover
           if (!player) {
+            const isCopied = recentlyCopiedSlot === index
             return (
-              <motion.div
+              <motion.button
                 key={`empty-${index}`}
-                className="border-surface-3 bg-surface-2/20 flex min-h-[42px] items-center justify-between rounded-lg border border-dashed p-2"
-                animate={{
-                  opacity: [0.6, 0.85, 0.6],
-                  borderColor: [
-                    'rgba(255, 255, 255, 0.1)',
-                    'rgba(255, 255, 255, 0.2)',
-                    'rgba(255, 255, 255, 0.1)',
-                  ],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}
+                type="button"
+                onClick={() => handleCopyLink(index)}
+                disabled={!onCopyShareLink}
+                className="border-default bg-surface-1/50 hover:border-surface-3/80 hover:bg-surface-2/40 group flex min-h-[56px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-dashed p-2 text-left transition-colors active:scale-[0.98] disabled:cursor-default disabled:opacity-60"
+                whileHover={
+                  onCopyShareLink
+                    ? { scale: 1.01, transition: { duration: 0.2 } }
+                    : undefined
+                }
+                whileTap={
+                  onCopyShareLink
+                    ? { scale: 0.98, transition: { duration: 0.1 } }
+                    : undefined
+                }
+                title={onCopyShareLink ? 'Copy shareable link' : undefined}
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <motion.div
-                    className="bg-surface-3 h-2 w-2 flex-shrink-0 rounded-full"
-                    animate={{
-                      scale: [1, 1.2, 1],
-                      opacity: [0.5, 0.8, 0.5],
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: 'easeInOut',
-                    }}
-                  />
-                  <span className="text-text-muted truncate text-sm">
-                    Open seat
-                  </span>
+                  <AnimatePresence mode="wait">
+                    {isCopied ? (
+                      <motion.div
+                        key="copied"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex items-center gap-2"
+                      >
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{
+                            type: 'spring',
+                            stiffness: 400,
+                            damping: 20,
+                          }}
+                          className="bg-online flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full"
+                        >
+                          <Check
+                            className="text-surface-0 h-3 w-3"
+                            strokeWidth={2.5}
+                          />
+                        </motion.div>
+                        <span className="text-online text-sm font-medium">
+                          Copied!
+                        </span>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="copy"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        className="relative flex min-w-0 flex-1 items-center gap-2"
+                      >
+                        {/* Default: Gamepad2 + Open seat (matches VideoStreamGrid empty slot) */}
+                        <div className="flex min-w-0 flex-1 items-center gap-2 transition-opacity duration-200 group-hover:opacity-0">
+                          <motion.div className="bg-brand/10 relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full">
+                            <motion.div
+                              className="bg-brand/20 absolute inset-0 rounded-full"
+                              animate={{
+                                scale: [1, 1.4, 1],
+                                opacity: [0.5, 0, 0.5],
+                              }}
+                              transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: 'easeInOut',
+                              }}
+                            />
+                            <motion.div
+                              animate={{ scale: [1, 1.1, 1] }}
+                              transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: 'easeInOut',
+                              }}
+                            >
+                              <Gamepad2 className="text-brand-muted-foreground h-4 w-4" />
+                            </motion.div>
+                          </motion.div>
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <p className="text-text-muted truncate text-sm font-medium">
+                              Open seat
+                            </p>
+                            <p className="text-text-muted/60 truncate text-xs">
+                              Waiting for player...
+                            </p>
+                          </div>
+                        </div>
+                        {/* Hover: Link2 + Copy shareable link */}
+                        <div className="pointer-events-none absolute inset-0 flex items-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                          <motion.div className="bg-brand/10 relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full">
+                            <motion.div
+                              className="bg-brand/20 absolute inset-0 rounded-full"
+                              animate={{
+                                scale: [1, 1.4, 1],
+                                opacity: [0.5, 0, 0.5],
+                              }}
+                              transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: 'easeInOut',
+                              }}
+                            />
+                            <motion.div
+                              animate={{ scale: [1, 1.1, 1] }}
+                              transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: 'easeInOut',
+                              }}
+                            >
+                              <Link2 className="text-brand-muted-foreground h-4 w-4" />
+                            </motion.div>
+                          </motion.div>
+                          <span className="text-text-muted truncate text-sm">
+                            Copy shareable link
+                          </span>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-              </motion.div>
+              </motion.button>
             )
           }
 

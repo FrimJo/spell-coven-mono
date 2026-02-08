@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { forwardRef, memo } from 'react'
 
 import { Card } from '@repo/ui/components/card'
 
@@ -13,9 +13,11 @@ interface PlayerVideoCardProps {
  * The parent component is responsible for managing all state and passing children
  * for video elements, overlays, badges, and controls.
  *
+ * The ref is forwarded to the video container div (relative min-h-0 flex-1 bg-black).
+ *
  * Example usage:
  * ```tsx
- * <PlayerVideoCard>
+ * <PlayerVideoCard ref={containerRef}>
  *   <video ref={videoRef} style={{...}} />
  *   <canvas ref={overlayRef} style={{...}} />
  *   <div className="absolute left-3 top-3">Player Name</div>
@@ -23,12 +25,17 @@ interface PlayerVideoCardProps {
  * </PlayerVideoCard>
  * ```
  */
-export const PlayerVideoCard = memo(function PlayerVideoCard({
-  children,
-}: PlayerVideoCardProps) {
-  return (
-    <Card className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden">
-      <div className="relative min-h-0 flex-1 bg-black">{children}</div>
-    </Card>
-  )
-})
+export const PlayerVideoCard = memo(
+  forwardRef<HTMLDivElement, PlayerVideoCardProps>(function PlayerVideoCard(
+    { children },
+    ref,
+  ) {
+    return (
+      <Card className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden">
+        <div ref={ref} className="relative min-h-0 flex-1 bg-black">
+          {children}
+        </div>
+      </Card>
+    )
+  }),
+)

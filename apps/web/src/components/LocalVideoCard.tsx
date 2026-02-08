@@ -52,6 +52,7 @@ export const LocalVideoCard = memo(function LocalVideoCard({
   gridIndex = 0,
 }: LocalVideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const videoContainerRef = useRef<HTMLDivElement>(null)
 
   // Get toggle functions and state from media stream context
   // Using context directly for proper resource release/acquisition
@@ -140,7 +141,7 @@ export const LocalVideoCard = memo(function LocalVideoCard({
     videoEnabled && stream && stream.getVideoTracks().length > 0
 
   return (
-    <PlayerVideoCard>
+    <PlayerVideoCard ref={videoContainerRef}>
       {hasVideoStream ? (
         <>
           <video
@@ -170,6 +171,7 @@ export const LocalVideoCard = memo(function LocalVideoCard({
           roomId={roomId}
           participant={participant}
           participants={participants}
+          videoContainerRef={videoContainerRef}
         />
       )}
 
