@@ -5,6 +5,7 @@ import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
+import { CommandersPanelProvider } from '@/contexts/CommandersPanelContext'
 import { MediaStreamProvider } from '@/contexts/MediaStreamContext.js'
 import { PresenceProvider, usePresence } from '@/contexts/PresenceContext'
 import { api } from '@convex/_generated/api'
@@ -71,6 +72,11 @@ function GameRoomContent({
   const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const [showCardSearch, setShowCardSearch] = useState(false)
+  const [commandersPanelOpen, setCommandersPanelOpen] = useState(false)
+  const openCommandersPanel = useCallback(
+    () => setCommandersPanelOpen(true),
+    [],
+  )
 
   const resetRoomGameStateMutation = useMutation(api.rooms.resetRoomGameState)
 
@@ -297,34 +303,38 @@ function GameRoomContent({
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        <div className="flex h-full gap-4 p-4">
-          {/* Left Sidebar - Player List */}
-          <GameRoomSidebar
-            roomId={roomId}
-            userId={userId}
-            playerName={username}
-            isLobbyOwner={isOwner}
-            ownerId={ownerId}
-            onKickPlayer={handleKickPlayer}
-            onBanPlayer={handleBanPlayer}
-            mutedPlayers={mutedPlayers}
-            onToggleMutePlayer={handleToggleMutePlayer}
-          />
-
-          {/* Main Area - Video Stream Grid */}
-          <div className="flex-1 overflow-hidden">
-            <VideoStreamGridWithSuspense
+        <CommandersPanelProvider onOpenPanel={openCommandersPanel}>
+          <div className="flex h-full gap-4 p-4">
+            {/* Left Sidebar - Player List */}
+            <GameRoomSidebar
               roomId={roomId}
               userId={userId}
-              localPlayerName={username}
-              detectorType={detectorType}
-              usePerspectiveWarp={usePerspectiveWarp}
-              onCardCrop={query}
+              playerName={username}
+              isLobbyOwner={isOwner}
+              ownerId={ownerId}
+              onKickPlayer={handleKickPlayer}
+              onBanPlayer={handleBanPlayer}
               mutedPlayers={mutedPlayers}
-              showTestStream={showTestStream}
+              onToggleMutePlayer={handleToggleMutePlayer}
+              commandersPanelOpen={commandersPanelOpen}
+              onCommandersPanelOpenChange={setCommandersPanelOpen}
             />
+
+            {/* Main Area - Video Stream Grid */}
+            <div className="flex-1 overflow-hidden">
+              <VideoStreamGridWithSuspense
+                roomId={roomId}
+                userId={userId}
+                localPlayerName={username}
+                detectorType={detectorType}
+                usePerspectiveWarp={usePerspectiveWarp}
+                onCardCrop={query}
+                mutedPlayers={mutedPlayers}
+                showTestStream={showTestStream}
+              />
+            </div>
           </div>
-        </div>
+        </CommandersPanelProvider>
       </div>
     </div>
   )

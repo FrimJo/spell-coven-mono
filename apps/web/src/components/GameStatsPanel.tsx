@@ -1,6 +1,6 @@
 import type { ScryfallCard } from '@/lib/scryfall'
 import type { Participant } from '@/types/participant'
-import { useEffect, useEffectEvent, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { usePresence } from '@/contexts/PresenceContext'
 import { getCardByName, getCommanderImageUrl } from '@/lib/scryfall'
 import { commanderPanelMachine } from '@/state/commanderPanelMachine'
@@ -70,6 +70,28 @@ export function GameStatsPanel({
   const suggestionsLabel = state.context.suggestionsLabel
 
   const isClosed = state.matches('closed')
+
+  // When panel just opened, default to edit mode for current user if they have no commanders
+  const didAutoEditThisOpenRef = useRef(false)
+  useEffect(() => {
+    if (!isOpen) {
+      didAutoEditThisOpenRef.current = false
+      return
+    }
+    if (isClosed || editingPlayerId !== null) return
+    const player = participants.find((p) => p.id === currentUser.id)
+    if (!player) return
+    const hasNoCommanders =
+      !player.commanders[0]?.name && !player.commanders[1]?.name
+    if (!hasNoCommanders || didAutoEditThisOpenRef.current) return
+    didAutoEditThisOpenRef.current = true
+    send({
+      type: 'START_EDIT',
+      playerId: currentUser.id,
+      commander1Name: '',
+      commander2Name: '',
+    })
+  }, [isOpen, isClosed, editingPlayerId, participants, currentUser.id, send])
 
   // Effect Events - stable handlers that always see latest props/state
   const syncPanelOpenState = useEffectEvent(() => {
@@ -510,30 +532,11 @@ function CommanderSlot({
     return null
   }
 
-  // Edit mode - show search input
+  // Edit mode - search input with status/clear icon inside it (no wrapper; input full width)
   if (isEditing) {
     return (
-      <div className="border-border-default bg-surface-0/50 rounded-md border p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-text-muted text-xs font-medium">
-            Commander {slotNumber}
-            {slotNumber === 2 &&
-              allowsSecondCommander &&
-              ` (${suggestionsLabel})`}
-          </span>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-destructive hover:bg-destructive/20 hover:text-destructive h-6 px-2 text-xs disabled:opacity-50"
-            onClick={onClear}
-            disabled={!commander && !inputValue.trim()}
-            title="Clear"
-            aria-label="Clear commander"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-        <div className="relative">
+      <>
+        <div className="relative min-h-9 w-full">
           <CommanderSearchInput
             id={`c${slotNumber}`}
             value={inputValue}
@@ -544,19 +547,28 @@ function CommanderSlot({
                 ? `Search ${suggestionsLabel?.toLowerCase()}...`
                 : 'Search for a commander...'
             }
-            className="border-border-default bg-surface-1 placeholder:text-text-muted hover:border-border-default focus-visible:ring-brand h-9 pr-10 text-sm text-white transition-colors"
+            className="border-border-default bg-surface-1 placeholder:text-text-muted hover:border-border-default focus-visible:ring-brand h-9 w-full min-w-0 pr-10 text-sm text-white transition-colors"
             suggestions={slotNumber === 2 ? suggestions : undefined}
             suggestionsLabel={slotNumber === 2 ? suggestionsLabel : undefined}
             hideLoadingIndicator
             onLoadingChange={setIsSearching}
           />
-          <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+          <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center">
             {isSearching ? (
               <Loader2 className="text-text-muted h-4 w-4 animate-spin" />
             ) : status === 'saving' ? (
               <Loader2 className="text-brand-muted-foreground h-4 w-4 animate-spin" />
             ) : status === 'saved' ? (
-              <Check className="text-success h-4 w-4" />
+              <button
+                type="button"
+                className="text-success hover:text-destructive pointer-events-auto rounded p-0.5 [&:hover_.icon-check]:hidden [&:hover_.icon-remove]:block"
+                onClick={onClear}
+                title="Clear"
+                aria-label="Clear commander"
+              >
+                <Check className="icon-check h-4 w-4" />
+                <Trash2 className="icon-remove hidden h-4 w-4" />
+              </button>
             ) : status === 'error' ? (
               <AlertCircle className="text-destructive h-4 w-4" />
             ) : null}
@@ -599,7 +611,7 @@ function CommanderSlot({
             )}
           </div>
         )}
-      </div>
+      </>
     )
   }
 
