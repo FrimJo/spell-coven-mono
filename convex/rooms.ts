@@ -13,6 +13,7 @@ import { v } from 'convex/values'
 import type { MutationCtx } from './_generated/server'
 import { internal } from './_generated/api'
 import { internalMutation, mutation, query } from './_generated/server'
+import { DEFAULT_HEALTH } from './constants'
 import {
   AuthMismatchError,
   AuthRequiredError,
@@ -114,16 +115,16 @@ function toBase32Code(num: number, minLength = 6): string {
   let scrambled = scrambleId(num)
 
   if (scrambled === 0) {
-    return BASE32_CHARS[0]!.repeat(minLength)
+    return BASE32_CHARS[0].repeat(minLength)
   }
 
   let result = ''
   while (scrambled > 0) {
-    result = BASE32_CHARS[scrambled % 32]! + result
+    result = BASE32_CHARS[scrambled % 32] + result
     scrambled = Math.floor(scrambled / 32)
   }
 
-  return result.padStart(minLength, BASE32_CHARS[0]!)
+  return result.padStart(minLength, BASE32_CHARS[0])
 }
 
 /**
@@ -188,18 +189,22 @@ export const createRoom = mutation({
     const newCount = counter.count + 1
     await ctx.db.patch(counter._id, { count: newCount })
 
-    // Generate sequential room code (newCount - 1 because we want 0-indexed)
-    const roomId = toBase32Code(newCount - 1)
+        // Generate sequential room code (newCount - 1 because we want 0-indexed)
+        const roomId = await withComputationSpan(
+          'rooms.generate_room_code',
+          () => toBase32Code(newCount - 1),
+        )
 
-    // Create room with default seat count
-    await ctx.db.insert('rooms', {
-      roomId,
-      ownerId: userId,
-      status: 'waiting',
-      createdAt: now,
-      seatCount: 4,
-      lastActivityAt: now,
-    })
+        // Create room with default seat count
+        await withDbSpan('rooms.insert', () =>
+          ctx.db.insert('rooms', {
+            roomId,
+            ownerId: userId,
+            createdAt: now,
+            seatCount: 4,
+            lastActivityAt: now,
+          }),
+        )
 
     return { roomId, waitMs: null }
   },
@@ -327,24 +332,22 @@ export const checkRoomAccess = query({
 })
 
 /**
- * Update room status
+ * Reset game state for all players in the room.
  *
- * NOTE: callerId is used for Phase 3. Phase 5 will use getAuthUserId.
+ * Any active room member can call this. Resets life, poison, commanders, and
+ * commander damage to defaults. Players stay in the room.
  */
-export const updateRoomStatus = mutation({
+export const resetRoomGameState = mutation({
   args: {
     roomId: v.string(),
-    status: v.union(
-      v.literal('waiting'),
-      v.literal('playing'),
-      v.literal('finished'),
-    ),
   },
-  handler: async (ctx, { roomId, status }) => {
+  handler: async (ctx, { roomId }) => {
     const callerId = await getAuthUserId(ctx)
     if (!callerId) {
       throw new AuthRequiredError()
     }
+
+    await requireActiveRoomMember(ctx, roomId, callerId)
 
     const room = await ctx.db
       .query('rooms')
@@ -355,11 +358,21 @@ export const updateRoomStatus = mutation({
       throw new RoomNotFoundError()
     }
 
-    if (room.ownerId !== callerId) {
-      throw new NotRoomOwnerError('change room status')
+    const allPlayers = await ctx.db
+      .query('roomPlayers')
+      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+      .collect()
+
+    for (const player of allPlayers) {
+      await ctx.db.patch(player._id, {
+        health: DEFAULT_HEALTH,
+        poison: 0,
+        commanders: [],
+        commanderDamage: {},
+      })
     }
 
-    await ctx.db.patch(room._id, { status, lastActivityAt: Date.now() })
+    await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
   },
 })
 

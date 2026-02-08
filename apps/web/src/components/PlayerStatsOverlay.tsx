@@ -1,14 +1,16 @@
 import type { Participant } from '@/types/participant'
 import type { Doc } from '@convex/_generated/dataModel'
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { useDeltaDisplay } from '@/hooks/useDeltaDisplay'
 import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
+import { getCommanderImageUrl } from '@/lib/scryfall'
 import { api } from '@convex/_generated/api'
 import { useMutation } from 'convex/react'
 import { Heart, Minus, Plus, Skull, Swords } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
+import { Checkbox } from '@repo/ui/components/checkbox'
 import {
   Tooltip,
   TooltipContent,
@@ -16,6 +18,119 @@ import {
 } from '@repo/ui/components/tooltip'
 
 import { DeltaBubble } from './DeltaBubble'
+
+/** One row in the commander damage tooltip: image, name, owner, damage, +/- */
+type CommanderDamageEntry = {
+  ownerUserId: string
+  commanderId: string
+  commanderName: string
+  ownerName: string
+  isOwn: boolean
+  damage: number
+}
+
+function CommanderDamageTooltipRow({
+  entry,
+  onDamageChange,
+}: {
+  entry: CommanderDamageEntry
+  onDamageChange: (
+    ownerUserId: string,
+    commanderId: string,
+    delta: number,
+  ) => void
+}) {
+  const damageDelta = useDeltaDisplay()
+  const handleChange = useCallback(
+    (delta: number) => {
+      damageDelta.addDelta(delta)
+      onDamageChange(entry.ownerUserId, entry.commanderId, delta)
+    },
+    [entry.ownerUserId, entry.commanderId, onDamageChange, damageDelta],
+  )
+  const minus = useHoldToRepeat({
+    onChange: handleChange,
+    immediateDelta: -1,
+    repeatDelta: -10,
+  })
+  const plus = useHoldToRepeat({
+    onChange: handleChange,
+    immediateDelta: 1,
+    repeatDelta: 10,
+  })
+  const imageUrl = getCommanderImageUrl(entry.commanderId)
+
+  return (
+    <div className="hover:bg-surface-2/50 flex items-center gap-2 rounded px-2 py-1.5">
+      <div className="border-border-muted relative h-8 w-8 shrink-0 overflow-hidden rounded border">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={entry.commanderName}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="bg-surface-2 text-text-muted flex h-full w-full items-center justify-center text-[10px] font-bold">
+            {entry.commanderName.substring(0, 2)}
+          </div>
+        )}
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="text-text-secondary block truncate text-xs font-medium">
+          {entry.commanderName}
+        </span>
+        <span className="text-text-muted block truncate text-[10px]">
+          {entry.ownerName}
+          {entry.isOwn ? ' (you)' : ''}
+        </span>
+      </div>
+      <div className="flex items-center gap-0.5">
+        {damageDelta.delta < 0 && (
+          <DeltaBubble
+            delta={damageDelta.delta}
+            visible={damageDelta.visible}
+            side="left"
+          />
+        )}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="text-text-muted hover:bg-destructive/20 hover:text-destructive h-6 w-6 shrink-0 rounded-md"
+          onMouseDown={minus.handleStart}
+          onMouseUp={minus.handleStop}
+          onMouseLeave={minus.handleStop}
+          onTouchStart={minus.handleStart}
+          onTouchEnd={minus.handleStop}
+          disabled={entry.damage <= 0}
+        >
+          <Minus className="h-3 w-3" />
+        </Button>
+        <span className="min-w-[2ch] text-center font-mono text-sm font-bold text-white">
+          {entry.damage}
+        </span>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="text-text-muted hover:bg-success/20 hover:text-success h-6 w-6 shrink-0 rounded-md"
+          onMouseDown={plus.handleStart}
+          onMouseUp={plus.handleStop}
+          onMouseLeave={plus.handleStop}
+          onTouchStart={plus.handleStart}
+          onTouchEnd={plus.handleStop}
+        >
+          <Plus className="h-3 w-3" />
+        </Button>
+        {damageDelta.delta > 0 && (
+          <DeltaBubble
+            delta={damageDelta.delta}
+            visible={damageDelta.visible}
+            side="right"
+          />
+        )}
+      </div>
+    </div>
+  )
+}
 
 interface PlayerStatsOverlayProps {
   roomId: string
@@ -101,6 +216,31 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
     )
   })
 
+  const updateCommanderDamage = useMutation(
+    api.rooms.updateCommanderDamage,
+  ).withOptimisticUpdate((localStore, args) => {
+    const damageKey = `${args.ownerUserId}:${args.commanderId}`
+    updatePlayerQueriesOptimistically(
+      localStore,
+      args.roomId,
+      args.userId,
+      (player) => {
+        const currentDamage = player.commanderDamage?.[damageKey] ?? 0
+        const nextDamage = Math.max(0, currentDamage + args.delta)
+        const actualDamageChange = nextDamage - currentDamage
+        const nextHealth = (player.health ?? 0) - actualDamageChange
+        return {
+          ...player,
+          health: nextHealth,
+          commanderDamage: {
+            ...(player.commanderDamage ?? {}),
+            [damageKey]: nextDamage,
+          },
+        }
+      },
+    )
+  })
+
   // Delta display hooks for health and poison
   const healthDelta = useDeltaDisplay()
   const poisonDelta = useDeltaDisplay()
@@ -158,41 +298,63 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
     repeatDelta: 10,
   })
 
-  // Calculate total commander damage and breakdown - memoized to avoid recalculation
-  const { totalCommanderDamage, commanderDamageBreakdown } = useMemo(() => {
+  const handleCommanderDamageChange = useCallback(
+    (ownerUserId: string, commanderId: string, delta: number) => {
+      updateCommanderDamage({
+        roomId: convexRoomId,
+        userId: participant.id,
+        ownerUserId,
+        commanderId,
+        delta,
+      }).catch(() => {
+        toast.error('Failed to update commander damage')
+      })
+    },
+    [updateCommanderDamage, convexRoomId, participant.id],
+  )
+
+  // Toggle to include own commanders in the list (for self-damage edge case)
+  const [showOwnCommanders, setShowOwnCommanders] = useState(false)
+
+  // Commander damage shown is the highest from any single commander (21 from one = loss)
+  const { displayedCommanderDamage, allCommandersList } = useMemo(() => {
     const damageMap = participant.commanderDamage ?? {}
-    const total = Object.values(damageMap).reduce(
-      (sum, damage) => sum + damage,
-      0,
+    const values = Object.values(damageMap)
+    const maxDamage = values.length > 0 ? Math.max(...values) : 0
+
+    // Build list of all commanders that can deal damage to this player:
+    // opponents always; own only when showOwnCommanders is true
+    const list: CommanderDamageEntry[] = []
+    for (const p of participants) {
+      const isSelf = p.id === participant.id
+      if (isSelf && !showOwnCommanders) continue
+
+      for (const commander of p.commanders ?? []) {
+        if (!commander?.id || !commander?.name) continue
+        const key = `${p.id}:${commander.id}`
+        const damage = damageMap[key] ?? 0
+        list.push({
+          ownerUserId: p.id,
+          commanderId: commander.id,
+          commanderName: commander.name,
+          ownerName: p.username ?? 'Unknown Player',
+          isOwn: isSelf,
+          damage,
+        })
+      }
+    }
+    // Sort by damage descending, then by owner name
+    list.sort(
+      (a, b) => b.damage - a.damage || a.ownerName.localeCompare(b.ownerName),
     )
 
-    // Build breakdown: find commander names from participants
-    const breakdown: Array<{
-      commanderName: string
-      ownerName: string
-      damage: number
-    }> = []
-
-    for (const [key, damage] of Object.entries(damageMap)) {
-      if (damage <= 0) continue
-
-      // Key format: "ownerUserId:commanderId"
-      const [ownerUserId, commanderId] = key.split(':')
-      const owner = participants.find((p) => p.id === ownerUserId)
-      const commander = owner?.commanders.find((c) => c.id === commanderId)
-
-      breakdown.push({
-        commanderName: commander?.name ?? 'Unknown Commander',
-        ownerName: owner?.username ?? 'Unknown Player',
-        damage,
-      })
-    }
-
-    // Sort by damage descending
-    breakdown.sort((a, b) => b.damage - a.damage)
-
-    return { totalCommanderDamage: total, commanderDamageBreakdown: breakdown }
-  }, [participant.commanderDamage, participants])
+    return { displayedCommanderDamage: maxDamage, allCommandersList: list }
+  }, [
+    participant.id,
+    participant.commanderDamage,
+    participants,
+    showOwnCommanders,
+  ])
 
   // Clamp health and poison to 0 minimum for display
   const displayHealth = Math.max(0, participant.health ?? 0)
@@ -301,7 +463,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
               <div className="text-brand-muted-foreground flex cursor-default items-center gap-1.5">
                 <Swords className="h-4 w-4" />
                 <span className="min-w-[2ch] text-center font-mono font-bold text-white">
-                  {totalCommanderDamage}
+                  {displayedCommanderDamage}
                 </span>
               </div>
             </TooltipTrigger>
@@ -310,34 +472,36 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
               align="start"
               className="border-surface-2 bg-surface-1 text-text-secondary max-w-[280px] border p-0 shadow-xl"
             >
-              {commanderDamageBreakdown.length > 0 ? (
-                <div className="flex flex-col gap-1 p-2">
-                  {commanderDamageBreakdown.map((entry, idx) => (
-                    <div
-                      key={idx}
-                      className="hover:bg-surface-2/50 flex items-center justify-between gap-3 rounded px-2 py-1.5"
-                    >
-                      <div className="flex flex-col">
-                        <span className="text-text-secondary text-xs font-medium">
-                          {entry.commanderName}
-                        </span>
-                        <span className="text-text-muted text-[10px]">
-                          {entry.ownerName}
-                        </span>
-                      </div>
-                      <span className="font-mono text-sm font-bold text-white">
-                        {entry.damage}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="px-3 py-4 text-center">
-                  <p className="text-text-muted text-xs">
-                    No commander damage taken yet
-                  </p>
-                </div>
-              )}
+              <div className="flex flex-col gap-1 p-2">
+                <label className="text-text-muted hover:bg-surface-2/50 flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs">
+                  <Checkbox
+                    checked={showOwnCommanders}
+                    onCheckedChange={(checked) =>
+                      setShowOwnCommanders(checked === true)
+                    }
+                  />
+                  <span>Include my commanders</span>
+                </label>
+                {allCommandersList.length > 0 ? (
+                  <div className="flex max-h-[240px] flex-col gap-0.5 overflow-y-auto">
+                    {allCommandersList.map((entry) => (
+                      <CommanderDamageTooltipRow
+                        key={`${entry.ownerUserId}:${entry.commanderId}`}
+                        entry={entry}
+                        onDamageChange={handleCommanderDamageChange}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-3 py-4 text-center">
+                    <p className="text-text-muted text-xs">
+                      {showOwnCommanders
+                        ? 'No commanders in the game'
+                        : 'No other commanders in the game'}
+                    </p>
+                  </div>
+                )}
+              </div>
             </TooltipContent>
           </Tooltip>
         </div>

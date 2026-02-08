@@ -54,7 +54,10 @@ interface PlayerListProps {
   ownerId?: string
   mutedPlayers: Set<string>
   onToggleMutePlayer: (playerId: string) => void
-  onViewCommanders?: (playerId: string) => void
+  /** Current user's id – Commanders menu item is shown only for this player */
+  currentUserId?: string
+  /** Opens the commanders panel (no-arg; panel shows same content for everyone) */
+  onViewCommanders?: () => void
   /** Current seat count (1-4) */
   seatCount: number
   /** Callback to change seat count (owner only) */
@@ -72,6 +75,7 @@ export function PlayerList({
   ownerId,
   mutedPlayers,
   onToggleMutePlayer,
+  currentUserId,
   onViewCommanders,
   seatCount,
   onChangeSeatCount,
@@ -247,17 +251,19 @@ export function PlayerList({
                     align="end"
                     className="border-surface-3 bg-surface-2"
                   >
-                    {onViewCommanders && (
-                      <DropdownMenuItem
-                        onClick={() => onViewCommanders(player.id)}
-                        className="text-text-secondary focus:bg-surface-3 focus:text-white"
-                        title="View and edit commanders"
-                        data-testid="player-commanders-menu-item"
-                      >
-                        <Swords className="mr-2 h-4 w-4" />
-                        Commanders
-                      </DropdownMenuItem>
-                    )}
+                    {onViewCommanders &&
+                      currentUserId !== undefined &&
+                      player.id === currentUserId && (
+                        <DropdownMenuItem
+                          onClick={() => onViewCommanders()}
+                          className="text-text-secondary focus:bg-surface-3 focus:text-white"
+                          title="View and edit commanders"
+                          data-testid="player-commanders-menu-item"
+                        >
+                          <Swords className="mr-2 h-4 w-4" />
+                          Commanders
+                        </DropdownMenuItem>
+                      )}
                     {!isLocal && (
                       <DropdownMenuItem
                         onClick={() => onToggleMutePlayer(player.id)}

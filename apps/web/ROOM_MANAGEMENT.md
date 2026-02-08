@@ -12,7 +12,7 @@ presence is tracked in `roomPlayers`, and WebRTC signaling moves through
 
 Convex tables involved in room management:
 
-- `rooms`: metadata for each room (owner, status, createdAt)
+- `rooms`: metadata for each room (owner, createdAt)
 - `roomPlayers`: presence, sessions, and player stats
 - `roomSignals`: WebRTC signaling messages
 - `roomBans`: persistent bans

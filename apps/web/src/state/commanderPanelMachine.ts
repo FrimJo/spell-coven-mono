@@ -20,7 +20,6 @@ import { assign, fromPromise, setup } from 'xstate'
 export interface CommanderPanelContext {
   // Editing state
   editingPlayerId: string | null
-  viewedPlayerSlotCollapsed: boolean
 
   // Commander pair state
   commander1Name: string
@@ -44,7 +43,7 @@ export interface CommanderPanelContext {
 }
 
 export type CommanderPanelEvent =
-  | { type: 'OPEN_PANEL'; viewedPlayerHasCommanders: boolean }
+  | { type: 'OPEN_PANEL' }
   | { type: 'CLOSE_PANEL' }
   | {
       type: 'START_EDIT'
@@ -58,8 +57,6 @@ export type CommanderPanelEvent =
   | { type: 'CMD1_RESOLVED'; card: ScryfallCard | null }
   | { type: 'CMD2_RESOLVED'; card: ScryfallCard | null }
   | { type: 'CLEAR_CMD'; slot: 1 | 2 }
-  | { type: 'TOGGLE_COLLAPSED' }
-  | { type: 'SET_COLLAPSED'; collapsed: boolean }
   | { type: 'SAVE_REQUESTED'; triggeredBy: 1 | 2 }
   | { type: 'SAVE_SUCCEEDED' }
   | { type: 'SAVE_FAILED'; error: string }
@@ -179,7 +176,6 @@ export const commanderPanelMachine = setup({
   initial: 'closed',
   context: {
     editingPlayerId: null,
-    viewedPlayerSlotCollapsed: true,
     commander1Name: '',
     commander2Name: '',
     commander1Card: null,
@@ -196,13 +192,7 @@ export const commanderPanelMachine = setup({
   states: {
     closed: {
       on: {
-        OPEN_PANEL: {
-          target: 'viewing',
-          actions: assign({
-            viewedPlayerSlotCollapsed: ({ event }) =>
-              event.viewedPlayerHasCommanders,
-          }),
-        },
+        OPEN_PANEL: 'viewing',
       },
     },
     viewing: {
@@ -224,17 +214,6 @@ export const commanderPanelMachine = setup({
             allowsSecondCommander: false,
             commander2Suggestions: [],
             suggestionsLabel: 'Suggested',
-          }),
-        },
-        TOGGLE_COLLAPSED: {
-          actions: assign({
-            viewedPlayerSlotCollapsed: ({ context }) =>
-              !context.viewedPlayerSlotCollapsed,
-          }),
-        },
-        SET_COLLAPSED: {
-          actions: assign({
-            viewedPlayerSlotCollapsed: ({ event }) => event.collapsed,
           }),
         },
       },
@@ -291,17 +270,6 @@ export const commanderPanelMachine = setup({
               commander2Name: '',
               commander2Card: null,
             }
-          }),
-        },
-        TOGGLE_COLLAPSED: {
-          actions: assign({
-            viewedPlayerSlotCollapsed: ({ context }) =>
-              !context.viewedPlayerSlotCollapsed,
-          }),
-        },
-        SET_COLLAPSED: {
-          actions: assign({
-            viewedPlayerSlotCollapsed: ({ event }) => event.collapsed,
           }),
         },
       },

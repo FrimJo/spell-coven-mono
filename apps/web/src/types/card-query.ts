@@ -190,6 +190,9 @@ export interface UseCardQueryReturn {
   /** Clear the card history for the current room */
   clearHistory: () => void
 
+  /** Remove a single entry from history */
+  removeFromHistory: (entry: CardHistoryEntry) => void
+
   /** Clear the current result state and dismiss the preview */
   clearResult: () => void
 }

@@ -138,6 +138,22 @@ export function useCardQuery(roomId: string): UseCardQueryReturn {
     removeHistory(roomId)
   }, [roomId])
 
+  /**
+   * Remove a single entry from history (by id and timestamp)
+   */
+  const removeFromHistory = useCallback(
+    (entry: CardHistoryEntry) => {
+      setHistory((prev) => {
+        const updated = prev.filter(
+          (e) => !(e.id === entry.id && e.timestamp === entry.timestamp),
+        )
+        saveHistory(roomId, updated)
+        return updated
+      })
+    },
+    [roomId],
+  )
+
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const cancel = useCallback(() => {
@@ -517,5 +533,6 @@ export function useCardQuery(roomId: string): UseCardQueryReturn {
     isDismissed,
     clearHistory,
     clearResult,
+    removeFromHistory,
   }
 }

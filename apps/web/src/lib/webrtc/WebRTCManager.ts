@@ -313,6 +313,16 @@ export class WebRTCManager {
         this.callbacks.onRemoteStream?.(remotePeerId, stream)
         this.updateTrackState(remotePeerId, stream)
         this.startTrackStatePolling()
+
+        // Listen for mute/unmute/ended on video track for immediate Camera Off feedback
+        if (event.track.kind === 'video') {
+          const onVideoTrackStateChange = () => {
+            this.updateTrackState(remotePeerId, stream)
+          }
+          event.track.addEventListener('mute', onVideoTrackStateChange)
+          event.track.addEventListener('unmute', onVideoTrackStateChange)
+          event.track.addEventListener('ended', onVideoTrackStateChange)
+        }
       }
     }
 
@@ -341,6 +351,11 @@ export class WebRTCManager {
       })
     } else if (videoTrack && !videoSender) {
       pc.addTrack(videoTrack, this.localStream)
+    } else if (videoSender && !videoTrack) {
+      // Local user turned off video - remove track so peers see Camera Off immediately
+      videoSender.replaceTrack(null).catch((err) => {
+        console.error(`Failed to remove video track for ${peerId}:`, err)
+      })
     }
 
     // Update audio track
