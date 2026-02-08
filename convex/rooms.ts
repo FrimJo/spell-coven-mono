@@ -189,22 +189,17 @@ export const createRoom = mutation({
     const newCount = counter.count + 1
     await ctx.db.patch(counter._id, { count: newCount })
 
-        // Generate sequential room code (newCount - 1 because we want 0-indexed)
-        const roomId = await withComputationSpan(
-          'rooms.generate_room_code',
-          () => toBase32Code(newCount - 1),
-        )
+    // Generate sequential room code (newCount - 1 because we want 0-indexed)
+    const roomId = toBase32Code(newCount - 1)
 
-        // Create room with default seat count
-        await withDbSpan('rooms.insert', () =>
-          ctx.db.insert('rooms', {
-            roomId,
-            ownerId: userId,
-            createdAt: now,
-            seatCount: 4,
-            lastActivityAt: now,
-          }),
-        )
+    // Create room with default seat count
+    await ctx.db.insert('rooms', {
+      roomId,
+      ownerId: userId,
+      createdAt: now,
+      seatCount: 4,
+      lastActivityAt: now,
+    })
 
     return { roomId, waitMs: null }
   },
