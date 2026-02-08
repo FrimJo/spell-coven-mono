@@ -194,9 +194,11 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
     console.error(`[VideoStreamGrid] Video error for ${playerId}:`, e)
   }
 
+  const videoContainerRef = useRef<HTMLDivElement>(null)
+
   return (
     <Card className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden">
-      <div className="relative min-h-0 flex-1 bg-black">
+      <div ref={videoContainerRef} className="relative min-h-0 flex-1 bg-black">
         {peerVideoEnabled ? (
           <>
             {remoteStream && (
@@ -235,6 +237,7 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
               roomId={roomId}
               participant={participantData}
               participants={gameRoomParticipants}
+              videoContainerRef={videoContainerRef}
             />
           </>
         )}

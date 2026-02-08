@@ -71,15 +71,23 @@ export const DUAL_COMMANDER_KEYWORDS = [
 export type DualCommanderKeyword = (typeof DUAL_COMMANDER_KEYWORDS)[number]
 
 /**
- * Detect which dual-commander keyword(s) a card has
+ * Detect which dual-commander keyword(s) a card has.
+ * Checks card.keywords first; falls back to oracle_text for ability-style keywords
+ * (e.g. "Choose a Background") in case the API omits them from keywords.
  */
 export function detectDualCommanderKeywords(
   card: ScryfallCard,
 ): DualCommanderKeyword[] {
   const found: DualCommanderKeyword[] = []
+  const keywords = card.keywords ?? []
+  const oracle = (card.oracle_text ?? '').toLowerCase()
   for (const kw of DUAL_COMMANDER_KEYWORDS) {
-    // Scryfall keywords are case-insensitive in practice; normalize
-    if (card.keywords.some((k) => k.toLowerCase() === kw.toLowerCase())) {
+    const inKeywords = keywords.some(
+      (k) => k.toLowerCase() === kw.toLowerCase(),
+    )
+    const inOracle =
+      kw === 'Choose a background' && oracle.includes('choose a background')
+    if (inKeywords || inOracle) {
       found.push(kw)
     }
   }

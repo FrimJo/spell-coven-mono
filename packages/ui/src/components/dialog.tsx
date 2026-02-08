@@ -46,20 +46,76 @@ function DialogOverlay({
   )
 }
 
+interface DialogContentProps
+  extends React.ComponentProps<typeof DialogPrimitive.Content> {
+  /**
+   * When provided, the dialog content is centered within this element
+   * instead of the viewport. The backdrop still covers the full viewport.
+   */
+  centerInRef?: React.RefObject<HTMLElement | null>
+  /**
+   * When centerInRef is used, pass the dialog's open state here so positioning
+   * re-runs when the dialog opens (Radix may not pass data-state reliably).
+   */
+  forceReposition?: boolean
+}
+
 function DialogContent({
   className,
   children,
+  centerInRef,
+  forceReposition,
+  style,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content>) {
+}: DialogContentProps) {
+  const [position, setPosition] = React.useState<{
+    left: number
+    top: number
+  } | null>(null)
+
+  React.useLayoutEffect(() => {
+    if (!centerInRef?.current || !forceReposition) {
+      setPosition(null)
+      return
+    }
+    const updatePosition = () => {
+      const rect = centerInRef.current?.getBoundingClientRect()
+      if (rect) {
+        setPosition({
+          left: rect.left + rect.width / 2,
+          top: rect.top + rect.height / 2,
+        })
+      }
+    }
+    updatePosition()
+    const observer = new ResizeObserver(updatePosition)
+    observer.observe(centerInRef.current)
+    return () => observer.disconnect()
+  }, [centerInRef, forceReposition])
+
+  const useCustomPosition = centerInRef && position !== null
+
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed left-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg',
+          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed z-50 grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg',
+          !useCustomPosition &&
+            'left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]',
           className,
         )}
+        style={
+          useCustomPosition
+            ? {
+                ...style,
+                left: position!.left,
+                top: position!.top,
+                transform: 'translate(-50%, -50%)',
+              }
+            : style
+        }
         {...props}
       >
         {children}

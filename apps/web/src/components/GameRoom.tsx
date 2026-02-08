@@ -320,6 +320,7 @@ function GameRoomContent({
                 onToggleMutePlayer={handleToggleMutePlayer}
                 commandersPanelOpen={commandersPanelOpen}
                 onCommandersPanelOpenChange={setCommandersPanelOpen}
+                onCopyShareLink={handleCopyShareLink}
               />
 
               {/* Main Area - Video Stream Grid */}
