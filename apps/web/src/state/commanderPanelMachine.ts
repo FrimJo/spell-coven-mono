@@ -182,7 +182,7 @@ export const commanderPanelMachine = setup({
           : { commander2Name: '', commander2Card: null }),
       }
     }),
-    /** CMD1_RESOLVED: set new commander 1 and clear commander 2 if new card has no dual or a different dual type */
+    /** CMD1_RESOLVED: set new commander 1 and clear commander 2 only when user *changes* commander 1 to a card with no dual or different dual type (not when loading initial state on enter edit). */
     setCommander1AndMaybeClearCommander2: assign(({ context, event }) => {
       if (event.type !== 'CMD1_RESOLVED') return {}
       const oldCard = context.commander1Card
@@ -197,7 +197,9 @@ export const commanderPanelMachine = setup({
       const sameDualType =
         oldKeywords.length === newKeywords.length &&
         oldKeywords.every((k) => newKeywords.includes(k))
-      const clearCommander2 = !allowsSecondCommander || !sameDualType
+      // Only clear commander 2 when user actually changed commander 1 (oldCard was set) and the new card has no second slot or different dual type
+      const clearCommander2 =
+        oldCard != null && (!allowsSecondCommander || !sameDualType)
       if (!newCard) {
         return {
           commander1Card: null,

@@ -567,8 +567,8 @@ function PlayerCommanderCard({
             </span>
           )}
         </span>
-        {isEditingThisPlayer && (
-          <div className="ml-auto flex min-h-7 flex-shrink-0 items-center justify-end">
+        <div className="ml-auto flex min-h-7 flex-shrink-0 items-center justify-end">
+          {isEditingThisPlayer ? (
             <Button
               size="sm"
               variant="outline"
@@ -577,8 +577,19 @@ function PlayerCommanderCard({
             >
               Done
             </Button>
-          </div>
-        )}
+          ) : (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-text-muted hover:bg-surface-2 hover:text-brand-muted-foreground h-7 w-7"
+              onClick={() => onStartEditing(player)}
+              title="Edit commanders"
+              aria-label="Edit commanders"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className={slotsLayout}>
@@ -611,7 +622,6 @@ function PlayerCommanderCard({
           suggestions={commander2Suggestions}
           suggestionsLabel={suggestionsLabel}
           onQuickFillCommander2={onQuickFillCommander2}
-          onEdit={() => onStartEditing(player, 1)}
         />
         {(player.commanders[1]?.name ||
           (isEditingThisPlayer && cmdState.allowsSecondCommander)) && (
@@ -633,7 +643,6 @@ function PlayerCommanderCard({
             allowsSecondCommander={cmdState.allowsSecondCommander}
             suggestions={commander2Suggestions}
             suggestionsLabel={suggestionsLabel}
-            onEdit={() => onStartEditing(player, 2)}
           />
         )}
       </div>
@@ -664,19 +673,15 @@ interface CommanderSlotProps {
   allowsSecondCommander?: boolean
   suggestions?: string[]
   suggestionsLabel?: string
-  // Per-slot edit (opens both slots for this player)
-  onEdit?: () => void
 }
 
-/** View-only commander card (image, name, edit button) */
+/** View-only commander card (image, name) – edit via header button */
 function CommanderSlotView({
   commander,
   getCommanderImageUrl,
-  onEdit,
 }: {
   commander: { id: string; name: string }
   getCommanderImageUrl: (id: string) => string | null
-  onEdit?: () => void
 }) {
   const imageUrl = getCommanderImageUrl(commander.id)
   return (
@@ -696,18 +701,6 @@ function CommanderSlotView({
           {commander.name}
         </span>
       </div>
-      {onEdit && (
-        <Button
-          size="icon"
-          variant="ghost"
-          className="text-text-muted hover:bg-surface-2 hover:text-brand-muted-foreground absolute right-2 top-2 z-20 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
-          onClick={onEdit}
-          title="Edit commander"
-          aria-label="Edit commander"
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
-      )}
     </div>
   )
 }
@@ -839,7 +832,6 @@ function CommanderSlot({
   allowsSecondCommander,
   suggestions,
   suggestionsLabel,
-  onEdit,
 }: CommanderSlotProps) {
   if (!commander && !isEditing) return null
 
@@ -867,7 +859,6 @@ function CommanderSlot({
     <CommanderSlotView
       commander={commander}
       getCommanderImageUrl={getCommanderImageUrl}
-      onEdit={onEdit}
     />
   )
 }
