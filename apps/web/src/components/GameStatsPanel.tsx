@@ -241,12 +241,14 @@ export function GameStatsPanel({
 
   // Clear a specific commander slot for a player
   const handleClearCommander = (player: Participant, slotNumber: 1 | 2) => {
-    // Keep the other commander if it exists
-    const keepSlot = slotNumber === 1 ? 1 : 0
-    const keepCommander = player.commanders[keepSlot]
-    const commanders = keepCommander?.name
-      ? [{ id: keepCommander.id, name: keepCommander.name }]
-      : []
+    // When clearing commander 1, clear both (commander 2 only exists as partner to commander 1).
+    // When clearing commander 2, keep commander 1.
+    const commanders =
+      slotNumber === 1
+        ? []
+        : player.commanders[0]?.name
+          ? [{ id: player.commanders[0].id, name: player.commanders[0].name }]
+          : []
 
     // If clearing from currently edited player, also clear local state via machine
     if (player.id === editingPlayerId) {
@@ -330,162 +332,170 @@ export function GameStatsPanel({
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-140px)] pr-4">
-          <div className="space-y-4 px-4 pb-8">
-            {/* Joined players */}
-            {participants.map((player) => {
-              const isCurrentUser = player.id === currentUser.id
-              const isEditingThisPlayer = editingPlayerId === player.id
-              // Independent edit state per slot
-              const isEditingSlot1 = isEditingThisPlayer && editingSlot1
-              const isEditingSlot2 = isEditingThisPlayer && editingSlot2
-              const singleSlotEdit =
-                (isEditingSlot1 && !isEditingSlot2) ||
-                (!isEditingSlot1 && isEditingSlot2)
-              // Get status only if this player is being edited
-              // Use local state (cmdState) for hasExistingCommander when editing, not props (player.commanders)
-              // This ensures that when clearing, the status updates immediately based on local state
-              const playerCommander1Status = isEditingThisPlayer
-                ? getCommanderStatus(
-                    1,
-                    Boolean(cmdState.commander1Name || cmdState.commander1Card),
-                  )
-                : 'saved'
-              const playerCommander2Status = isEditingThisPlayer
-                ? getCommanderStatus(
-                    2,
-                    Boolean(cmdState.commander2Name || cmdState.commander2Card),
-                  )
-                : 'saved'
+          <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden px-4 pb-8">
+            {/* Joined players - flex so cards share space and shrink when all have two commanders */}
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+              {participants.map((player) => {
+                const isCurrentUser = player.id === currentUser.id
+                const isEditingThisPlayer = editingPlayerId === player.id
+                // Independent edit state per slot
+                const isEditingSlot1 = isEditingThisPlayer && editingSlot1
+                const isEditingSlot2 = isEditingThisPlayer && editingSlot2
+                const singleSlotEdit =
+                  (isEditingSlot1 && !isEditingSlot2) ||
+                  (!isEditingSlot1 && isEditingSlot2)
+                // Get status only if this player is being edited
+                // Use local state (cmdState) for hasExistingCommander when editing, not props (player.commanders)
+                // This ensures that when clearing, the status updates immediately based on local state
+                const playerCommander1Status = isEditingThisPlayer
+                  ? getCommanderStatus(
+                      1,
+                      Boolean(
+                        cmdState.commander1Name || cmdState.commander1Card,
+                      ),
+                    )
+                  : 'saved'
+                const playerCommander2Status = isEditingThisPlayer
+                  ? getCommanderStatus(
+                      2,
+                      Boolean(
+                        cmdState.commander2Name || cmdState.commander2Card,
+                      ),
+                    )
+                  : 'saved'
 
-              return (
-                <div
-                  key={player.id}
-                  className={`border-border-default bg-surface-1/50 rounded-lg border ${singleSlotEdit ? 'p-3' : 'p-4'}`}
-                >
-                  {/* Player header */}
+                return (
                   <div
-                    className={`border-border-default flex items-center gap-2 border-b ${singleSlotEdit ? 'mb-2 pb-1.5' : 'mb-3 pb-2'}`}
+                    key={player.id}
+                    className={`border-border-default bg-surface-1/50 flex min-h-0 flex-1 flex-col rounded-lg border ${singleSlotEdit ? 'p-3' : 'p-4'}`}
                   >
-                    {player.avatar ? (
-                      <img
-                        src={player.avatar}
-                        alt={player.username}
-                        className="h-6 w-6 rounded-full"
-                      />
-                    ) : (
-                      <User className="text-text-muted h-5 w-5" />
-                    )}
-                    <span className="text-text-secondary font-semibold">
-                      {player.username}
-                      {isCurrentUser && (
-                        <span className="text-text-muted ml-1.5 text-xs font-normal">
-                          (You)
-                        </span>
+                    {/* Player header */}
+                    <div
+                      className={`border-border-default flex flex-shrink-0 items-center gap-2 border-b ${singleSlotEdit ? 'mb-2 pb-1.5' : 'mb-3 pb-2'}`}
+                    >
+                      {player.avatar ? (
+                        <img
+                          src={player.avatar}
+                          alt={player.username}
+                          className="h-6 w-6 rounded-full"
+                        />
+                      ) : (
+                        <User className="text-text-muted h-5 w-5" />
                       )}
-                    </span>
+                      <span className="text-text-secondary font-semibold">
+                        {player.username}
+                        {isCurrentUser && (
+                          <span className="text-text-muted ml-1.5 text-xs font-normal">
+                            (You)
+                          </span>
+                        )}
+                      </span>
 
-                    {/* Done - shown when any commander slot is in edit mode */}
-                    <div className="ml-auto flex min-h-7 flex-shrink-0 items-center justify-end">
-                      {isEditingThisPlayer && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-border-default bg-surface-2 text-text-secondary hover:bg-surface-3 h-7 hover:text-white"
-                          onClick={() => send({ type: 'DONE_EDIT' })}
-                        >
-                          Done
-                        </Button>
+                      {/* Done - shown when any commander slot is in edit mode */}
+                      <div className="ml-auto flex min-h-7 flex-shrink-0 items-center justify-end">
+                        {isEditingThisPlayer && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-border-default bg-surface-2 text-text-secondary hover:bg-surface-3 h-7 hover:text-white"
+                            onClick={() => send({ type: 'DONE_EDIT' })}
+                          >
+                            Done
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Commander slots - flex so they shrink to fill without scroll; min-height avoids layout shift when switching to edit mode */}
+                    <div
+                      className={
+                        singleSlotEdit
+                          ? 'min-h-0 space-y-2'
+                          : 'flex min-h-0 flex-1 flex-col gap-3'
+                      }
+                    >
+                      {!isEditingThisPlayer &&
+                        !player.commanders[0]?.name &&
+                        !player.commanders[1]?.name && (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditing(player)}
+                            className="border-border-default bg-surface-1/30 text-text-muted hover:border-border-default hover:bg-surface-1/50 hover:text-text-muted flex w-full flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 transition-colors"
+                          >
+                            <Plus className="h-5 w-5" />
+                            <span className="text-sm font-medium">
+                              {isCurrentUser
+                                ? 'Add your Commander'
+                                : 'Add commander'}
+                            </span>
+                          </button>
+                        )}
+                      {/* Commander 1 */}
+                      <CommanderSlot
+                        slotNumber={1}
+                        commander={player.commanders[0]}
+                        isEditing={isEditingSlot1}
+                        getCommanderImageUrl={getCommanderImageUrl}
+                        onClear={() => handleClearCommander(player, 1)}
+                        inputValue={
+                          isEditingThisPlayer ? cmdState.commander1Name : ''
+                        }
+                        onInputChange={setCommander1Name}
+                        onCardResolved={onCommander1Resolved}
+                        status={playerCommander1Status}
+                        dualKeywords={cmdState.dualKeywords}
+                        specificPartner={cmdState.specificPartner}
+                        suggestions={commander2Suggestions}
+                        suggestionsLabel={suggestionsLabel}
+                        onQuickFillCommander2={handleQuickFillCommander2}
+                        onEdit={() => handleStartEditing(player, 1)}
+                      />
+
+                      {/* Commander 2 - only show if commander 1 allows a second commander (Partner, Background, etc.) */}
+                      {(player.commanders[1]?.name ||
+                        (isEditingThisPlayer &&
+                          cmdState.allowsSecondCommander)) && (
+                        <CommanderSlot
+                          slotNumber={2}
+                          commander={player.commanders[1]}
+                          isEditing={isEditingSlot2}
+                          getCommanderImageUrl={getCommanderImageUrl}
+                          onClear={() => handleClearCommander(player, 2)}
+                          inputValue={
+                            isEditingThisPlayer ? cmdState.commander2Name : ''
+                          }
+                          onInputChange={setCommander2Name}
+                          onCardResolved={onCommander2Resolved}
+                          status={playerCommander2Status}
+                          allowsSecondCommander={cmdState.allowsSecondCommander}
+                          suggestions={commander2Suggestions}
+                          suggestionsLabel={suggestionsLabel}
+                          onEdit={() => handleStartEditing(player, 2)}
+                        />
                       )}
                     </div>
                   </div>
+                )
+              })}
+            </div>
 
-                  {/* Commander slots - min-height avoids layout shift when switching to edit mode */}
-                  <div
-                    className={
-                      singleSlotEdit
-                        ? 'min-h-0 space-y-2'
-                        : 'min-h-[5.5rem] space-y-3'
-                    }
-                  >
-                    {!isEditingThisPlayer &&
-                      !player.commanders[0]?.name &&
-                      !player.commanders[1]?.name && (
-                        <button
-                          type="button"
-                          onClick={() => handleStartEditing(player)}
-                          className="border-border-default bg-surface-1/30 text-text-muted hover:border-border-default hover:bg-surface-1/50 hover:text-text-muted flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 transition-colors"
-                        >
-                          <Plus className="h-5 w-5" />
-                          <span className="text-sm font-medium">
-                            {isCurrentUser
-                              ? 'Add your Commander'
-                              : 'Add commander'}
-                          </span>
-                        </button>
-                      )}
-                    {/* Commander 1 */}
-                    <CommanderSlot
-                      slotNumber={1}
-                      commander={player.commanders[0]}
-                      isEditing={isEditingSlot1}
-                      getCommanderImageUrl={getCommanderImageUrl}
-                      onClear={() => handleClearCommander(player, 1)}
-                      inputValue={
-                        isEditingThisPlayer ? cmdState.commander1Name : ''
-                      }
-                      onInputChange={setCommander1Name}
-                      onCardResolved={onCommander1Resolved}
-                      status={playerCommander1Status}
-                      dualKeywords={cmdState.dualKeywords}
-                      specificPartner={cmdState.specificPartner}
-                      suggestions={commander2Suggestions}
-                      suggestionsLabel={suggestionsLabel}
-                      onQuickFillCommander2={handleQuickFillCommander2}
-                      onEdit={() => handleStartEditing(player, 1)}
-                    />
-
-                    {/* Commander 2 - only show if commander 1 allows a second commander (Partner, Background, etc.) */}
-                    {(player.commanders[1]?.name ||
-                      (isEditingThisPlayer &&
-                        cmdState.allowsSecondCommander)) && (
-                      <CommanderSlot
-                        slotNumber={2}
-                        commander={player.commanders[1]}
-                        isEditing={isEditingSlot2}
-                        getCommanderImageUrl={getCommanderImageUrl}
-                        onClear={() => handleClearCommander(player, 2)}
-                        inputValue={
-                          isEditingThisPlayer ? cmdState.commander2Name : ''
-                        }
-                        onInputChange={setCommander2Name}
-                        onCardResolved={onCommander2Resolved}
-                        status={playerCommander2Status}
-                        allowsSecondCommander={cmdState.allowsSecondCommander}
-                        suggestions={commander2Suggestions}
-                        suggestionsLabel={suggestionsLabel}
-                        onEdit={() => handleStartEditing(player, 2)}
-                      />
-                    )}
+            {/* Vacant slots - fixed size at bottom */}
+            <div className="flex flex-shrink-0 flex-col gap-4">
+              {vacantSlots.map((slot) => (
+                <div
+                  key={`vacant-${slot.index}`}
+                  className="border-border-default bg-surface-1/30 rounded-lg border border-dashed p-4"
+                >
+                  <div className="text-text-muted flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    <span className="font-medium">Open seat</span>
                   </div>
+                  <p className="text-text-muted mt-2 text-sm">
+                    Waiting for player to join...
+                  </p>
                 </div>
-              )
-            })}
-
-            {/* Vacant slots */}
-            {vacantSlots.map((slot) => (
-              <div
-                key={`vacant-${slot.index}`}
-                className="border-border-default bg-surface-1/30 rounded-lg border border-dashed p-4"
-              >
-                <div className="text-text-muted flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  <span className="font-medium">Open seat</span>
-                </div>
-                <p className="text-text-muted mt-2 text-sm">
-                  Waiting for player to join...
-                </p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </ScrollArea>
       </SheetContent>
@@ -636,7 +646,7 @@ function CommanderSlot({
   if (!commander) return null
 
   return (
-    <div className="border-border-default bg-surface-0/50 group relative min-h-24 rounded-md border">
+    <div className="border-border-default bg-surface-0/50 group relative flex min-h-[38px] min-w-0 flex-1 rounded-md border">
       {/* Commander Background Image */}
       {imageUrl && (
         <div className="absolute inset-0 z-0 overflow-hidden rounded-md">
@@ -649,7 +659,7 @@ function CommanderSlot({
         </div>
       )}
 
-      <div className="relative z-10 flex min-h-24 items-center px-3">
+      <div className="relative z-10 flex min-h-[38px] flex-1 items-center px-3">
         <span className="text-shadow-sm text-text-secondary text-sm font-medium shadow-black">
           {commander.name}
         </span>

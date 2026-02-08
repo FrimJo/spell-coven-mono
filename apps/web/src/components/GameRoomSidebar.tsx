@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCardQueryContext } from '@/contexts/CardQueryContext'
+import { useCommanderDamageDialog } from '@/contexts/CommanderDamageDialogContext'
 import { usePresence } from '@/contexts/PresenceContext'
 import { History, Trash2 } from 'lucide-react'
 
@@ -223,6 +224,7 @@ function SidebarContent({
   // Get game room participants from context (already deduplicated)
   const { uniqueParticipants, roomSeatCount, setRoomSeatCount } = usePresence()
   const { user } = useAuth()
+  const commanderDamageDialog = useCommanderDamageDialog()
   const {
     state,
     history,
@@ -333,6 +335,7 @@ function SidebarContent({
           onToggleMutePlayer={onToggleMutePlayer}
           currentUserId={user?.id ?? undefined}
           onViewCommanders={handleOpenCommanders}
+          onOpenCommanderDamage={commanderDamageDialog?.setOpenForPlayerId}
           seatCount={roomSeatCount}
           onChangeSeatCount={isLobbyOwner ? handleChangeSeatCount : undefined}
         />

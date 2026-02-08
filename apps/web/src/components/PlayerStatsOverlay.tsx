@@ -1,6 +1,7 @@
 import type { Participant } from '@/types/participant'
 import type { Doc } from '@convex/_generated/dataModel'
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { useCommanderDamageDialog } from '@/contexts/CommanderDamageDialogContext'
 import { useCommandersPanel } from '@/contexts/CommandersPanelContext'
 import { useDeltaDisplay } from '@/hooks/useDeltaDisplay'
 import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
@@ -350,6 +351,19 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
   const displayPoison = Math.max(0, participant.poison ?? 0)
 
   const commandersPanel = useCommandersPanel()
+  const commanderDamageDialog = useCommanderDamageDialog()
+  const [commanderDialogOpen, setCommanderDialogOpen] = useState(false)
+
+  // Open dialog when requested from sidebar menu (e.g. "Damage taken")
+  useEffect(() => {
+    if (
+      commanderDamageDialog &&
+      commanderDamageDialog.openForPlayerId === participant.id
+    ) {
+      setCommanderDialogOpen(true)
+      commanderDamageDialog.setOpenForPlayerId(null)
+    }
+  }, [commanderDamageDialog, participant.id])
 
   return (
     <>
@@ -449,18 +463,33 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
 
         {/* Commander Damage */}
         <div className="flex items-center justify-between gap-3">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button
-                variant="ghost"
-                className="text-brand-muted-foreground hover:text-brand flex h-auto min-h-0 min-w-[2.5rem] cursor-pointer items-center gap-1.5 p-0 font-normal hover:bg-transparent [&_svg]:shrink-0"
-              >
-                <Swords className="h-4 w-4" />
-                <span className="min-w-[2ch] text-center font-mono font-bold text-white">
-                  {displayedCommanderDamage}
-                </span>
-              </Button>
-            </DialogTrigger>
+          <Dialog
+            open={commanderDialogOpen}
+            onOpenChange={(open) => {
+              setCommanderDialogOpen(open)
+              if (!open && commanderDamageDialog) {
+                commanderDamageDialog.setOpenForPlayerId(null)
+              }
+            }}
+          >
+            <div className="text-brand-muted-foreground flex min-w-[2.5rem] items-center gap-1.5">
+              <Swords className="h-4 w-4 shrink-0" />
+              <span className="min-w-[2ch] text-center font-mono font-bold text-white">
+                {displayedCommanderDamage}
+              </span>
+            </div>
+            <div className="relative flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+              <DialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-text-muted hover:bg-brand/20 hover:text-brand h-6 gap-1 rounded-md px-2 text-xs"
+                  aria-label="Edit commander damage"
+                >
+                  <span>DMG</span>
+                </Button>
+              </DialogTrigger>
+            </div>
             <DialogContent className="border-surface-2 bg-surface-1 text-text-secondary w-[300px] max-w-[calc(100vw-2rem)] p-0">
               <DialogTitle className="sr-only">Commander damage</DialogTitle>
               <div className="flex flex-col">
