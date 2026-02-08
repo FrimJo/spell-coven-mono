@@ -180,26 +180,35 @@ export function PlayerList({
                 disabled={!onCopyShareLink}
                 className="border-default bg-surface-1/50 hover:border-surface-3/80 hover:bg-surface-2/40 group flex min-h-[56px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-dashed p-2 text-left transition-colors active:scale-[0.98] disabled:cursor-default disabled:opacity-60"
                 whileHover={
-                  onCopyShareLink
+                  onCopyShareLink && !isCopied
                     ? { scale: 1.01, transition: { duration: 0.2 } }
                     : undefined
                 }
                 whileTap={
-                  onCopyShareLink
+                  onCopyShareLink && !isCopied
                     ? { scale: 0.98, transition: { duration: 0.1 } }
                     : undefined
                 }
-                title={onCopyShareLink ? 'Copy shareable link' : undefined}
+                title={
+                  isCopied
+                    ? 'Copied!'
+                    : onCopyShareLink
+                      ? 'Copy shareable link'
+                      : undefined
+                }
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <AnimatePresence mode="wait">
                     {isCopied ? (
                       <motion.div
                         key="copied"
-                        initial={{ opacity: 0, scale: 0.8 }}
+                        initial={{ opacity: 0, scale: 0.92 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        transition={{ duration: 0.2 }}
+                        exit={{ opacity: 0, scale: 0.96 }}
+                        transition={{
+                          duration: 0.22,
+                          ease: [0.25, 0.46, 0.45, 0.94],
+                        }}
                         className="flex items-center gap-2"
                       >
                         <motion.div
@@ -207,17 +216,17 @@ export function PlayerList({
                           animate={{ scale: 1 }}
                           transition={{
                             type: 'spring',
-                            stiffness: 400,
-                            damping: 20,
+                            stiffness: 380,
+                            damping: 22,
                           }}
-                          className="bg-online flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full"
+                          className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#2ee8a6]"
                         >
                           <Check
-                            className="text-surface-0 h-3 w-3"
+                            className="h-2.5 w-2.5 text-white"
                             strokeWidth={2.5}
                           />
                         </motion.div>
-                        <span className="text-online text-sm font-medium">
+                        <span className="text-sm font-medium text-[#2ee8a6]">
                           Copied!
                         </span>
                       </motion.div>
