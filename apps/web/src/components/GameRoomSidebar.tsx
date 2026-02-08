@@ -202,6 +202,10 @@ interface GameRoomSidebarProps {
   onBanPlayer: (playerId: string) => void
   mutedPlayers: Set<string>
   onToggleMutePlayer: (playerId: string) => void
+  /** Controlled open state for the commanders panel */
+  commandersPanelOpen: boolean
+  /** Called when the commanders panel should open or close */
+  onCommandersPanelOpenChange: (open: boolean) => void
 }
 
 function SidebarContent({
@@ -213,6 +217,8 @@ function SidebarContent({
   onBanPlayer,
   mutedPlayers,
   onToggleMutePlayer,
+  commandersPanelOpen: panelOpen,
+  onCommandersPanelOpenChange: setPanelOpen,
 }: GameRoomSidebarProps) {
   // Get game room participants from context (already deduplicated)
   const { uniqueParticipants, roomSeatCount, setRoomSeatCount } = usePresence()
@@ -244,9 +250,6 @@ function SidebarContent({
     // Match by name:set (same format as history entry id)
     return `${displayResult.name}:${displayResult.set}`
   }, [state.result, state.status, history])
-
-  // State for commanders panel (same content for everyone; no selected player)
-  const [panelOpen, setPanelOpen] = useState(false)
 
   // Handler to re-select a history entry (doesn't add to history)
   const handleHistorySelect = useCallback(
@@ -293,12 +296,12 @@ function SidebarContent({
   // Handler to open commanders panel (panel shows same list for everyone)
   const handleOpenCommanders = useCallback(() => {
     setPanelOpen(true)
-  }, [])
+  }, [setPanelOpen])
 
   // Handler to close panel
   const handleClosePanel = useCallback(() => {
     setPanelOpen(false)
-  }, [])
+  }, [setPanelOpen])
 
   // Handler to change seat count
   const handleChangeSeatCount = useCallback(

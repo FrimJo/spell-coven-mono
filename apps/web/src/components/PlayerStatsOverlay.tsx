@@ -1,12 +1,13 @@
 import type { Participant } from '@/types/participant'
 import type { Doc } from '@convex/_generated/dataModel'
 import { memo, useCallback, useMemo, useState } from 'react'
+import { useCommandersPanel } from '@/contexts/CommandersPanelContext'
 import { useDeltaDisplay } from '@/hooks/useDeltaDisplay'
 import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
 import { getCommanderImageUrl } from '@/lib/scryfall'
 import { api } from '@convex/_generated/api'
 import { useMutation } from 'convex/react'
-import { Heart, Minus, Plus, Skull, Swords } from 'lucide-react'
+import { Heart, Minus, Plus, Skull, Swords, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
@@ -360,6 +361,8 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
   const displayHealth = Math.max(0, participant.health ?? 0)
   const displayPoison = Math.max(0, participant.poison ?? 0)
 
+  const commandersPanel = useCommandersPanel()
+
   return (
     <>
       <div
@@ -470,10 +473,10 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
             <TooltipContent
               side="bottom"
               align="start"
-              className="border-surface-2 bg-surface-1 text-text-secondary max-w-[280px] border p-0 shadow-xl"
+              className="border-surface-2 bg-surface-1 text-text-secondary w-[280px] max-w-[280px] border p-0 shadow-xl"
             >
-              <div className="flex flex-col gap-1 p-2">
-                <label className="text-text-muted hover:bg-surface-2/50 flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs">
+              <div className="flex w-[280px] flex-col gap-1 p-2">
+                <label className="text-text-muted hover:bg-surface-2/50 flex shrink-0 cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs">
                   <Checkbox
                     checked={showOwnCommanders}
                     onCheckedChange={(checked) =>
@@ -482,25 +485,39 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                   />
                   <span>Include my commanders</span>
                 </label>
-                {allCommandersList.length > 0 ? (
-                  <div className="flex max-h-[240px] flex-col gap-0.5 overflow-y-auto">
-                    {allCommandersList.map((entry) => (
-                      <CommanderDamageTooltipRow
-                        key={`${entry.ownerUserId}:${entry.commanderId}`}
-                        entry={entry}
-                        onDamageChange={handleCommanderDamageChange}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="px-3 py-4 text-center">
-                    <p className="text-text-muted text-xs">
-                      {showOwnCommanders
-                        ? 'No commanders in the game'
-                        : 'No other commanders in the game'}
-                    </p>
-                  </div>
-                )}
+                {/* Same min-height as one commander row (py-1.5*2 + h-8) so no shift when first row appears */}
+                <div className="flex min-h-[44px] flex-col gap-0.5">
+                  {allCommandersList.length > 0 ? (
+                    <div className="flex max-h-[240px] flex-col gap-0.5 overflow-y-auto">
+                      {allCommandersList.map((entry) => (
+                        <CommanderDamageTooltipRow
+                          key={`${entry.ownerUserId}:${entry.commanderId}`}
+                          entry={entry}
+                          onDamageChange={handleCommanderDamageChange}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-text-muted flex min-h-[44px] flex-col items-center justify-center gap-2 px-3 py-2 text-center">
+                      <p className="text-xs">
+                        {showOwnCommanders
+                          ? 'No commanders in the game'
+                          : 'No other commanders in the game'}
+                      </p>
+                      {commandersPanel && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-7 gap-1.5 text-xs"
+                          onClick={() => commandersPanel.openCommandersPanel()}
+                        >
+                          <Users className="h-3.5 w-3.5" />
+                          Open commanders panel
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </TooltipContent>
           </Tooltip>
