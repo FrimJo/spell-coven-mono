@@ -13,6 +13,7 @@ import {
   LogIn,
   LogOut,
   Menu,
+  RotateCcw,
   Search,
   Settings,
 } from 'lucide-react'
@@ -40,6 +41,7 @@ import logoGreen from '../assets/logo_1024_green.png'
 import logoWarmGold from '../assets/logo_1024_warmgold.png'
 import logo from '../assets/logo_1024x1024.png'
 import { useTheme } from '../contexts/ThemeContext.js'
+import { useSearchShortcutParts } from '../hooks/useSearchShortcut.js'
 import { ThemeToggle } from './ThemeToggle.js'
 
 // ============================================================================
@@ -74,6 +76,8 @@ interface AppHeaderProps {
   onOpenSettings?: () => void
   /** Callback when search button is clicked (game only) */
   onSearchClick?: () => void
+  /** Callback when reset game button is clicked (game only) */
+  onResetGame?: () => void
 }
 
 // ============================================================================
@@ -344,7 +348,9 @@ function GameHeader({
   onCopyLink,
   onOpenSettings,
   onSearchClick,
+  onResetGame,
 }: AppHeaderProps) {
+  const shortcut = useSearchShortcutParts()
   return (
     <header className="border-surface-2 bg-surface-1/80 shrink-0 border-b backdrop-blur-md">
       {/* Subtle gradient border effect */}
@@ -364,6 +370,20 @@ function GameHeader({
             <ArrowLeft className="mr-2 h-4 w-4" />
             Leave
           </Button>
+
+          {onResetGame && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onResetGame}
+              className="text-text-muted hover:text-text-primary"
+              title="Reset game state"
+              data-testid="reset-game-button"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reset game
+            </Button>
+          )}
 
           <div className="bg-surface-3 h-6 w-px" />
 
@@ -418,13 +438,14 @@ function GameHeader({
             size="sm"
             onClick={onSearchClick}
             className="border-surface-3 bg-surface-2 text-text-muted hover:bg-surface-3 hover:text-text-primary gap-2"
-            title="Search cards (⌘K)"
+            title={`Search cards (${shortcut.modifier}${shortcut.modifier.length === 1 ? '' : '+'}${shortcut.key})`}
             data-testid="search-button"
           >
             <Search className="h-4 w-4" />
             <span className="hidden sm:inline">Search cards</span>
             <kbd className="bg-surface-3 text-text-muted pointer-events-none hidden h-5 select-none items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-75 sm:inline-flex">
-              <span className="text-xs">⌘</span>K
+              <span className="text-xs">{shortcut.modifier}</span>
+              {shortcut.key}
             </kbd>
           </Button>
 

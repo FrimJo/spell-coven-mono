@@ -1,10 +1,7 @@
 import type { ScryfallCard } from '@/lib/scryfall'
 import type { Participant } from '@/types/participant'
-import type { Doc } from '@convex/_generated/dataModel'
-import { useCallback, useEffect, useEffectEvent, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import { usePresence } from '@/contexts/PresenceContext'
-import { useDeltaDisplay } from '@/hooks/useDeltaDisplay'
-import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
 import { getCardByName, getCommanderImageUrl } from '@/lib/scryfall'
 import { commanderPanelMachine } from '@/state/commanderPanelMachine'
 import { api } from '@convex/_generated/api'
@@ -14,11 +11,10 @@ import { useMutation as useConvexMutation } from 'convex/react'
 import {
   AlertCircle,
   Check,
-  ChevronDown,
-  ChevronUp,
   Loader2,
   Pencil,
   Plus,
+  Trash2,
   User,
   UserCircle,
 } from 'lucide-react'
@@ -35,7 +31,6 @@ import {
 } from '@repo/ui/components/sheet'
 
 import { CommanderSearchInput } from './CommanderSearchInput'
-import { DeltaBubble } from './DeltaBubble'
 
 interface GameStatsPanelProps {
   isOpen: boolean
@@ -43,10 +38,6 @@ interface GameStatsPanelProps {
   roomId: string
   currentUser: Participant
   participants: Participant[]
-  /** @deprecated - no longer used in slot-based design */
-  defaultTab?: 'damage' | 'setup'
-  /** The player whose stats are being viewed (defaults to currentUser) */
-  selectedPlayer?: Participant
 }
 
 export function GameStatsPanel({
@@ -55,27 +46,17 @@ export function GameStatsPanel({
   roomId,
   currentUser,
   participants,
-  selectedPlayer,
 }: GameStatsPanelProps) {
-  // The player whose stats we're viewing (defaults to current user)
-  const viewedPlayer = selectedPlayer ?? currentUser
-  const isViewingOwnStats = viewedPlayer.id === currentUser.id
   // Use roomId as-is - roomPlayers table stores bare roomId (e.g., "ABC123")
   const convexRoomId = roomId
   // Get seat count from presence context
   const { roomSeatCount } = usePresence()
-
-  // Determine if viewed player has any commanders set
-  const viewedPlayerHasCommanders =
-    viewedPlayer.commanders.length > 0 &&
-    viewedPlayer.commanders.some((c) => c?.name)
 
   // XState machine for commander panel state
   const [state, send] = useMachine(commanderPanelMachine)
 
   // Derive state from machine context
   const editingPlayerId = state.context.editingPlayerId
-  const viewedPlayerSlotCollapsed = state.context.viewedPlayerSlotCollapsed
   const cmdState = {
     commander1Name: state.context.commander1Name,
     commander2Name: state.context.commander2Name,
@@ -93,16 +74,9 @@ export function GameStatsPanel({
   // Effect Events - stable handlers that always see latest props/state
   const syncPanelOpenState = useEffectEvent(() => {
     if (isOpen && isClosed) {
-      send({ type: 'OPEN_PANEL', viewedPlayerHasCommanders })
+      send({ type: 'OPEN_PANEL' })
     } else if (!isOpen && !isClosed) {
       send({ type: 'CLOSE_PANEL' })
-    }
-  })
-
-  const syncCollapsedState = useEffectEvent(() => {
-    if (isOpen) {
-      const hasCommanders = viewedPlayer.commanders.some((c) => c?.name)
-      send({ type: 'SET_COLLAPSED', collapsed: hasCommanders })
     }
   })
 
@@ -111,81 +85,8 @@ export function GameStatsPanel({
     syncPanelOpenState()
   }, [isOpen])
 
-  // Reset collapsed state when viewed player changes
-  useEffect(() => {
-    syncCollapsedState()
-  }, [viewedPlayer.id])
-
-  // Convex mutation functions
+  // Convex mutation for setting commanders
   const setCommandersMutation = useConvexMutation(api.rooms.setPlayerCommanders)
-
-  // Helper function for optimistic updates on player queries
-  type RoomPlayer = Doc<'roomPlayers'>
-
-  const updatePlayerQueriesOptimistically = (
-    localStore: Parameters<
-      Parameters<
-        ReturnType<
-          typeof useConvexMutation<typeof api.rooms.updateCommanderDamage>
-        >['withOptimisticUpdate']
-      >[0]
-    >[0],
-    roomId: string,
-    userId: string,
-    updater: (player: RoomPlayer) => RoomPlayer,
-  ) => {
-    const existingSessions = localStore.getQuery(
-      api.players.listAllPlayerSessions,
-      { roomId },
-    )
-    if (existingSessions !== undefined) {
-      const nextSessions = existingSessions.map((session: RoomPlayer) =>
-        session.userId === userId ? updater(session) : session,
-      )
-      localStore.setQuery(
-        api.players.listAllPlayerSessions,
-        { roomId },
-        nextSessions,
-      )
-    }
-
-    const activePlayers = localStore.getQuery(api.players.listActivePlayers, {
-      roomId,
-    })
-    if (activePlayers !== undefined) {
-      const nextActive = activePlayers.map((player: RoomPlayer) =>
-        player.userId === userId ? updater(player) : player,
-      )
-      localStore.setQuery(api.players.listActivePlayers, { roomId }, nextActive)
-    }
-  }
-
-  const updateCommanderDamage = useConvexMutation(
-    api.rooms.updateCommanderDamage,
-  ).withOptimisticUpdate((localStore, args) => {
-    const damageKey = `${args.ownerUserId}:${args.commanderId}`
-
-    updatePlayerQueriesOptimistically(
-      localStore,
-      args.roomId,
-      args.userId,
-      (player) => {
-        const currentDamage = player.commanderDamage?.[damageKey] ?? 0
-        const nextDamage = Math.max(0, currentDamage + args.delta)
-        const actualDamageChange = nextDamage - currentDamage
-        const nextHealth = (player.health ?? 0) - actualDamageChange
-
-        return {
-          ...player,
-          health: nextHealth,
-          commanderDamage: {
-            ...(player.commanderDamage ?? {}),
-            [damageKey]: nextDamage,
-          },
-        }
-      },
-    )
-  })
 
   // Mutation variables type includes which commander triggered the save
   type SaveCommandersInput = {
@@ -375,24 +276,6 @@ export function GameStatsPanel({
     return 'idle'
   }
 
-  // Suggestions are now fetched by the machine when CMD1_RESOLVED is dispatched
-
-  const handleUpdateDamage = (
-    ownerUserId: string,
-    commanderId: string,
-    delta: number,
-  ) => {
-    updateCommanderDamage({
-      roomId: convexRoomId,
-      userId: viewedPlayer.id, // The viewed player is taking damage
-      ownerUserId, // From this owner
-      commanderId, // From this commander
-      delta,
-    }).catch(() => {
-      toast.error('Failed to update commander damage')
-    })
-  }
-
   // Build the slots: joined players first, then vacant slots
   const vacantSlotsCount = Math.max(0, roomSeatCount - participants.length)
   const vacantSlots = Array.from({ length: vacantSlotsCount }, (_, i) => ({
@@ -409,14 +292,10 @@ export function GameStatsPanel({
         <SheetHeader className="pb-4">
           <SheetTitle className="flex items-center gap-2 text-white">
             <UserCircle className="text-brand-muted-foreground h-5 w-5" />
-            {isViewingOwnStats
-              ? 'Your Commander Damage'
-              : `${viewedPlayer.username}'s Commander Damage`}
+            Commanders
           </SheetTitle>
           <SheetDescription className="text-text-muted">
-            {isViewingOwnStats
-              ? 'Track damage dealt to you by each commander.'
-              : `Viewing damage dealt to ${viewedPlayer.username} by each commander.`}
+            Set or edit each player&apos;s commanders.
           </SheetDescription>
         </SheetHeader>
 
@@ -425,102 +304,6 @@ export function GameStatsPanel({
             {/* Joined players */}
             {participants.map((player) => {
               const isCurrentUser = player.id === currentUser.id
-              const isViewedPlayer = player.id === viewedPlayer.id
-              const isCollapsed = isViewedPlayer && viewedPlayerSlotCollapsed
-
-              // Minimized view for viewed player's own slot (self-damage is rare)
-              if (isCollapsed) {
-                const commander1 = player.commanders[0]
-                const commander2 = player.commanders[1]
-                const cmd1ImageUrl = commander1
-                  ? getCommanderImageUrl(commander1.id)
-                  : null
-                const cmd2ImageUrl = commander2
-                  ? getCommanderImageUrl(commander2.id)
-                  : null
-
-                return (
-                  <div
-                    key={player.id}
-                    className="border-border-default bg-surface-1/50 rounded-lg border p-3"
-                  >
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={() =>
-                        send({ type: 'SET_COLLAPSED', collapsed: false })
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          send({ type: 'SET_COLLAPSED', collapsed: false })
-                        }
-                      }}
-                      className="flex w-full cursor-pointer items-center gap-2 text-left"
-                    >
-                      {player.avatar ? (
-                        <img
-                          src={player.avatar}
-                          alt={player.username}
-                          className="h-5 w-5 rounded-full"
-                        />
-                      ) : (
-                        <User className="text-text-muted h-4 w-4" />
-                      )}
-                      <span className="text-text-secondary font-semibold">
-                        {player.username}
-                        {isCurrentUser && (
-                          <span className="text-text-muted ml-1.5 text-xs font-normal">
-                            (You)
-                          </span>
-                        )}
-                      </span>
-                      <span className="bg-brand/20 text-brand-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">
-                        Viewing
-                      </span>
-                      <span className="ml-auto flex items-center gap-1.5">
-                        {/* Commander thumbnails */}
-                        <span className="flex -space-x-1">
-                          {cmd1ImageUrl ? (
-                            <img
-                              src={cmd1ImageUrl}
-                              alt={commander1?.name}
-                              title={commander1?.name}
-                              className="border-border-default h-6 w-6 rounded-full border object-cover"
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                send({
-                                  type: 'SET_COLLAPSED',
-                                  collapsed: false,
-                                })
-                                handleStartEditing(player)
-                              }}
-                              className="border-border-default bg-surface-1/50 text-text-muted hover:border-brand hover:bg-brand/10 hover:text-brand-muted-foreground flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-dashed transition-colors"
-                              title="Add Commander 1"
-                            >
-                              <Plus className="h-3 w-3" />
-                            </button>
-                          )}
-                          {/* Only show commander 2 thumbnail if it exists - don't show add button since we need to check if commander 1 supports a partner */}
-                          {cmd2ImageUrl && (
-                            <img
-                              src={cmd2ImageUrl}
-                              alt={commander2?.name}
-                              title={commander2?.name}
-                              className="border-border-default h-6 w-6 rounded-full border object-cover"
-                            />
-                          )}
-                        </span>
-                        <ChevronDown className="text-text-muted h-4 w-4" />
-                      </span>
-                    </div>
-                  </div>
-                )
-              }
-
               const isEditingThisPlayer = editingPlayerId === player.id
               // Get status only if this player is being edited
               // Use local state (cmdState) for hasExistingCommander when editing, not props (player.commanders)
@@ -563,15 +346,9 @@ export function GameStatsPanel({
                       )}
                     </span>
 
-                    {/* Controls: Viewing Badge, Edit Button, Minimize Button */}
-                    <div className="ml-auto flex items-center gap-1">
-                      {isViewedPlayer && (
-                        <span className="bg-brand/20 text-brand-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">
-                          Viewing
-                        </span>
-                      )}
-
-                      <div className="w-[3rem]">
+                    {/* Controls: Edit Button - reserve space so header height doesn't shift when toggling edit/view */}
+                    <div className="ml-auto flex min-h-7 flex-shrink-0 items-center gap-1">
+                      <div className="flex h-7 w-[3rem] items-center">
                         {isEditingThisPlayer ? (
                           <Button
                             size="sm"
@@ -594,26 +371,11 @@ export function GameStatsPanel({
                           </Button>
                         ) : null}
                       </div>
-
-                      {isViewedPlayer &&
-                        viewedPlayerHasCommanders &&
-                        !isEditingThisPlayer && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              send({ type: 'SET_COLLAPSED', collapsed: true })
-                            }
-                            className="text-text-muted hover:bg-surface-2 hover:text-text-secondary rounded p-1"
-                            title="Minimize"
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                        )}
                     </div>
                   </div>
 
-                  {/* Commander slots */}
-                  <div className="space-y-3">
+                  {/* Commander slots - min-height avoids layout shift when switching to edit mode */}
+                  <div className="min-h-[5.5rem] space-y-3">
                     {!isEditingThisPlayer &&
                       !player.commanders[0]?.name &&
                       !player.commanders[1]?.name && (
@@ -634,27 +396,9 @@ export function GameStatsPanel({
                     <CommanderSlot
                       slotNumber={1}
                       commander={player.commanders[0]}
-                      damage={
-                        player.commanders[0]
-                          ? (viewedPlayer.commanderDamage[
-                              `${player.id}:${player.commanders[0].id}`
-                            ] ?? 0)
-                          : 0
-                      }
                       isEditing={isEditingThisPlayer}
-                      isViewedPlayer={isViewedPlayer}
                       getCommanderImageUrl={getCommanderImageUrl}
-                      onDamageChange={(delta) =>
-                        player.commanders[0] &&
-                        handleUpdateDamage(
-                          player.id,
-                          player.commanders[0].id,
-                          delta,
-                        )
-                      }
-                      onStartEdit={() => handleStartEditing(player)}
                       onClear={() => handleClearCommander(player, 1)}
-                      // Edit props - pass shared state if editing this player
                       inputValue={
                         isEditingThisPlayer ? cmdState.commander1Name : ''
                       }
@@ -675,27 +419,9 @@ export function GameStatsPanel({
                       <CommanderSlot
                         slotNumber={2}
                         commander={player.commanders[1]}
-                        damage={
-                          player.commanders[1]
-                            ? (viewedPlayer.commanderDamage[
-                                `${player.id}:${player.commanders[1].id}`
-                              ] ?? 0)
-                            : 0
-                        }
                         isEditing={isEditingThisPlayer}
-                        isViewedPlayer={isViewedPlayer}
                         getCommanderImageUrl={getCommanderImageUrl}
-                        onDamageChange={(delta) =>
-                          player.commanders[1] &&
-                          handleUpdateDamage(
-                            player.id,
-                            player.commanders[1].id,
-                            delta,
-                          )
-                        }
-                        onStartEdit={() => handleStartEditing(player)}
                         onClear={() => handleClearCommander(player, 2)}
-                        // Edit props
                         inputValue={
                           isEditingThisPlayer ? cmdState.commander2Name : ''
                         }
@@ -741,12 +467,8 @@ export function GameStatsPanel({
 interface CommanderSlotProps {
   slotNumber: 1 | 2
   commander?: { id: string; name: string }
-  damage: number
   isEditing: boolean
-  isViewedPlayer: boolean
   getCommanderImageUrl: (id: string) => string | null
-  onDamageChange: (delta: number) => void
-  onStartEdit: () => void
   onClear: () => void
   // Edit mode props
   inputValue: string
@@ -766,12 +488,8 @@ interface CommanderSlotProps {
 function CommanderSlot({
   slotNumber,
   commander,
-  damage,
   isEditing,
-  isViewedPlayer: _isViewedPlayer,
   getCommanderImageUrl,
-  onDamageChange,
-  onStartEdit: _onStartEdit,
   onClear,
   inputValue,
   onInputChange,
@@ -786,30 +504,6 @@ function CommanderSlot({
 }: CommanderSlotProps) {
   const [isSearching, setIsSearching] = useState(false)
   const imageUrl = commander ? getCommanderImageUrl(commander.id) : null
-
-  // Delta display for damage
-  const damageDelta = useDeltaDisplay()
-
-  const handleDamageChange = useCallback(
-    (delta: number) => {
-      damageDelta.addDelta(delta)
-      onDamageChange(delta)
-    },
-    [damageDelta, onDamageChange],
-  )
-
-  // Hold-to-repeat hooks for damage buttons
-  const damageMinus = useHoldToRepeat({
-    onChange: handleDamageChange,
-    immediateDelta: -1,
-    repeatDelta: -10,
-  })
-
-  const damagePlus = useHoldToRepeat({
-    onChange: handleDamageChange,
-    immediateDelta: 1,
-    repeatDelta: 10,
-  })
 
   // Empty slot - hide if not set and not editing
   if (!commander && !isEditing) {
@@ -833,8 +527,10 @@ function CommanderSlot({
             className="text-destructive hover:bg-destructive/20 hover:text-destructive h-6 px-2 text-xs disabled:opacity-50"
             onClick={onClear}
             disabled={!commander && !inputValue.trim()}
+            title="Clear"
+            aria-label="Clear commander"
           >
-            Clear
+            <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
         <div className="relative">
@@ -907,7 +603,7 @@ function CommanderSlot({
     )
   }
 
-  // Display mode - show commander with damage counter
+  // Display mode - show commander name and image only (no damage in this panel)
   // Guard: at this point commander must exist (we returned early if !commander && !isEditing)
   if (!commander) return null
 
@@ -925,60 +621,10 @@ function CommanderSlot({
         </div>
       )}
 
-      <div className="relative z-10 flex items-center justify-between p-3">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="text-shadow-sm text-text-secondary text-sm font-medium shadow-black">
-              {commander.name}
-            </span>
-          </div>
-        </div>
-
-        {/* Damage counter */}
-        <div className="relative flex items-center gap-2">
-          {damageDelta.delta < 0 && (
-            <DeltaBubble
-              delta={damageDelta.delta}
-              visible={damageDelta.visible}
-              side="left"
-            />
-          )}
-          <Button
-            size="icon"
-            variant="outline"
-            className="border-border-default bg-surface-1/80 text-text-secondary hover:bg-surface-2 h-8 w-8 backdrop-blur-sm hover:text-white"
-            onMouseDown={damageMinus.handleStart}
-            onMouseUp={damageMinus.handleStop}
-            onMouseLeave={damageMinus.handleStop}
-            onTouchStart={damageMinus.handleStart}
-            onTouchEnd={damageMinus.handleStop}
-            disabled={damage <= 0}
-          >
-            -
-          </Button>
-          <span className="text-shadow-sm text-text-secondary min-w-[2rem] text-center font-mono text-lg font-bold shadow-black">
-            {damage}
-          </span>
-          <Button
-            size="icon"
-            variant="outline"
-            className="border-border-default bg-surface-1/80 text-text-secondary hover:bg-surface-2 h-8 w-8 backdrop-blur-sm hover:text-white"
-            onMouseDown={damagePlus.handleStart}
-            onMouseUp={damagePlus.handleStop}
-            onMouseLeave={damagePlus.handleStop}
-            onTouchStart={damagePlus.handleStart}
-            onTouchEnd={damagePlus.handleStop}
-          >
-            +
-          </Button>
-          {damageDelta.delta > 0 && (
-            <DeltaBubble
-              delta={damageDelta.delta}
-              visible={damageDelta.visible}
-              side="right"
-            />
-          )}
-        </div>
+      <div className="relative z-10 flex items-center p-3">
+        <span className="text-shadow-sm text-text-secondary text-sm font-medium shadow-black">
+          {commander.name}
+        </span>
       </div>
     </div>
   )

@@ -116,25 +116,33 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
   })
 
   // Combine streams into a single MediaStream for WebRTC
-  // Handle cases where video or audio is intentionally disabled
-  // Only include 'live' tracks to avoid using stopped/ended tracks from cache
+  // When both video and audio are enabled, wait for BOTH to be ready so the first
+  // WebRTC offer includes both tracks (avoids "everyone shows muted" from video-only offer).
+  // Only include 'live' tracks to avoid using stopped/ended tracks from cache.
   const combinedStream = useMemo((): MediaStream | null => {
     const tracks: MediaStreamTrack[] = []
 
-    // Add video tracks if video is enabled and stream is available
-    // Filter to only 'live' tracks (excludes stopped tracks from cache)
-    if (videoEnabled && isSuccessState(videoResult) && videoResult.stream) {
-      const liveTracks = videoResult.stream
-        .getVideoTracks()
+    const hasVideo =
+      videoEnabled && isSuccessState(videoResult) && videoResult.stream
+    const hasAudio =
+      audioEnabled && isSuccessState(audioResult) && audioResult.stream
+
+    // If both are enabled but one isn't ready yet, don't build a partial stream
+    // so we never send a video-only (or audio-only) offer and cause wrong mute icons.
+    if (videoEnabled && audioEnabled && (!hasVideo || !hasAudio)) {
+      return null
+    }
+
+    if (hasVideo) {
+      const liveTracks = videoResult
+        .stream!.getVideoTracks()
         .filter((track) => track.readyState === 'live')
       tracks.push(...liveTracks)
     }
 
-    // Add audio tracks if audio is enabled and stream is available
-    // Filter to only 'live' tracks (excludes stopped tracks from cache)
-    if (audioEnabled && isSuccessState(audioResult) && audioResult.stream) {
-      const liveTracks = audioResult.stream
-        .getAudioTracks()
+    if (hasAudio) {
+      const liveTracks = audioResult
+        .stream!.getAudioTracks()
         .filter((track) => track.readyState === 'live')
       tracks.push(...liveTracks)
     }

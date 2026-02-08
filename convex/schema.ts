@@ -10,15 +10,6 @@ import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 
 /**
- * Room status enum values
- */
-export const roomStatusValues = v.union(
-  v.literal('waiting'),
-  v.literal('playing'),
-  v.literal('finished'),
-)
-
-/**
  * Player status enum values
  */
 export const playerStatusValues = v.union(
@@ -34,15 +25,13 @@ export default defineSchema({
   /**
    * rooms - Room metadata
    *
-   * Each room has a unique roomId (short shareable code), an owner, and a status.
+   * Each room has a unique roomId (short shareable code) and an owner.
    */
   rooms: defineTable({
     /** Short shareable room code (e.g., "ABC123" - 6 character base-32 code) */
     roomId: v.string(),
     /** Discord user ID of the room owner */
     ownerId: v.string(),
-    /** Room lifecycle status */
-    status: roomStatusValues,
     /** When the room was created */
     createdAt: v.number(),
     /** Number of player seats (1-4, default 4) */

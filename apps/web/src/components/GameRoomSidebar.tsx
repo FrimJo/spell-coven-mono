@@ -100,11 +100,13 @@ function CardHistoryList({
   onSelect,
   selectedCardId,
   onClear,
+  onRemove,
 }: {
   history: CardHistoryEntry[]
   onSelect: (entry: CardHistoryEntry) => void
   selectedCardId: string | null
   onClear: () => void
+  onRemove: (entry: CardHistoryEntry) => void
 }) {
   const hasHistory = history.length > 0
 
@@ -132,31 +134,51 @@ function CardHistoryList({
       {history.map((entry) => {
         const isSelected = selectedCardId === entry.id
         return (
-          <button
+          <div
             key={`${entry.id}-${entry.timestamp}`}
-            onClick={() => onSelect(entry)}
-            className={`flex w-full items-center gap-2 px-3 py-2 text-left transition-colors ${
+            className={`group flex w-full items-center gap-2 border-l-2 transition-colors ${
               isSelected
-                ? 'bg-surface-2 border-brand border-l-2'
-                : 'hover:bg-surface-2'
+                ? 'bg-surface-2 border-brand'
+                : 'hover:bg-surface-2 border-transparent'
             }`}
           >
-            {entry.image_url && (
-              <img
-                src={entry.image_url}
-                alt=""
-                className="h-8 w-6 flex-shrink-0 rounded object-cover"
-              />
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="text-text-primary truncate text-sm">
-                {entry.name}
+            <button
+              type="button"
+              onClick={() => onSelect(entry)}
+              className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left"
+            >
+              {entry.image_url && (
+                <img
+                  src={entry.image_url}
+                  alt=""
+                  className="h-8 w-6 flex-shrink-0 rounded object-cover"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="text-text-primary truncate text-sm">
+                  {entry.name}
+                </div>
+                <div className="text-text-muted text-xs uppercase">
+                  {entry.set}
+                </div>
               </div>
-              <div className="text-text-muted text-xs uppercase">
-                {entry.set}
-              </div>
-            </div>
-          </button>
+            </button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemove(entry)
+              }}
+              className="text-text-muted hover:text-destructive h-8 w-8 flex-shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100"
+              title="Remove from list"
+              aria-label={`Remove ${entry.name} from list`}
+              data-testid={`recent-card-remove-${entry.id}`}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         )
       })}
     </SidebarCard>
@@ -195,8 +217,14 @@ function SidebarContent({
   // Get game room participants from context (already deduplicated)
   const { uniqueParticipants, roomSeatCount, setRoomSeatCount } = usePresence()
   const { user } = useAuth()
-  const { state, history, setResultWithoutHistory, clearResult, clearHistory } =
-    useCardQueryContext()
+  const {
+    state,
+    history,
+    setResultWithoutHistory,
+    clearResult,
+    clearHistory,
+    removeFromHistory,
+  } = useCardQueryContext()
 
   // Determine the currently selected card ID for highlighting
   const selectedCardIdForHighlight = useMemo(() => {
@@ -217,9 +245,8 @@ function SidebarContent({
     return `${displayResult.name}:${displayResult.set}`
   }, [state.result, state.status, history])
 
-  // State for commanders panel
+  // State for commanders panel (same content for everyone; no selected player)
   const [panelOpen, setPanelOpen] = useState(false)
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
 
   // Handler to re-select a history entry (doesn't add to history)
   const handleHistorySelect = useCallback(
@@ -263,22 +290,14 @@ function SidebarContent({
     return uniqueParticipants.find((p) => p.id === user.id) ?? null
   }, [uniqueParticipants, user])
 
-  // Find selected player participant
-  const selectedPlayer = useMemo<Participant | undefined>(() => {
-    if (!selectedPlayerId) return undefined
-    return uniqueParticipants.find((p) => p.id === selectedPlayerId)
-  }, [uniqueParticipants, selectedPlayerId])
-
-  // Handler to open commanders panel for a player
-  const handleViewCommanders = useCallback((playerId: string) => {
-    setSelectedPlayerId(playerId)
+  // Handler to open commanders panel (panel shows same list for everyone)
+  const handleOpenCommanders = useCallback(() => {
     setPanelOpen(true)
   }, [])
 
   // Handler to close panel
   const handleClosePanel = useCallback(() => {
     setPanelOpen(false)
-    setSelectedPlayerId(null)
   }, [])
 
   // Handler to change seat count
@@ -309,7 +328,8 @@ function SidebarContent({
           ownerId={ownerId ?? undefined}
           mutedPlayers={mutedPlayers}
           onToggleMutePlayer={onToggleMutePlayer}
-          onViewCommanders={handleViewCommanders}
+          currentUserId={user?.id ?? undefined}
+          onViewCommanders={handleOpenCommanders}
           seatCount={roomSeatCount}
           onChangeSeatCount={isLobbyOwner ? handleChangeSeatCount : undefined}
         />
@@ -319,18 +339,18 @@ function SidebarContent({
           onSelect={handleHistorySelect}
           selectedCardId={selectedCardIdForHighlight}
           onClear={clearHistory}
+          onRemove={removeFromHistory}
         />
       </div>
 
-      {/* Commanders Panel */}
-      {currentUser && selectedPlayer && (
+      {/* Commanders Panel – same content for everyone; mount when open */}
+      {currentUser && panelOpen && (
         <GameStatsPanel
           isOpen={panelOpen}
           onClose={handleClosePanel}
           roomId={roomId}
           currentUser={currentUser}
           participants={uniqueParticipants}
-          selectedPlayer={selectedPlayer}
         />
       )}
     </>

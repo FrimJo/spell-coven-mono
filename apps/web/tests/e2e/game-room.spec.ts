@@ -10,6 +10,7 @@ import {
   mockMediaDevices,
   navigateToTestGame,
   setDesktopViewport,
+  STORAGE_KEYS,
 } from '../helpers/test-utils'
 
 const MTG_THEME_BRAND_COLORS = {
@@ -82,6 +83,51 @@ test.describe('Game Room', () => {
   }
 
   test.describe('Route Access', () => {
+    test('should show sign-in dialog for active room with open slots when unauthenticated and media setup is incomplete', async ({
+      browser,
+    }) => {
+      const context = await browser.newContext({
+        storageState: { cookies: [], origins: [] },
+      })
+      const unauthenticatedPage = await context.newPage()
+
+      await unauthenticatedPage.goto('/')
+      await clearStorage(unauthenticatedPage, { clearAuth: true })
+      await expect
+        .poll(async () =>
+          unauthenticatedPage.evaluate(
+            (key) => localStorage.getItem(key),
+            STORAGE_KEYS.MEDIA_DEVICES,
+          ),
+        )
+        .toBeNull()
+
+      await unauthenticatedPage.goto(`/game/${roomId}`)
+
+      await expect(unauthenticatedPage).toHaveURL(`/game/${roomId}`)
+      await expect(
+        unauthenticatedPage.getByRole('heading', { name: 'Sign In Required' }),
+      ).toBeVisible({ timeout: 10000 })
+      await expect(
+        unauthenticatedPage.getByRole('button', {
+          name: /Sign in with Discord/i,
+        }),
+      ).toBeVisible()
+
+      // Route guard should require auth before the media setup redirect can happen.
+      await expect(unauthenticatedPage).not.toHaveURL(
+        `/setup?returnTo=${encodeURIComponent(`/game/${roomId}`)}`,
+      )
+
+      const mediaPrefValue = await unauthenticatedPage.evaluate(
+        (key) => localStorage.getItem(key),
+        STORAGE_KEYS.MEDIA_DEVICES,
+      )
+      expect(mediaPrefValue).toBeNull()
+
+      await context.close()
+    })
+
     test('should show 404 for missing room even when media is not configured', async ({
       page,
     }) => {
@@ -373,6 +419,83 @@ test.describe('Game Room', () => {
     })
   })
 
+  test.describe('Reset Game Flow', () => {
+    test('should open ResetGameDialog when clicking Reset game button', async ({
+      page,
+    }) => {
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
+
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
+
+      const resetButton = page.getByTestId('reset-game-button')
+      await expect(resetButton).toBeVisible()
+      await resetButton.click()
+
+      await expect(
+        page.getByRole('heading', { name: /Reset game state\?/i }),
+      ).toBeVisible()
+      await expect(page.getByTestId('reset-dialog-cancel-button')).toBeVisible()
+      await expect(
+        page.getByTestId('reset-dialog-confirm-button'),
+      ).toBeVisible()
+    })
+
+    test('should stay in game room when canceling reset dialog', async ({
+      page,
+    }) => {
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
+
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
+
+      const resetButton = page.getByTestId('reset-game-button')
+      await resetButton.click()
+
+      await expect(
+        page.getByRole('heading', { name: /Reset game state\?/i }),
+      ).toBeVisible()
+
+      const cancelButton = page.getByTestId('reset-dialog-cancel-button')
+      await cancelButton.click()
+
+      await expect(
+        page.getByRole('heading', { name: /Reset game state\?/i }),
+      ).not.toBeVisible()
+      await expect(page).toHaveURL(`/game/${roomId}`)
+    })
+
+    test('should show success toast and close dialog when confirming reset', async ({
+      page,
+    }) => {
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
+
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
+
+      const resetButton = page.getByTestId('reset-game-button')
+      await resetButton.click()
+
+      await expect(
+        page.getByRole('heading', { name: /Reset game state\?/i }),
+      ).toBeVisible()
+
+      const confirmButton = page.getByTestId('reset-dialog-confirm-button')
+      await confirmButton.click()
+
+      await expect(page.getByText(/Game state reset/i)).toBeVisible({
+        timeout: 10000,
+      })
+      await expect(
+        page.getByRole('heading', { name: /Reset game state\?/i }),
+      ).not.toBeVisible()
+      await expect(page).toHaveURL(`/game/${roomId}`)
+    })
+  })
+
   test.describe('Settings Dialog', () => {
     test('should open MediaSetupDialog when clicking Settings button', async ({
       page,
@@ -474,6 +597,59 @@ test.describe('Game Room', () => {
         .getByRole('switch')
         .count()
       expect(switchCount).toBeGreaterThan(0)
+    })
+  })
+
+  test.describe('Recent Cards', () => {
+    const CARD_HISTORY_KEY_PREFIX = 'spell-coven:card-history:'
+
+    test('should remove a card from Recent Cards when clicking remove icon on hover', async ({
+      page,
+    }) => {
+      await navigateToTestGame(page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
+
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
+
+      // Seed card history in localStorage and reload so the sidebar shows it
+      const entry = {
+        id: 'Lightning Bolt:LEA',
+        name: 'Lightning Bolt',
+        set: 'LEA',
+        timestamp: Date.now(),
+        source: 'search' as const,
+      }
+      await page.evaluate(
+        ({ keyPrefix, gameId, historyEntry }) => {
+          localStorage.setItem(
+            `${keyPrefix}${gameId}`,
+            JSON.stringify([historyEntry]),
+          )
+        },
+        {
+          keyPrefix: CARD_HISTORY_KEY_PREFIX,
+          gameId: roomId,
+          historyEntry: entry,
+        },
+      )
+      await page.reload()
+
+      // Wait for game room and Recent Cards section
+      await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText('Recent Cards')).toBeVisible({
+        timeout: 5000,
+      })
+      await expect(page.getByText('Lightning Bolt')).toBeVisible()
+
+      // Hover the row so the remove icon appears, then click it
+      await page.getByText('Lightning Bolt').hover()
+      const removeButton = page.getByTestId(`recent-card-remove-${entry.id}`)
+      await expect(removeButton).toBeVisible()
+      await removeButton.click()
+
+      // Card should be removed from the list
+      await expect(page.getByText('Lightning Bolt')).not.toBeVisible()
     })
   })
 

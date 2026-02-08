@@ -33,7 +33,9 @@ export async function handleOffer(
 }
 
 /**
- * Handle an answer signal
+ * Handle an answer signal.
+ * Only sets remote description when in have-local-offer state.
+ * Idempotent: ignores duplicate/late answers when already stable (handshake complete).
  */
 export async function handleAnswer(
   pc: RTCPeerConnection,
@@ -41,6 +43,16 @@ export async function handleAnswer(
 ): Promise<void> {
   if (!signal.payload.sdp) {
     throw new Error('Answer signal missing SDP')
+  }
+
+  // setRemoteDescription(answer) is only valid in have-local-offer.
+  // If we're already stable, the handshake is done (e.g. we already set this answer,
+  // or we answered their offer and they're sending us an answer from "glare").
+  if (pc.signalingState !== 'have-local-offer') {
+    console.debug(
+      `[WebRTC] Ignoring answer signal in state ${pc.signalingState} (expected have-local-offer)`,
+    )
+    return
   }
 
   const answer = new RTCSessionDescription({

@@ -7,6 +7,8 @@ import {
 } from '@/contexts/CardQueryContext'
 import { MediaStreamProvider } from '@/contexts/MediaStreamContext.js'
 import { PresenceProvider, usePresence } from '@/contexts/PresenceContext'
+import { api } from '@convex/_generated/api'
+import { useMutation } from 'convex/react'
 import { toast } from 'sonner'
 
 import { Toaster } from '@repo/ui/components/sonner'
@@ -19,6 +21,7 @@ import { GameRoomSidebar } from './GameRoomSidebar.js'
 import { LeaveGameDialog } from './LeaveGameDialog.js'
 import { MediaSetupDialog } from './MediaSetupDialog.js'
 import { RejoinGameDialog } from './RejoinGameDialog.js'
+import { ResetGameDialog } from './ResetGameDialog.js'
 import { VideoStreamGridWithSuspense } from './VideoStreamGrid.js'
 
 interface GameRoomProps {
@@ -65,7 +68,11 @@ function GameRoomContent({
   const [duplicateDialogDismissed, setDuplicateDialogDismissed] =
     useState(false)
   const [showLeaveConfirmDialog, setShowLeaveConfirmDialog] = useState(false)
+  const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
   const [showCardSearch, setShowCardSearch] = useState(false)
+
+  const resetRoomGameStateMutation = useMutation(api.rooms.resetRoomGameState)
 
   // Muted players state - tracks which remote players are muted by the local user
   const [mutedPlayers, setMutedPlayers] = useState<Set<string>>(new Set())
@@ -208,6 +215,25 @@ function GameRoomContent({
     }
   }, [connect, rejoinReason])
 
+  const handleResetClick = useCallback(() => {
+    setShowResetConfirmDialog(true)
+  }, [])
+
+  const handleConfirmReset = useCallback(async () => {
+    setIsResetting(true)
+    try {
+      await resetRoomGameStateMutation({ roomId })
+      setShowResetConfirmDialog(false)
+      toast.success('Game state reset')
+      clearHistory()
+    } catch (error) {
+      console.error('[GameRoom] Failed to reset game state:', error)
+      toast.error('Failed to reset game state')
+    } finally {
+      setIsResetting(false)
+    }
+  }, [roomId, resetRoomGameStateMutation, clearHistory])
+
   return (
     <div className="bg-surface-0 flex h-screen flex-col">
       {/* Duplicate Session Dialog - shown when user is already connected from another tab */}
@@ -222,6 +248,14 @@ function GameRoomContent({
         open={showLeaveConfirmDialog}
         onConfirm={handleConfirmLeave}
         onCancel={() => setShowLeaveConfirmDialog(false)}
+      />
+
+      {/* Reset Game Confirmation Dialog */}
+      <ResetGameDialog
+        open={showResetConfirmDialog}
+        onConfirm={handleConfirmReset}
+        onCancel={() => setShowResetConfirmDialog(false)}
+        isResetting={isResetting}
       />
 
       {/* Rejoin/Leave Dialog */}
@@ -258,6 +292,7 @@ function GameRoomContent({
         onCopyLink={handleCopyShareLink}
         onOpenSettings={handleOpenSettings}
         onSearchClick={handleSearchClick}
+        onResetGame={handleResetClick}
       />
 
       {/* Main Content */}

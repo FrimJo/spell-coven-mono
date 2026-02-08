@@ -21,7 +21,12 @@ export function getTrackState(stream: MediaStream | null): TrackState {
       videoTrack.readyState === 'live' &&
       videoTrack.enabled &&
       !videoTrack.muted,
-    audioEnabled: audioTrack?.enabled ?? false,
+    // For remote streams: no track, or track muted/disabled/ended means sender has muted
+    audioEnabled:
+      !!audioTrack &&
+      audioTrack.readyState === 'live' &&
+      audioTrack.enabled &&
+      !audioTrack.muted,
   }
 }
 
