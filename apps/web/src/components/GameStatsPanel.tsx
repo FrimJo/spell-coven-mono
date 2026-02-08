@@ -211,12 +211,15 @@ export function GameStatsPanel({
     })
   }
 
-  // Wrapper to auto-save when Commander 1 is selected
+  // Wrapper to auto-save when Commander 1 is selected (or cleared)
   const onCommander1Resolved = async (
     card: Parameters<typeof baseOnCommander1Resolved>[0],
   ) => {
     baseOnCommander1Resolved(card)
-    if (!card) return
+    if (!card) {
+      saveCommanders('', '', 1)
+      return
+    }
     const newKeywords = detectDualCommanderKeywords(card)
     const newAllowsSecond = newKeywords.length > 0
     // Compute commander 2 to persist: clear when new has no dual, or when switching to a different dual type.
@@ -241,13 +244,15 @@ export function GameStatsPanel({
     saveCommanders(card.name, commander2ForSave, 1, { c1: card.id })
   }
 
-  // Wrapper to auto-save when Commander 2 is selected
+  // Wrapper to auto-save when Commander 2 is selected (or cleared)
   const onCommander2Resolved = (
     card: Parameters<typeof baseOnCommander2Resolved>[0],
   ) => {
     baseOnCommander2Resolved(card)
     if (card) {
       saveCommanders(cmdState.commander1Name, card.name, 2, { c2: card.id })
+    } else {
+      saveCommanders(cmdState.commander1Name, '', 2)
     }
   }
 
@@ -629,11 +634,11 @@ function CommanderSlot({
             </div>
           </div>
         </div>
-        {/* Show partner suggestions for slot 1 */}
+        {/* Show partner/background suggestions when in edit mode (slot 1 or 2) */}
         {slotNumber === 1 && dualKeywords && dualKeywords.length > 0 && (
           <div className="text-brand-muted-foreground mt-2 text-xs">
             {specificPartner ? (
-              <p>
+              <p className="text-xs">
                 Partner with{' '}
                 <button
                   type="button"
@@ -646,7 +651,7 @@ function CommanderSlot({
             ) : suggestions &&
               suggestions.length > 0 &&
               suggestions.length <= 5 ? (
-              <div className="flex flex-wrap items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1 text-xs">
                 <span>{suggestionsLabel}:</span>
                 {suggestions.map((name, idx) => (
                   <span key={name}>
@@ -662,10 +667,32 @@ function CommanderSlot({
                 ))}
               </div>
             ) : (
-              <p>{dualKeywords.join(', ')} detected</p>
+              <p className="text-xs">{dualKeywords.join(', ')} detected</p>
             )}
           </div>
         )}
+        {slotNumber === 2 &&
+          allowsSecondCommander &&
+          suggestions &&
+          suggestions.length > 0 && (
+            <div className="text-brand-muted-foreground mt-2 text-xs">
+              <p className="text-xs">
+                <span>{suggestionsLabel}:</span>{' '}
+                {suggestions.slice(0, 5).map((name, idx) => (
+                  <span key={name}>
+                    <button
+                      type="button"
+                      onClick={() => onQuickFillCommander2?.(name)}
+                      className="text-brand-muted-foreground decoration-brand/50 hover:text-brand-muted-foreground hover:decoration-brand-muted-foreground cursor-pointer font-medium underline underline-offset-2"
+                    >
+                      {name}
+                    </button>
+                    {idx < Math.min(5, suggestions.length) - 1 ? ', ' : ''}
+                  </span>
+                ))}
+              </p>
+            </div>
+          )}
       </>
     )
   }

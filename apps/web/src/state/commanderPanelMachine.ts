@@ -201,6 +201,7 @@ export const commanderPanelMachine = setup({
       if (!newCard) {
         return {
           commander1Card: null,
+          commander1Name: '',
           dualKeywords: [] as DualCommanderKeyword[],
           specificPartner: null,
           allowsSecondCommander: false,
@@ -315,9 +316,11 @@ export const commanderPanelMachine = setup({
           actions: ['setCommander1AndMaybeClearCommander2'],
         },
         CMD2_RESOLVED: {
-          actions: assign({
-            commander2Card: ({ event }) => event.card,
-          }),
+          actions: assign(({ event }) =>
+            event.card === null
+              ? { commander2Card: null, commander2Name: '' }
+              : { commander2Card: event.card },
+          ),
         },
         CLEAR_CMD: {
           actions: assign(({ event }) => {

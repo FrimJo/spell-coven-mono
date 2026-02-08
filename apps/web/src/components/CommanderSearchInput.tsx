@@ -73,7 +73,7 @@ export function CommanderSearchInput({
     onLoadingChange?.(isLoading)
   })
 
-  const onCardWasResolved = useEffectEvent((card: ScryfallCard) => {
+  const onCardWasResolved = useEffectEvent((card: ScryfallCard | null) => {
     onCardResolved?.(card)
   })
 
@@ -110,11 +110,16 @@ export function CommanderSearchInput({
   // Track previous resolved card to detect new resolutions
   const prevResolvedCardRef = useRef<ScryfallCard | null>(null)
 
-  // Watch for resolved card and call callback
+  // Watch for resolved card changes and call callback (including clear when becoming null)
   useEffect(() => {
-    if (resolvedCard !== null && resolvedCard !== prevResolvedCardRef.current) {
+    if (resolvedCard !== prevResolvedCardRef.current) {
+      const prev = prevResolvedCardRef.current
       prevResolvedCardRef.current = resolvedCard
-      onCardWasResolved(resolvedCard)
+      if (resolvedCard !== null) {
+        onCardWasResolved(resolvedCard)
+      } else if (prev !== null) {
+        onCardWasResolved(null)
+      }
     }
   }, [resolvedCard])
 

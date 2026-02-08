@@ -219,14 +219,14 @@ export function PlayerList({
                             stiffness: 380,
                             damping: 22,
                           }}
-                          className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#2ee8a6]"
+                          className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-teal-600"
                         >
                           <Check
                             className="h-2.5 w-2.5 text-white"
                             strokeWidth={2.5}
                           />
                         </motion.div>
-                        <span className="text-sm font-medium text-[#2ee8a6]">
+                        <span className="text-sm font-medium text-teal-500">
                           Copied!
                         </span>
                       </motion.div>
