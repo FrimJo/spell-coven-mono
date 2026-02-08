@@ -1,6 +1,6 @@
 import type { Participant } from '@/types/participant'
 import type { Doc } from '@convex/_generated/dataModel'
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import { useCommandersPanel } from '@/contexts/CommandersPanelContext'
 import { useDeltaDisplay } from '@/hooks/useDeltaDisplay'
 import { useHoldToRepeat } from '@/hooks/useHoldToRepeat'
@@ -11,12 +11,12 @@ import { Heart, Minus, Plus, Skull, Swords, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
-import { Checkbox } from '@repo/ui/components/checkbox'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@repo/ui/components/tooltip'
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from '@repo/ui/components/dialog'
 
 import { DeltaBubble } from './DeltaBubble'
 
@@ -85,7 +85,7 @@ function CommanderDamageTooltipRow({
           {entry.isOwn ? ' (you)' : ''}
         </span>
       </div>
-      <div className="flex items-center gap-0.5">
+      <div className="relative flex items-center gap-0.5">
         {damageDelta.delta < 0 && (
           <DeltaBubble
             delta={damageDelta.delta}
@@ -314,22 +314,15 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
     [updateCommanderDamage, convexRoomId, participant.id],
   )
 
-  // Toggle to include own commanders in the list (for self-damage edge case)
-  const [showOwnCommanders, setShowOwnCommanders] = useState(false)
-
   // Commander damage shown is the highest from any single commander (21 from one = loss)
   const { displayedCommanderDamage, allCommandersList } = useMemo(() => {
     const damageMap = participant.commanderDamage ?? {}
     const values = Object.values(damageMap)
     const maxDamage = values.length > 0 ? Math.max(...values) : 0
 
-    // Build list of all commanders that can deal damage to this player:
-    // opponents always; own only when showOwnCommanders is true
+    // Build list of all commanders that can deal damage to this player
     const list: CommanderDamageEntry[] = []
     for (const p of participants) {
-      const isSelf = p.id === participant.id
-      if (isSelf && !showOwnCommanders) continue
-
       for (const commander of p.commanders ?? []) {
         if (!commander?.id || !commander?.name) continue
         const key = `${p.id}:${commander.id}`
@@ -339,7 +332,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
           commanderId: commander.id,
           commanderName: commander.name,
           ownerName: p.username ?? 'Unknown Player',
-          isOwn: isSelf,
+          isOwn: p.id === participant.id,
           damage,
         })
       }
@@ -350,12 +343,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
     )
 
     return { displayedCommanderDamage: maxDamage, allCommandersList: list }
-  }, [
-    participant.id,
-    participant.commanderDamage,
-    participants,
-    showOwnCommanders,
-  ])
+  }, [participant.id, participant.commanderDamage, participants])
 
   // Clamp health and poison to 0 minimum for display
   const displayHealth = Math.max(0, participant.health ?? 0)
@@ -371,8 +359,8 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
       >
         {/* Life */}
         <div className="flex items-center justify-between gap-3">
-          <div className="text-destructive flex items-center gap-1.5">
-            <Heart className="h-4 w-4" />
+          <div className="text-destructive flex min-w-[2.5rem] items-center gap-1.5">
+            <Heart className="h-4 w-4 shrink-0" />
             <span className="min-w-[2ch] text-center font-mono font-bold text-white">
               {displayHealth}
             </span>
@@ -416,8 +404,8 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
 
         {/* Poison */}
         <div className="flex items-center justify-between gap-3">
-          <div className="text-success flex items-center gap-1.5">
-            <Skull className="h-4 w-4" />
+          <div className="text-success flex min-w-[2.5rem] items-center gap-1.5">
+            <Skull className="h-4 w-4 shrink-0" />
             <span className="min-w-[2ch] text-center font-mono font-bold text-white">
               {displayPoison}
             </span>
@@ -461,34 +449,40 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
 
         {/* Commander Damage */}
         <div className="flex items-center justify-between gap-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="text-brand-muted-foreground flex cursor-default items-center gap-1.5">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                className="text-brand-muted-foreground hover:text-brand flex h-auto min-h-0 min-w-[2.5rem] cursor-pointer items-center gap-1.5 p-0 font-normal hover:bg-transparent [&_svg]:shrink-0"
+              >
                 <Swords className="h-4 w-4" />
                 <span className="min-w-[2ch] text-center font-mono font-bold text-white">
                   {displayedCommanderDamage}
                 </span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent
-              side="bottom"
-              align="start"
-              className="border-surface-2 bg-surface-1 text-text-secondary w-[280px] max-w-[280px] border p-0 shadow-xl"
-            >
-              <div className="flex w-[280px] flex-col gap-1 p-2">
-                <label className="text-text-muted hover:bg-surface-2/50 flex shrink-0 cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs">
-                  <Checkbox
-                    checked={showOwnCommanders}
-                    onCheckedChange={(checked) =>
-                      setShowOwnCommanders(checked === true)
-                    }
-                  />
-                  <span>Include my commanders</span>
-                </label>
-                {/* Same min-height as one commander row (py-1.5*2 + h-8) so no shift when first row appears */}
-                <div className="flex min-h-[44px] flex-col gap-0.5">
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="border-surface-2 bg-surface-1 text-text-secondary w-[300px] max-w-[calc(100vw-2rem)] p-0">
+              <DialogTitle className="sr-only">Commander damage</DialogTitle>
+              <div className="flex flex-col">
+                {/* Header */}
+                <div className="border-surface-2/80 flex items-center gap-2 border-b px-3 py-2.5">
+                  <div className="bg-brand/15 text-brand flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
+                    <Swords className="h-3.5 w-3.5" />
+                  </div>
+                  <div>
+                    <p className="text-text-primary text-sm font-semibold">
+                      Commander damage
+                    </p>
+                    <p className="text-text-muted text-[11px]">
+                      Track combat damage dealt by commanders
+                    </p>
+                  </div>
+                </div>
+
+                {/* Commander list or empty state */}
+                <div className="flex min-h-[44px] flex-col">
                   {allCommandersList.length > 0 ? (
-                    <div className="flex max-h-[240px] flex-col gap-0.5 overflow-y-auto">
+                    <div className="flex max-h-[240px] flex-col gap-0.5 overflow-y-auto p-2 px-3">
                       {allCommandersList.map((entry) => (
                         <CommanderDamageTooltipRow
                           key={`${entry.ownerUserId}:${entry.commanderId}`}
@@ -498,17 +492,23 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                       ))}
                     </div>
                   ) : (
-                    <div className="text-text-muted flex min-h-[44px] flex-col items-center justify-center gap-2 px-3 py-2 text-center">
-                      <p className="text-xs">
-                        {showOwnCommanders
-                          ? 'No commanders in the game'
-                          : 'No other commanders in the game'}
-                      </p>
+                    <div className="text-text-muted flex min-h-[52px] flex-col items-center justify-center gap-3 px-4 py-4 text-center">
+                      <div className="bg-surface-2/50 flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+                        <Users className="h-4 w-4 opacity-60" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-text-secondary text-xs font-medium">
+                          No commanders in this game yet
+                        </p>
+                        <p className="text-[11px] leading-relaxed">
+                          Add commanders in the panel to start tracking damage.
+                        </p>
+                      </div>
                       {commandersPanel && (
                         <Button
                           variant="secondary"
                           size="sm"
-                          className="h-7 gap-1.5 text-xs"
+                          className="h-8 gap-2 text-xs font-medium shadow-sm transition-all hover:shadow"
                           onClick={() => commandersPanel.openCommandersPanel()}
                         >
                           <Users className="h-3.5 w-3.5" />
@@ -519,8 +519,8 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                   )}
                 </div>
               </div>
-            </TooltipContent>
-          </Tooltip>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </>

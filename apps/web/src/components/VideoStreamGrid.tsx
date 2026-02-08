@@ -38,7 +38,6 @@ import {
   TooltipTrigger,
 } from '@repo/ui/components/tooltip'
 
-import { CommanderOverlay } from './CommanderOverlay'
 import { LocalVideoCard } from './LocalVideoCard'
 import { MediaPermissionGate } from './MediaPermissionGate'
 import { PlayerStatsOverlay } from './PlayerStatsOverlay'
@@ -232,12 +231,6 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
 
         {localParticipant && (
           <>
-            <CommanderOverlay
-              participant={participantData}
-              currentUser={localParticipant}
-              roomId={roomId}
-              gridIndex={gridIndex}
-            />
             <PlayerStatsOverlay
               roomId={roomId}
               participant={participantData}

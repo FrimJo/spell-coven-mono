@@ -57,6 +57,8 @@ export function GameStatsPanel({
 
   // Derive state from machine context
   const editingPlayerId = state.context.editingPlayerId
+  const editingSlot1 = state.context.editingSlot1
+  const editingSlot2 = state.context.editingSlot2
   const cmdState = {
     commander1Name: state.context.commander1Name,
     commander2Name: state.context.commander2Name,
@@ -259,13 +261,19 @@ export function GameStatsPanel({
     toast.success(`Commander ${slotNumber} cleared`)
   }
 
-  const handleStartEditing = (player: Participant) => {
-    send({
-      type: 'START_EDIT',
-      playerId: player.id,
-      commander1Name: player.commanders[0]?.name ?? '',
-      commander2Name: player.commanders[1]?.name ?? '',
-    })
+  const handleStartEditing = (player: Participant, slot?: 1 | 2) => {
+    const alreadyEditingThisPlayer = editingPlayerId === player.id
+    if (alreadyEditingThisPlayer && slot !== undefined) {
+      send({ type: 'ENTER_SLOT_EDIT', slot })
+    } else {
+      send({
+        type: 'START_EDIT',
+        playerId: player.id,
+        commander1Name: player.commanders[0]?.name ?? '',
+        commander2Name: player.commanders[1]?.name ?? '',
+        slot,
+      })
+    }
   }
 
   // Derive status for each commander input using React Query state
@@ -327,6 +335,12 @@ export function GameStatsPanel({
             {participants.map((player) => {
               const isCurrentUser = player.id === currentUser.id
               const isEditingThisPlayer = editingPlayerId === player.id
+              // Independent edit state per slot
+              const isEditingSlot1 = isEditingThisPlayer && editingSlot1
+              const isEditingSlot2 = isEditingThisPlayer && editingSlot2
+              const singleSlotEdit =
+                (isEditingSlot1 && !isEditingSlot2) ||
+                (!isEditingSlot1 && isEditingSlot2)
               // Get status only if this player is being edited
               // Use local state (cmdState) for hasExistingCommander when editing, not props (player.commanders)
               // This ensures that when clearing, the status updates immediately based on local state
@@ -346,10 +360,12 @@ export function GameStatsPanel({
               return (
                 <div
                   key={player.id}
-                  className="border-border-default bg-surface-1/50 rounded-lg border p-4"
+                  className={`border-border-default bg-surface-1/50 rounded-lg border ${singleSlotEdit ? 'p-3' : 'p-4'}`}
                 >
                   {/* Player header */}
-                  <div className="border-border-default mb-3 flex items-center gap-2 border-b pb-2">
+                  <div
+                    className={`border-border-default flex items-center gap-2 border-b ${singleSlotEdit ? 'mb-2 pb-1.5' : 'mb-3 pb-2'}`}
+                  >
                     {player.avatar ? (
                       <img
                         src={player.avatar}
@@ -368,36 +384,29 @@ export function GameStatsPanel({
                       )}
                     </span>
 
-                    {/* Controls: Edit Button - reserve space so header height doesn't shift when toggling edit/view */}
-                    <div className="ml-auto flex min-h-7 flex-shrink-0 items-center gap-1">
-                      <div className="flex h-7 w-[3rem] items-center">
-                        {isEditingThisPlayer ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-border-default bg-surface-2 text-text-secondary hover:bg-surface-3 h-7 w-full hover:text-white"
-                            onClick={() => send({ type: 'DONE_EDIT' })}
-                          >
-                            Done
-                          </Button>
-                        ) : player.commanders[0]?.name ||
-                          player.commanders[1]?.name ? (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-text-muted hover:bg-surface-2 hover:text-brand-muted-foreground h-7 w-7"
-                            onClick={() => handleStartEditing(player)}
-                            title="Edit commanders"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        ) : null}
-                      </div>
+                    {/* Done - shown when any commander slot is in edit mode */}
+                    <div className="ml-auto flex min-h-7 flex-shrink-0 items-center justify-end">
+                      {isEditingThisPlayer && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-border-default bg-surface-2 text-text-secondary hover:bg-surface-3 h-7 hover:text-white"
+                          onClick={() => send({ type: 'DONE_EDIT' })}
+                        >
+                          Done
+                        </Button>
+                      )}
                     </div>
                   </div>
 
                   {/* Commander slots - min-height avoids layout shift when switching to edit mode */}
-                  <div className="min-h-[5.5rem] space-y-3">
+                  <div
+                    className={
+                      singleSlotEdit
+                        ? 'min-h-0 space-y-2'
+                        : 'min-h-[5.5rem] space-y-3'
+                    }
+                  >
                     {!isEditingThisPlayer &&
                       !player.commanders[0]?.name &&
                       !player.commanders[1]?.name && (
@@ -418,7 +427,7 @@ export function GameStatsPanel({
                     <CommanderSlot
                       slotNumber={1}
                       commander={player.commanders[0]}
-                      isEditing={isEditingThisPlayer}
+                      isEditing={isEditingSlot1}
                       getCommanderImageUrl={getCommanderImageUrl}
                       onClear={() => handleClearCommander(player, 1)}
                       inputValue={
@@ -432,6 +441,7 @@ export function GameStatsPanel({
                       suggestions={commander2Suggestions}
                       suggestionsLabel={suggestionsLabel}
                       onQuickFillCommander2={handleQuickFillCommander2}
+                      onEdit={() => handleStartEditing(player, 1)}
                     />
 
                     {/* Commander 2 - only show if commander 1 allows a second commander (Partner, Background, etc.) */}
@@ -441,7 +451,7 @@ export function GameStatsPanel({
                       <CommanderSlot
                         slotNumber={2}
                         commander={player.commanders[1]}
-                        isEditing={isEditingThisPlayer}
+                        isEditing={isEditingSlot2}
                         getCommanderImageUrl={getCommanderImageUrl}
                         onClear={() => handleClearCommander(player, 2)}
                         inputValue={
@@ -453,6 +463,7 @@ export function GameStatsPanel({
                         allowsSecondCommander={cmdState.allowsSecondCommander}
                         suggestions={commander2Suggestions}
                         suggestionsLabel={suggestionsLabel}
+                        onEdit={() => handleStartEditing(player, 2)}
                       />
                     )}
                   </div>
@@ -505,6 +516,8 @@ interface CommanderSlotProps {
   allowsSecondCommander?: boolean
   suggestions?: string[]
   suggestionsLabel?: string
+  // Per-slot edit (opens both slots for this player)
+  onEdit?: () => void
 }
 
 function CommanderSlot({
@@ -523,6 +536,7 @@ function CommanderSlot({
   allowsSecondCommander,
   suggestions,
   suggestionsLabel,
+  onEdit,
 }: CommanderSlotProps) {
   const [isSearching, setIsSearching] = useState(false)
   const imageUrl = commander ? getCommanderImageUrl(commander.id) : null
@@ -532,46 +546,48 @@ function CommanderSlot({
     return null
   }
 
-  // Edit mode - search input with status/clear icon inside it (no wrapper; input full width)
+  // Edit mode - row height matches view card (36px content + 2px border = 38px) so no layout shift
   if (isEditing) {
     return (
       <>
-        <div className="relative min-h-9 w-full">
-          <CommanderSearchInput
-            id={`c${slotNumber}`}
-            value={inputValue}
-            onChange={onInputChange}
-            onCardResolved={onCardResolved}
-            placeholder={
-              slotNumber === 2 && allowsSecondCommander
-                ? `Search ${suggestionsLabel?.toLowerCase()}...`
-                : 'Search for a commander...'
-            }
-            className="border-border-default bg-surface-1 placeholder:text-text-muted hover:border-border-default focus-visible:ring-brand h-9 w-full min-w-0 pr-10 text-sm text-white transition-colors"
-            suggestions={slotNumber === 2 ? suggestions : undefined}
-            suggestionsLabel={slotNumber === 2 ? suggestionsLabel : undefined}
-            hideLoadingIndicator
-            onLoadingChange={setIsSearching}
-          />
-          <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center">
-            {isSearching ? (
-              <Loader2 className="text-text-muted h-4 w-4 animate-spin" />
-            ) : status === 'saving' ? (
-              <Loader2 className="text-brand-muted-foreground h-4 w-4 animate-spin" />
-            ) : status === 'saved' ? (
-              <button
-                type="button"
-                className="text-success hover:text-destructive pointer-events-auto rounded p-0.5 [&:hover_.icon-check]:hidden [&:hover_.icon-remove]:block"
-                onClick={onClear}
-                title="Clear"
-                aria-label="Clear commander"
-              >
-                <Check className="icon-check h-4 w-4" />
-                <Trash2 className="icon-remove hidden h-4 w-4" />
-              </button>
-            ) : status === 'error' ? (
-              <AlertCircle className="text-destructive h-4 w-4" />
-            ) : null}
+        <div className="relative flex h-[38px] w-full items-center">
+          <div className="relative h-9 min-w-0 flex-1">
+            <CommanderSearchInput
+              id={`c${slotNumber}`}
+              value={inputValue}
+              onChange={onInputChange}
+              onCardResolved={onCardResolved}
+              placeholder={
+                slotNumber === 2 && allowsSecondCommander
+                  ? `Search ${suggestionsLabel?.toLowerCase()}...`
+                  : 'Search for a commander...'
+              }
+              className="border-border-default bg-surface-1 placeholder:text-text-muted hover:border-border-default focus-visible:ring-brand h-9 w-full min-w-0 pr-10 text-sm text-white transition-colors"
+              suggestions={slotNumber === 2 ? suggestions : undefined}
+              suggestionsLabel={slotNumber === 2 ? suggestionsLabel : undefined}
+              hideLoadingIndicator
+              onLoadingChange={setIsSearching}
+            />
+            <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center">
+              {isSearching ? (
+                <Loader2 className="text-text-muted h-4 w-4 animate-spin" />
+              ) : status === 'saving' ? (
+                <Loader2 className="text-brand-muted-foreground h-4 w-4 animate-spin" />
+              ) : status === 'saved' ? (
+                <button
+                  type="button"
+                  className="text-success hover:text-destructive pointer-events-auto rounded p-0.5 [&:hover_.icon-check]:hidden [&:hover_.icon-remove]:block"
+                  onClick={onClear}
+                  title="Clear"
+                  aria-label="Clear commander"
+                >
+                  <Check className="icon-check h-4 w-4" />
+                  <Trash2 className="icon-remove hidden h-4 w-4" />
+                </button>
+              ) : status === 'error' ? (
+                <AlertCircle className="text-destructive h-4 w-4" />
+              ) : null}
+            </div>
           </div>
         </div>
         {/* Show partner suggestions for slot 1 */}
@@ -620,7 +636,7 @@ function CommanderSlot({
   if (!commander) return null
 
   return (
-    <div className="border-border-default bg-surface-0/50 group relative rounded-md border">
+    <div className="border-border-default bg-surface-0/50 group relative min-h-24 rounded-md border">
       {/* Commander Background Image */}
       {imageUrl && (
         <div className="absolute inset-0 z-0 overflow-hidden rounded-md">
@@ -633,11 +649,24 @@ function CommanderSlot({
         </div>
       )}
 
-      <div className="relative z-10 flex items-center p-3">
+      <div className="relative z-10 flex min-h-24 items-center px-3">
         <span className="text-shadow-sm text-text-secondary text-sm font-medium shadow-black">
           {commander.name}
         </span>
       </div>
+
+      {onEdit && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="text-text-muted hover:bg-surface-2 hover:text-brand-muted-foreground absolute right-2 top-2 z-20 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+          onClick={onEdit}
+          title="Edit commander"
+          aria-label="Edit commander"
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   )
 }
