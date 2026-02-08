@@ -212,18 +212,33 @@ export function GameStatsPanel({
   }
 
   // Wrapper to auto-save when Commander 1 is selected
-  const onCommander1Resolved = (
+  const onCommander1Resolved = async (
     card: Parameters<typeof baseOnCommander1Resolved>[0],
   ) => {
     baseOnCommander1Resolved(card)
-    if (card) {
-      // If the new commander 1 does not allow a second (Partner/Background etc.), clear commander 2
-      const commander2ForSave =
-        detectDualCommanderKeywords(card).length > 0
-          ? cmdState.commander2Name
-          : ''
-      saveCommanders(card.name, commander2ForSave, 1, { c1: card.id })
+    if (!card) return
+    const newKeywords = detectDualCommanderKeywords(card)
+    const newAllowsSecond = newKeywords.length > 0
+    // Compute commander 2 to persist: clear when new has no dual, or when switching to a different dual type.
+    // We can't rely on cmdState.commander2Name here (React state may not have updated yet after send).
+    let commander2ForSave = ''
+    if (newAllowsSecond) {
+      const player = participants.find((p) => p.id === editingPlayerId)
+      const oldCommander1Name = player?.commanders[0]?.name
+      const isSwitching =
+        oldCommander1Name != null && oldCommander1Name !== card.name
+      if (!isSwitching) {
+        commander2ForSave = cmdState.commander2Name
+      } else {
+        const oldCard = await getCardByName(oldCommander1Name, false)
+        const oldKeywords = oldCard ? detectDualCommanderKeywords(oldCard) : []
+        const sameDualType =
+          oldKeywords.length === newKeywords.length &&
+          oldKeywords.every((k) => newKeywords.includes(k))
+        commander2ForSave = sameDualType ? cmdState.commander2Name : ''
+      }
     }
+    saveCommanders(card.name, commander2ForSave, 1, { c1: card.id })
   }
 
   // Wrapper to auto-save when Commander 2 is selected
