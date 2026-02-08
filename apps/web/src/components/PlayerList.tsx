@@ -209,7 +209,7 @@ export function PlayerList({
                           duration: 0.22,
                           ease: [0.25, 0.46, 0.45, 0.94],
                         }}
-                        className="flex items-center gap-2"
+                        className="flex min-w-0 flex-1 items-center gap-2"
                       >
                         <motion.div
                           initial={{ scale: 0 }}
@@ -219,14 +219,14 @@ export function PlayerList({
                             stiffness: 380,
                             damping: 22,
                           }}
-                          className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-teal-600"
+                          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-teal-600"
                         >
                           <Check
-                            className="h-2.5 w-2.5 text-white"
+                            className="h-4 w-4 text-white"
                             strokeWidth={2.5}
                           />
                         </motion.div>
-                        <span className="text-sm font-medium text-teal-500">
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-teal-500">
                           Copied!
                         </span>
                       </motion.div>

@@ -85,7 +85,7 @@ export function SidebarCard({
       </div>
       <div
         ref={scrollContainerRef}
-        className={maxHeight ? `${maxHeight} overflow-y-auto` : ''}
+        className={maxHeight ? `min-h-0 ${maxHeight} overflow-y-auto` : ''}
       >
         {children}
       </div>
@@ -116,7 +116,7 @@ function CardHistoryList({
       icon={History}
       title="Recent Cards"
       count={`(${history.length})`}
-      maxHeight="max-h-[300px]"
+      maxHeight="max-h-[200px]"
       onScrollToTop
       scrollTrigger={history.length}
       headerAction={
