@@ -1,4 +1,5 @@
 import type { CardQueryResult } from '@/types/card-query'
+import { useState } from 'react'
 import { useCardQueryContext } from '@/contexts/CardQueryContext'
 import { isLowConfidence } from '@/types/card-query'
 import {
@@ -8,10 +9,12 @@ import {
   Eye,
   Loader2,
   X,
+  ZoomIn,
 } from 'lucide-react'
 
 import { Alert, AlertDescription } from '@repo/ui/components/alert'
 import { Button } from '@repo/ui/components/button'
+import { Dialog, DialogContent, DialogTitle } from '@repo/ui/components/dialog'
 
 import { SidebarCard } from './GameRoomSidebar'
 
@@ -21,6 +24,7 @@ interface CardPreviewProps {
 
 export function CardPreview({ onClose }: CardPreviewProps) {
   const { state, history, isDismissed } = useCardQueryContext()
+  const [cardModalOpen, setCardModalOpen] = useState(false)
 
   // Don't show preview if dismissed
   if (isDismissed) {
@@ -59,102 +63,122 @@ export function CardPreview({ onClose }: CardPreviewProps) {
     displayResult.image_url?.replace('/art_crop/', '/normal/')
 
   return (
-    <SidebarCard
-      icon={Eye}
-      title="Card Preview"
-      count=""
-      headerAction={
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="text-text-muted h-5 w-5 p-0 hover:text-white"
-          title="Dismiss"
-        >
-          <X className="h-3 w-3" />
-        </Button>
-      }
-    >
-      <div className="relative">
-        {/* Low Confidence Warning */}
-        {cardState === 'success' && lowConfidence && (
-          <div className="px-3 pt-3">
-            <Alert className="border-warning/30 bg-warning/10">
-              <AlertTriangle className="text-warning h-4 w-4" />
-              <AlertDescription className="text-warning ml-2 text-xs">
-                Low confidence match. This might not be the correct card. Please
-                verify.
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
+    <>
+      <SidebarCard
+        icon={Eye}
+        title="Card Preview"
+        count=""
+        headerAction={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="text-text-muted h-5 w-5 p-0 hover:text-white"
+            title="Dismiss"
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        }
+      >
+        <div className="relative">
+          {/* Low Confidence Warning */}
+          {cardState === 'success' && lowConfidence && (
+            <div className="px-3 pt-3">
+              <Alert className="border-warning/30 bg-warning/10">
+                <AlertTriangle className="text-warning h-4 w-4" />
+                <AlertDescription className="text-warning ml-2 text-xs">
+                  Low confidence match. This might not be the correct card.
+                  Please verify.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
 
-        {/* Card Image */}
-        <div className="p-3">
-          <div className="bg-surface-0 relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-lg">
-            {cardState === 'querying' && (
-              <div className="flex flex-col items-center gap-3 py-12">
-                <Loader2 className="text-brand-muted-foreground h-10 w-10 animate-spin" />
-                <p className="text-text-muted text-sm">Recognizing card...</p>
-              </div>
-            )}
-
-            {cardState === 'error' && (
-              <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-                <div className="bg-destructive/20 flex h-12 w-12 items-center justify-center rounded-full">
-                  <AlertCircle className="text-destructive h-6 w-6" />
+          {/* Card Image */}
+          <div className="p-3">
+            <div className="bg-surface-0 group relative flex min-h-[300px] cursor-pointer items-center justify-center overflow-hidden rounded-lg transition-transform duration-200 ease-out hover:scale-[1.02]">
+              {cardState === 'querying' && (
+                <div className="flex flex-col items-center gap-3 py-12">
+                  <Loader2 className="text-brand-muted-foreground h-10 w-10 animate-spin" />
+                  <p className="text-text-muted text-sm">Recognizing card...</p>
                 </div>
-                <div>
-                  <p className="text-destructive mb-1 text-sm">
-                    Failed to recognize card
-                  </p>
-                  <p className="text-text-muted text-xs">
-                    Try adjusting the camera angle or lighting
-                  </p>
+              )}
+
+              {cardState === 'error' && (
+                <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+                  <div className="bg-destructive/20 flex h-12 w-12 items-center justify-center rounded-full">
+                    <AlertCircle className="text-destructive h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-destructive mb-1 text-sm">
+                      Failed to recognize card
+                    </p>
+                    <p className="text-text-muted text-xs">
+                      Try adjusting the camera angle or lighting
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => console.warn('Not implemented')}
+                    className="border-surface-3 text-text-secondary hover:bg-surface-2 mt-2"
+                  >
+                    Try Again
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => console.warn('Not implemented')}
-                  className="border-surface-3 text-text-secondary hover:bg-surface-2 mt-2"
-                >
-                  Try Again
-                </Button>
-              </div>
-            )}
+              )}
 
-            {cardState === 'success' && (
-              <img
-                src={cardImage}
-                alt="Birds of Paradise"
-                className="h-auto w-full"
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Query Image (Development only) */}
-        {import.meta.env.DEV && state.queryImageUrl && (
-          <div className="border-surface-2 mx-3 mb-3 border-t pt-3">
-            <p className="text-text-muted mb-2 text-xs font-medium">
-              Query Image (Dev)
-            </p>
-            <div className="bg-surface-0 overflow-hidden rounded-lg">
-              <img
-                src={state.queryImageUrl}
-                alt="Query image used for database lookup"
-                className="h-auto w-full"
-                style={{ imageRendering: 'pixelated' }}
-              />
+              {cardState === 'success' && (
+                <>
+                  <img
+                    src={cardImage}
+                    alt={displayResult.name}
+                    className="h-auto w-full"
+                  />
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="absolute inset-0 flex cursor-pointer flex-col items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                    onClick={() => setCardModalOpen(true)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setCardModalOpen(true)
+                      }
+                    }}
+                  >
+                    <div className="bg-surface-1/90 flex h-12 w-12 items-center justify-center rounded-full shadow-lg ring-1 ring-white/20 backdrop-blur-sm">
+                      <ZoomIn className="h-6 w-6 text-white" />
+                    </div>
+                    <span className="text-xs font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                      View larger
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        )}
 
-        {/* Card Info */}
-        {cardState === 'success' && (
-          <div className="flex items-center justify-between px-3 pb-3">
-            <p className="text-text-muted text-xs">Selected from table view</p>
-            {displayResult.scryfall_uri && (
+          {/* Query Image (Development only) */}
+          {import.meta.env.DEV && state.queryImageUrl && (
+            <div className="border-surface-2 mx-3 mb-3 border-t pt-3">
+              <p className="text-text-muted mb-2 text-xs font-medium">
+                Query Image (Dev)
+              </p>
+              <div className="bg-surface-0 overflow-hidden rounded-lg">
+                <img
+                  src={state.queryImageUrl}
+                  alt="Query image used for database lookup"
+                  className="h-auto w-full"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Card Info */}
+          {cardState === 'success' && displayResult.scryfall_uri && (
+            <div className="flex items-center justify-end px-3 pb-3">
               <a
                 href={displayResult.scryfall_uri}
                 target="_blank"
@@ -164,15 +188,24 @@ export function CardPreview({ onClose }: CardPreviewProps) {
                 <span>Scryfall</span>
                 <ExternalLink className="h-3 w-3" />
               </a>
-            )}
-          </div>
-        )}
-        {cardState !== 'success' && (
-          <div className="text-text-muted px-3 pb-3 text-xs">
-            <p>Selected from table view</p>
-          </div>
-        )}
-      </div>
-    </SidebarCard>
+            </div>
+          )}
+        </div>
+      </SidebarCard>
+
+      {/* Card zoom modal - click outside or X closes */}
+      <Dialog open={cardModalOpen} onOpenChange={setCardModalOpen}>
+        <DialogContent className="border-surface-2 [&>button]:bg-surface-1 bg-transparent p-0 shadow-none sm:max-w-[480px] [&>button]:right-2 [&>button]:top-2 [&>button]:rounded-full [&>button]:text-white">
+          <DialogTitle className="sr-only">{displayResult.name}</DialogTitle>
+          {cardState === 'success' && cardImage && (
+            <img
+              src={cardImage}
+              alt={displayResult.name}
+              className="h-auto w-full rounded-lg"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

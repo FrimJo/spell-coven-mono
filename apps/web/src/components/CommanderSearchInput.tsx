@@ -56,6 +56,7 @@ export function CommanderSearchInput({
   // Use stable reference for empty array to prevent infinite loops
   const effectiveSuggestions = suggestions ?? EMPTY_SUGGESTIONS
   const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   // XState machine for search state
   const [state, send] = useMachine(commanderSearchMachine)
@@ -73,7 +74,7 @@ export function CommanderSearchInput({
     onLoadingChange?.(isLoading)
   })
 
-  const onCardWasResolved = useEffectEvent((card: ScryfallCard | null) => {
+  const onCardWasResolved = useEffectEvent((card: ScryfallCard) => {
     onCardResolved?.(card)
   })
 
@@ -110,16 +111,14 @@ export function CommanderSearchInput({
   // Track previous resolved card to detect new resolutions
   const prevResolvedCardRef = useRef<ScryfallCard | null>(null)
 
-  // Watch for resolved card changes and call callback (including clear when becoming null)
+  // Watch for resolved card and call callback (including when cleared to null)
   useEffect(() => {
-    if (resolvedCard !== prevResolvedCardRef.current) {
-      const prev = prevResolvedCardRef.current
+    if (resolvedCard !== null && resolvedCard !== prevResolvedCardRef.current) {
       prevResolvedCardRef.current = resolvedCard
-      if (resolvedCard !== null) {
-        onCardWasResolved(resolvedCard)
-      } else if (prev !== null) {
-        onCardWasResolved(null)
-      }
+      onCardWasResolved(resolvedCard)
+    } else if (resolvedCard === null && prevResolvedCardRef.current !== null) {
+      prevResolvedCardRef.current = null
+      onCardResolved?.(null)
     }
   }, [resolvedCard])
 
@@ -147,6 +146,17 @@ export function CommanderSearchInput({
     send({ type: 'BLUR' })
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!open || !showResults) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      const firstItem = listRef.current?.querySelector<HTMLElement>(
+        '[data-slot="command-item"]',
+      )
+      firstItem?.focus()
+    }
+  }
+
   const showResults =
     results.length > 0 || effectiveSuggestions.length > 0 || loading
 
@@ -169,6 +179,7 @@ export function CommanderSearchInput({
             onChange={handleInputChange}
             onFocus={handleFocus}
             onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
             placeholder={placeholder}
             className={className}
             autoComplete="off"
@@ -183,51 +194,56 @@ export function CommanderSearchInput({
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <Command className="bg-transparent">
-          <CommandList>
-            {effectiveSuggestions.length > 0 && (
-              <CommandGroup
-                heading={suggestionsLabel}
-                className="text-text-muted"
-              >
-                {effectiveSuggestions.map((name) => (
-                  <CommandItem
-                    key={`sug-${name}`}
-                    value={name}
-                    onSelect={() => handleSuggestionSelect(name)}
-                    className="text-brand-muted-foreground hover:bg-surface-2 cursor-pointer"
-                  >
-                    {name}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-            {results.length > 0 && (
-              <CommandGroup
-                heading="Search Results"
-                className="text-text-muted"
-              >
-                {results.slice(0, 10).map((name) => (
-                  <CommandItem
-                    key={name}
-                    value={name}
-                    onSelect={() => handleSelect(name)}
-                    className="text-text-secondary hover:bg-surface-2 cursor-pointer"
-                  >
-                    {name}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-            {!loading &&
-              results.length === 0 &&
-              effectiveSuggestions.length === 0 &&
-              query.length >= 2 && (
-                <CommandEmpty className="text-text-muted">
-                  No cards found
-                </CommandEmpty>
+        <Command className="bg-transparent" shouldFilter={false}>
+          <div
+            ref={listRef}
+            className="max-h-[min(300px,50vh)] overflow-y-auto overflow-x-hidden"
+          >
+            <CommandList className="h-full">
+              {effectiveSuggestions.length > 0 && (
+                <CommandGroup
+                  heading={suggestionsLabel}
+                  className="text-text-muted"
+                >
+                  {effectiveSuggestions.map((name) => (
+                    <CommandItem
+                      key={`sug-${name}`}
+                      value={name}
+                      onSelect={() => handleSuggestionSelect(name)}
+                      className="text-brand-muted-foreground hover:bg-surface-2 cursor-pointer"
+                    >
+                      {name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
               )}
-          </CommandList>
+              {results.length > 0 && (
+                <CommandGroup
+                  heading="Search Results"
+                  className="text-text-muted"
+                >
+                  {results.slice(0, 10).map((name) => (
+                    <CommandItem
+                      key={name}
+                      value={name}
+                      onSelect={() => handleSelect(name)}
+                      className="text-text-secondary hover:bg-surface-2 cursor-pointer"
+                    >
+                      {name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+              {!loading &&
+                results.length === 0 &&
+                effectiveSuggestions.length === 0 &&
+                query.length >= 2 && (
+                  <CommandEmpty className="text-text-muted">
+                    No cards found
+                  </CommandEmpty>
+                )}
+            </CommandList>
+          </div>
         </Command>
       </PopoverContent>
     </Popover>
