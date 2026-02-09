@@ -12,10 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LicenseRouteImport } from './routes/license'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as DebugSessionStorageRouteImport } from './routes/debug/session-storage'
-import { Route as DebugSentryRouteImport } from './routes/debug/sentry'
 import { Route as AuthedSetupRouteImport } from './routes/_authed/setup'
-import { Route as DebugVoiceChannelChannelIdRouteImport } from './routes/debug/voice-channel.$channelId'
 import { Route as AuthedGameGameIdRouteImport } from './routes/_authed/game.$gameId'
 
 const LicenseRoute = LicenseRouteImport.update({
@@ -32,27 +29,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DebugSessionStorageRoute = DebugSessionStorageRouteImport.update({
-  id: '/debug/session-storage',
-  path: '/debug/session-storage',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DebugSentryRoute = DebugSentryRouteImport.update({
-  id: '/debug/sentry',
-  path: '/debug/sentry',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthedSetupRoute = AuthedSetupRouteImport.update({
   id: '/setup',
   path: '/setup',
   getParentRoute: () => AuthedRoute,
 } as any)
-const DebugVoiceChannelChannelIdRoute =
-  DebugVoiceChannelChannelIdRouteImport.update({
-    id: '/debug/voice-channel/$channelId',
-    path: '/debug/voice-channel/$channelId',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const AuthedGameGameIdRoute = AuthedGameGameIdRouteImport.update({
   id: '/game/$gameId',
   path: '/game/$gameId',
@@ -63,19 +44,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/license': typeof LicenseRoute
   '/setup': typeof AuthedSetupRoute
-  '/debug/sentry': typeof DebugSentryRoute
-  '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof AuthedGameGameIdRoute
-  '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/license': typeof LicenseRoute
   '/setup': typeof AuthedSetupRoute
-  '/debug/sentry': typeof DebugSentryRoute
-  '/debug/session-storage': typeof DebugSessionStorageRoute
   '/game/$gameId': typeof AuthedGameGameIdRoute
-  '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -83,49 +58,26 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/license': typeof LicenseRoute
   '/_authed/setup': typeof AuthedSetupRoute
-  '/debug/sentry': typeof DebugSentryRoute
-  '/debug/session-storage': typeof DebugSessionStorageRoute
   '/_authed/game/$gameId': typeof AuthedGameGameIdRoute
-  '/debug/voice-channel/$channelId': typeof DebugVoiceChannelChannelIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/license'
-    | '/setup'
-    | '/debug/sentry'
-    | '/debug/session-storage'
-    | '/game/$gameId'
-    | '/debug/voice-channel/$channelId'
+  fullPaths: '/' | '/license' | '/setup' | '/game/$gameId'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/license'
-    | '/setup'
-    | '/debug/sentry'
-    | '/debug/session-storage'
-    | '/game/$gameId'
-    | '/debug/voice-channel/$channelId'
+  to: '/' | '/license' | '/setup' | '/game/$gameId'
   id:
     | '__root__'
     | '/'
     | '/_authed'
     | '/license'
     | '/_authed/setup'
-    | '/debug/sentry'
-    | '/debug/session-storage'
     | '/_authed/game/$gameId'
-    | '/debug/voice-channel/$channelId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
   LicenseRoute: typeof LicenseRoute
-  DebugSentryRoute: typeof DebugSentryRoute
-  DebugSessionStorageRoute: typeof DebugSessionStorageRoute
-  DebugVoiceChannelChannelIdRoute: typeof DebugVoiceChannelChannelIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -151,33 +103,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/debug/session-storage': {
-      id: '/debug/session-storage'
-      path: '/debug/session-storage'
-      fullPath: '/debug/session-storage'
-      preLoaderRoute: typeof DebugSessionStorageRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/debug/sentry': {
-      id: '/debug/sentry'
-      path: '/debug/sentry'
-      fullPath: '/debug/sentry'
-      preLoaderRoute: typeof DebugSentryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authed/setup': {
       id: '/_authed/setup'
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof AuthedSetupRouteImport
       parentRoute: typeof AuthedRoute
-    }
-    '/debug/voice-channel/$channelId': {
-      id: '/debug/voice-channel/$channelId'
-      path: '/debug/voice-channel/$channelId'
-      fullPath: '/debug/voice-channel/$channelId'
-      preLoaderRoute: typeof DebugVoiceChannelChannelIdRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/_authed/game/$gameId': {
       id: '/_authed/game/$gameId'
@@ -206,9 +137,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
   LicenseRoute: LicenseRoute,
-  DebugSentryRoute: DebugSentryRoute,
-  DebugSessionStorageRoute: DebugSessionStorageRoute,
-  DebugVoiceChannelChannelIdRoute: DebugVoiceChannelChannelIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
