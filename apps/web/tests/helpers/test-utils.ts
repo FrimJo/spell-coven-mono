@@ -345,6 +345,72 @@ export async function mockGetUserMedia(page: Page): Promise<void> {
 }
 
 /**
+ * Mock navigator.mediaDevices.getUserMedia to return a fake stream with
+ * animated video frames and a non-silent tone for audio checks.
+ */
+export async function mockGetUserMediaWithTone(
+  page: Page,
+  options?: { toneHz?: number; label?: string },
+): Promise<void> {
+  const toneHz = options?.toneHz ?? 440
+  const label = options?.label ?? 'Mock Stream'
+
+  await page.addInitScript(
+    ({ toneHz, labelText }) => {
+      navigator.mediaDevices.getUserMedia = async (
+        _constraints: MediaStreamConstraints,
+      ) => {
+        const canvas = document.createElement('canvas')
+        const width = 640
+        const height = 480
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        let frame = 0
+
+        const drawFrame = () => {
+          if (!ctx) return
+          frame += 1
+          ctx.fillStyle = `hsl(${(frame * 8) % 360}, 70%, 35%)`
+          ctx.fillRect(0, 0, width, height)
+          ctx.fillStyle = '#ffffff'
+          ctx.font = '28px sans-serif'
+          ctx.fillText(labelText, 20, 40)
+          ctx.fillText(`Frame ${frame}`, 20, 80)
+        }
+
+        drawFrame()
+        setInterval(drawFrame, 1000 / 15)
+
+        const stream = canvas.captureStream(15)
+
+        try {
+          const audioContext = new AudioContext()
+          const oscillator = audioContext.createOscillator()
+          const gain = audioContext.createGain()
+          const destination = audioContext.createMediaStreamDestination()
+
+          oscillator.frequency.value = toneHz
+          gain.gain.value = 0.2
+          oscillator.connect(gain)
+          gain.connect(destination)
+          oscillator.start()
+
+          destination.stream.getAudioTracks().forEach((track) => {
+            stream.addTrack(track)
+          })
+        } catch {
+          // AudioContext might not be available in all contexts
+        }
+
+        return stream
+      }
+    },
+    { toneHz, labelText: label },
+  )
+}
+
+/**
  * Set up localStorage with media device preferences.
  */
 export async function setMediaPreferences(
