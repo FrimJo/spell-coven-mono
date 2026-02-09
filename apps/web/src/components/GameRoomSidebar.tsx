@@ -31,6 +31,7 @@ export function SidebarCard({
   count,
   children,
   maxHeight,
+  fillRemaining,
   onScrollToTop,
   scrollTrigger,
   headerAction,
@@ -41,6 +42,8 @@ export function SidebarCard({
   count: string | number
   children: React.ReactNode
   maxHeight?: string
+  /** When true, card grows to fill remaining flex space and content scrolls inside */
+  fillRemaining?: boolean
   onScrollToTop?: boolean
   scrollTrigger?: number
   headerAction?: React.ReactNode
@@ -67,8 +70,16 @@ export function SidebarCard({
     }
   }, [scrollTrigger, onScrollToTop])
 
+  const contentClassName = fillRemaining
+    ? 'min-h-0 flex-1 overflow-y-auto'
+    : maxHeight
+      ? `min-h-0 ${maxHeight} overflow-y-auto`
+      : ''
+
   return (
-    <Card className="border-surface-2 bg-surface-1 gap-0 overflow-hidden">
+    <Card
+      className={`border-surface-2 bg-surface-1 gap-0 overflow-hidden ${fillRemaining ? 'flex min-h-0 flex-1 flex-col' : ''}`}
+    >
       <div className="border-surface-2 bg-surface-0/50 flex items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-2">
           <Icon className="text-text-muted h-4 w-4" />
@@ -83,10 +94,7 @@ export function SidebarCard({
           {headerAction}
         </div>
       </div>
-      <div
-        ref={scrollContainerRef}
-        className={maxHeight ? `min-h-0 ${maxHeight} overflow-y-auto` : ''}
-      >
+      <div ref={scrollContainerRef} className={contentClassName}>
         {children}
       </div>
     </Card>
@@ -116,7 +124,7 @@ function CardHistoryList({
       icon={History}
       title="Recent Cards"
       count={`(${history.length})`}
-      maxHeight="max-h-[200px]"
+      fillRemaining
       onScrollToTop
       scrollTrigger={history.length}
       headerAction={
@@ -326,31 +334,37 @@ function SidebarContent({
 
   return (
     <>
-      <div className="w-64 flex-shrink-0 space-y-4 overflow-y-auto">
-        <PlayerList
-          players={playersWithStatus}
-          isLobbyOwner={isLobbyOwner}
-          localPlayerName={playerName}
-          onKickPlayer={onKickPlayer}
-          onBanPlayer={onBanPlayer}
-          ownerId={ownerId ?? undefined}
-          mutedPlayers={mutedPlayers}
-          onToggleMutePlayer={onToggleMutePlayer}
-          currentUserId={user?.id ?? undefined}
-          onViewCommanders={handleOpenCommanders}
-          onOpenCommanderDamage={commanderDamageDialog?.setOpenForPlayerId}
-          seatCount={roomSeatCount}
-          onChangeSeatCount={isLobbyOwner ? handleChangeSeatCount : undefined}
-          onCopyShareLink={onCopyShareLink}
-        />
-        <CardPreview onClose={clearResult} />
-        <CardHistoryList
-          history={history}
-          onSelect={handleHistorySelect}
-          selectedCardId={selectedCardIdForHighlight}
-          onClear={clearHistory}
-          onRemove={removeFromHistory}
-        />
+      <div className="flex h-full w-64 flex-shrink-0 flex-col gap-4">
+        <div className="flex-shrink-0">
+          <PlayerList
+            players={playersWithStatus}
+            isLobbyOwner={isLobbyOwner}
+            localPlayerName={playerName}
+            onKickPlayer={onKickPlayer}
+            onBanPlayer={onBanPlayer}
+            ownerId={ownerId ?? undefined}
+            mutedPlayers={mutedPlayers}
+            onToggleMutePlayer={onToggleMutePlayer}
+            currentUserId={user?.id ?? undefined}
+            onViewCommanders={handleOpenCommanders}
+            onOpenCommanderDamage={commanderDamageDialog?.setOpenForPlayerId}
+            seatCount={roomSeatCount}
+            onChangeSeatCount={isLobbyOwner ? handleChangeSeatCount : undefined}
+            onCopyShareLink={onCopyShareLink}
+          />
+        </div>
+        <div className="flex-shrink-0">
+          <CardPreview onClose={clearResult} />
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <CardHistoryList
+            history={history}
+            onSelect={handleHistorySelect}
+            selectedCardId={selectedCardIdForHighlight}
+            onClear={clearHistory}
+            onRemove={removeFromHistory}
+          />
+        </div>
       </div>
 
       {/* Commanders Panel – same content for everyone; mount when open */}
