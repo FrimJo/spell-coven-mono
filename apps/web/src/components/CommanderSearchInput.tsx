@@ -1,7 +1,7 @@
 'use client'
 
 import type { ScryfallCard } from '@/lib/scryfall'
-import { useEffect, useEffectEvent, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { detectDualCommanderKeywords, getSpecificPartner } from '@/lib/scryfall'
 import { commanderSearchMachine } from '@/state/commanderSearchMachine'
 import { useMachine } from '@xstate/react'
@@ -57,6 +57,9 @@ export function CommanderSearchInput({
   const effectiveSuggestions = suggestions ?? EMPTY_SUGGESTIONS
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  const popoverContentRef = useRef<HTMLDivElement>(null)
+  const mousedownInContentRef = useRef(false)
+  const [highlightedIndex, setHighlightedIndex] = useState(-1)
 
   // XState machine for search state
   const [state, send] = useMachine(commanderSearchMachine)
@@ -67,6 +70,15 @@ export function CommanderSearchInput({
   const results = state.context.results
   const loading = state.context.loading
   const resolvedCard = state.context.resolvedCard
+
+  // Flat list of options for keyboard nav: suggestions first, then results
+  const options = [
+    ...effectiveSuggestions.map((name) => ({
+      type: 'suggestion' as const,
+      name,
+    })),
+    ...results.slice(0, 10).map((name) => ({ type: 'result' as const, name })),
+  ]
 
   // Effect Events - stable handlers that always see latest props/state
   // These don't need to be in dependency arrays
@@ -131,11 +143,13 @@ export function CommanderSearchInput({
   const handleSelect = (name: string) => {
     onChange(name)
     send({ type: 'RESULT_SELECTED', name })
+    setTimeout(() => inputRef.current?.focus(), 0)
   }
 
   const handleSuggestionSelect = (name: string) => {
     onChange(name)
     send({ type: 'SUGGESTION_SELECTED', name })
+    setTimeout(() => inputRef.current?.focus(), 0)
   }
 
   const handleFocus = () => {
@@ -143,22 +157,67 @@ export function CommanderSearchInput({
   }
 
   const handleBlur = () => {
+    // Don't close when user is interacting with scrollbar or list (e.g. dragging scrollbar)
+    if (mousedownInContentRef.current) return
     send({ type: 'BLUR' })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!open || !showResults) return
+    if (!open || !showResults) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        // Open and show results if we have any so user can navigate
+        if (options.length > 0) {
+          e.preventDefault()
+          setHighlightedIndex(0)
+        }
+      }
+      return
+    }
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      const firstItem = listRef.current?.querySelector<HTMLElement>(
-        '[data-slot="command-item"]',
-      )
-      firstItem?.focus()
+      setHighlightedIndex((i) => (i < options.length - 1 ? i + 1 : i))
+      return
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlightedIndex((i) => (i > 0 ? i - 1 : 0))
+      return
+    }
+    if (
+      e.key === 'Enter' &&
+      highlightedIndex >= 0 &&
+      options[highlightedIndex]
+    ) {
+      e.preventDefault()
+      const opt = options[highlightedIndex]
+      if (opt.type === 'suggestion') {
+        handleSuggestionSelect(opt.name)
+      } else {
+        handleSelect(opt.name)
+      }
+      return
+    }
+    if (e.key === 'Escape') {
+      setHighlightedIndex(-1)
     }
   }
 
   const showResults =
     results.length > 0 || effectiveSuggestions.length > 0 || loading
+
+  // Reset highlight when options change (new search or suggestions)
+  useEffect(() => {
+    setHighlightedIndex(options.length === 0 ? -1 : 0)
+  }, [options.length, results.length, effectiveSuggestions.length])
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightedIndex < 0 || !listRef.current) return
+    const el = listRef.current.querySelector(
+      `[data-commander-option-index="${highlightedIndex}"]`,
+    )
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [highlightedIndex])
 
   const handleOpenChange = (newOpen: boolean) => {
     // Ignore close requests when the input is focused (prevents Radix from closing on anchor click)
@@ -183,6 +242,14 @@ export function CommanderSearchInput({
             placeholder={placeholder}
             className={className}
             autoComplete="off"
+            aria-expanded={open && showResults}
+            aria-autocomplete="list"
+            aria-controls={open && showResults ? `${id}-list` : undefined}
+            aria-activedescendant={
+              highlightedIndex >= 0
+                ? `${id}-option-${highlightedIndex}`
+                : undefined
+            }
           />
           {loading && !hideLoadingIndicator && (
             <Loader2 className="text-text-muted absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin" />
@@ -193,58 +260,100 @@ export function CommanderSearchInput({
         className="border-surface-3 bg-surface-1 w-[var(--radix-popover-trigger-width)] p-0"
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
+        asChild
       >
-        <Command className="flex min-h-0 bg-transparent" shouldFilter={false}>
-          <div
-            ref={listRef}
-            className="max-h-[min(300px,50vh)] min-h-0 overflow-y-auto overflow-x-hidden"
-          >
-            <CommandList className="h-full">
-              {effectiveSuggestions.length > 0 && (
-                <CommandGroup
-                  heading={suggestionsLabel}
-                  className="text-text-muted"
-                >
-                  {effectiveSuggestions.map((name) => (
-                    <CommandItem
-                      key={`sug-${name}`}
-                      value={name}
-                      onSelect={() => handleSuggestionSelect(name)}
-                      className="text-brand-muted-foreground hover:bg-surface-2 cursor-pointer"
-                    >
-                      {name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-              {results.length > 0 && (
-                <CommandGroup
-                  heading="Search Results"
-                  className="text-text-muted"
-                >
-                  {results.slice(0, 10).map((name) => (
-                    <CommandItem
-                      key={name}
-                      value={name}
-                      onSelect={() => handleSelect(name)}
-                      className="text-text-secondary hover:bg-surface-2 cursor-pointer"
-                    >
-                      {name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-              {!loading &&
-                results.length === 0 &&
-                effectiveSuggestions.length === 0 &&
-                query.length >= 2 && (
-                  <CommandEmpty className="text-text-muted">
-                    No cards found
-                  </CommandEmpty>
+        <div
+          ref={popoverContentRef}
+          onMouseDown={() => {
+            mousedownInContentRef.current = true
+          }}
+          onMouseUp={() => {
+            mousedownInContentRef.current = false
+          }}
+        >
+          <Command className="flex min-h-0 bg-transparent" shouldFilter={false}>
+            <div
+              ref={listRef}
+              id={`${id}-list`}
+              role="listbox"
+              className="max-h-[min(300px,50vh)] min-h-0 overflow-y-auto overflow-x-hidden"
+              onWheel={(e) => {
+                // Focus stays on input, so wheel often goes to input; handle wheel over list so list scrolls
+                const el = listRef.current
+                if (!el) return
+                el.scrollTop += e.deltaY
+                e.preventDefault()
+                e.stopPropagation()
+              }}
+            >
+              <CommandList className="h-full">
+                {effectiveSuggestions.length > 0 && (
+                  <CommandGroup
+                    heading={suggestionsLabel}
+                    className="text-text-muted"
+                  >
+                    {effectiveSuggestions.map((name, i) => (
+                      <CommandItem
+                        key={`sug-${name}`}
+                        value={name}
+                        data-commander-option-index={i}
+                        id={`${id}-option-${i}`}
+                        role="option"
+                        tabIndex={-1}
+                        aria-selected={highlightedIndex === i}
+                        onSelect={() => handleSuggestionSelect(name)}
+                        className={`cursor-pointer ${
+                          highlightedIndex === i
+                            ? 'bg-surface-2 text-text-secondary'
+                            : 'text-brand-muted-foreground hover:bg-surface-2'
+                        }`}
+                      >
+                        {name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
                 )}
-            </CommandList>
-          </div>
-        </Command>
+                {results.length > 0 && (
+                  <CommandGroup
+                    heading="Search Results"
+                    className="text-text-muted"
+                  >
+                    {results.slice(0, 10).map((name, i) => {
+                      const index = effectiveSuggestions.length + i
+                      return (
+                        <CommandItem
+                          key={name}
+                          value={name}
+                          data-commander-option-index={index}
+                          id={`${id}-option-${index}`}
+                          role="option"
+                          tabIndex={-1}
+                          aria-selected={highlightedIndex === index}
+                          onSelect={() => handleSelect(name)}
+                          className={`cursor-pointer ${
+                            highlightedIndex === index
+                              ? 'bg-surface-2 text-text-secondary'
+                              : 'text-text-secondary hover:bg-surface-2'
+                          }`}
+                        >
+                          {name}
+                        </CommandItem>
+                      )
+                    })}
+                  </CommandGroup>
+                )}
+                {!loading &&
+                  results.length === 0 &&
+                  effectiveSuggestions.length === 0 &&
+                  query.length >= 2 && (
+                    <CommandEmpty className="text-text-muted">
+                      No cards found
+                    </CommandEmpty>
+                  )}
+              </CommandList>
+            </div>
+          </Command>
+        </div>
       </PopoverContent>
     </Popover>
   )
