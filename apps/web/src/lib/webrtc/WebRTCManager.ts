@@ -30,6 +30,7 @@ export class WebRTCManager {
   private localStream: MediaStream | null = null
   private trackStatePollInterval: number | null = null
   private pendingCandidates = new Map<string, CandidateSignal[]>()
+  private makingOffer = new Map<string, boolean>()
 
   constructor(
     private readonly localPeerId: string,
@@ -102,6 +103,25 @@ export class WebRTCManager {
       // Handle offer specially - need to add tracks and send answer back
       if (type === 'offer') {
         console.debug(`[WebRTC] Processing offer from ${from}`)
+
+        const isPolite = this.isPolitePeer(from)
+        const isMakingOffer = this.makingOffer.get(from) ?? false
+        const isOfferCollision =
+          isMakingOffer || peerInfo.pc.signalingState !== 'stable'
+
+        if (isOfferCollision) {
+          if (!isPolite) {
+            console.warn(
+              `[WebRTC] Ignoring offer from ${from} due to collision (impolite peer)`,
+            )
+            return
+          }
+
+          console.debug(
+            `[WebRTC] Offer collision detected for ${from}, rolling back local description`,
+          )
+          await peerInfo.pc.setLocalDescription({ type: 'rollback' })
+        }
 
         // Add local tracks if we have a stream
         if (this.localStream) {
@@ -302,6 +322,46 @@ export class WebRTCManager {
       )
     }
 
+    pc.onnegotiationneeded = async () => {
+      try {
+        if (pc.signalingState !== 'stable') {
+          console.debug(
+            `[WebRTC] Skipping negotiation for ${remotePeerId} (signalingState: ${pc.signalingState})`,
+          )
+          return
+        }
+
+        this.makingOffer.set(remotePeerId, true)
+        const offer = await pc.createOffer()
+        await pc.setLocalDescription(offer)
+
+        if (!offer.sdp) {
+          throw new Error('Created offer has no SDP')
+        }
+
+        await this.sendSignal({
+          type: 'offer',
+          from: this.localPeerId,
+          to: remotePeerId,
+          roomId,
+          payload: {
+            sdp: offer.sdp,
+          },
+        })
+      } catch (error) {
+        console.error(
+          `[WebRTC] Failed to negotiate with ${remotePeerId}:`,
+          error,
+        )
+        this.callbacks.onError?.(
+          remotePeerId,
+          error instanceof Error ? error : new Error(String(error)),
+        )
+      } finally {
+        this.makingOffer.set(remotePeerId, false)
+      }
+    }
+
     // Handle remote stream
     pc.ontrack = (event) => {
       const stream = event.streams[0]
@@ -419,6 +479,8 @@ export class WebRTCManager {
       peerInfo.pc.close()
       this.peers.delete(peerId)
       this.remoteStreams.delete(peerId)
+      this.pendingCandidates.delete(peerId)
+      this.makingOffer.delete(peerId)
     }
   }
 
@@ -436,6 +498,11 @@ export class WebRTCManager {
     this.remoteStreams.clear()
     this.localStream = null
     this.pendingCandidates.clear()
+    this.makingOffer.clear()
+  }
+
+  private isPolitePeer(peerId: string): boolean {
+    return this.localPeerId.localeCompare(peerId) > 0
   }
 
   private queueCandidate(peerId: string, signal: CandidateSignal): void {
