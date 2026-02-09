@@ -17,6 +17,11 @@ import { History, Trash2 } from 'lucide-react'
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
 import { Skeleton } from '@repo/ui/components/skeleton'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@repo/ui/components/tooltip'
 
 import { CardPreview } from './CardPreview'
 import { GameStatsPanel } from './GameStatsPanel'
@@ -164,9 +169,16 @@ function CardHistoryList({
                 />
               )}
               <div className="min-w-0 flex-1">
-                <div className="text-text-primary truncate text-sm">
-                  {entry.name}
-                </div>
+                <Tooltip delayDuration={700}>
+                  <TooltipTrigger asChild>
+                    <div className="text-text-primary truncate text-sm">
+                      {entry.name}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>{entry.name}</p>
+                  </TooltipContent>
+                </Tooltip>
                 <div className="text-text-muted text-xs uppercase">
                   {entry.set}
                 </div>
