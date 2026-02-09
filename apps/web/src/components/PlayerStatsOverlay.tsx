@@ -18,6 +18,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@repo/ui/components/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@repo/ui/components/tooltip'
 
 import { DeltaBubble } from './DeltaBubble'
 
@@ -63,7 +68,7 @@ function CommanderDamageTooltipRow({
   const imageUrl = getCommanderImageUrl(entry.commanderId)
 
   return (
-    <div className="hover:bg-surface-2/50 flex items-center gap-2 rounded px-2 py-1.5">
+    <div className="hover:bg-surface-2/50 flex min-w-0 items-center gap-2 rounded px-2 py-1.5">
       <div className="border-border-muted relative h-8 w-8 shrink-0 overflow-hidden rounded border">
         {imageUrl ? (
           <img
@@ -77,16 +82,23 @@ function CommanderDamageTooltipRow({
           </div>
         )}
       </div>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <span className="text-text-secondary block truncate text-xs font-medium">
-          {entry.commanderName}
-        </span>
+      <div className="flex w-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <Tooltip delayDuration={700}>
+          <TooltipTrigger asChild>
+            <span className="text-text-secondary block truncate text-xs font-medium">
+              {entry.commanderName}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>{entry.commanderName}</p>
+          </TooltipContent>
+        </Tooltip>
         <span className="text-text-muted block truncate text-[10px]">
           {entry.ownerName}
           {entry.isOwn ? ' (you)' : ''}
         </span>
       </div>
-      <div className="relative flex items-center gap-0.5">
+      <div className="relative flex shrink-0 items-center gap-0.5">
         {damageDelta.delta < 0 && (
           <DeltaBubble
             delta={damageDelta.delta}
@@ -505,7 +517,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
               className="border-surface-2 bg-surface-1 text-text-secondary w-[300px] max-w-[calc(100vw-2rem)] p-0"
             >
               <DialogTitle className="sr-only">Commander damage</DialogTitle>
-              <div className="flex flex-col">
+              <div className="flex min-w-0 flex-col overflow-hidden">
                 {/* Header */}
                 <div className="border-surface-2/80 flex items-center gap-2 border-b px-3 py-2.5">
                   <div className="bg-brand/15 text-brand flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
@@ -522,9 +534,9 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                 </div>
 
                 {/* Commander list or empty state */}
-                <div className="flex min-h-[44px] flex-col">
+                <div className="flex min-h-[44px] min-w-0 flex-col">
                   {allCommandersList.length > 0 ? (
-                    <div className="flex max-h-[240px] flex-col gap-0.5 overflow-y-auto p-2 px-3">
+                    <div className="flex max-h-[240px] min-w-0 flex-col gap-0.5 overflow-y-auto overflow-x-hidden p-2 px-3">
                       {allCommandersList.map((entry) => (
                         <CommanderDamageTooltipRow
                           key={`${entry.ownerUserId}:${entry.commanderId}`}
