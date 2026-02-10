@@ -64,6 +64,7 @@ interface LandingPageProps {
   /** Auth props */
   user?: AuthUser | null
   onSignIn?: () => void | Promise<void>
+  onPreviewSignIn?: (code: string, userId?: string) => void | Promise<void>
 }
 
 export function LandingPage({
@@ -73,6 +74,7 @@ export function LandingPage({
   isRefreshingInvite: _isRefreshingInvite,
   user,
   onSignIn,
+  onPreviewSignIn,
 }: LandingPageProps) {
   const navigate = useNavigate()
   const { mtgTheme } = useTheme()
@@ -137,6 +139,9 @@ export function LandingPage({
     [onlineUsers, activeRooms],
   )
   const isAuthenticated = !!user
+  const [previewCode, setPreviewCode] = useState('')
+  const [previewUserId, setPreviewUserId] = useState('')
+  const [isPreviewSigningIn, setIsPreviewSigningIn] = useState(false)
 
   const handleCreateGame = async () => {
     if (!user) {
@@ -254,6 +259,24 @@ export function LandingPage({
     }
   }
 
+  const handlePreviewSignIn = async () => {
+    if (!onPreviewSignIn || !previewCode.trim()) {
+      return
+    }
+    setIsPreviewSigningIn(true)
+    setError(null)
+    try {
+      await onPreviewSignIn(
+        previewCode.trim(),
+        previewUserId.trim() || undefined,
+      )
+    } catch {
+      setError('Unauthorized')
+    } finally {
+      setIsPreviewSigningIn(false)
+    }
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       {error && (
@@ -302,6 +325,44 @@ export function LandingPage({
           ]}
           onSignIn={onSignIn}
         />
+
+        {env.VITE_PREVIEW_AUTH && !isAuthenticated ? (
+          <section className="container mx-auto px-4 pt-6">
+            <div className="border-warning/40 bg-surface-1/90 mx-auto max-w-xl rounded-xl border p-4 backdrop-blur-md">
+              <p className="text-warning mb-3 text-sm font-semibold">
+                Preview Only: Login Code
+              </p>
+              <div className="grid gap-3">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="preview-login-code">Preview Login Code</Label>
+                  <Input
+                    id="preview-login-code"
+                    value={previewCode}
+                    onChange={(event) => setPreviewCode(event.target.value)}
+                    placeholder="Enter code"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="preview-user-id">User ID (optional)</Label>
+                  <Input
+                    id="preview-user-id"
+                    value={previewUserId}
+                    onChange={(event) => setPreviewUserId(event.target.value)}
+                    placeholder="Optional existing user id"
+                    autoComplete="off"
+                  />
+                </div>
+                <Button
+                  onClick={handlePreviewSignIn}
+                  disabled={isPreviewSigningIn || !previewCode.trim()}
+                >
+                  {isPreviewSigningIn ? 'Signing in...' : 'Sign in with Code'}
+                </Button>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {/* Hero Section */}
         <section className="container mx-auto px-4 py-12 md:py-24">

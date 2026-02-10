@@ -7,6 +7,9 @@
  */
 
 import { useCallback } from 'react'
+import { env } from '@/env'
+import { writeConvexAuthTokensToStorage } from '@/lib/convex-auth-storage'
+import { exchangePreviewLoginCode } from '@/lib/preview-auth'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { api } from '@convex/_generated/api'
 import { useConvexAuth, useQuery } from 'convex/react'
@@ -37,6 +40,8 @@ export interface UseConvexAuthReturn {
   isAuthenticated: boolean
   /** Sign in with Discord */
   signIn: () => Promise<void>
+  /** Sign in using preview login code */
+  signInWithPreviewCode: (code: string, userId?: string) => Promise<void>
   /** Sign out */
   signOut: () => Promise<void>
 }
@@ -101,11 +106,28 @@ export function useConvexAuthHook(): UseConvexAuthReturn {
     }
   }, [convexSignOut])
 
+  const signInWithPreviewCode = useCallback(
+    async (code: string, userId?: string) => {
+      const result = await exchangePreviewLoginCode({
+        convexUrl: env.VITE_CONVEX_URL,
+        code,
+        userId,
+      })
+      writeConvexAuthTokensToStorage(env.VITE_CONVEX_URL, {
+        token: result.token,
+        refreshToken: result.refreshToken,
+      })
+      window.location.reload()
+    },
+    [],
+  )
+
   return {
     user,
     isLoading,
     isAuthenticated,
     signIn,
+    signInWithPreviewCode,
     signOut,
   }
 }

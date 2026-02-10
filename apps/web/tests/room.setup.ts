@@ -28,7 +28,7 @@ setup(
   async ({ browser, baseURL }) => {
     if (!hasAuthCredentials()) {
       throw new Error(
-        'Auth env vars missing. Set E2E_AUTH_EMAIL, E2E_AUTH_PASSWORD, and VITE_CONVEX_URL.',
+        'Auth env vars missing. Set VITE_CONVEX_URL and either PREVIEW_LOGIN_CODE or E2E_AUTH_EMAIL/E2E_AUTH_PASSWORD.',
       )
     }
     if (!baseURL) {

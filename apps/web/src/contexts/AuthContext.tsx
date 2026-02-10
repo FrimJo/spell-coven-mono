@@ -28,6 +28,8 @@ interface AuthContextValue {
   isAuthenticated: boolean
   /** Sign in with Discord */
   signIn: () => Promise<void>
+  /** Sign in using preview login code */
+  signInWithPreviewCode: (code: string, userId?: string) => Promise<void>
   /** Sign out */
   signOut: () => Promise<void>
 }
@@ -43,8 +45,14 @@ interface AuthProviderProps {
 // ============================================================================
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const { user, isLoading, isAuthenticated, signIn, signOut } =
-    useConvexAuthHook()
+  const {
+    user,
+    isLoading,
+    isAuthenticated,
+    signIn,
+    signInWithPreviewCode,
+    signOut,
+  } = useConvexAuthHook()
 
   useEffect(() => {
     console.log(
@@ -69,6 +77,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     isAuthenticated,
     signIn,
+    signInWithPreviewCode,
     signOut,
   }
 

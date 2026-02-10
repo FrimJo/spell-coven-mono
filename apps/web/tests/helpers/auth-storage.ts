@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url'
 import { ConvexHttpClient } from 'convex/browser'
 import z from 'zod'
 
+import { buildConvexAuthStorageState } from '../../src/lib/convex-auth-storage'
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
@@ -28,6 +30,7 @@ function loadAuthEnv(): {
   email?: string
   password?: string
   convexUrl?: string
+  previewLoginCode?: string
 } {
   const repoRoot = resolve(__dirname, '../../../../')
   const appRoot = resolve(__dirname, '../../')
@@ -35,10 +38,16 @@ function loadAuthEnv(): {
   const rootEnv = loadEnvFile(resolve(repoRoot, '.env.development'))
   const rootEnvLocal = loadEnvFile(resolve(repoRoot, '.env.development.local'))
   const rootTestEnv = loadEnvFile(resolve(repoRoot, '.env.test'))
+  const rootGeneratedTestEnv = loadEnvFile(
+    resolve(repoRoot, '.env.test.generated'),
+  )
   const rootTestEnvLocal = loadEnvFile(resolve(repoRoot, '.env.test.local'))
   const appEnv = loadEnvFile(resolve(appRoot, '.env.development'))
   const appEnvLocal = loadEnvFile(resolve(appRoot, '.env.development.local'))
   const appTestEnv = loadEnvFile(resolve(appRoot, '.env.test'))
+  const appGeneratedTestEnv = loadEnvFile(
+    resolve(appRoot, '.env.test.generated'),
+  )
   const testEnv = loadEnvFile(resolve(appRoot, '.env.test.local'))
 
   const env = {
@@ -47,8 +56,10 @@ function loadAuthEnv(): {
     ...appEnv,
     ...appEnvLocal,
     ...rootTestEnv,
+    ...rootGeneratedTestEnv,
     ...rootTestEnvLocal,
     ...appTestEnv,
+    ...appGeneratedTestEnv,
     ...testEnv,
     ...process.env,
   }
@@ -57,11 +68,8 @@ function loadAuthEnv(): {
     email: env.E2E_AUTH_EMAIL,
     password: env.E2E_AUTH_PASSWORD,
     convexUrl: env.VITE_CONVEX_URL,
+    previewLoginCode: env.PREVIEW_LOGIN_CODE,
   }
-}
-
-function getConvexAuthNamespace(convexUrl: string): string {
-  return convexUrl.replace(/[^a-zA-Z0-9]/g, '')
 }
 
 async function signInWithPassword(
@@ -90,6 +98,31 @@ async function signInWithPassword(
   }
 }
 
+async function signInWithPreviewCode(params: {
+  convexUrl: string
+  code: string
+  userId?: string
+}): Promise<{ token: string; refreshToken: string }> {
+  const response = await fetch(`${params.convexUrl}/api/test/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-PREVIEW-LOGIN': params.code,
+    },
+    body: JSON.stringify(params.userId ? { userId: params.userId } : {}),
+  })
+
+  if (!response.ok) {
+    const responseText = await response.text().catch(() => '')
+    throw new Error(
+      `Preview login failed with status ${response.status} for ${params.convexUrl}. ${responseText}`,
+    )
+  }
+
+  const json = await response.json()
+  return z.object({ token: z.string(), refreshToken: z.string() }).parse(json)
+}
+
 function withWorkerSuffix(email: string, workerIndex: number): string {
   if (email.includes('{worker}')) {
     return email.replace('{worker}', String(workerIndex))
@@ -106,8 +139,10 @@ function withWorkerSuffix(email: string, workerIndex: number): string {
 }
 
 export function hasAuthCredentials(): boolean {
-  const { email, password, convexUrl } = loadAuthEnv()
-  return Boolean(email && password && convexUrl)
+  const { email, password, convexUrl, previewLoginCode } = loadAuthEnv()
+  const hasPasswordAuth = Boolean(email && password && convexUrl)
+  const hasPreviewAuth = Boolean(previewLoginCode && convexUrl)
+  return hasPasswordAuth || hasPreviewAuth
 }
 
 export async function ensureWorkerStorageState(
@@ -117,48 +152,63 @@ export async function ensureWorkerStorageState(
   const storageDir = resolve(__dirname, '../../.playwright-storage')
   const storagePath = resolve(storageDir, `state.worker-${workerIndex}.json`)
 
-  const { email, password, convexUrl } = loadAuthEnv()
-  if (!email || !password || !convexUrl) {
+  const { email, password, convexUrl, previewLoginCode } = loadAuthEnv()
+  if (!convexUrl) {
     throw new Error(
-      'E2E auth env vars missing. Set E2E_AUTH_EMAIL, E2E_AUTH_PASSWORD, and VITE_CONVEX_URL.',
+      'E2E auth env vars missing. Set VITE_CONVEX_URL and either PREVIEW_LOGIN_CODE or E2E_AUTH_EMAIL/E2E_AUTH_PASSWORD.',
     )
   }
 
-  const workerEmail = withWorkerSuffix(email, workerIndex)
-  const client = new ConvexHttpClient(convexUrl)
+  let tokens: { token: string; refreshToken: string } | null = null
+  let previewLoginError: Error | null = null
 
-  const { token, refreshToken } = await signInWithPassword(
-    client,
-    workerEmail,
-    password,
-  )
+  if (previewLoginCode != null) {
+    try {
+      tokens = await signInWithPreviewCode({
+        convexUrl,
+        code: previewLoginCode,
+        userId: `worker-${workerIndex}`,
+      })
+    } catch (error) {
+      previewLoginError =
+        error instanceof Error ? error : new Error('Preview login failed')
+    }
+  }
 
-  const namespace = getConvexAuthNamespace(convexUrl)
-  const jwtKey = `__convexAuthJWT_${namespace}`
-  const refreshTokenKey = `__convexAuthRefreshToken_${namespace}`
+  if (!tokens) {
+    if (email && password) {
+      const workerEmail = withWorkerSuffix(email, workerIndex)
+      const client = new ConvexHttpClient(convexUrl)
+      tokens = await signInWithPassword(client, workerEmail, password)
+    } else if (previewLoginError) {
+      throw new Error(
+        `${previewLoginError.message}\nHint: ensure VITE_CONVEX_URL points to the preview deployment created by \`bun run convex:test\` and that deployment has E2E_TEST=1.`,
+      )
+    } else {
+      throw new Error(
+        'Missing PREVIEW_LOGIN_CODE and E2E_AUTH_EMAIL/E2E_AUTH_PASSWORD.',
+      )
+    }
+  }
+
   const appOrigin = new URL(baseURL).origin
 
-  const storageState = {
-    cookies: [],
-    origins: [
+  const storageState = buildConvexAuthStorageState({
+    appOrigin,
+    convexUrl,
+    tokens,
+    extraLocalStorage: [
       {
-        origin: appOrigin,
-        localStorage: [
-          { name: jwtKey, value: token },
-          { name: refreshTokenKey, value: refreshToken },
-          {
-            name: 'mtg-selected-media-devices',
-            value: JSON.stringify({
-              videoEnabled: false,
-              audioEnabled: false,
-              videoinput: 'mock-camera-1',
-              audioinput: 'mock-mic-1',
-            }),
-          },
-        ],
+        name: 'mtg-selected-media-devices',
+        value: JSON.stringify({
+          videoEnabled: false,
+          audioEnabled: false,
+          videoinput: 'mock-camera-1',
+          audioinput: 'mock-mic-1',
+        }),
       },
     ],
-  }
+  })
 
   if (!existsSync(storageDir)) {
     mkdirSync(storageDir, { recursive: true })

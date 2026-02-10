@@ -22,7 +22,12 @@ export const Route = createFileRoute('/')({
 function LandingPageContent() {
   const { error } = Route.useSearch()
   const navigate = useNavigate()
-  const { user, isLoading: isAuthLoading, signIn } = useAuth()
+  const {
+    user,
+    isLoading: isAuthLoading,
+    signIn,
+    signInWithPreviewCode,
+  } = useAuth()
 
   // After authentication completes, redirect to the stored return URL (e.g., game room)
   useEffect(() => {
@@ -49,6 +54,7 @@ function LandingPageContent() {
         isRefreshingInvite={false}
         user={user}
         onSignIn={signIn}
+        onPreviewSignIn={signInWithPreviewCode}
       />
     </ErrorBoundary>
   )

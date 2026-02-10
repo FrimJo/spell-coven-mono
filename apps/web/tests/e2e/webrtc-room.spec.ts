@@ -1,10 +1,15 @@
-import { test, expect } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
-import { ensureWorkerStorageState, hasAuthCredentials } from '../helpers/auth-storage'
+import {
+  ensureWorkerStorageState,
+  hasAuthCredentials,
+} from '../helpers/auth-storage'
 import { launchPlayer } from '../helpers/launch-player'
-import { expectAudioEnergy, expectVideoRendering } from '../helpers/media-assertions'
-import { getRoomId } from '../helpers/test-utils'
-import { navigateToTestGame } from '../helpers/test-utils'
+import {
+  expectAudioEnergy,
+  expectVideoRendering,
+} from '../helpers/media-assertions'
+import { getRoomId, navigateToTestGame } from '../helpers/test-utils'
 
 test.describe('WebRTC 4-player room', () => {
   test('players join and render remote video/audio', async ({}, testInfo) => {
@@ -13,7 +18,7 @@ test.describe('WebRTC 4-player room', () => {
     if (!hasAuthCredentials()) {
       test.skip(
         true,
-        'E2E auth env vars missing. Set E2E_AUTH_EMAIL, E2E_AUTH_PASSWORD, and VITE_CONVEX_URL.',
+        'E2E auth env vars missing. Set VITE_CONVEX_URL and either PREVIEW_LOGIN_CODE or E2E_AUTH_EMAIL/E2E_AUTH_PASSWORD.',
       )
     }
 

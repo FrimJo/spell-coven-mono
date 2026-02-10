@@ -99,3 +99,21 @@ key). Create one at: Dashboard → your deployment → Settings → **Preview de
 keys**. Set it as `CONVEX_DEPLOY_KEY` when running locally (e.g. in `.env.test`
 or `.env.local`) and in CI use the `CONVEX_PREVIEW_DEPLOY_KEY` repository
 secret.
+
+When `convex:test` runs, it persists the dynamically generated preview URL to:
+
+- `.env.test.generated`
+- `apps/web/.env.test.generated`
+
+using `VITE_CONVEX_URL=...` so local Playwright runs can reuse the same URL.
+
+#### E2E auth env requirements
+
+`E2E_TEST=1` is managed in the Convex Dashboard under **Default Environment
+Variables** so new preview deployments are created with E2E auth mode enabled.
+
+- For new preview deployments: no CLI step is required.
+- For existing preview deployments created before this default was added: set
+  `E2E_TEST=1` in that deployment's settings page.
+
+`PREVIEW_LOGIN_CODE` remains per-run and is set by CI for each preview deploy.

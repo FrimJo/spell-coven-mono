@@ -12,7 +12,12 @@ export const Route = createFileRoute('/_authed')({
 
 function AuthedLayout() {
   const navigate = useNavigate()
-  const { isLoading: isAuthLoading, isAuthenticated, signIn } = useAuth()
+  const {
+    isLoading: isAuthLoading,
+    isAuthenticated,
+    signIn,
+    signInWithPreviewCode,
+  } = useAuth()
 
   const handleSignIn = async () => {
     if (typeof window !== 'undefined') {
@@ -58,6 +63,7 @@ function AuthedLayout() {
         <AuthRequiredDialog
           open={true}
           onSignIn={handleSignIn}
+          onPreviewSignIn={signInWithPreviewCode}
           onClose={handleClose}
           message={message}
         />
