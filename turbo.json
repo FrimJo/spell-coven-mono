@@ -43,6 +43,10 @@
       "cache": false,
       "persistent": true
     },
+    "serve": {
+      "cache": false,
+      "persistent": true
+    },
     "test": {
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "cache": false

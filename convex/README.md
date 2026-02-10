@@ -90,3 +90,12 @@ function handleButtonPress() {
 Use the Convex CLI to push your functions to a deployment. See everything
 the Convex CLI can do by running `npx convex -h` in your project root
 directory. To learn more, launch the docs with `npx convex docs`.
+
+### Preview deploys and `convex:test`
+
+The `convex:test` script creates a local preview deployment and runs the
+`seedForE2E` seed. It requires a **preview deploy key** (not a regular deploy
+key). Create one at: Dashboard → your deployment → Settings → **Preview deploy
+keys**. Set it as `CONVEX_DEPLOY_KEY` when running locally (e.g. in `.env.test`
+or `.env.local`) and in CI use the `CONVEX_PREVIEW_DEPLOY_KEY` repository
+secret.
