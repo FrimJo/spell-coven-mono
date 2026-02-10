@@ -109,7 +109,6 @@ export function useConvexAuthHook(): UseConvexAuthReturn {
   const signInWithPreviewCode = useCallback(
     async (code: string, userId?: string) => {
       const result = await exchangePreviewLoginCode({
-        convexUrl: env.VITE_CONVEX_URL,
         code,
         userId,
       })
