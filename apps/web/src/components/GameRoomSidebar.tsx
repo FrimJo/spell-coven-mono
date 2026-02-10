@@ -229,6 +229,10 @@ interface GameRoomSidebarProps {
   onCommandersPanelOpenChange: (open: boolean) => void
   /** Called when user wants to copy the shareable game link */
   onCopyShareLink: () => void
+  commanderShortcutParts?: {
+    toggleCommandersPanel: string[]
+    openCommanderDamage: string[]
+  }
 }
 
 function SidebarContent({
@@ -243,6 +247,7 @@ function SidebarContent({
   commandersPanelOpen: panelOpen,
   onCommandersPanelOpenChange: setPanelOpen,
   onCopyShareLink,
+  commanderShortcutParts,
 }: GameRoomSidebarProps) {
   // Get game room participants from context (already deduplicated)
   const { uniqueParticipants, roomSeatCount, setRoomSeatCount } = usePresence()
@@ -360,6 +365,7 @@ function SidebarContent({
             currentUserId={user?.id ?? undefined}
             onViewCommanders={handleOpenCommanders}
             onOpenCommanderDamage={commanderDamageDialog?.setOpenForPlayerId}
+            commanderShortcutParts={commanderShortcutParts}
             seatCount={roomSeatCount}
             onChangeSeatCount={isLobbyOwner ? handleChangeSeatCount : undefined}
             onCopyShareLink={onCopyShareLink}
