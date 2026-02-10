@@ -6,6 +6,8 @@
  * 2. Return to home page
  */
 
+import { useState } from 'react'
+import { env } from '@/env'
 import { Home, LogIn, ShieldAlert } from 'lucide-react'
 
 import {
@@ -15,11 +17,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@repo/ui/components/dialog'
+import { Input } from '@repo/ui/components/input'
+import { Label } from '@repo/ui/components/label'
 
 interface AuthRequiredDialogProps {
   open: boolean
   onSignIn: () => void
   onClose: () => void
+  onPreviewSignIn?: (code: string, userId?: string) => Promise<void> | void
   /** Optional message to show in the dialog */
   message?: string
 }
@@ -28,8 +33,25 @@ export function AuthRequiredDialog({
   open,
   onSignIn,
   onClose,
+  onPreviewSignIn,
   message = 'You need to sign in to join a game room.',
 }: AuthRequiredDialogProps) {
+  const [code, setCode] = useState('')
+  const [userId, setUserId] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const showPreviewAuth = env.VITE_PREVIEW_AUTH && !!onPreviewSignIn
+
+  const handlePreviewSignIn = async () => {
+    if (!onPreviewSignIn || !code.trim()) return
+    setIsSubmitting(true)
+    try {
+      await onPreviewSignIn(code.trim(), userId.trim() || undefined)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent className="border-warning/50 bg-surface-1 sm:max-w-[450px] [&>button]:hidden">
@@ -85,6 +107,45 @@ export function AuthRequiredDialog({
               </div>
             </div>
           </button>
+
+          {showPreviewAuth ? (
+            <div className="border-warning/40 rounded-lg border p-3">
+              <p className="text-warning mb-2 text-sm font-medium">
+                Preview only
+              </p>
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <Label htmlFor="preview-dialog-code">
+                    Preview Login Code
+                  </Label>
+                  <Input
+                    id="preview-dialog-code"
+                    value={code}
+                    onChange={(event) => setCode(event.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="preview-dialog-user">
+                    User ID (optional)
+                  </Label>
+                  <Input
+                    id="preview-dialog-user"
+                    value={userId}
+                    onChange={(event) => setUserId(event.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+                <button
+                  onClick={handlePreviewSignIn}
+                  disabled={!code.trim() || isSubmitting}
+                  className="border-warning/50 bg-warning/20 hover:bg-warning/30 text-warning w-full cursor-pointer rounded-lg border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSubmitting ? 'Signing in...' : 'Sign in with Code'}
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

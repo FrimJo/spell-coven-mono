@@ -12,7 +12,7 @@
     "dev": "bunx turbo run dev",
     "serve": "bunx turbo run serve",
     "convex:dev": "bunx convex dev",
-    "convex:test": "bunx dotenv-cli -e .env.test -- bunx convex deploy --preview-create local --cmd \"bun run build\" --cmd-url-env-var-name VITE_CONVEX_URL",
+    "convex:test": "bunx dotenv-cli -e .env.test -- bunx convex deploy --preview-create local --cmd \"printf 'VITE_CONVEX_URL=%s\\n' \\\"$VITE_CONVEX_URL\\\" > .env.test.generated && printf 'VITE_CONVEX_URL=%s\\n' \\\"$VITE_CONVEX_URL\\\" > apps/web/.env.test.generated && bun run build\" --cmd-url-env-var-name VITE_CONVEX_URL",
     "test": "bunx turbo run test",
     "lint": "bunx turbo run lint",
     "lint:fix": "bunx turbo run lint -- --fix",

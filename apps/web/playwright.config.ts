@@ -50,7 +50,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'bun run preview',
+      command: 'bun run with-test-env -- vite preview',
       url: 'https://localhost:1234',
       timeout: process.env.CI ? 120_000 : 90_000,
       reuseExistingServer: !process.env.CI,

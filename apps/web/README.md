@@ -111,6 +111,23 @@ cd apps/web && bun run e2e           # Run all e2e tests
 cd apps/web && bun run e2e:ui        # Run with Playwright UI
 ```
 
+#### Local E2E prerequisites
+
+- Run `bun run convex:test` from repo root to create/update the local preview
+  deployment and build artifacts. This command writes the dynamic preview URL
+  into `.env.test.generated` and `apps/web/.env.test.generated` as
+  `VITE_CONVEX_URL=...`.
+- Ensure your Convex preview deployment has `E2E_TEST=1`. This is expected to
+  come from Convex Dashboard **Default Environment Variables** for new previews.
+- Set local env for test auth:
+  - `VITE_CONVEX_URL` is auto-written by `bun run convex:test`.
+  - Set either `PREVIEW_LOGIN_CODE=<value>` (recommended) or
+    `E2E_AUTH_EMAIL` + `E2E_AUTH_PASSWORD` (fallback path), typically in
+    `.env.test.local`.
+
+You do not usually need to run `bun run serve` manually; Playwright starts the
+preview server from config using `.env.test`/`.env.test.local`.
+
 ### Visual Regression Tests
 
 Visual tests capture screenshots and compare them against baseline images to detect unintended UI changes.
