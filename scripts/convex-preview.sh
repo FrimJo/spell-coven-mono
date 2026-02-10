@@ -3,6 +3,15 @@ set -euo pipefail
 
 MODE="${1:-build}"
 
+case "$MODE" in
+  build|e2e|e2e-ui)
+    ;;
+  *)
+    echo "Unsupported mode: $MODE (expected: build | e2e | e2e-ui)" >&2
+    exit 2
+    ;;
+esac
+
 sanitize_name() {
   local raw="${1:-preview}"
   local normalized
@@ -55,6 +64,7 @@ generate_preview_login_code() {
 
 PREVIEW_NAME="$(derive_preview_name)"
 PREVIEW_LOGIN_CODE="$(generate_preview_login_code)"
+export PREVIEW_LOGIN_CODE
 
 if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
   echo "::add-mask::$PREVIEW_LOGIN_CODE"
@@ -69,26 +79,23 @@ if [ -n "${VERCEL_ENV:-}" ]; then
   fi
 fi
 
-bunx convex deploy \
-  --preview-create "$PREVIEW_NAME" \
-  --preview-run "seedForE2E" \
-  --cmd 'bun run build' \
+DEPLOY_CMD='bun run build'
+case "$MODE" in
+  e2e)
+    DEPLOY_CMD="$DEPLOY_CMD && cd apps/web && bun run e2e"
+    ;;
+  e2e-ui)
+    DEPLOY_CMD="$DEPLOY_CMD && cd apps/web && bun run e2e:ui"
+    ;;
+esac
+
+deploy_args=(
+  --preview-create "$PREVIEW_NAME"
+  --cmd "$DEPLOY_CMD"
   --cmd-url-env-var-name VITE_CONVEX_URL
+)
+
+bunx convex deploy "${deploy_args[@]}"
 
 # E2E_TEST is expected from Convex Dashboard defaults.
 bunx convex env set --preview-name "$PREVIEW_NAME" PREVIEW_LOGIN_CODE "$PREVIEW_LOGIN_CODE"
-
-case "$MODE" in
-  build)
-    ;;
-  e2e)
-    PREVIEW_LOGIN_CODE="$PREVIEW_LOGIN_CODE" bash -lc 'cd apps/web && bun run e2e'
-    ;;
-  e2e-ui)
-    PREVIEW_LOGIN_CODE="$PREVIEW_LOGIN_CODE" bash -lc 'cd apps/web && bun run e2e:ui'
-    ;;
-  *)
-    echo "Unsupported mode: $MODE (expected: build | e2e | e2e-ui)" >&2
-    exit 2
-    ;;
-esac
