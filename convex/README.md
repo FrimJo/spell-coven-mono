@@ -93,12 +93,23 @@ directory. To learn more, launch the docs with `npx convex docs`.
 
 ### Preview deploys and `convex:test`
 
-The `convex:test` script creates a local preview deployment and runs the
-`seedForE2E` seed. It requires a **preview deploy key** (not a regular deploy
-key). Create one at: Dashboard → your deployment → Settings → **Preview deploy
-keys**. Set it as `CONVEX_DEPLOY_KEY` when running locally (e.g. in `.env.test`
-or `.env.local`) and in CI use the `CONVEX_PREVIEW_DEPLOY_KEY` repository
-secret.
+Preview deploy automation is centralized in `scripts/convex-preview.sh`. It is
+used by:
+
+- local scripts (`convex:test`, `convex:e2e:ui`)
+- GitHub Actions web E2E workflow
+- Vercel preview build command
+
+It requires a **preview deploy key** (not a regular deploy key). Create one at:
+Dashboard → your deployment → Settings → **Preview deploy keys**. Set it as
+`CONVEX_DEPLOY_KEY` when running locally (e.g. in `.env.test` or `.env.local`)
+and in CI/Vercel secret settings.
+
+Preview name resolution is automatic:
+
+- `CONVEX_PREVIEW_NAME` / `PREVIEW_NAME` if set
+- otherwise Vercel/GitHub ref/sha environment variables
+- fallback: `local`
 
 When `convex:test` runs, it persists the dynamically generated preview URL to:
 

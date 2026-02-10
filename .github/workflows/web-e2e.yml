@@ -11,8 +11,6 @@ concurrency:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    env:
-      CONVEX_PREVIEW_NAME: ${{ github.head_ref || github.ref_name }}
     defaults:
       run:
         working-directory: apps/web
@@ -33,27 +31,14 @@ jobs:
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
 
-      - name: Generate preview login code
-        run: |
-          PREVIEW_LOGIN_CODE="$(openssl rand -base64 24 | tr -d '=+/' | cut -c1-32)"
-          echo "::add-mask::$PREVIEW_LOGIN_CODE"
-          echo "PREVIEW_LOGIN_CODE=$PREVIEW_LOGIN_CODE" >> "$GITHUB_ENV"
-
       - name: Deploy Convex (preview) and run E2E
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
           CI: '1'
-          PREVIEW_LOGIN_CODE: ${{ env.PREVIEW_LOGIN_CODE }}
+          CONVEX_PREVIEW_NAME: ${{ github.head_ref || github.ref_name }}
+        working-directory: .
         run: |
-          bunx convex deploy \
-            --preview-create "${{ env.CONVEX_PREVIEW_NAME }}" \
-            --preview-run "seedForE2E" \
-            --cmd 'bun run build && bun -C apps/web run e2e' \
-            --cmd-url-env-var-name VITE_CONVEX_URL
-
-          # Apply per-run login code after preview deployment exists.
-          # E2E_TEST is managed in Convex Dashboard default env vars.
-          bunx convex env set --preview-name "${{ env.CONVEX_PREVIEW_NAME }}" PREVIEW_LOGIN_CODE "${{ env.PREVIEW_LOGIN_CODE }}"
+          bash ./scripts/convex-preview.sh e2e
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
