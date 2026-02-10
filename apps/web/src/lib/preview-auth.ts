@@ -1,3 +1,5 @@
+import { convex } from '@/integrations/convex/provider'
+import { api } from '@convex/_generated/api'
 import z from 'zod'
 
 const previewLoginResponseSchema = z.object({
@@ -9,23 +11,12 @@ const previewLoginResponseSchema = z.object({
 export type PreviewLoginResponse = z.infer<typeof previewLoginResponseSchema>
 
 export async function exchangePreviewLoginCode(params: {
-  convexUrl: string
   code: string
   userId?: string
 }): Promise<PreviewLoginResponse> {
-  const response = await fetch(`${params.convexUrl}/api/test/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-PREVIEW-LOGIN': params.code,
-    },
-    body: JSON.stringify(params.userId ? { userId: params.userId } : {}),
+  const result = await convex.action(api.auth.previewLogin as any, {
+    code: params.code,
+    userId: params.userId,
   })
-
-  if (!response.ok) {
-    throw new Error(response.status === 401 ? 'Unauthorized' : 'Login failed')
-  }
-
-  const body = await response.json()
-  return previewLoginResponseSchema.parse(body)
+  return previewLoginResponseSchema.parse(result)
 }

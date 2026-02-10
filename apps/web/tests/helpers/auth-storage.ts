@@ -103,24 +103,12 @@ async function signInWithPreviewCode(params: {
   code: string
   userId?: string
 }): Promise<{ token: string; refreshToken: string }> {
-  const response = await fetch(`${params.convexUrl}/api/test/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-PREVIEW-LOGIN': params.code,
-    },
-    body: JSON.stringify(params.userId ? { userId: params.userId } : {}),
+  const client = new ConvexHttpClient(params.convexUrl)
+  const result = await client.action('auth:previewLogin' as any, {
+    code: params.code,
+    userId: params.userId,
   })
-
-  if (!response.ok) {
-    const responseText = await response.text().catch(() => '')
-    throw new Error(
-      `Preview login failed with status ${response.status} for ${params.convexUrl}. ${responseText}`,
-    )
-  }
-
-  const json = await response.json()
-  return z.object({ token: z.string(), refreshToken: z.string() }).parse(json)
+  return z.object({ token: z.string(), refreshToken: z.string() }).parse(result)
 }
 
 function withWorkerSuffix(email: string, workerIndex: number): string {

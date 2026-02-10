@@ -74,7 +74,7 @@
     "vitest": "^3.2.0",
     "web-vitals": "^4.2.4",
     "xstate": "^5.26.0",
-    "zod": "^4.1.12"
+    "zod": "catalog:"
   },
   "prettier": "@repo/prettier-config"
 }
