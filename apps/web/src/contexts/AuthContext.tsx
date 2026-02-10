@@ -29,7 +29,7 @@ interface AuthContextValue {
   /** Sign in with Discord */
   signIn: () => Promise<void>
   /** Sign in using preview login code */
-  signInWithPreviewCode: (code: string, userId?: string) => Promise<void>
+  signInWithPreviewCode: (code: string) => Promise<void>
   /** Sign out */
   signOut: () => Promise<void>
 }

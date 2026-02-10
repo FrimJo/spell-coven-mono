@@ -24,7 +24,7 @@ interface AuthRequiredDialogProps {
   open: boolean
   onSignIn: () => void
   onClose: () => void
-  onPreviewSignIn?: (code: string, userId?: string) => Promise<void> | void
+  onPreviewSignIn?: (code: string) => Promise<void> | void
   /** Optional message to show in the dialog */
   message?: string
 }
@@ -37,7 +37,6 @@ export function AuthRequiredDialog({
   message = 'You need to sign in to join a game room.',
 }: AuthRequiredDialogProps) {
   const [code, setCode] = useState('')
-  const [userId, setUserId] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const showPreviewAuth = env.VITE_PREVIEW_AUTH && !!onPreviewSignIn
@@ -46,7 +45,7 @@ export function AuthRequiredDialog({
     if (!onPreviewSignIn || !code.trim()) return
     setIsSubmitting(true)
     try {
-      await onPreviewSignIn(code.trim(), userId.trim() || undefined)
+      await onPreviewSignIn(code.trim())
     } finally {
       setIsSubmitting(false)
     }
@@ -122,17 +121,6 @@ export function AuthRequiredDialog({
                     id="preview-dialog-code"
                     value={code}
                     onChange={(event) => setCode(event.target.value)}
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="preview-dialog-user">
-                    User ID (optional)
-                  </Label>
-                  <Input
-                    id="preview-dialog-user"
-                    value={userId}
-                    onChange={(event) => setUserId(event.target.value)}
                     autoComplete="off"
                   />
                 </div>

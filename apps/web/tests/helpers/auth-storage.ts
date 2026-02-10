@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
+import { api } from '@convex/_generated/api'
 import { ConvexHttpClient } from 'convex/browser'
 import z from 'zod'
 
@@ -78,7 +79,7 @@ async function signInWithPassword(
   password: string,
 ): Promise<{ token: string; refreshToken: string }> {
   try {
-    const signInResult = await client.action('auth:signIn' as any, {
+    const signInResult = await client.action(api.auth.signIn, {
       provider: 'password',
       params: { email, password, flow: 'signIn' },
     })
@@ -87,7 +88,7 @@ async function signInWithPassword(
       .object({ token: z.string(), refreshToken: z.string() })
       .parse(signInResult.tokens)
   } catch {
-    const signUpResult = await client.action('auth:signIn' as any, {
+    const signUpResult = await client.action(api.auth.signIn, {
       provider: 'password',
       params: { email, password, flow: 'signUp' },
     })
@@ -101,14 +102,23 @@ async function signInWithPassword(
 async function signInWithPreviewCode(params: {
   convexUrl: string
   code: string
-  userId?: string
-}): Promise<{ token: string; refreshToken: string }> {
+}): Promise<{
+  token: string
+  refreshToken: string
+  userId: string
+  previewName: string
+}> {
   const client = new ConvexHttpClient(params.convexUrl)
-  const result = await client.action('auth:previewLogin' as any, {
+  const result = await client.action(api.auth.previewLogin, {
     code: params.code,
-    userId: params.userId,
   })
-  return z.object({ token: z.string(), refreshToken: z.string() }).parse(result)
+
+  return {
+    token: result.token,
+    refreshToken: result.refreshToken,
+    userId: result.userId,
+    previewName: result.previewName,
+  }
 }
 
 function withWorkerSuffix(email: string, workerIndex: number): string {
@@ -147,16 +157,25 @@ export async function ensureWorkerStorageState(
     )
   }
 
-  let tokens: { token: string; refreshToken: string } | null = null
+  type AuthTokens = {
+    token: string
+    refreshToken: string
+    previewName?: string
+  }
+  let tokens: AuthTokens | null = null
   let previewLoginError: Error | null = null
 
   if (previewLoginCode != null) {
     try {
-      tokens = await signInWithPreviewCode({
+      const previewResult = await signInWithPreviewCode({
         convexUrl,
         code: previewLoginCode,
-        userId: `worker-${workerIndex}`,
       })
+      tokens = {
+        token: previewResult.token,
+        refreshToken: previewResult.refreshToken,
+        previewName: previewResult.previewName,
+      }
     } catch (error) {
       previewLoginError =
         error instanceof Error ? error : new Error('Preview login failed')

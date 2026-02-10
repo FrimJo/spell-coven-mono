@@ -1,16 +1,6 @@
 import { v } from 'convex/values'
 
-import type { Id } from './_generated/dataModel'
 import { internalQuery } from './_generated/server'
-
-export const getUserById = internalQuery({
-  args: {
-    userId: v.string(),
-  },
-  handler: async (ctx, { userId }) => {
-    return await ctx.db.get(userId as Id<'users'>)
-  },
-})
 
 export const getUserByEmail = internalQuery({
   args: {

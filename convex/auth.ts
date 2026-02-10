@@ -8,18 +8,22 @@
  * @see https://labs.convex.dev/auth
  */
 
-import type { AuthProviderConfig } from '@convex-dev/auth/server'
 import Discord from '@auth/core/providers/discord'
+import { Password } from '@convex-dev/auth/providers/Password'
 import { convexAuth } from '@convex-dev/auth/server'
 import z from 'zod'
 
 export { previewLogin } from './previewLogin'
 
-const providers: AuthProviderConfig[] = []
+let providers: [typeof Discord] | [typeof Password]
+const e2eEnabledSchema = z.coerce.boolean().safeParse(process.env.E2E_TEST)
+const isE2ePreview = e2eEnabledSchema.data ?? false
 
 // Only add Discord provider when not running e2e tests
-if (!z.coerce.boolean().safeParse(process.env.E2E_TEST).success) {
-  providers.push(Discord)
+if (isE2ePreview) {
+  providers = [Password]
+} else {
+  providers = [Discord]
 }
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({

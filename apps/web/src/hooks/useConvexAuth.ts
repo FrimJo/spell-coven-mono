@@ -8,7 +8,11 @@
 
 import { useCallback } from 'react'
 import { env } from '@/env'
-import { writeConvexAuthTokensToStorage } from '@/lib/convex-auth-storage'
+import {
+  clearConvexAuthPreviewName,
+  getConvexAuthPreviewName,
+  writeConvexAuthTokensToStorage,
+} from '@/lib/convex-auth-storage'
 import { exchangePreviewLoginCode } from '@/lib/preview-auth'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { api } from '@convex/_generated/api'
@@ -41,7 +45,7 @@ export interface UseConvexAuthReturn {
   /** Sign in with Discord */
   signIn: () => Promise<void>
   /** Sign in using preview login code */
-  signInWithPreviewCode: (code: string, userId?: string) => Promise<void>
+  signInWithPreviewCode: (code: string) => Promise<void>
   /** Sign out */
   signOut: () => Promise<void>
 }
@@ -74,12 +78,18 @@ export function useConvexAuthHook(): UseConvexAuthReturn {
   const isLoading =
     isAuthLoading || (isAuthenticated && currentUser === undefined)
 
-  // Build user object from Convex user data
+  // Build user object from Convex user data.
+  // Use stored preview name when Convex user has no name (e.g. preview/password auth), like Discord name for Discord auth.
+  const storedPreviewName = getConvexAuthPreviewName(env.VITE_CONVEX_URL)
   const user: ConvexAuthUser | null =
     currentUser && isAuthenticated
       ? {
           id: currentUser._id,
-          username: currentUser.name ?? currentUser.email ?? 'Unknown',
+          username:
+            currentUser.name ??
+            storedPreviewName ??
+            currentUser.email ??
+            'Unknown',
           avatar: currentUser.image ?? null,
           email: currentUser.email ?? null,
         }
@@ -99,6 +109,7 @@ export function useConvexAuthHook(): UseConvexAuthReturn {
   // Sign out
   const signOut = useCallback(async () => {
     try {
+      clearConvexAuthPreviewName(env.VITE_CONVEX_URL)
       await convexSignOut()
     } catch (error) {
       console.error('[ConvexAuth] Sign out failed:', error)
@@ -106,20 +117,17 @@ export function useConvexAuthHook(): UseConvexAuthReturn {
     }
   }, [convexSignOut])
 
-  const signInWithPreviewCode = useCallback(
-    async (code: string, userId?: string) => {
-      const result = await exchangePreviewLoginCode({
-        code,
-        userId,
-      })
-      writeConvexAuthTokensToStorage(env.VITE_CONVEX_URL, {
-        token: result.token,
-        refreshToken: result.refreshToken,
-      })
-      window.location.reload()
-    },
-    [],
-  )
+  const signInWithPreviewCode = useCallback(async (code: string) => {
+    const result = await exchangePreviewLoginCode({
+      code,
+    })
+    writeConvexAuthTokensToStorage(env.VITE_CONVEX_URL, {
+      token: result.token,
+      refreshToken: result.refreshToken,
+      previewName: result.previewName,
+    })
+    window.location.reload()
+  }, [])
 
   return {
     user,
