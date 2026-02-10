@@ -4,9 +4,7 @@
   "type": "module",
   "scripts": {
     "with-env": "dotenv -e ../../.env.development -e ../../.env.development.local -e .env.development -e .env.development.local --",
-    "with-env:test": "dotenv -e ../../.env.test -e ../../.env.test.local -e .env.test -e .env.test.local --",
     "dev": "bun run with-env -- vite dev",
-    "dev:test": "bun run with-env:test -- vite dev",
     "build": "bun run with-env -- vite build",
     "serve": "bun run with-env -- vite preview",
     "test": "bun run vitest run",

@@ -12,10 +12,12 @@ import Discord from '@auth/core/providers/discord'
 import { Password } from '@convex-dev/auth/providers/Password'
 import { AuthProviderConfig, convexAuth } from '@convex-dev/auth/server'
 
-const providers: AuthProviderConfig[] = [Discord]
+const providers: AuthProviderConfig[] = []
 
-if (process.env.CONVEX_AUTH_TEST_MODE === 'true') {
+if (process.env.E2E_TEST === '1') {
   providers.push(Password)
+} else {
+  providers.push(Discord)
 }
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
