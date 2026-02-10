@@ -1,15 +1,33 @@
+import { GenericActionCtx } from 'convex/server'
 import { v } from 'convex/values'
 import z from 'zod'
 
 import { api, internal } from './_generated/api'
+import { DataModel } from './_generated/dataModel'
 import { action } from './_generated/server'
 
-const internalApi = internal as any
-
 const previewTokensSchema = z.object({
-  token: z.string(),
-  refreshToken: z.string(),
+  tokens: z.object({
+    token: z.string(),
+    refreshToken: z.string(),
+  }),
 })
+
+const PREVIEW_NAMES = [
+  'Jace',
+  'Chandra',
+  'Liliana',
+  'Gideon',
+  'Nissa',
+  'Teferi',
+  'Ajani',
+  'Sorin',
+  'Karn',
+  'Nahiri',
+] as const
+
+const e2eEnabledSchema = z.coerce.boolean().safeParse(process.env.E2E_TEST)
+const isE2ePreview = e2eEnabledSchema.data ?? false
 
 function constantTimeEquals(a: string, b: string): boolean {
   const max = Math.max(a.length, b.length)
@@ -28,42 +46,58 @@ function sanitizeHandle(value: string | undefined): string {
   return normalized.length > 0 ? normalized.slice(0, 32) : 'qa'
 }
 
+function hashString(value: string): number {
+  let hash = 2166136261
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return hash >>> 0
+}
+
+function pickRandomPreviewName(): string {
+  const index = Math.floor(Math.random() * PREVIEW_NAMES.length)
+  return PREVIEW_NAMES[index] ?? PREVIEW_NAMES[0]
+}
+
+function buildPreviewHandle(code: string, baseName: string): string {
+  const suffix = hashString(`${code}:${baseName}`)
+    .toString(36)
+    .padStart(6, '0')
+    .slice(0, 6)
+  return sanitizeHandle(`${baseName}-${suffix}`)
+}
+
 function buildPreviewEmail(handle: string): string {
   return `preview+${handle}@preview.spell-coven.local`
 }
 
 async function signInOrSignUp(
-  ctx: {
-    runAction: (ref: any, args: any) => Promise<any>
-  },
+  ctx: GenericActionCtx<DataModel>,
   email: string,
   password: string,
 ) {
-  const signInArgs = {
-    provider: 'password',
-    params: { email, password, flow: 'signIn' as const },
-  }
-  const signUpArgs = {
-    provider: 'password',
-    params: { email, password, flow: 'signUp' as const },
-  }
-
   try {
-    const signInResult = await ctx.runAction(api.auth.signIn as any, signInArgs)
-    return previewTokensSchema.parse(signInResult.tokens)
+    const signInResult: unknown = await ctx.runAction(api.auth.signIn, {
+      provider: 'password',
+      params: { email, password, flow: 'signIn' },
+    })
+    return previewTokensSchema.parse(signInResult).tokens
   } catch {
-    const signUpResult = await ctx.runAction(api.auth.signIn as any, signUpArgs)
-    return previewTokensSchema.parse(signUpResult.tokens)
+    const signUpResult: unknown = await ctx.runAction(api.auth.signIn, {
+      provider: 'password',
+      params: { email, password, flow: 'signUp' },
+    })
+    return previewTokensSchema.parse(signUpResult).tokens
   }
 }
 
 export const previewLogin = action({
   args: {
     code: v.string(),
-    userId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    if (!z.coerce.boolean().safeParse(process.env.E2E_TEST).success) {
+    if (!isE2ePreview) {
       throw new Error('Unauthorized')
     }
 
@@ -76,58 +110,31 @@ export const previewLogin = action({
       throw new Error('Unauthorized')
     }
 
-    const requestedUserId = args.userId ?? null
-    const fallbackHandle = sanitizeHandle(requestedUserId ?? undefined)
+    const previewName = pickRandomPreviewName()
+    const fallbackHandle = buildPreviewHandle(configuredCode, previewName)
     const fallbackEmail = buildPreviewEmail(fallbackHandle)
-    const password = process.env.PREVIEW_LOGIN_PASSWORD ?? configuredCode
+    const password = configuredCode
 
-    const emailCandidates: string[] = []
-    if (requestedUserId) {
-      const existingUser = await ctx.runQuery(
-        internalApi.previewAuth.getUserById,
-        {
-          userId: requestedUserId,
-        },
-      )
-      if (existingUser?.email) {
-        emailCandidates.push(existingUser.email)
-      }
-    }
-    emailCandidates.push(fallbackEmail)
+    const tokens = await signInOrSignUp(ctx, fallbackEmail, password)
 
-    let tokens: z.infer<typeof previewTokensSchema> | null = null
-    let chosenEmail: string | null = null
-
-    for (const email of emailCandidates) {
-      try {
-        tokens = await signInOrSignUp(ctx, email, password)
-        chosenEmail = email
-        break
-      } catch {
-        // Try next candidate.
-      }
-    }
-
-    if (!tokens || !chosenEmail) {
-      throw new Error('Unauthorized')
-    }
-
-    const user = await ctx.runQuery(internalApi.previewAuth.getUserByEmail, {
-      email: chosenEmail,
-    })
-    const userId =
-      requestedUserId && user?._id === requestedUserId
-        ? requestedUserId
-        : user?._id
+    const user: unknown = await ctx.runQuery(
+      internal.previewAuth.getUserByEmail,
+      {
+        email: fallbackEmail,
+      },
+    )
+    const userId = z.object({ _id: z.string().min(1) }).parse(user)._id
 
     if (!userId) {
       throw new Error('Unauthorized')
     }
 
     return {
+      ok: true,
       userId,
       token: tokens.token,
       refreshToken: tokens.refreshToken,
+      previewName,
     }
   },
 })

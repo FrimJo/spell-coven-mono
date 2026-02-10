@@ -64,7 +64,7 @@ interface LandingPageProps {
   /** Auth props */
   user?: AuthUser | null
   onSignIn?: () => void | Promise<void>
-  onPreviewSignIn?: (code: string, userId?: string) => void | Promise<void>
+  onPreviewSignIn?: (code: string) => void | Promise<void>
 }
 
 export function LandingPage({
@@ -140,7 +140,6 @@ export function LandingPage({
   )
   const isAuthenticated = !!user
   const [previewCode, setPreviewCode] = useState('')
-  const [previewUserId, setPreviewUserId] = useState('')
   const [isPreviewSigningIn, setIsPreviewSigningIn] = useState(false)
 
   const handleCreateGame = async () => {
@@ -266,10 +265,7 @@ export function LandingPage({
     setIsPreviewSigningIn(true)
     setError(null)
     try {
-      await onPreviewSignIn(
-        previewCode.trim(),
-        previewUserId.trim() || undefined,
-      )
+      await onPreviewSignIn(previewCode.trim())
     } catch {
       setError('Unauthorized')
     } finally {
@@ -340,16 +336,6 @@ export function LandingPage({
                     value={previewCode}
                     onChange={(event) => setPreviewCode(event.target.value)}
                     placeholder="Enter code"
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="preview-user-id">User ID (optional)</Label>
-                  <Input
-                    id="preview-user-id"
-                    value={previewUserId}
-                    onChange={(event) => setPreviewUserId(event.target.value)}
-                    placeholder="Optional existing user id"
                     autoComplete="off"
                   />
                 </div>
