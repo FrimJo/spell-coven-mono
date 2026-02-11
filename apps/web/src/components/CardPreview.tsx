@@ -1,6 +1,7 @@
 import type { CardQueryResult } from '@/types/card-query'
 import { useState } from 'react'
 import { useCardQueryContext } from '@/contexts/CardQueryContext'
+import { toScryfallPngUrl } from '@/lib/scryfall'
 import { isLowConfidence } from '@/types/card-query'
 import {
   AlertCircle,
@@ -133,13 +134,17 @@ export function CardPreview({ onClose }: CardPreviewProps) {
                   <img
                     src={cardImage}
                     alt={displayResult.name}
-                    className="h-auto w-full"
+                    className="h-auto w-full rounded-lg"
                   />
                   <div
                     role="button"
                     tabIndex={0}
                     className="absolute inset-0 flex cursor-pointer flex-col items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                     onClick={() => setCardModalOpen(true)}
+                    onMouseEnter={() => {
+                      const img = new Image()
+                      img.src = toScryfallPngUrl(cardImage)
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
@@ -193,15 +198,15 @@ export function CardPreview({ onClose }: CardPreviewProps) {
         </div>
       </SidebarCard>
 
-      {/* Card zoom modal - click outside or X closes */}
+      {/* Card zoom modal - uses Scryfall PNG (transparent, pre-rounded corners) */}
       <Dialog open={cardModalOpen} onOpenChange={setCardModalOpen}>
         <DialogContent className="border-surface-2 [&>button]:bg-surface-1 bg-transparent p-0 shadow-none sm:max-w-[480px] [&>button]:right-2 [&>button]:top-2 [&>button]:rounded-full [&>button]:text-white">
           <DialogTitle className="sr-only">{displayResult.name}</DialogTitle>
           {cardState === 'success' && cardImage && (
             <img
-              src={cardImage}
+              src={toScryfallPngUrl(cardImage)}
               alt={displayResult.name}
-              className="h-auto w-full rounded-lg"
+              className="h-auto w-full"
             />
           )}
         </DialogContent>

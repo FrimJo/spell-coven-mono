@@ -387,10 +387,12 @@ function GameHeader({
 
           <div className="bg-surface-3 h-6 w-px" />
 
-          <div className="hidden items-center gap-2 sm:flex">
-            <span className="text-text-muted text-sm">Share Link:</span>
+          <div className="hidden min-w-0 flex-1 items-center gap-2 sm:flex">
+            <span className="text-text-muted shrink-0 text-sm">
+              Share Link:
+            </span>
             <code
-              className="bg-surface-2 text-brand-muted-foreground hover:bg-surface-3 cursor-pointer break-all rounded px-2 py-1 text-sm transition-colors"
+              className="bg-surface-2 text-brand-muted-foreground hover:bg-surface-3 min-w-0 flex-1 cursor-pointer truncate rounded px-2 py-1 text-sm transition-colors"
               data-testid="game-id-display"
               onClick={onCopyLink}
               title="Click to copy shareable link"
@@ -401,7 +403,7 @@ function GameHeader({
               variant="ghost"
               size="sm"
               onClick={onCopyLink}
-              className="text-text-muted hover:text-text-primary"
+              className="text-text-muted hover:text-text-primary shrink-0"
               title="Copy shareable link"
               data-testid="copy-share-link-button"
             >

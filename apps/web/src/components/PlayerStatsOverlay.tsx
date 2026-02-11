@@ -563,7 +563,11 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                           variant="secondary"
                           size="sm"
                           className="h-8 gap-2 text-xs font-medium shadow-sm transition-all hover:shadow"
-                          onClick={() => commandersPanel.openCommandersPanel()}
+                          onClick={() => {
+                            setCommanderDialogOpen(false)
+                            commanderDamageDialog?.setOpenForPlayerId(null)
+                            commandersPanel.openCommandersPanel()
+                          }}
                         >
                           <Users className="h-3.5 w-3.5" />
                           Open commanders panel

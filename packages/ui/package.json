@@ -28,6 +28,7 @@
     "@types/react-dom": "catalog:",
     "eslint": "^9.39.2",
     "shadcn": "^3.4.0",
+    "tailwind-animate": "^0.2.10",
     "tailwindcss": "catalog:",
     "tsup": "^8.5.0",
     "typescript": "5.9.2"

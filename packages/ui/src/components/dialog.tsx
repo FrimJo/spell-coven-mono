@@ -50,7 +50,9 @@ interface DialogContentProps
   extends React.ComponentProps<typeof DialogPrimitive.Content> {
   /**
    * When provided, the dialog content is centered within this element
-   * instead of the viewport. The backdrop still covers the full viewport.
+   * instead of the viewport. The overlay is also scoped to this element
+   * (portaled into it with position: absolute), so the backdrop only
+   * covers the container, not the whole window.
    */
   centerInRef?: React.RefObject<HTMLElement | null>
   /**
@@ -94,36 +96,57 @@ function DialogContent({
   }, [centerInRef, forceReposition])
 
   const useCustomPosition = centerInRef && position !== null
+  const container = centerInRef?.current ?? undefined
+  const scopeOverlayToContainer = Boolean(container)
+
+  const overlay = scopeOverlayToContainer ? (
+    <DialogOverlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 absolute inset-0 z-50 bg-black/50" />
+  ) : (
+    <DialogOverlay />
+  )
+
+  const content = (
+    <DialogPrimitive.Content
+      data-slot="dialog-content"
+      className={cn(
+        'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed z-50 grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg',
+        !useCustomPosition &&
+          'left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]',
+        className,
+      )}
+      style={
+        useCustomPosition
+          ? {
+              ...style,
+              left: position!.left,
+              top: position!.top,
+              transform: 'translate(-50%, -50%)',
+            }
+          : style
+      }
+      {...props}
+    >
+      {children}
+      <DialogPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground rounded-xs focus:outline-hidden absolute right-4 top-4 cursor-pointer opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0">
+        <XIcon />
+        <span className="sr-only">Close</span>
+      </DialogPrimitive.Close>
+    </DialogPrimitive.Content>
+  )
 
   return (
-    <DialogPortal data-slot="dialog-portal">
-      <DialogOverlay />
-      <DialogPrimitive.Content
-        data-slot="dialog-content"
-        className={cn(
-          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed z-50 grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg',
-          !useCustomPosition &&
-            'left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]',
-          className,
-        )}
-        style={
-          useCustomPosition
-            ? {
-                ...style,
-                left: position!.left,
-                top: position!.top,
-                transform: 'translate(-50%, -50%)',
-              }
-            : style
-        }
-        {...props}
-      >
-        {children}
-        <DialogPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground rounded-xs focus:outline-hidden absolute right-4 top-4 cursor-pointer opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0">
-          <XIcon />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-      </DialogPrimitive.Content>
+    <DialogPortal container={container} data-slot="dialog-portal">
+      {scopeOverlayToContainer ? (
+        <div className="absolute inset-0">
+          {overlay}
+          {content}
+        </div>
+      ) : (
+        <>
+          {overlay}
+          {content}
+        </>
+      )}
     </DialogPortal>
   )
 }

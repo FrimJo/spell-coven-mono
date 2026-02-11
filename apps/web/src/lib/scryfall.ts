@@ -239,6 +239,20 @@ export async function searchCommanderAndSidekicks(
 }
 
 /**
+ * Convert a Scryfall card image URL to the PNG format.
+ * PNG format provides a transparent background and MTG-accurate rounded corners
+ * baked in by Scryfall—no need for CSS border-radius.
+ *
+ * @see https://scryfall.com/docs/api/images
+ */
+export function toScryfallPngUrl(url: string): string {
+  if (!url?.includes('cards.scryfall.io')) return url
+  return url
+    .replace(/\/(normal|large|small|border_crop|art_crop)\//, '/png/')
+    .replace(/\.(jpg|jpeg)(\?|$)/i, '.png$2')
+}
+
+/**
  * Get Scryfall art crop image URL from a card ID
  */
 export function getCommanderImageUrl(id: string): string | null {
