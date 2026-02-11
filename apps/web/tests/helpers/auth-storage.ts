@@ -7,7 +7,7 @@ import { buildConvexAuthStorageState } from '../../src/lib/convex-auth-storage'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-const AUTH_PREVIEW_LOGIN_ACTION = 'auth:previewLogin'
+const AUTH_PREVIEW_LOGIN_ACTION = 'previewLogin:previewLogin'
 
 function loadEnvFile(path: string): Record<string, string> {
   try {

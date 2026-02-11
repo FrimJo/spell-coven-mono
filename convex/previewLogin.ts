@@ -29,6 +29,7 @@ const PREVIEW_NAMES = [
 const e2eEnabledSchema = z.coerce.boolean().safeParse(process.env.E2E_TEST)
 const isE2ePreview = e2eEnabledSchema.data ?? false
 
+/** Constant-time string comparison to avoid timing attacks when comparing secrets (e.g. tokens). */
 function constantTimeEquals(a: string, b: string): boolean {
   const max = Math.max(a.length, b.length)
   let mismatch = a.length === b.length ? 0 : 1
@@ -101,19 +102,21 @@ export const previewLogin = action({
       throw new Error('Unauthorized')
     }
 
-    const configuredCode = process.env.PREVIEW_LOGIN_CODE
-    if (!configuredCode) {
-      throw new Error('Unauthorized')
-    }
+    // Require server-side secret so we never accept arbitrary client codes.
+    const loginCode = z
+      .string()
+      .min(1, 'PREVIEW_LOGIN_CODE must be set')
+      .parse(process.env.PREVIEW_LOGIN_CODE)
 
-    if (!constantTimeEquals(args.code, configuredCode)) {
+    // Reject if the client-provided code doesn't match the server's preview secret.
+    if (!constantTimeEquals(args.code, loginCode)) {
       throw new Error('Unauthorized')
     }
 
     const previewName = pickRandomPreviewName()
-    const fallbackHandle = buildPreviewHandle(configuredCode, previewName)
+    const fallbackHandle = buildPreviewHandle(loginCode, previewName)
     const fallbackEmail = buildPreviewEmail(fallbackHandle)
-    const password = configuredCode
+    const password = loginCode
 
     const tokens = await signInOrSignUp(ctx, fallbackEmail, password)
 
