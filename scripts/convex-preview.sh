@@ -27,10 +27,6 @@ derive_preview_name() {
     sanitize_name "${CONVEX_PREVIEW_NAME}"
     return
   fi
-  if [ -n "${PREVIEW_NAME:-}" ]; then
-    sanitize_name "${PREVIEW_NAME}"
-    return
-  fi
   if [ -n "${VERCEL_GIT_COMMIT_REF:-}" ]; then
     sanitize_name "${VERCEL_GIT_COMMIT_REF}"
     return
@@ -51,7 +47,8 @@ derive_preview_name() {
     sanitize_name "gh-${GITHUB_SHA:0:12}"
     return
   fi
-  printf 'local'
+  echo "Could not derive preview name. Set one of: CONVEX_PREVIEW_NAME, VERCEL_GIT_COMMIT_REF, GITHUB_HEAD_REF, GITHUB_REF_NAME, VERCEL_GIT_COMMIT_SHA, GITHUB_SHA" >&2
+  exit 1
 }
 
 generate_preview_login_code() {
@@ -80,18 +77,12 @@ if [ -n "${VERCEL_ENV:-}" ]; then
 fi
 
 DEPLOY_CMD='bun run build'
-case "$MODE" in
-  e2e)
-    DEPLOY_CMD="$DEPLOY_CMD && cd apps/web && bun run e2e"
-    ;;
-  e2e-ui)
-    DEPLOY_CMD="$DEPLOY_CMD && cd apps/web && bun run e2e:ui"
-    ;;
-esac
 
 # Ensure the same preview login code is available to the local --cmd process
 # executed by `convex deploy`.
 DEPLOY_CMD="PREVIEW_LOGIN_CODE=$PREVIEW_LOGIN_CODE $DEPLOY_CMD"
+# Write .convex_url as a sourceable snippet so e2e can use VITE_CONVEX_URL.
+DEPLOY_CMD="$DEPLOY_CMD && printf 'export VITE_CONVEX_URL=%q\n' \"\$VITE_CONVEX_URL\" > .convex_url"
 
 deploy_args=(
   --preview-create "$PREVIEW_NAME"
@@ -103,3 +94,15 @@ bunx convex deploy "${deploy_args[@]}"
 
 # E2E_TEST is expected from Convex Dashboard defaults.
 bunx convex env set --preview-name "$PREVIEW_NAME" PREVIEW_LOGIN_CODE "$PREVIEW_LOGIN_CODE"
+
+# Source preview URL into this shell so e2e steps can use VITE_CONVEX_URL.
+[ -f .convex_url ] && source .convex_url
+
+case "$MODE" in
+  e2e)
+    (cd apps/web && PREVIEW_LOGIN_CODE=$PREVIEW_LOGIN_CODE bun run e2e)
+    ;;
+  e2e-ui)
+    (cd apps/web && PREVIEW_LOGIN_CODE=$PREVIEW_LOGIN_CODE bun run e2e:ui)
+    ;;
+esac
