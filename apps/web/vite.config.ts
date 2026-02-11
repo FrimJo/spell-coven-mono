@@ -23,9 +23,10 @@ const MIME: Record<string, string> = {
   '.webmanifest': 'application/manifest+json',
 }
 
-/** Serves TanStack Start SPA from dist/client with _shell.html fallback (preview only). */
+/** Serves TanStack Start SPA from dist/client with SPA shell fallback (preview only). */
 function tanStackStartPreviewPlugin() {
   const clientDir = path.resolve(__dirname, 'dist/client')
+  const shellCandidates = ['_shell.html', 'index.html']
   return {
     name: 'tanstack-start-preview',
     enforce: 'pre' as const,
@@ -45,9 +46,10 @@ function tanStackStartPreviewPlugin() {
           if (req.method !== 'GET' && req.method !== 'HEAD') return next()
           const url = req.url?.split('?')[0] ?? '/'
           const safePath = path.normalize(url).replace(/^(\.\.(\/|$))+/, '')
+          const relativePath = safePath.replace(/^\/+/, '')
           const filePath = path.resolve(
             clientDir,
-            safePath === '/' ? '.' : safePath,
+            relativePath === '' ? '.' : relativePath,
           )
           if (
             !filePath.startsWith(clientDir + path.sep) &&
@@ -71,8 +73,10 @@ function tanStackStartPreviewPlugin() {
             fs.createReadStream(filePath).pipe(res)
             return
           }
-          const shellPath = path.join(clientDir, '_shell.html')
-          if (!fs.existsSync(shellPath)) return next()
+          const shellPath = shellCandidates
+            .map((name) => path.join(clientDir, name))
+            .find((candidate) => fs.existsSync(candidate))
+          if (!shellPath) return next()
           res.statusCode = 200
           res.setHeader('Content-Type', 'text/html')
           fs.createReadStream(shellPath).pipe(res)
