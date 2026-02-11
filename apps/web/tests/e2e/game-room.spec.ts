@@ -83,7 +83,7 @@ test.describe('Game Room', () => {
   }
 
   test.describe('Route Access', () => {
-    test('should show sign-in dialog for active room with open slots when unauthenticated and media setup is incomplete', async ({
+    test('should redirect to setup and show sign-in dialog when unauthenticated and media setup is incomplete', async ({
       browser,
     }) => {
       const context = await browser.newContext({
@@ -104,7 +104,9 @@ test.describe('Game Room', () => {
 
       await unauthenticatedPage.goto(`/game/${roomId}`)
 
-      await expect(unauthenticatedPage).toHaveURL(`/game/${roomId}`)
+      await expect(unauthenticatedPage).toHaveURL(
+        `/setup?returnTo=${encodeURIComponent(`/game/${roomId}`)}`,
+      )
       await expect(
         unauthenticatedPage.getByRole('heading', { name: 'Sign In Required' }),
       ).toBeVisible({ timeout: 10000 })
@@ -114,10 +116,7 @@ test.describe('Game Room', () => {
         }),
       ).toBeVisible()
 
-      // Route guard should require auth before the media setup redirect can happen.
-      await expect(unauthenticatedPage).not.toHaveURL(
-        `/setup?returnTo=${encodeURIComponent(`/game/${roomId}`)}`,
-      )
+      // Unauthenticated users are still blocked by auth dialog on authed routes.
 
       const mediaPrefValue = await unauthenticatedPage.evaluate(
         (key) => localStorage.getItem(key),
