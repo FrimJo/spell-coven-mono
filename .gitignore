@@ -5,7 +5,7 @@ node_modules
 .pnp
 .pnp.js
 
-# Local env files
+# Local env files (secrets: deploy keys, etc.)
 .env*.local
 
 # Testing

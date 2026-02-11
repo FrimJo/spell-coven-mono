@@ -102,7 +102,7 @@ used by:
 
 It requires a **preview deploy key** (not a regular deploy key). Create one at:
 Dashboard → your deployment → Settings → **Preview deploy keys**. Set it as
-`CONVEX_DEPLOY_KEY` when running locally (e.g. in `.env.test` or `.env.local`)
+`CONVEX_DEPLOY_KEY` when running locally (e.g. in `.env.test.local` or `.env.local`)
 and in CI/Vercel secret settings.
 
 Preview name resolution is automatic:
