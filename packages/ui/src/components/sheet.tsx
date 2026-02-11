@@ -23,20 +23,29 @@ function SheetClose({
 }
 
 function SheetPortal({
+  forceMount,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Portal>) {
-  return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
+  return (
+    <SheetPrimitive.Portal
+      data-slot="sheet-portal"
+      forceMount={forceMount}
+      {...props}
+    />
+  )
 }
 
 function SheetOverlay({
   className,
+  forceMount,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Overlay>) {
   return (
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
+      forceMount={forceMount}
       className={cn(
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50',
+        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 transition-opacity data-[state=closed]:pointer-events-none data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=closed]:ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=open]:ease-[cubic-bezier(0.32,0.72,0,1)]',
         className,
       )}
       {...props}
@@ -48,17 +57,21 @@ function SheetContent({
   className,
   children,
   side = 'right',
+  forceMount,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: 'top' | 'right' | 'bottom' | 'left'
+  /** When true, overlay and content stay mounted for smooth exit animations */
+  forceMount?: boolean
 }) {
   return (
-    <SheetPortal>
-      <SheetOverlay />
+    <SheetPortal forceMount={forceMount}>
+      <SheetOverlay forceMount={forceMount} />
       <SheetPrimitive.Content
         data-slot="sheet-content"
+        forceMount={forceMount}
         className={cn(
-          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition-all data-[state=closed]:pointer-events-none data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=closed]:ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=open]:ease-[cubic-bezier(0.32,0.72,0,1)]',
           side === 'right' &&
             'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm',
           side === 'left' &&
