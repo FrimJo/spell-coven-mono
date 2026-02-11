@@ -81,8 +81,8 @@ DEPLOY_CMD='bun run build'
 # Ensure the same preview login code is available to the local --cmd process
 # executed by `convex deploy`.
 DEPLOY_CMD="PREVIEW_LOGIN_CODE=$PREVIEW_LOGIN_CODE $DEPLOY_CMD"
-# Write .convex_url as a sourceable snippet so e2e can use VITE_CONVEX_URL.
-DEPLOY_CMD="$DEPLOY_CMD && printf 'export VITE_CONVEX_URL=%q\n' \"\$VITE_CONVEX_URL\" > .convex_url"
+# Write .convex_url.gen as a sourceable snippet so e2e can use VITE_CONVEX_URL.
+DEPLOY_CMD="$DEPLOY_CMD && printf 'export VITE_CONVEX_URL=%q\n' \"\$VITE_CONVEX_URL\" > .convex_url.gen"
 
 deploy_args=(
   --preview-create "$PREVIEW_NAME"
@@ -96,7 +96,7 @@ bunx convex deploy "${deploy_args[@]}"
 bunx convex env set --preview-name "$PREVIEW_NAME" PREVIEW_LOGIN_CODE "$PREVIEW_LOGIN_CODE"
 
 # Source preview URL into this shell so e2e steps can use VITE_CONVEX_URL.
-[ -f .convex_url ] && source .convex_url
+[ -f .convex_url.gen ] && source .convex_url.gen
 
 case "$MODE" in
   e2e)

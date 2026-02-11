@@ -12,7 +12,6 @@
     "dev": "bunx turbo run dev",
     "serve": "bunx turbo run serve",
     "convex:dev": "bunx convex dev",
-    "convex:test": "bunx dotenv-cli -e .env.test -- CONVEX_PREVIEW_NAME=local bash ./scripts/convex-preview.sh build",
     "convex:e2e:ui": "CONVEX_PREVIEW_NAME=local bunx dotenv-cli -e .env.test -- bash ./scripts/convex-preview.sh e2e-ui",
     "test": "bunx turbo run test",
     "lint": "bunx turbo run lint",
