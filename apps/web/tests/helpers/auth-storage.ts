@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
-import { api } from '@convex/_generated/api'
 import { ConvexHttpClient } from 'convex/browser'
 import z from 'zod'
 
@@ -9,6 +8,8 @@ import { buildConvexAuthStorageState } from '../../src/lib/convex-auth-storage'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+const AUTH_SIGN_IN_ACTION = 'auth:signIn'
+const AUTH_PREVIEW_LOGIN_ACTION = 'auth:previewLogin'
 
 function loadEnvFile(path: string): Record<string, string> {
   try {
@@ -79,7 +80,7 @@ async function signInWithPassword(
   password: string,
 ): Promise<{ token: string; refreshToken: string }> {
   try {
-    const signInResult = await client.action(api.auth.signIn, {
+    const signInResult = await client.action(AUTH_SIGN_IN_ACTION as any, {
       provider: 'password',
       params: { email, password, flow: 'signIn' },
     })
@@ -88,7 +89,7 @@ async function signInWithPassword(
       .object({ token: z.string(), refreshToken: z.string() })
       .parse(signInResult.tokens)
   } catch {
-    const signUpResult = await client.action(api.auth.signIn, {
+    const signUpResult = await client.action(AUTH_SIGN_IN_ACTION as any, {
       provider: 'password',
       params: { email, password, flow: 'signUp' },
     })
@@ -109,7 +110,7 @@ async function signInWithPreviewCode(params: {
   previewName: string
 }> {
   const client = new ConvexHttpClient(params.convexUrl)
-  const result = await client.action(api.auth.previewLogin, {
+  const result = await client.action(AUTH_PREVIEW_LOGIN_ACTION as any, {
     code: params.code,
   })
 
