@@ -171,6 +171,7 @@ export const LocalVideoCard = memo(function LocalVideoCard({
           roomId={roomId}
           participant={participant}
           participants={participants}
+          currentUserId={currentUser?.id}
           videoContainerRef={videoContainerRef}
         />
       )}

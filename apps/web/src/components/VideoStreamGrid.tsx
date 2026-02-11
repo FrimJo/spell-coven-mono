@@ -237,6 +237,7 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
               roomId={roomId}
               participant={participantData}
               participants={gameRoomParticipants}
+              currentUserId={localParticipant.id}
               videoContainerRef={videoContainerRef}
             />
           </>
