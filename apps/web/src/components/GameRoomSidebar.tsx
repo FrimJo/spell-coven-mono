@@ -85,7 +85,7 @@ export function SidebarCard({
 
   return (
     <Card
-      className={`border-surface-2 bg-surface-1 gap-0 overflow-hidden ${fillRemaining ? 'flex min-h-0 flex-1 flex-col' : ''}`}
+      className={`border-surface-2 bg-surface-1 gap-0 overflow-hidden ${fillRemaining ? 'flex max-h-full min-h-0 flex-col' : ''}`}
     >
       <div className="border-surface-2 bg-surface-0/50 flex items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-2">

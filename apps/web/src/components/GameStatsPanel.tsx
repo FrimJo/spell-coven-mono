@@ -75,21 +75,38 @@ export function GameStatsPanel({
   // XState machine for commander panel state
   const [state, send] = useMachine(commanderPanelMachine)
 
-  // Derive state from machine context
-  const editingPlayerId = state.context.editingPlayerId
-  const editingSlot1 = state.context.editingSlot1
-  const editingSlot2 = state.context.editingSlot2
-  const cmdState = {
-    commander1Name: state.context.commander1Name,
-    commander2Name: state.context.commander2Name,
-    commander1Card: state.context.commander1Card,
-    commander2Card: state.context.commander2Card,
-    dualKeywords: state.context.dualKeywords,
-    specificPartner: state.context.specificPartner,
-    allowsSecondCommander: state.context.allowsSecondCommander,
+  // Derive state from machine context (multi-player: editingPlayerIds + editStateByPlayerId)
+  const editingPlayerIds = state.context.editingPlayerIds
+  const editStateByPlayerId = state.context.editStateByPlayerId
+
+  // Helper to get edit state for a player (used when rendering each card)
+  const getEditStateForPlayer = (playerId: string) => {
+    const editState = editStateByPlayerId[playerId]
+    if (!editState) {
+      return {
+        commander1Name: '',
+        commander2Name: '',
+        commander1Card: null,
+        commander2Card: null,
+        dualKeywords: [],
+        specificPartner: null,
+        allowsSecondCommander: false,
+        commander2Suggestions: [],
+        suggestionsLabel: 'Suggested',
+      }
+    }
+    return {
+      commander1Name: editState.commander1Name,
+      commander2Name: editState.commander2Name,
+      commander1Card: editState.commander1Card,
+      commander2Card: editState.commander2Card,
+      dualKeywords: editState.dualKeywords,
+      specificPartner: editState.specificPartner,
+      allowsSecondCommander: editState.allowsSecondCommander,
+      commander2Suggestions: editState.commander2Suggestions,
+      suggestionsLabel: editState.suggestionsLabel,
+    }
   }
-  const commander2Suggestions = state.context.commander2Suggestions
-  const suggestionsLabel = state.context.suggestionsLabel
 
   const isClosed = state.matches('closed')
 
@@ -100,7 +117,7 @@ export function GameStatsPanel({
       didAutoEditThisOpenRef.current = false
       return
     }
-    if (isClosed || editingPlayerId !== null) return
+    if (isClosed || editingPlayerIds.length > 0) return
     const player = participants.find((p) => p.id === currentUser.id)
     if (!player) return
     const hasNoCommanders =
@@ -113,28 +130,34 @@ export function GameStatsPanel({
       commander1Name: '',
       commander2Name: '',
     })
-  }, [isOpen, isClosed, editingPlayerId, participants, currentUser.id, send])
-
-  // When entering edit mode with an existing commander 1, load its card so helper text (Partner/Background) shows immediately
-  useEffect(() => {
-    const player = participants.find((p) => p.id === editingPlayerId)
-    if (
-      !editingPlayerId ||
-      !player?.commanders[0]?.name ||
-      cmdState.commander1Card != null
-    )
-      return
-    if (cmdState.commander1Name.trim() !== player.commanders[0].name) return
-    getCardByName(player.commanders[0].name, false).then((card) => {
-      if (card) send({ type: 'CMD1_RESOLVED', card })
-    })
   }, [
-    editingPlayerId,
+    isOpen,
+    isClosed,
+    editingPlayerIds.length,
     participants,
-    cmdState.commander1Name,
-    cmdState.commander1Card,
+    currentUser.id,
     send,
   ])
+
+  // When entering edit mode with an existing commander 1, load its card so helper text (Partner/Background) shows immediately
+  const firstEditingPlayerId = editingPlayerIds[0] ?? null
+  useEffect(() => {
+    const player = participants.find((p) => p.id === firstEditingPlayerId)
+    const editState = firstEditingPlayerId
+      ? editStateByPlayerId[firstEditingPlayerId]
+      : null
+    if (
+      !firstEditingPlayerId ||
+      !player?.commanders[0]?.name ||
+      editState?.commander1Card != null
+    )
+      return
+    if (editState?.commander1Name.trim() !== player.commanders[0].name) return
+    getCardByName(player.commanders[0].name, false).then((card) => {
+      if (card)
+        send({ type: 'CMD1_RESOLVED', playerId: firstEditingPlayerId, card })
+    })
+  }, [firstEditingPlayerId, participants, editStateByPlayerId, send])
 
   // Effect Events - stable handlers that always see latest props/state
   const syncPanelOpenState = useEffectEvent(() => {
@@ -186,32 +209,37 @@ export function GameStatsPanel({
     },
   })
 
-  // Commander name setters via machine events
-  const setCommander1Name = (name: string) => {
-    send({ type: 'SET_CMD1_NAME', name })
+  // Commander name setters via machine events (require playerId for multi-player context)
+  const setCommander1Name = (playerId: string, name: string) => {
+    send({ type: 'SET_CMD1_NAME', playerId, name })
   }
-  const setCommander2Name = (name: string) => {
-    send({ type: 'SET_CMD2_NAME', name })
+  const setCommander2Name = (playerId: string, name: string) => {
+    send({ type: 'SET_CMD2_NAME', playerId, name })
   }
-  const baseOnCommander1Resolved = (card: ScryfallCard | null) => {
-    send({ type: 'CMD1_RESOLVED', card })
+  const baseOnCommander1Resolved = (
+    playerId: string,
+    card: ScryfallCard | null,
+  ) => {
+    send({ type: 'CMD1_RESOLVED', playerId, card })
   }
-  const baseOnCommander2Resolved = (card: ScryfallCard | null) => {
-    send({ type: 'CMD2_RESOLVED', card })
+  const baseOnCommander2Resolved = (
+    playerId: string,
+    card: ScryfallCard | null,
+  ) => {
+    send({ type: 'CMD2_RESOLVED', playerId, card })
   }
 
   // Helper to build commanders array and save
   const saveCommanders = (
+    playerId: string,
     commander1: string,
     commander2: string,
     triggeredBy: 1 | 2,
     newIds?: { c1?: string; c2?: string },
   ) => {
-    if (!editingPlayerId) return
-
-    // Find the player being edited
-    const player = participants.find((p) => p.id === editingPlayerId)
+    const player = participants.find((p) => p.id === playerId)
     if (!player) return
+    const editState = editStateByPlayerId[playerId]
 
     const commanders = []
 
@@ -219,8 +247,11 @@ export function GameStatsPanel({
     if (!c1Id) {
       if (commander1.trim() === player.commanders[0]?.name) {
         c1Id = player.commanders[0]?.id
-      } else if (commander1.trim() === cmdState.commander1Card?.name) {
-        c1Id = cmdState.commander1Card?.id
+      } else if (
+        editState &&
+        commander1.trim() === editState.commander1Card?.name
+      ) {
+        c1Id = editState.commander1Card?.id
       }
     }
     c1Id = c1Id ?? player.commanders[0]?.id ?? 'c1'
@@ -229,8 +260,11 @@ export function GameStatsPanel({
     if (!c2Id) {
       if (commander2.trim() === player.commanders[1]?.name) {
         c2Id = player.commanders[1]?.id
-      } else if (commander2.trim() === cmdState.commander2Card?.name) {
-        c2Id = cmdState.commander2Card?.id
+      } else if (
+        editState &&
+        commander2.trim() === editState.commander2Card?.name
+      ) {
+        c2Id = editState.commander2Card?.id
       }
     }
     c2Id = c2Id ?? player.commanders[1]?.id ?? 'c2'
@@ -250,61 +284,70 @@ export function GameStatsPanel({
 
   // Wrapper to auto-save when Commander 1 is selected or cleared (empty input / deselect)
   const onCommander1Resolved = async (
+    playerId: string,
     card: Parameters<typeof baseOnCommander1Resolved>[0],
   ) => {
-    baseOnCommander1Resolved(card)
+    const editState = editStateByPlayerId[playerId]
+    baseOnCommander1Resolved(playerId, card)
     if (!card) {
-      saveCommanders('', cmdState.commander2Name, 1)
+      saveCommanders(playerId, '', editState?.commander2Name ?? '', 1)
       return
     }
     setResult(scryfallToQueryResult(card))
     const newKeywords = detectDualCommanderKeywords(card)
     const newAllowsSecond = newKeywords.length > 0
-    // Compute commander 2 to persist: clear when new has no dual, or when switching to a different dual type.
-    // We can't rely on cmdState.commander2Name here (React state may not have updated yet after send).
     let commander2ForSave = ''
     if (newAllowsSecond) {
-      const player = participants.find((p) => p.id === editingPlayerId)
+      const player = participants.find((p) => p.id === playerId)
       const oldCommander1Name = player?.commanders[0]?.name
       const isSwitching =
         oldCommander1Name != null && oldCommander1Name !== card.name
       if (!isSwitching) {
-        commander2ForSave = cmdState.commander2Name
+        commander2ForSave = editState?.commander2Name ?? ''
       } else {
         const oldCard = await getCardByName(oldCommander1Name, false)
         const oldKeywords = oldCard ? detectDualCommanderKeywords(oldCard) : []
         const sameDualType =
           oldKeywords.length === newKeywords.length &&
           oldKeywords.every((k) => newKeywords.includes(k))
-        commander2ForSave = sameDualType ? cmdState.commander2Name : ''
+        commander2ForSave = sameDualType
+          ? (editState?.commander2Name ?? '')
+          : ''
       }
     }
-    saveCommanders(card.name, commander2ForSave, 1, { c1: card.id })
+    saveCommanders(playerId, card.name, commander2ForSave, 1, { c1: card.id })
   }
 
   // Wrapper to auto-save when Commander 2 is selected or cleared (empty input / deselect)
   const onCommander2Resolved = (
+    playerId: string,
     card: Parameters<typeof baseOnCommander2Resolved>[0],
   ) => {
-    baseOnCommander2Resolved(card)
+    const editState = editStateByPlayerId[playerId]
+    baseOnCommander2Resolved(playerId, card)
     if (card) {
       setResult(scryfallToQueryResult(card))
-      saveCommanders(cmdState.commander1Name, card.name, 2, { c2: card.id })
+      saveCommanders(playerId, editState?.commander1Name ?? '', card.name, 2, {
+        c2: card.id,
+      })
     } else {
-      saveCommanders(cmdState.commander1Name, '', 2)
+      saveCommanders(playerId, editState?.commander1Name ?? '', '', 2)
     }
   }
 
   // Quick-fill Commander 2 from a suggestion link
-  const handleQuickFillCommander2 = async (name: string) => {
-    setCommander2Name(name)
+  const handleQuickFillCommander2 = async (playerId: string, name: string) => {
+    const editState = editStateByPlayerId[playerId]
+    setCommander2Name(playerId, name)
     const card = await getCardByName(name, false)
     if (card) {
       setResult(scryfallToQueryResult(card))
-      baseOnCommander2Resolved(card)
-      saveCommanders(cmdState.commander1Name, name, 2, { c2: card.id })
+      baseOnCommander2Resolved(playerId, card)
+      saveCommanders(playerId, editState?.commander1Name ?? '', name, 2, {
+        c2: card.id,
+      })
     } else {
-      saveCommanders(cmdState.commander1Name, name, 2)
+      saveCommanders(playerId, editState?.commander1Name ?? '', name, 2)
     }
   }
 
@@ -320,8 +363,8 @@ export function GameStatsPanel({
           : []
 
     // If clearing from currently edited player, also clear local state via machine
-    if (player.id === editingPlayerId) {
-      send({ type: 'CLEAR_CMD', slot: slotNumber })
+    if (editingPlayerIds.includes(player.id)) {
+      send({ type: 'CLEAR_CMD', playerId: player.id, slot: slotNumber })
     }
 
     setCommandersMutation({
@@ -333,9 +376,9 @@ export function GameStatsPanel({
   }
 
   const handleStartEditing = (player: Participant, slot?: 1 | 2) => {
-    const alreadyEditingThisPlayer = editingPlayerId === player.id
+    const alreadyEditingThisPlayer = editingPlayerIds.includes(player.id)
     if (alreadyEditingThisPlayer && slot !== undefined) {
-      send({ type: 'ENTER_SLOT_EDIT', slot })
+      send({ type: 'ENTER_SLOT_EDIT', playerId: player.id, slot })
     } else {
       send({
         type: 'START_EDIT',
@@ -406,12 +449,16 @@ export function GameStatsPanel({
             {/* Joined players - flex so cards share space and shrink when all have two commanders */}
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
               {participants.map((player) => {
-                const isEditingThisPlayer = editingPlayerId === player.id
-                const isEditingSlot1 = isEditingThisPlayer && editingSlot1
-                const isEditingSlot2 = isEditingThisPlayer && editingSlot2
+                const isEditingThisPlayer = editingPlayerIds.includes(player.id)
+                const editState = editStateByPlayerId[player.id]
+                const isEditingSlot1 =
+                  isEditingThisPlayer && (editState?.editingSlot1 ?? true)
+                const isEditingSlot2 =
+                  isEditingThisPlayer && (editState?.editingSlot2 ?? true)
                 const singleSlotEdit =
                   (isEditingSlot1 && !isEditingSlot2) ||
                   (!isEditingSlot1 && isEditingSlot2)
+                const cmdState = getEditStateForPlayer(player.id)
                 const playerCommander1Status = isEditingThisPlayer
                   ? getCommanderStatus(
                       1,
@@ -439,18 +486,30 @@ export function GameStatsPanel({
                     editingSlot2={isEditingSlot2}
                     singleSlotEdit={singleSlotEdit}
                     cmdState={cmdState}
-                    commander2Suggestions={commander2Suggestions}
-                    suggestionsLabel={suggestionsLabel}
+                    commander2Suggestions={cmdState.commander2Suggestions}
+                    suggestionsLabel={cmdState.suggestionsLabel}
                     commander1Status={playerCommander1Status}
                     commander2Status={playerCommander2Status}
                     onStartEditing={handleStartEditing}
                     onClearCommander={handleClearCommander}
-                    onDoneEdit={() => send({ type: 'DONE_EDIT' })}
-                    setCommander1Name={setCommander1Name}
-                    setCommander2Name={setCommander2Name}
-                    onCommander1Resolved={onCommander1Resolved}
-                    onCommander2Resolved={onCommander2Resolved}
-                    onQuickFillCommander2={handleQuickFillCommander2}
+                    onDoneEdit={() =>
+                      send({ type: 'DONE_EDIT', playerId: player.id })
+                    }
+                    setCommander1Name={(name) =>
+                      setCommander1Name(player.id, name)
+                    }
+                    setCommander2Name={(name) =>
+                      setCommander2Name(player.id, name)
+                    }
+                    onCommander1Resolved={(card) =>
+                      onCommander1Resolved(player.id, card)
+                    }
+                    onCommander2Resolved={(card) =>
+                      onCommander2Resolved(player.id, card)
+                    }
+                    onQuickFillCommander2={(name) =>
+                      handleQuickFillCommander2(player.id, name)
+                    }
                     getCommanderImageUrl={getCommanderImageUrl}
                   />
                 )
