@@ -3,7 +3,7 @@ import {
   clearStorage,
   ensureAuthWarm,
   getMediaPreferences,
-  getRoomId,
+  getOrCreateRoomId,
   hasAuthStorageState,
   mockGetUserMedia,
   mockMediaDevices,
@@ -62,7 +62,11 @@ test.describe('Media Setup Page', () => {
     })
 
     test('should redirect to returnTo path on completion', async ({ page }) => {
-      const returnPath = `/game/${getRoomId()}`
+      const roomId = await getOrCreateRoomId(page, {
+        fresh: true,
+        persist: false,
+      })
+      const returnPath = `/game/${roomId}`
       await page.goto(`/setup?returnTo=${encodeURIComponent(returnPath)}`)
 
       // Wait for page to load

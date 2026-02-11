@@ -4,7 +4,7 @@ import { expect, test } from '../helpers/fixtures'
 import {
   clearStorage,
   ensureAuthWarm,
-  getRoomId,
+  getOrCreateRoomId,
   hasAuthStorageState,
   mockGetUserMedia,
   mockMediaDevices,
@@ -45,7 +45,7 @@ test.describe('Game Room', () => {
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }
-    roomId = getRoomId()
+    roomId = await getOrCreateRoomId(page, { fresh: true, persist: false })
     // Mock media devices before navigating
     await mockMediaDevices(page)
     await mockGetUserMedia(page)

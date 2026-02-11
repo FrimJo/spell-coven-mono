@@ -1,6 +1,6 @@
 import { expect, test } from '../helpers/fixtures'
 import {
-  getRoomId,
+  getOrCreateRoomId,
   hasAuthStorageState,
   mockGetUserMedia,
   mockMediaDevices,
@@ -31,7 +31,10 @@ test.describe('Duplicate Session Dialog', () => {
     await mockMediaDevices(page2)
     await mockGetUserMedia(page2)
 
-    const roomId = getRoomId()
+    const roomId = await getOrCreateRoomId(page1, {
+      fresh: true,
+      persist: false,
+    })
 
     await navigateToTestGame(page1, roomId, {
       handleDuplicateSession: 'transfer',
@@ -71,7 +74,10 @@ test.describe('Duplicate Session Dialog', () => {
     await mockMediaDevices(page2)
     await mockGetUserMedia(page2)
 
-    const roomId = getRoomId()
+    const roomId = await getOrCreateRoomId(page1, {
+      fresh: true,
+      persist: false,
+    })
 
     await navigateToTestGame(page1, roomId, {
       handleDuplicateSession: 'transfer',

@@ -348,7 +348,10 @@ export function PlayerList({
                   }`}
                   title={player.isOnline !== false ? 'Online' : 'Disconnected'}
                 />
-                <span className="truncate text-sm text-white">
+                <span
+                  className="truncate text-sm text-white"
+                  data-testid="player-name"
+                >
                   {player.name}
                 </span>
                 {isOwner && (

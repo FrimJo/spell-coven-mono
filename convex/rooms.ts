@@ -9,6 +9,7 @@
 
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
+import z from 'zod'
 
 import type { MutationCtx } from './_generated/server'
 import { internal } from './_generated/api'
@@ -31,6 +32,8 @@ const PRESENCE_THRESHOLD_MS = 30_000
  * Room creation throttle (minimum time between room creations)
  */
 const ROOM_CREATION_COOLDOWN_MS = 10_000
+const e2eEnabledSchema = z.coerce.boolean().safeParse(process.env.E2E_TEST)
+const isE2ePreview = e2eEnabledSchema.data ?? false
 
 /**
  * Room inactivity timeout in milliseconds (1 hour)
@@ -152,18 +155,20 @@ export const createRoom = mutation({
 
     const now = Date.now()
 
-    // Check throttle: find user's most recent room creation
-    const lastRoom = await ctx.db
-      .query('rooms')
-      .withIndex('by_ownerId_createdAt', (q) => q.eq('ownerId', userId))
-      .order('desc')
-      .first()
+    if (!isE2ePreview) {
+      // Check throttle: find user's most recent room creation
+      const lastRoom = await ctx.db
+        .query('rooms')
+        .withIndex('by_ownerId_createdAt', (q) => q.eq('ownerId', userId))
+        .order('desc')
+        .first()
 
-    if (lastRoom) {
-      const timeSinceLastCreation = now - lastRoom.createdAt
-      if (timeSinceLastCreation < ROOM_CREATION_COOLDOWN_MS) {
-        const waitMs = ROOM_CREATION_COOLDOWN_MS - timeSinceLastCreation
-        return { roomId: null, waitMs }
+      if (lastRoom) {
+        const timeSinceLastCreation = now - lastRoom.createdAt
+        if (timeSinceLastCreation < ROOM_CREATION_COOLDOWN_MS) {
+          const waitMs = ROOM_CREATION_COOLDOWN_MS - timeSinceLastCreation
+          return { roomId: null, waitMs }
+        }
       }
     }
 

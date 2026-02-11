@@ -141,8 +141,8 @@ export async function getOrCreateRoomId(
   page: Page,
   options?: { fresh?: boolean; persist?: boolean },
 ): Promise<string> {
-  const fresh = options?.fresh ?? false
-  const persist = options?.persist ?? true
+  const fresh = options?.fresh ?? true
+  const persist = options?.persist ?? false
 
   if (!fresh) {
     const cached = readCachedRoomId()

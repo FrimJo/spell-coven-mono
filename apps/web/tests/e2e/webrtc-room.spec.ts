@@ -9,10 +9,11 @@ import {
   expectAudioEnergy,
   expectVideoRendering,
 } from '../helpers/media-assertions'
-import { getRoomId, navigateToTestGame } from '../helpers/test-utils'
+import { createRoomViaUI, navigateToTestGame } from '../helpers/test-utils'
 
 test.describe('WebRTC 4-player room', () => {
-  test('players join and render remote video/audio', async ({}, testInfo) => {
+  test('players join and render remote video/audio', // eslint-disable-next-line no-empty-pattern -- Playwright fixture signature requires object destructuring
+  async ({}, testInfo) => {
     test.setTimeout(180_000)
 
     if (!hasAuthCredentials()) {
@@ -27,11 +28,13 @@ test.describe('WebRTC 4-player room', () => {
       throw new Error('Playwright baseURL is not configured.')
     }
 
-    const roomId = getRoomId()
-
-    const storageStatePaths = await Promise.all(
-      [0, 1, 2, 3].map((index) => ensureWorkerStorageState(index, baseURL)),
-    )
+    const assignedUserIds = new Set<string>()
+    const storageStatePaths: string[] = []
+    for (const index of [0, 1, 2, 3]) {
+      storageStatePaths.push(
+        await ensureWorkerStorageState(index, baseURL, { assignedUserIds }),
+      )
+    }
 
     const players = await Promise.all(
       storageStatePaths.map((storageStatePath, index) =>
@@ -43,10 +46,19 @@ test.describe('WebRTC 4-player room', () => {
         }),
       ),
     )
+    const owner = players[0]
+    if (!owner) {
+      throw new Error('Expected room owner player to be initialized.')
+    }
 
     try {
+      const roomId = await createRoomViaUI(owner.page)
+      await navigateToTestGame(owner.page, roomId, {
+        handleDuplicateSession: 'transfer',
+      })
+
       await Promise.all(
-        players.map((player) =>
+        players.slice(1).map((player) =>
           navigateToTestGame(player.page, roomId, {
             handleDuplicateSession: 'transfer',
           }),

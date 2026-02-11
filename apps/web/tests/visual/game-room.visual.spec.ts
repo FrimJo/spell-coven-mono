@@ -58,7 +58,7 @@ test.describe('Game Room Visual Tests', () => {
       await expect(page).toHaveScreenshot('game-room-initial.png', {
         animations: 'disabled',
         // Mask video elements as they may have slight variations
-        mask: [page.locator('video')],
+        mask: [page.locator('video'), page.getByTestId('player-name')],
         maxDiffPixelRatio: 0.02,
       })
     })
@@ -78,6 +78,7 @@ test.describe('Game Room Visual Tests', () => {
       const header = page.locator('header').first()
       await expect(header).toHaveScreenshot('game-room-header.png', {
         animations: 'disabled',
+        mask: [header.getByTestId('game-id-display')],
         maxDiffPixelRatio: 0.02,
       })
     })
@@ -128,7 +129,7 @@ test.describe('Game Room Visual Tests', () => {
 
       // The GameStatsPanel should now be visible
       // Look for the panel dialog/sheet
-      const panel = page.getByRole('dialog')
+      const panel = page.getByRole('dialog', { name: /commanders/i })
       await expect(panel).toBeVisible({ timeout: 5000 })
 
       await expect(panel).toHaveScreenshot('commander-panel-open.png', {
@@ -152,7 +153,7 @@ test.describe('Game Room Visual Tests', () => {
       await openCommandersPanel(page)
 
       // Wait for panel to open
-      const panel = page.getByRole('dialog')
+      const panel = page.getByRole('dialog', { name: /commanders/i })
       await expect(panel).toBeVisible({ timeout: 5000 })
       await page.waitForTimeout(300)
 
@@ -184,7 +185,7 @@ test.describe('Game Room Visual Tests', () => {
       await openCommandersPanel(page)
 
       // Wait for panel to open
-      const panel = page.getByRole('dialog')
+      const panel = page.getByRole('dialog', { name: /commanders/i })
       await expect(panel).toBeVisible({ timeout: 5000 })
       await page.waitForTimeout(300)
 
@@ -218,7 +219,7 @@ test.describe('Game Room Visual Tests', () => {
       await openCommandersPanel(page)
 
       // Wait for panel to open
-      const panel = page.getByRole('dialog')
+      const panel = page.getByRole('dialog', { name: /commanders/i })
       await expect(panel).toBeVisible({ timeout: 5000 })
       await page.waitForTimeout(300)
 
@@ -259,7 +260,7 @@ test.describe('Game Room Visual Tests', () => {
       await openCommandersPanel(page)
 
       // Wait for panel to open
-      const panel = page.getByRole('dialog')
+      const panel = page.getByRole('dialog', { name: /commanders/i })
       await expect(panel).toBeVisible({ timeout: 5000 })
       await page.waitForTimeout(300)
 

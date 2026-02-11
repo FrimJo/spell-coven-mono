@@ -4,7 +4,7 @@ import {
   ensureAuthWarm,
   getGameState,
   getMediaPreferences,
-  getRoomId,
+  getOrCreateRoomId,
   hasAuthStorageState,
   mockGetUserMedia,
   mockMediaDevices,
@@ -28,7 +28,7 @@ test.describe('Session Storage', () => {
         'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
       )
     }
-    roomId = getRoomId()
+    roomId = await getOrCreateRoomId(page, { fresh: true, persist: false })
     // Mock media devices
     await mockMediaDevices(page)
     await mockGetUserMedia(page)
