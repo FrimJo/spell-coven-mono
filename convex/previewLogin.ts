@@ -5,6 +5,7 @@ import z from 'zod'
 import { api, internal } from './_generated/api'
 import { DataModel } from './_generated/dataModel'
 import { action } from './_generated/server'
+import { isE2ePreview } from './env'
 
 const previewTokensSchema = z.object({
   tokens: z.object({
@@ -25,9 +26,6 @@ const PREVIEW_NAMES = [
   'Karn',
   'Nahiri',
 ] as const
-
-const e2eEnabledSchema = z.coerce.boolean().safeParse(process.env.E2E_TEST)
-const isE2ePreview = e2eEnabledSchema.data ?? false
 
 /** Constant-time string comparison to avoid timing attacks when comparing secrets (e.g. tokens). */
 function constantTimeEquals(a: string, b: string): boolean {

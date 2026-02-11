@@ -11,13 +11,12 @@
 import Discord from '@auth/core/providers/discord'
 import { Password } from '@convex-dev/auth/providers/Password'
 import { convexAuth } from '@convex-dev/auth/server'
-import z from 'zod'
+
+import { isE2ePreview } from './env'
 
 export { previewLogin } from './previewLogin'
 
 let providers: [typeof Discord] | [typeof Password]
-const e2eEnabledSchema = z.coerce.boolean().safeParse(process.env.E2E_TEST)
-const isE2ePreview = e2eEnabledSchema.data ?? false
 
 // Only add Discord provider when not running e2e tests
 if (isE2ePreview) {

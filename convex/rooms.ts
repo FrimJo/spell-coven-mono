@@ -9,12 +9,12 @@
 
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
-import z from 'zod'
 
 import type { MutationCtx } from './_generated/server'
 import { internal } from './_generated/api'
 import { internalMutation, mutation, query } from './_generated/server'
 import { DEFAULT_HEALTH } from './constants'
+import { isE2ePreview } from './env'
 import {
   AuthMismatchError,
   AuthRequiredError,
@@ -32,8 +32,6 @@ const PRESENCE_THRESHOLD_MS = 30_000
  * Room creation throttle (minimum time between room creations)
  */
 const ROOM_CREATION_COOLDOWN_MS = 10_000
-const e2eEnabledSchema = z.coerce.boolean().safeParse(process.env.E2E_TEST)
-const isE2ePreview = e2eEnabledSchema.data ?? false
 
 /**
  * Room inactivity timeout in milliseconds (1 hour)
