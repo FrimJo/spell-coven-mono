@@ -18,7 +18,7 @@ test.describe('WebRTC 4-player room', () => {
     if (!hasAuthCredentials()) {
       test.skip(
         true,
-        'E2E auth env vars missing. Set VITE_CONVEX_URL and either PREVIEW_LOGIN_CODE or E2E_AUTH_EMAIL/E2E_AUTH_PASSWORD.',
+        'E2E auth env vars missing. Set VITE_CONVEX_URL and PREVIEW_LOGIN_CODE.',
       )
     }
 

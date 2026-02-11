@@ -89,6 +89,10 @@ case "$MODE" in
     ;;
 esac
 
+# Ensure the same preview login code is available to the local --cmd process
+# executed by `convex deploy`.
+DEPLOY_CMD="PREVIEW_LOGIN_CODE=$PREVIEW_LOGIN_CODE $DEPLOY_CMD"
+
 deploy_args=(
   --preview-create "$PREVIEW_NAME"
   --cmd "$DEPLOY_CMD"
