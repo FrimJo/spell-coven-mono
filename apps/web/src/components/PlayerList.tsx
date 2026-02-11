@@ -403,7 +403,7 @@ export function PlayerList({
                           </DropdownMenuLabel>
                           <DropdownMenuItem
                             onClick={() => onViewCommanders()}
-                            className="text-text-secondary focus:bg-surface-3 focus:text-white flex items-center gap-2"
+                            className="text-text-secondary focus:bg-surface-3 flex items-center gap-2 focus:text-white"
                             title="View and edit the list of commanders"
                             data-testid="player-commanders-menu-item"
                           >
@@ -416,7 +416,7 @@ export function PlayerList({
                           {onOpenCommanderDamage && (
                             <DropdownMenuItem
                               onClick={() => onOpenCommanderDamage(player.id)}
-                              className="text-text-secondary focus:bg-surface-3 focus:text-white flex items-center gap-2"
+                              className="text-text-secondary focus:bg-surface-3 flex items-center gap-2 focus:text-white"
                               title="Edit damage taken from commanders"
                               data-testid="player-commander-damage-menu-item"
                             >
@@ -429,6 +429,17 @@ export function PlayerList({
                           )}
                         </DropdownMenuGroup>
                       )}
+                    {onOpenCommanderDamage && player.id !== currentUserId && (
+                      <DropdownMenuItem
+                        onClick={() => onOpenCommanderDamage(player.id)}
+                        className="text-text-secondary focus:bg-surface-3 flex items-center gap-2 focus:text-white"
+                        title="Edit commander damage"
+                        data-testid="player-commander-damage-menu-item"
+                      >
+                        <Swords className="mr-2 h-4 w-4" />
+                        <span>Commander damage</span>
+                      </DropdownMenuItem>
+                    )}
                     {!isLocal && (
                       <DropdownMenuItem
                         onClick={() => onToggleMutePlayer(player.id)}
