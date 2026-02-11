@@ -6,8 +6,13 @@ import {
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
 import { CommanderDamageDialogProvider } from '@/contexts/CommanderDamageDialogContext'
+import { useCommanderDamageDialog } from '@/contexts/CommanderDamageDialogContext'
 import { CommandersPanelProvider } from '@/contexts/CommandersPanelContext'
 import { MediaStreamProvider } from '@/contexts/MediaStreamContext.js'
+import {
+  useGameRoomKeyboardShortcuts,
+  useGameRoomShortcutDisplayParts,
+} from '@/hooks/useGameRoomKeybindings'
 import { PresenceProvider, usePresence } from '@/contexts/PresenceContext'
 import { api } from '@convex/_generated/api'
 import { useMutation } from 'convex/react'
@@ -139,6 +144,12 @@ function GameRoomContent({
   const handleSearchClick = useCallback(() => {
     setShowCardSearch(true)
   }, [])
+
+  const toggleSearchDialog = useCallback(() => {
+    setShowCardSearch((previous) => !previous)
+  }, [])
+
+  const shortcutParts = useGameRoomShortcutDisplayParts()
 
   const handleKickPlayer = async (playerId: string) => {
     try {
@@ -306,39 +317,131 @@ function GameRoomContent({
       <div className="flex-1 overflow-hidden">
         <CommandersPanelProvider onOpenPanel={openCommandersPanel}>
           <CommanderDamageDialogProvider>
-            <div className="flex h-full gap-4 p-4">
-              {/* Left Sidebar - Player List */}
-              <GameRoomSidebar
-                roomId={roomId}
-                userId={userId}
-                playerName={username}
-                isLobbyOwner={isOwner}
-                ownerId={ownerId}
-                onKickPlayer={handleKickPlayer}
-                onBanPlayer={handleBanPlayer}
-                mutedPlayers={mutedPlayers}
-                onToggleMutePlayer={handleToggleMutePlayer}
-                commandersPanelOpen={commandersPanelOpen}
-                onCommandersPanelOpenChange={setCommandersPanelOpen}
-                onCopyShareLink={handleCopyShareLink}
-              />
-
-              {/* Main Area - Video Stream Grid */}
-              <div className="flex-1 overflow-hidden">
-                <VideoStreamGridWithSuspense
-                  roomId={roomId}
-                  userId={userId}
-                  localPlayerName={username}
-                  detectorType={detectorType}
-                  usePerspectiveWarp={usePerspectiveWarp}
-                  onCardCrop={query}
-                  mutedPlayers={mutedPlayers}
-                  showTestStream={showTestStream}
-                />
-              </div>
-            </div>
+            <GameRoomMainLayout
+              roomId={roomId}
+              userId={userId}
+              username={username}
+              ownerId={ownerId}
+              isOwner={isOwner}
+              onKickPlayer={handleKickPlayer}
+              onBanPlayer={handleBanPlayer}
+              mutedPlayers={mutedPlayers}
+              onToggleMutePlayer={handleToggleMutePlayer}
+              commandersPanelOpen={commandersPanelOpen}
+              onCommandersPanelOpenChange={setCommandersPanelOpen}
+              onCopyShareLink={handleCopyShareLink}
+              detectorType={detectorType}
+              usePerspectiveWarp={usePerspectiveWarp}
+              onCardCrop={query}
+              showTestStream={showTestStream}
+              onToggleSearchCards={toggleSearchDialog}
+              shortcutParts={shortcutParts}
+            />
           </CommanderDamageDialogProvider>
         </CommandersPanelProvider>
+      </div>
+    </div>
+  )
+}
+
+interface GameRoomMainLayoutProps {
+  roomId: string
+  userId: string
+  username: string
+  ownerId: string | null
+  isOwner: boolean
+  onKickPlayer: (playerId: string) => void
+  onBanPlayer: (playerId: string) => void
+  mutedPlayers: Set<string>
+  onToggleMutePlayer: (playerId: string) => void
+  commandersPanelOpen: boolean
+  onCommandersPanelOpenChange: (open: boolean) => void
+  onCopyShareLink: () => void
+  detectorType?: DetectorType
+  usePerspectiveWarp: boolean
+  onCardCrop: ReturnType<typeof useCardQueryContext>['query']
+  showTestStream: boolean
+  onToggleSearchCards: () => void
+  shortcutParts: {
+    toggleCommandersPanel: string[]
+    openCommanderDamage: string[]
+  }
+}
+
+function GameRoomMainLayout({
+  roomId,
+  userId,
+  username,
+  ownerId,
+  isOwner,
+  onKickPlayer,
+  onBanPlayer,
+  mutedPlayers,
+  onToggleMutePlayer,
+  commandersPanelOpen,
+  onCommandersPanelOpenChange,
+  onCopyShareLink,
+  detectorType,
+  usePerspectiveWarp,
+  onCardCrop,
+  showTestStream,
+  onToggleSearchCards,
+  shortcutParts,
+}: GameRoomMainLayoutProps) {
+  const commanderDamageDialog = useCommanderDamageDialog()
+
+  const shortcutHandlers = useMemo(
+    () => ({
+      searchCards: onToggleSearchCards,
+      toggleCommandersPanel: () => {
+        onCommandersPanelOpenChange(!commandersPanelOpen)
+      },
+      openCommanderDamage: () => {
+        commanderDamageDialog?.setOpenForPlayerId(userId)
+      },
+    }),
+    [
+      commandersPanelOpen,
+      commanderDamageDialog,
+      onCommandersPanelOpenChange,
+      onToggleSearchCards,
+      userId,
+    ],
+  )
+
+  useGameRoomKeyboardShortcuts(shortcutHandlers)
+
+  return (
+    <div className="flex h-full gap-4 p-4">
+      {/* Left Sidebar - Player List */}
+      <GameRoomSidebar
+        roomId={roomId}
+        userId={userId}
+        playerName={username}
+        isLobbyOwner={isOwner}
+        ownerId={ownerId}
+        onKickPlayer={onKickPlayer}
+        onBanPlayer={onBanPlayer}
+        mutedPlayers={mutedPlayers}
+        onToggleMutePlayer={onToggleMutePlayer}
+        commandersPanelOpen={commandersPanelOpen}
+        onCommandersPanelOpenChange={onCommandersPanelOpenChange}
+        onCopyShareLink={onCopyShareLink}
+        commanderShortcutParts={shortcutParts}
+      />
+
+      {/* Main Area - Video Stream Grid */}
+      <div className="flex-1 overflow-hidden">
+        <VideoStreamGridWithSuspense
+          roomId={roomId}
+          userId={userId}
+          localPlayerName={username}
+          detectorType={detectorType}
+          usePerspectiveWarp={usePerspectiveWarp}
+          onCardCrop={onCardCrop}
+          mutedPlayers={mutedPlayers}
+          showTestStream={showTestStream}
+        />
       </div>
     </div>
   )

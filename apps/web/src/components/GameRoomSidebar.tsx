@@ -1,6 +1,8 @@
 import type { CardHistoryEntry } from '@/types/card-query'
 import type { Participant } from '@/types/participant'
 import {
+  Activity,
+  startTransition,
   Suspense,
   useCallback,
   useEffect,
@@ -150,17 +152,23 @@ function CardHistoryList({
         return (
           <div
             key={`${entry.id}-${entry.timestamp}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => onSelect(entry)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onSelect(entry)
+              }
+            }}
             className={`group flex w-full items-center gap-2 border-l-2 transition-colors ${
               isSelected
-                ? 'bg-surface-2 border-brand'
-                : 'hover:bg-surface-2 border-transparent'
+                ? 'bg-surface-2 border-brand cursor-default'
+                : 'hover:bg-surface-2 cursor-pointer border-transparent'
             }`}
+            aria-pressed={isSelected}
           >
-            <button
-              type="button"
-              onClick={() => onSelect(entry)}
-              className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left"
-            >
+            <div className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left">
               {entry.image_url && (
                 <img
                   src={entry.image_url}
@@ -171,9 +179,9 @@ function CardHistoryList({
               <div className="min-w-0 flex-1">
                 <Tooltip delayDuration={700}>
                   <TooltipTrigger asChild>
-                    <div className="text-text-primary truncate text-sm">
+                    <span className="text-text-primary block truncate text-sm">
                       {entry.name}
-                    </div>
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent side="top">
                     <p>{entry.name}</p>
@@ -183,15 +191,17 @@ function CardHistoryList({
                   {entry.set}
                 </div>
               </div>
-            </button>
+            </div>
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={(e) => {
                 e.stopPropagation()
+                e.preventDefault()
                 onRemove(entry)
               }}
+              onKeyDown={(e) => e.stopPropagation()}
               className="text-text-muted hover:text-destructive h-8 w-8 flex-shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100"
               title="Remove from list"
               aria-label={`Remove ${entry.name} from list`}
@@ -229,6 +239,10 @@ interface GameRoomSidebarProps {
   onCommandersPanelOpenChange: (open: boolean) => void
   /** Called when user wants to copy the shareable game link */
   onCopyShareLink: () => void
+  commanderShortcutParts?: {
+    toggleCommandersPanel: string[]
+    openCommanderDamage: string[]
+  }
 }
 
 function SidebarContent({
@@ -243,6 +257,7 @@ function SidebarContent({
   commandersPanelOpen: panelOpen,
   onCommandersPanelOpenChange: setPanelOpen,
   onCopyShareLink,
+  commanderShortcutParts,
 }: GameRoomSidebarProps) {
   // Get game room participants from context (already deduplicated)
   const { uniqueParticipants, roomSeatCount, setRoomSeatCount } = usePresence()
@@ -323,9 +338,11 @@ function SidebarContent({
     setPanelOpen(true)
   }, [setPanelOpen])
 
-  // Handler to close panel
+  // Handler to close panel - use startTransition for smooth slide-out animation
   const handleClosePanel = useCallback(() => {
-    setPanelOpen(false)
+    startTransition(() => {
+      setPanelOpen(false)
+    })
   }, [setPanelOpen])
 
   // Handler to change seat count
@@ -360,6 +377,7 @@ function SidebarContent({
             currentUserId={user?.id ?? undefined}
             onViewCommanders={handleOpenCommanders}
             onOpenCommanderDamage={commanderDamageDialog?.setOpenForPlayerId}
+            commanderShortcutParts={commanderShortcutParts}
             seatCount={roomSeatCount}
             onChangeSeatCount={isLobbyOwner ? handleChangeSeatCount : undefined}
             onCopyShareLink={onCopyShareLink}
@@ -379,15 +397,17 @@ function SidebarContent({
         </div>
       </div>
 
-      {/* Commanders Panel – same content for everyone; mount when open */}
-      {currentUser && panelOpen && (
-        <GameStatsPanel
-          isOpen={panelOpen}
-          onClose={handleClosePanel}
-          roomId={roomId}
-          currentUser={currentUser}
-          participants={uniqueParticipants}
-        />
+      {/* Commanders Panel – kept mounted via Activity for smooth slide animation */}
+      {currentUser && (
+        <Activity mode={panelOpen ? 'visible' : 'hidden'}>
+          <GameStatsPanel
+            isOpen={panelOpen}
+            onClose={handleClosePanel}
+            roomId={roomId}
+            currentUser={currentUser}
+            participants={uniqueParticipants}
+          />
+        </Activity>
       )}
     </>
   )

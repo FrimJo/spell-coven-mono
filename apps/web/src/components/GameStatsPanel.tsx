@@ -388,6 +388,7 @@ export function GameStatsPanel({
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         side="right"
+        forceMount
         className="border-l-border-default bg-surface-0 w-[400px] text-white sm:w-[540px]"
       >
         <SheetHeader className="pb-4">
