@@ -752,7 +752,7 @@ function CommanderSlotView({
 }) {
   const imageUrl = getCommanderImageUrl(commander.id)
   return (
-    <div className="border-border-default bg-surface-0/50 group relative flex min-h-[38px] min-w-0 flex-1 rounded-md border">
+    <div className="border-border-default bg-surface-0/50 group relative flex min-h-[76px] min-w-0 flex-1 rounded-md border">
       {imageUrl && (
         <div className="absolute inset-0 z-0 overflow-hidden rounded-md">
           <img
@@ -763,7 +763,7 @@ function CommanderSlotView({
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/40 to-transparent" />
         </div>
       )}
-      <div className="relative z-10 flex min-h-[38px] flex-1 items-center px-3">
+      <div className="relative z-10 flex min-h-[76px] flex-1 items-center px-3">
         <span className="text-shadow-sm text-text-secondary text-sm font-medium shadow-black">
           {commander.name}
         </span>

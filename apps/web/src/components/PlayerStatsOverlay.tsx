@@ -12,12 +12,14 @@ import { Heart, Minus, Plus, Skull, Swords, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@repo/ui/components/button'
+import { Checkbox } from '@repo/ui/components/checkbox'
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogTrigger,
 } from '@repo/ui/components/dialog'
+import { Label } from '@repo/ui/components/label'
 import {
   Tooltip,
   TooltipContent,
@@ -150,6 +152,8 @@ interface PlayerStatsOverlayProps {
   roomId: string
   participant: Participant
   participants: Participant[]
+  /** Current user id – used to filter "my" commanders when "Show my commanders" is off */
+  currentUserId?: string
   /** Ref to the video card container - used to center the commander damage dialog */
   videoContainerRef?: React.RefObject<HTMLElement | null>
 }
@@ -158,6 +162,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
   roomId,
   participant,
   participants,
+  currentUserId,
   videoContainerRef: videoContainerRefProp,
 }: PlayerStatsOverlayProps) {
   // Use roomId as-is - roomPlayers table stores bare roomId (e.g., "ABC123")
@@ -361,6 +366,32 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
     return { displayedCommanderDamage: maxDamage, allCommandersList: list }
   }, [participant.id, participant.commanderDamage, participants])
 
+  // Toggle for showing own commanders (default hidden, resets on reload)
+  const [showOwnCommanders, setShowOwnCommanders] = useState(false)
+
+  // When current user is set and "show own" is off, hide own commanders from the list
+  const visibleCommandersList = useMemo(() => {
+    if (
+      currentUserId == null ||
+      showOwnCommanders ||
+      allCommandersList.length === 0
+    ) {
+      return allCommandersList
+    }
+    return allCommandersList.filter((e) => e.ownerUserId !== currentUserId)
+  }, [allCommandersList, currentUserId, showOwnCommanders])
+
+  const hasOwnCommandersInGame = useMemo(
+    () =>
+      currentUserId != null &&
+      allCommandersList.some((e) => e.ownerUserId === currentUserId),
+    [allCommandersList, currentUserId],
+  )
+  const isEmptyBecauseOwnHidden =
+    visibleCommandersList.length === 0 &&
+    allCommandersList.length > 0 &&
+    hasOwnCommandersInGame
+
   // Clamp health and poison to 0 minimum for display
   const displayHealth = Math.max(0, participant.health ?? 0)
   const displayPoison = Math.max(0, participant.poison ?? 0)
@@ -533,11 +564,31 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                   </div>
                 </div>
 
+                {/* Show my commanders toggle (only when current user has commanders in game) */}
+                {hasOwnCommandersInGame && (
+                  <div className="border-surface-2/80 flex items-center gap-2 border-b px-3 py-2">
+                    <Checkbox
+                      id="commander-damage-show-own"
+                      checked={showOwnCommanders}
+                      onCheckedChange={(checked) =>
+                        setShowOwnCommanders(checked === true)
+                      }
+                      aria-label="Show my commanders in the list"
+                    />
+                    <Label
+                      htmlFor="commander-damage-show-own"
+                      className="text-text-secondary cursor-pointer text-xs font-medium"
+                    >
+                      Show my commanders
+                    </Label>
+                  </div>
+                )}
+
                 {/* Commander list or empty state */}
                 <div className="flex min-h-[44px] min-w-0 flex-col">
-                  {allCommandersList.length > 0 ? (
+                  {visibleCommandersList.length > 0 ? (
                     <div className="flex max-h-[240px] min-w-0 flex-col gap-0.5 overflow-y-auto overflow-x-hidden p-2 px-3">
-                      {allCommandersList.map((entry) => (
+                      {visibleCommandersList.map((entry) => (
                         <CommanderDamageTooltipRow
                           key={`${entry.ownerUserId}:${entry.commanderId}`}
                           entry={entry}
@@ -552,10 +603,14 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                       </div>
                       <div className="space-y-0.5">
                         <p className="text-text-secondary text-xs font-medium">
-                          No commanders in this game yet
+                          {isEmptyBecauseOwnHidden
+                            ? "Other players haven't chosen their commanders yet"
+                            : 'No commanders in this game yet'}
                         </p>
                         <p className="text-[11px] leading-relaxed">
-                          Add commanders in the panel to start tracking damage.
+                          {isEmptyBecauseOwnHidden
+                            ? 'Open the commanders panel to help set commanders for other players.'
+                            : 'Add commanders in the panel to start tracking damage.'}
                         </p>
                       </div>
                       {commandersPanel && (
