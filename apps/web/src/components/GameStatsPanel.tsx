@@ -427,8 +427,15 @@ export function GameStatsPanel({
     index: i,
   }))
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      send({ type: 'CLOSE_PANEL' })
+      onClose()
+    }
+  }
+
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
         forceMount
