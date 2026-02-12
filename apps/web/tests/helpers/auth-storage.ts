@@ -36,16 +36,10 @@ function loadAuthEnv(): {
   const rootEnv = loadEnvFile(resolve(repoRoot, '.env.development'))
   const rootEnvLocal = loadEnvFile(resolve(repoRoot, '.env.development.local'))
   const rootTestEnv = loadEnvFile(resolve(repoRoot, '.env.test'))
-  const rootGeneratedTestEnv = loadEnvFile(
-    resolve(repoRoot, '.env.test.generated'),
-  )
   const rootTestEnvLocal = loadEnvFile(resolve(repoRoot, '.env.test.local'))
   const appEnv = loadEnvFile(resolve(appRoot, '.env.development'))
   const appEnvLocal = loadEnvFile(resolve(appRoot, '.env.development.local'))
   const appTestEnv = loadEnvFile(resolve(appRoot, '.env.test'))
-  const appGeneratedTestEnv = loadEnvFile(
-    resolve(appRoot, '.env.test.generated'),
-  )
   const testEnv = loadEnvFile(resolve(appRoot, '.env.test.local'))
 
   const env = {
@@ -54,10 +48,8 @@ function loadAuthEnv(): {
     ...appEnv,
     ...appEnvLocal,
     ...rootTestEnv,
-    ...rootGeneratedTestEnv,
     ...rootTestEnvLocal,
     ...appTestEnv,
-    ...appGeneratedTestEnv,
     ...testEnv,
     ...process.env,
   }

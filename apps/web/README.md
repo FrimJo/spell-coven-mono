@@ -113,10 +113,6 @@ cd apps/web && bun run e2e:ui        # Run with Playwright UI
 
 #### Local E2E prerequisites
 
-- Run `bun run convex:test` from repo root to create/update the local preview
-  deployment and build artifacts. This command writes the dynamic preview URL
-  into `.env.test.generated` and `apps/web/.env.test.generated` as
-  `VITE_CONVEX_URL=...`.
 - For one-command local deploy + interactive E2E UI, run from repo root:
   - `bun run convex:e2e:ui`
 - Ensure your Convex preview deployment has `E2E_TEST=1`. This is expected to

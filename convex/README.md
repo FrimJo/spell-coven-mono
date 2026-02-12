@@ -111,11 +111,6 @@ Preview name resolution is automatic:
 - otherwise Vercel/GitHub ref/sha environment variables
 - fallback: `local`
 
-When `convex:test` runs, it persists the dynamically generated preview URL to:
-
-- `.env.test.generated`
-- `apps/web/.env.test.generated`
-
 using `VITE_CONVEX_URL=...` so local Playwright runs can reuse the same URL.
 
 #### E2E auth env requirements
