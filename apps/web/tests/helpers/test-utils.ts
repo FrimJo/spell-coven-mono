@@ -396,6 +396,17 @@ export async function mockGetUserMediaWithTone(
           gain.connect(destination)
           oscillator.start()
 
+          // In automation/headless contexts the AudioContext can start suspended,
+          // which yields an all-zero remote audio track unless resumed.
+          if (audioContext.state === 'suspended') {
+            try {
+              await audioContext.resume()
+            } catch {
+              // If resume is blocked, keep the track attached; callers can still
+              // validate track presence and retry playback checks.
+            }
+          }
+
           destination.stream.getAudioTracks().forEach((track) => {
             stream.addTrack(track)
           })
