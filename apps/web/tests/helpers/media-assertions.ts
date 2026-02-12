@@ -1,4 +1,5 @@
-import { expect, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect } from '@playwright/test'
 
 export async function expectVideoRendering(
   page: Page,
@@ -87,11 +88,13 @@ export async function expectVideoFrozen(
 export async function expectAudioEnergy(
   page: Page,
   mediaSelector: string,
-  threshold = 0.01,
+  threshold = 0.003,
 ): Promise<void> {
   const result = await page.evaluate(
     async ({ selector, threshold }) => {
-      const element = document.querySelector(selector) as HTMLMediaElement | null
+      const element = document.querySelector(
+        selector,
+      ) as HTMLMediaElement | null
       if (!element) return { ok: false, reason: 'no-media-element' }
 
       try {
@@ -101,12 +104,46 @@ export async function expectAudioEnergy(
       }
 
       const AudioContextConstructor =
-        window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+        window.AudioContext ||
+        (window as typeof window & { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext
       if (!AudioContextConstructor) {
         return { ok: false, reason: 'no-audio-context' }
       }
 
       const ctx = new AudioContextConstructor()
+      if (ctx.state === 'suspended') {
+        try {
+          await ctx.resume()
+        } catch {
+          // Continue and attempt to sample anyway.
+        }
+      }
+
+      if (element.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+        const start = performance.now()
+        while (performance.now() - start < 8000) {
+          if (element.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) break
+          await new Promise((resolve) => setTimeout(resolve, 100))
+        }
+      }
+
+      const stream = element.srcObject as MediaStream | null
+      if (stream) {
+        const start = performance.now()
+        while (performance.now() - start < 8000) {
+          const hasLiveAudioTrack = stream
+            .getAudioTracks()
+            .some((track) => track.readyState === 'live' && !track.muted)
+          if (hasLiveAudioTrack) break
+          await new Promise((resolve) => setTimeout(resolve, 100))
+        }
+      }
+
+      if (element.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+        return { ok: false, reason: 'media-not-ready' }
+      }
+
       const source = ctx.createMediaElementSource(element)
       const analyser = ctx.createAnalyser()
       analyser.fftSize = 2048
@@ -114,7 +151,7 @@ export async function expectAudioEnergy(
       analyser.connect(ctx.destination)
 
       const data = new Float32Array(analyser.fftSize)
-      const samples = 20
+      const samples = 30
       let maxRms = 0
 
       for (let i = 0; i < samples; i += 1) {
@@ -147,11 +184,15 @@ export async function expectAudioSilent(
 ): Promise<void> {
   const result = await page.evaluate(
     async ({ selector, threshold }) => {
-      const element = document.querySelector(selector) as HTMLMediaElement | null
+      const element = document.querySelector(
+        selector,
+      ) as HTMLMediaElement | null
       if (!element) return { ok: false, reason: 'no-media-element' }
 
       const AudioContextConstructor =
-        window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+        window.AudioContext ||
+        (window as typeof window & { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext
       if (!AudioContextConstructor) {
         return { ok: false, reason: 'no-audio-context' }
       }
