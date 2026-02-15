@@ -1,6 +1,117 @@
 import type { Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 
+type MediaTrackDiagnostic = {
+  id: string
+  kind: string
+  label: string
+  enabled: boolean
+  muted: boolean
+  readyState: string
+}
+
+type MediaElementDiagnostic = {
+  tagName: string
+  index: number
+  id: string
+  className: string
+  connected: boolean
+  visible: boolean
+  readyState: number
+  networkState: number
+  currentTime: number
+  paused: boolean
+  ended: boolean
+  muted: boolean
+  defaultMuted: boolean
+  volume: number
+  playbackRate: number
+  autoplay: boolean
+  videoWidth: number
+  videoHeight: number
+  srcObjectPresent: boolean
+  srcObjectActive: boolean | null
+  audioTrackCount: number
+  videoTrackCount: number
+  audioTracks: MediaTrackDiagnostic[]
+  videoTracks: MediaTrackDiagnostic[]
+}
+
+function formatDiagnostics(details: unknown): string {
+  return JSON.stringify(details, null, 2)
+}
+
+export async function collectMediaDiagnostics(
+  page: Page,
+  selector = 'video',
+): Promise<{
+  selector: string
+  selectedCount: number
+  allMediaCount: number
+  diagnostics: MediaElementDiagnostic[]
+}> {
+  return await page.evaluate((targetSelector) => {
+    const mediaElements = Array.from(
+      document.querySelectorAll('video, audio'),
+    ) as HTMLMediaElement[]
+
+    const toTrackDiagnostics = (tracks: MediaStreamTrack[]) =>
+      tracks.map((track) => ({
+        id: track.id,
+        kind: track.kind,
+        label: track.label,
+        enabled: track.enabled,
+        muted: track.muted,
+        readyState: track.readyState,
+      }))
+
+    const diagnostics = mediaElements.map((media, index) => {
+      const rect = media.getBoundingClientRect()
+      const stream = media.srcObject as MediaStream | null
+      const audioTracks = stream ? stream.getAudioTracks() : []
+      const videoTracks = stream ? stream.getVideoTracks() : []
+      const video = media instanceof HTMLVideoElement ? media : null
+
+      return {
+        tagName: media.tagName.toLowerCase(),
+        index,
+        id: media.id,
+        className: media.className,
+        connected: media.isConnected,
+        visible: rect.width > 0 && rect.height > 0,
+        readyState: media.readyState,
+        networkState: media.networkState,
+        currentTime: media.currentTime,
+        paused: media.paused,
+        ended: media.ended,
+        muted: media.muted,
+        defaultMuted: media.defaultMuted,
+        volume: media.volume,
+        playbackRate: media.playbackRate,
+        autoplay: media.autoplay,
+        videoWidth: video ? video.videoWidth : 0,
+        videoHeight: video ? video.videoHeight : 0,
+        srcObjectPresent: Boolean(stream),
+        srcObjectActive: stream ? stream.active : null,
+        audioTrackCount: audioTracks.length,
+        videoTrackCount: videoTracks.length,
+        audioTracks: toTrackDiagnostics(audioTracks),
+        videoTracks: toTrackDiagnostics(videoTracks),
+      }
+    })
+
+    return {
+      selector: targetSelector,
+      selectedCount: diagnostics.filter((entry) => {
+        const el = mediaElements[entry.index]
+        return el ? el.matches(targetSelector) : false
+      }).length,
+      allMediaCount: diagnostics.length,
+      diagnostics,
+    }
+  }, selector)
+}
+
 export async function expectVideoRendering(
   page: Page,
   videoSelector: string,
@@ -30,7 +141,7 @@ export async function expectVideoRendering(
       const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
       let sum = 0
       for (let i = 0; i < data.length; i += 97) {
-        sum = (sum + data[i]) | 0
+        sum = (sum + (data[i] ?? 0)) | 0
       }
       return sum
     }
@@ -67,7 +178,7 @@ export async function expectVideoFrozen(
       const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
       let sum = 0
       for (let i = 0; i < data.length; i += 97) {
-        sum = (sum + data[i]) | 0
+        sum = (sum + (data[i] ?? 0)) | 0
       }
       return sum
     }
@@ -95,7 +206,33 @@ export async function expectAudioEnergy(
       const element = document.querySelector(
         selector,
       ) as HTMLMediaElement | null
-      if (!element) return { ok: false, reason: 'no-media-element' }
+      if (!element) {
+        return {
+          ok: false,
+          reason: 'no-media-element',
+          maxRms: 0,
+          details: { selector },
+        }
+      }
+
+      const describeStream = (stream: MediaStream | null) => {
+        if (!stream) return null
+        const describeTrack = (track: MediaStreamTrack) => ({
+          id: track.id,
+          kind: track.kind,
+          label: track.label,
+          enabled: track.enabled,
+          muted: track.muted,
+          readyState: track.readyState,
+        })
+
+        return {
+          id: stream.id,
+          active: stream.active,
+          audioTracks: stream.getAudioTracks().map(describeTrack),
+          videoTracks: stream.getVideoTracks().map(describeTrack),
+        }
+      }
 
       try {
         await element.play()
@@ -108,7 +245,18 @@ export async function expectAudioEnergy(
         (window as typeof window & { webkitAudioContext: typeof AudioContext })
           .webkitAudioContext
       if (!AudioContextConstructor) {
-        return { ok: false, reason: 'no-audio-context' }
+        return {
+          ok: false,
+          reason: 'no-audio-context',
+          maxRms: 0,
+          details: {
+            element: {
+              readyState: element.readyState,
+              muted: element.muted,
+              paused: element.paused,
+            },
+          },
+        }
       }
 
       const ctx = new AudioContextConstructor()
@@ -141,39 +289,88 @@ export async function expectAudioEnergy(
       }
 
       if (element.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-        return { ok: false, reason: 'media-not-ready' }
+        return {
+          ok: false,
+          reason: 'media-not-ready',
+          maxRms: 0,
+          details: {
+            element: {
+              readyState: element.readyState,
+              networkState: element.networkState,
+              paused: element.paused,
+              currentTime: element.currentTime,
+              muted: element.muted,
+            },
+            stream: describeStream(stream),
+            audioContextState: ctx.state,
+          },
+        }
       }
 
-      const source = ctx.createMediaElementSource(element)
+      const sourceStream = stream ?? null
+      const source = sourceStream
+        ? ctx.createMediaStreamSource(sourceStream)
+        : ctx.createMediaElementSource(element)
       const analyser = ctx.createAnalyser()
       analyser.fftSize = 2048
       source.connect(analyser)
-      analyser.connect(ctx.destination)
+      // Avoid routing the signal to speakers during tests.
+      const sink = ctx.createGain()
+      sink.gain.value = 0
+      analyser.connect(sink)
+      sink.connect(ctx.destination)
 
       const data = new Float32Array(analyser.fftSize)
       const samples = 30
       let maxRms = 0
+      const rmsSeries: number[] = []
 
       for (let i = 0; i < samples; i += 1) {
         analyser.getFloatTimeDomainData(data)
         let sum = 0
         for (let j = 0; j < data.length; j += 1) {
-          sum += data[j] * data[j]
+          const sample = data[j] ?? 0
+          sum += sample * sample
         }
         const rms = Math.sqrt(sum / data.length)
         if (rms > maxRms) maxRms = rms
+        rmsSeries.push(rms)
         await new Promise((resolve) => setTimeout(resolve, 100))
       }
 
       const ok = maxRms > threshold
-      return { ok, maxRms, reason: ok ? 'ok' : 'silent' }
+      return {
+        ok,
+        maxRms,
+        reason: ok ? 'ok' : 'silent',
+        details: {
+          threshold,
+          audioContextState: ctx.state,
+          probeSource: sourceStream ? 'stream' : 'media-element',
+          element: {
+            readyState: element.readyState,
+            networkState: element.networkState,
+            currentTime: element.currentTime,
+            paused: element.paused,
+            ended: element.ended,
+            muted: element.muted,
+            defaultMuted: element.defaultMuted,
+            volume: element.volume,
+            playbackRate: element.playbackRate,
+          },
+          stream: describeStream(stream),
+          rmsSeries,
+        },
+      }
     },
     { selector: mediaSelector, threshold },
   )
 
   expect(
     result.ok,
-    `audio check failed: ${result.reason}, maxRms=${result.maxRms}`,
+    `audio check failed: ${result.reason}, maxRms=${result.maxRms}, details=${formatDiagnostics(
+      result.details,
+    )}`,
   ).toBeTruthy()
 }
 
@@ -212,7 +409,8 @@ export async function expectAudioSilent(
         analyser.getFloatTimeDomainData(data)
         let sum = 0
         for (let j = 0; j < data.length; j += 1) {
-          sum += data[j] * data[j]
+          const sample = data[j] ?? 0
+          sum += sample * sample
         }
         const rms = Math.sqrt(sum / data.length)
         if (rms > maxRms) maxRms = rms
@@ -229,4 +427,76 @@ export async function expectAudioSilent(
     result.ok,
     `audio silence check failed: ${result.reason}, maxRms=${result.maxRms}`,
   ).toBeTruthy()
+}
+
+type RemoteCardState = {
+  playerId: string
+  hasVideo: boolean
+  hasVideoOffPlaceholder: boolean
+  hasOfflineWarning: boolean
+  hasWebRtcWarning: boolean
+}
+
+async function collectRemoteCardStates(page: Page): Promise<RemoteCardState[]> {
+  return await page.evaluate(() => {
+    const cards = Array.from(
+      document.querySelectorAll('[data-testid="remote-player-card"]'),
+    )
+
+    return cards
+      .map((card) => {
+        const playerId = card.getAttribute('data-player-id')
+        if (!playerId) return null
+        return {
+          playerId,
+          hasVideo: card.querySelector('[data-testid="remote-player-video"]')
+            ? true
+            : false,
+          hasVideoOffPlaceholder: card.querySelector(
+            '[data-testid="remote-player-video-off"]',
+          )
+            ? true
+            : false,
+          hasOfflineWarning: card.querySelector(
+            '[data-testid="remote-player-offline-warning"]',
+          )
+            ? true
+            : false,
+          hasWebRtcWarning: card.querySelector(
+            '[data-testid="remote-player-webrtc-warning"]',
+          )
+            ? true
+            : false,
+        }
+      })
+      .filter((state): state is RemoteCardState => state !== null)
+  })
+}
+
+export async function waitForRemoteCardsStable(
+  page: Page,
+  expectedRemoteCount: number,
+): Promise<RemoteCardState[]> {
+  await expect
+    .poll(
+      async () => {
+        const states = await collectRemoteCardStates(page)
+        return (
+          states.every(
+            (state) =>
+              state.hasVideo &&
+              !state.hasVideoOffPlaceholder &&
+              !state.hasOfflineWarning &&
+              !state.hasWebRtcWarning,
+          ) && states.length === expectedRemoteCount
+        )
+      },
+      {
+        timeout: 30_000,
+        intervals: [250, 500, 1_000],
+      },
+    )
+    .toBeTruthy()
+
+  return await collectRemoteCardStates(page)
 }

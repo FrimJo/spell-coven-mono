@@ -9,6 +9,7 @@ import {
   Minus,
   MoreVertical,
   Plus,
+  RotateCcw,
   Swords,
   Unplug,
   Users,
@@ -31,9 +32,7 @@ import { Button } from '@repo/ui/components/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@repo/ui/components/dropdown-menu'
 import {
@@ -59,10 +58,8 @@ interface PlayerListProps {
   ownerId?: string
   mutedPlayers: Set<string>
   onToggleMutePlayer: (playerId: string) => void
-  /** Current user's id – Commanders menu item is shown only for this player */
+  /** Current user's id – Commanders menu (e.g. damage taken) is shown only for this player */
   currentUserId?: string
-  /** Opens the commanders panel (no-arg; panel shows same content for everyone) */
-  onViewCommanders?: () => void
   /** Opens the commander damage dialog for the given player (e.g. from sidebar menu) */
   onOpenCommanderDamage?: (playerId: string) => void
   /** Current seat count (1-4) */
@@ -71,10 +68,8 @@ interface PlayerListProps {
   onChangeSeatCount?: (delta: number) => void
   /** Called when user wants to copy the shareable game link */
   onCopyShareLink?: () => void
-  commanderShortcutParts?: {
-    toggleCommandersPanel: string[]
-    openCommanderDamage: string[]
-  }
+  /** Called when user wants to reset game state (life, poison, commanders) */
+  onResetGame?: () => void
 }
 
 type RemovalAction = 'kick' | 'ban'
@@ -89,12 +84,11 @@ export function PlayerList({
   mutedPlayers,
   onToggleMutePlayer,
   currentUserId,
-  onViewCommanders,
   onOpenCommanderDamage,
   seatCount,
   onChangeSeatCount,
   onCopyShareLink,
-  commanderShortcutParts,
+  onResetGame,
 }: PlayerListProps) {
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
@@ -130,24 +124,12 @@ export function PlayerList({
     setConfirmDialog({ open: true, player, action })
   }
 
-  const renderShortcut = (parts: string[]) => (
-    <span className="ml-auto inline-flex items-center gap-1">
-      {parts.map((part) => (
-        <kbd
-          key={part}
-          className="bg-surface-3 text-text-muted pointer-events-none inline-flex h-5 select-none items-center rounded border px-1.5 font-mono text-[10px] font-medium opacity-75"
-        >
-          {part}
-        </kbd>
-      ))}
-    </span>
-  )
   // Compute bounds for seat count controls
   const canDecrease =
     isLobbyOwner && seatCount > players.length && seatCount > 1
   const canIncrease = isLobbyOwner && seatCount < 4
 
-  // Header action for seat count controls (owner only)
+  // Header action: seat count controls (owner only) and reset game (icon + tooltip)
   const headerAction =
     isLobbyOwner && onChangeSeatCount ? (
       <div className="flex items-center gap-1">
@@ -171,7 +153,38 @@ export function PlayerList({
         >
           <Plus className="h-3 w-3" />
         </Button>
+        {onResetGame && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onResetGame}
+                className="text-text-muted hover:text-text-secondary h-5 w-5 p-0"
+                data-testid="reset-game-button"
+              >
+                <RotateCcw className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Reset game state</TooltipContent>
+          </Tooltip>
+        )}
       </div>
+    ) : onResetGame ? (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onResetGame}
+            className="text-text-muted hover:text-text-secondary h-5 w-5 p-0"
+            data-testid="reset-game-button"
+          >
+            <RotateCcw className="h-3 w-3" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Reset game state</TooltipContent>
+      </Tooltip>
     ) : undefined
 
   return (
@@ -396,43 +409,7 @@ export function PlayerList({
                     align="end"
                     className="border-surface-3 bg-surface-2"
                   >
-                    {onViewCommanders &&
-                      currentUserId !== undefined &&
-                      player.id === currentUserId && (
-                        <DropdownMenuGroup>
-                          <DropdownMenuLabel className="text-text-muted flex items-center gap-1.5 text-xs font-normal">
-                            <Swords className="h-3.5 w-3.5" />
-                            Commanders
-                          </DropdownMenuLabel>
-                          <DropdownMenuItem
-                            onClick={() => onViewCommanders()}
-                            className="text-text-secondary focus:bg-surface-3 flex items-center gap-2 focus:text-white"
-                            title="View and edit the list of commanders"
-                            data-testid="player-commanders-menu-item"
-                          >
-                            <span>View & edit list</span>
-                            {commanderShortcutParts &&
-                              renderShortcut(
-                                commanderShortcutParts.toggleCommandersPanel,
-                              )}
-                          </DropdownMenuItem>
-                          {onOpenCommanderDamage && (
-                            <DropdownMenuItem
-                              onClick={() => onOpenCommanderDamage(player.id)}
-                              className="text-text-secondary focus:bg-surface-3 flex items-center gap-2 focus:text-white"
-                              title="Edit damage taken from commanders"
-                              data-testid="player-commander-damage-menu-item"
-                            >
-                              <span>Damage taken</span>
-                              {commanderShortcutParts &&
-                                renderShortcut(
-                                  commanderShortcutParts.openCommanderDamage,
-                                )}
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuGroup>
-                      )}
-                    {onOpenCommanderDamage && player.id !== currentUserId && (
+                    {onOpenCommanderDamage && (
                       <DropdownMenuItem
                         onClick={() => onOpenCommanderDamage(player.id)}
                         className="text-text-secondary focus:bg-surface-3 flex items-center gap-2 focus:text-white"

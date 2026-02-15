@@ -1,9 +1,9 @@
-import { GenericActionCtx } from 'convex/server'
+import type { GenericActionCtx } from 'convex/server'
 import { v } from 'convex/values'
 import z from 'zod'
 
+import type { DataModel } from './_generated/dataModel'
 import { api, internal } from './_generated/api'
-import { DataModel } from './_generated/dataModel'
 import { action } from './_generated/server'
 import { isE2ePreview } from './env'
 
@@ -59,6 +59,15 @@ function pickRandomPreviewName(): string {
   return PREVIEW_NAMES[index] ?? PREVIEW_NAMES[0]
 }
 
+function pickPreviewNameForSlot(slot: number | undefined): string {
+  if (slot == null || !Number.isFinite(slot) || slot < 0) {
+    return pickRandomPreviewName()
+  }
+  const normalizedSlot = Math.floor(slot)
+  const index = normalizedSlot % PREVIEW_NAMES.length
+  return PREVIEW_NAMES[index] ?? PREVIEW_NAMES[0]
+}
+
 function buildPreviewHandle(code: string, baseName: string): string {
   const suffix = hashString(`${code}:${baseName}`)
     .toString(36)
@@ -94,6 +103,7 @@ async function signInOrSignUp(
 export const previewLogin = action({
   args: {
     code: v.string(),
+    workerSlot: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     if (!isE2ePreview) {
@@ -111,7 +121,7 @@ export const previewLogin = action({
       throw new Error('Unauthorized')
     }
 
-    const previewName = pickRandomPreviewName()
+    const previewName = pickPreviewNameForSlot(args.workerSlot)
     const fallbackHandle = buildPreviewHandle(loginCode, previewName)
     const fallbackEmail = buildPreviewEmail(fallbackHandle)
     const password = loginCode

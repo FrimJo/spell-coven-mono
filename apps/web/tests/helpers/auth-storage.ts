@@ -63,6 +63,7 @@ function loadAuthEnv(): {
 async function signInWithPreviewCode(params: {
   convexUrl: string
   code: string
+  workerSlot?: number
 }): Promise<{
   token: string
   refreshToken: string
@@ -70,9 +71,36 @@ async function signInWithPreviewCode(params: {
   previewName: string
 }> {
   const client = new ConvexHttpClient(params.convexUrl)
-  const result = await client.action(AUTH_PREVIEW_LOGIN_ACTION as any, {
-    code: params.code,
-  })
+  const payload =
+    params.workerSlot == null
+      ? { code: params.code }
+      : { code: params.code, workerSlot: params.workerSlot }
+
+  let result: {
+    token: string
+    refreshToken: string
+    userId: string
+    previewName: string
+  }
+  try {
+    result = await client.action(AUTH_PREVIEW_LOGIN_ACTION as any, payload)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    const fieldRejected =
+      params.workerSlot != null &&
+      message.includes('workerSlot') &&
+      (message.includes('extra field') ||
+        message.includes('Unexpected field') ||
+        message.includes('Object contains extra field'))
+
+    if (!fieldRejected) {
+      throw error
+    }
+
+    result = await client.action(AUTH_PREVIEW_LOGIN_ACTION as any, {
+      code: params.code,
+    })
+  }
 
   return {
     token: result.token,
@@ -90,6 +118,10 @@ export function hasAuthCredentials(): boolean {
 export async function ensureWorkerStorageState(
   workerIndex: number,
   baseURL: string,
+  options?: {
+    assignedUserIds?: Set<string>
+    maxUniqueAttempts?: number
+  },
 ): Promise<string> {
   const storageDir = resolve(__dirname, '../../.playwright-storage')
   const storagePath = resolve(storageDir, `state.worker-${workerIndex}.json`)
@@ -110,19 +142,40 @@ export async function ensureWorkerStorageState(
   let previewLoginError: Error | null = null
 
   if (previewLoginCode != null) {
-    try {
-      const previewResult = await signInWithPreviewCode({
-        convexUrl,
-        code: previewLoginCode,
-      })
-      tokens = {
-        token: previewResult.token,
-        refreshToken: previewResult.refreshToken,
-        previewName: previewResult.previewName,
+    const assignedUserIds = options?.assignedUserIds
+    const maxUniqueAttempts = Math.max(1, options?.maxUniqueAttempts ?? 8)
+
+    for (let attempt = 0; attempt < maxUniqueAttempts; attempt += 1) {
+      try {
+        const previewResult = await signInWithPreviewCode({
+          convexUrl,
+          code: previewLoginCode,
+          workerSlot: workerIndex + attempt,
+        })
+        if (assignedUserIds?.has(previewResult.userId)) {
+          if (attempt === maxUniqueAttempts - 1) {
+            throw new Error(
+              `Failed to allocate unique preview user after ${maxUniqueAttempts} attempts (worker ${workerIndex}).`,
+            )
+          }
+          continue
+        }
+
+        assignedUserIds?.add(previewResult.userId)
+        tokens = {
+          token: previewResult.token,
+          refreshToken: previewResult.refreshToken,
+          previewName: previewResult.previewName,
+        }
+        previewLoginError = null
+        break
+      } catch (error) {
+        previewLoginError =
+          error instanceof Error ? error : new Error('Preview login failed')
+        if (attempt === maxUniqueAttempts - 1) {
+          break
+        }
       }
-    } catch (error) {
-      previewLoginError =
-        error instanceof Error ? error : new Error('Preview login failed')
     }
   }
 

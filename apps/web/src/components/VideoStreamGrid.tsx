@@ -84,7 +84,6 @@ interface RemotePlayerCardProps {
   roomId: string
   localParticipant: Participant | undefined
   gameRoomParticipants: Participant[]
-  gridIndex: number
   isOnline: boolean // Presence-based online status (matches sidebar)
   // Card detection props
   enableCardDetection: boolean
@@ -109,7 +108,6 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
   roomId,
   localParticipant,
   gameRoomParticipants,
-  gridIndex,
   isOnline,
   enableCardDetection,
   detectorType,
@@ -197,12 +195,18 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
   const videoContainerRef = useRef<HTMLDivElement>(null)
 
   return (
-    <Card className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden">
+    <Card
+      className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden"
+      data-testid="remote-player-card"
+      data-player-id={playerId}
+      data-player-name={playerName}
+    >
       <div ref={videoContainerRef} className="relative min-h-0 flex-1 bg-black">
         {peerVideoEnabled ? (
           <>
             {remoteStream && (
               <video
+                data-testid="remote-player-video"
                 ref={handleVideoRef}
                 autoPlay
                 playsInline
@@ -224,7 +228,9 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
             )}
           </>
         ) : (
-          <VideoDisabledPlaceholder />
+          <div data-testid="remote-player-video-off">
+            <VideoDisabledPlaceholder />
+          </div>
         )}
 
         <PlayerNameBadge position="bottom-center">
@@ -253,7 +259,10 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
           {!isOnline && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="border-warning/30 bg-warning/20 flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur-sm">
+                <div
+                  className="border-warning/30 bg-warning/20 flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur-sm"
+                  data-testid="remote-player-offline-warning"
+                >
                   <Unplug className="text-warning h-4 w-4" />
                 </div>
               </TooltipTrigger>
@@ -265,6 +274,8 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
           {/* Show WebRTC connection issues only when presence is online but WebRTC has problems */}
           {isOnline && connectionState && connectionState !== 'connected' && (
             <div
+              data-testid="remote-player-webrtc-warning"
+              data-connection-state={connectionState}
               className={`flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur-sm ${
                 connectionState === 'connecting' ||
                 connectionState === 'reconnecting'
@@ -691,7 +702,7 @@ export function VideoStreamGrid({
       )}
 
       {/* Render remote players */}
-      {players.map((player, index) => {
+      {players.map((player) => {
         const state = streamStates[player.id] || { video: true, audio: true }
         const remoteStream = remoteStreams.get(player.id)
         const connectionState = connectionStates.get(player.id)
@@ -719,7 +730,6 @@ export function VideoStreamGrid({
             roomId={roomId}
             localParticipant={localParticipant}
             gameRoomParticipants={gameRoomParticipants}
-            gridIndex={index + 1}
             isOnline={isOnline}
             enableCardDetection={enableCardDetection}
             detectorType={detectorType}

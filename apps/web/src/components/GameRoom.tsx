@@ -5,15 +5,17 @@ import {
   CardQueryProvider,
   useCardQueryContext,
 } from '@/contexts/CardQueryContext'
-import { CommanderDamageDialogProvider } from '@/contexts/CommanderDamageDialogContext'
-import { useCommanderDamageDialog } from '@/contexts/CommanderDamageDialogContext'
+import {
+  CommanderDamageDialogProvider,
+  useCommanderDamageDialog,
+} from '@/contexts/CommanderDamageDialogContext'
 import { CommandersPanelProvider } from '@/contexts/CommandersPanelContext'
 import { MediaStreamProvider } from '@/contexts/MediaStreamContext.js'
+import { PresenceProvider, usePresence } from '@/contexts/PresenceContext'
 import {
   useGameRoomKeyboardShortcuts,
   useGameRoomShortcutDisplayParts,
 } from '@/hooks/useGameRoomKeybindings'
-import { PresenceProvider, usePresence } from '@/contexts/PresenceContext'
 import { api } from '@convex/_generated/api'
 import { useMutation } from 'convex/react'
 import { toast } from 'sonner'
@@ -310,7 +312,9 @@ function GameRoomContent({
         onCopyLink={handleCopyShareLink}
         onOpenSettings={handleOpenSettings}
         onSearchClick={handleSearchClick}
-        onResetGame={handleResetClick}
+        commandersPanelOpen={commandersPanelOpen}
+        onCommandersPanelToggle={() => setCommandersPanelOpen((prev) => !prev)}
+        commanderShortcutParts={shortcutParts.toggleCommandersPanel}
       />
 
       {/* Main Content */}
@@ -330,6 +334,7 @@ function GameRoomContent({
               commandersPanelOpen={commandersPanelOpen}
               onCommandersPanelOpenChange={setCommandersPanelOpen}
               onCopyShareLink={handleCopyShareLink}
+              onResetGame={handleResetClick}
               detectorType={detectorType}
               usePerspectiveWarp={usePerspectiveWarp}
               onCardCrop={query}
@@ -357,6 +362,7 @@ interface GameRoomMainLayoutProps {
   commandersPanelOpen: boolean
   onCommandersPanelOpenChange: (open: boolean) => void
   onCopyShareLink: () => void
+  onResetGame?: () => void
   detectorType?: DetectorType
   usePerspectiveWarp: boolean
   onCardCrop: ReturnType<typeof useCardQueryContext>['query']
@@ -381,6 +387,7 @@ function GameRoomMainLayout({
   commandersPanelOpen,
   onCommandersPanelOpenChange,
   onCopyShareLink,
+  onResetGame,
   detectorType,
   usePerspectiveWarp,
   onCardCrop,
@@ -427,7 +434,7 @@ function GameRoomMainLayout({
         commandersPanelOpen={commandersPanelOpen}
         onCommandersPanelOpenChange={onCommandersPanelOpenChange}
         onCopyShareLink={onCopyShareLink}
-        commanderShortcutParts={shortcutParts}
+        onResetGame={onResetGame}
       />
 
       {/* Main Area - Video Stream Grid */}

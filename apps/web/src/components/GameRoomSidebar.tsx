@@ -239,10 +239,8 @@ interface GameRoomSidebarProps {
   onCommandersPanelOpenChange: (open: boolean) => void
   /** Called when user wants to copy the shareable game link */
   onCopyShareLink: () => void
-  commanderShortcutParts?: {
-    toggleCommandersPanel: string[]
-    openCommanderDamage: string[]
-  }
+  /** Called when user wants to reset game state (life, poison, commanders) */
+  onResetGame?: () => void
 }
 
 function SidebarContent({
@@ -257,7 +255,7 @@ function SidebarContent({
   commandersPanelOpen: panelOpen,
   onCommandersPanelOpenChange: setPanelOpen,
   onCopyShareLink,
-  commanderShortcutParts,
+  onResetGame,
 }: GameRoomSidebarProps) {
   // Get game room participants from context (already deduplicated)
   const { uniqueParticipants, roomSeatCount, setRoomSeatCount } = usePresence()
@@ -333,11 +331,6 @@ function SidebarContent({
     return uniqueParticipants.find((p) => p.id === user.id) ?? null
   }, [uniqueParticipants, user])
 
-  // Handler to open commanders panel (panel shows same list for everyone)
-  const handleOpenCommanders = useCallback(() => {
-    setPanelOpen(true)
-  }, [setPanelOpen])
-
   // Handler to close panel - use startTransition for smooth slide-out animation
   const handleClosePanel = useCallback(() => {
     startTransition(() => {
@@ -375,12 +368,11 @@ function SidebarContent({
             mutedPlayers={mutedPlayers}
             onToggleMutePlayer={onToggleMutePlayer}
             currentUserId={user?.id ?? undefined}
-            onViewCommanders={handleOpenCommanders}
             onOpenCommanderDamage={commanderDamageDialog?.setOpenForPlayerId}
-            commanderShortcutParts={commanderShortcutParts}
             seatCount={roomSeatCount}
             onChangeSeatCount={isLobbyOwner ? handleChangeSeatCount : undefined}
             onCopyShareLink={onCopyShareLink}
+            onResetGame={onResetGame}
           />
         </div>
         <div className="flex-shrink-0">

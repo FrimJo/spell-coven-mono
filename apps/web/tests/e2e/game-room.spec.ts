@@ -684,10 +684,10 @@ test.describe('Game Room', () => {
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
-      const toggleButton = page.getByTestId('theme-toggle-button')
+      const settingsButton = page.getByTestId('settings-button')
 
       for (const theme of themes) {
-        await toggleButton.click()
+        await settingsButton.click()
         await page
           .getByRole('menuitemradio', { name: MTG_THEME_LABELS[theme] })
           .click()

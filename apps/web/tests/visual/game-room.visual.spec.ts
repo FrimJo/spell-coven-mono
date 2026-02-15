@@ -19,15 +19,9 @@ test.describe('Game Room Visual Tests', () => {
   test.use({ permissions: ['camera', 'microphone'] })
 
   async function openCommandersPanel(page: Page): Promise<void> {
-    const actionsButton = page.getByTestId('player-actions-button').first()
-    await expect(actionsButton).toBeVisible({ timeout: 5000 })
-    await actionsButton.click()
-
-    const commandersItem = page
-      .getByTestId('player-commanders-menu-item')
-      .first()
-    await expect(commandersItem).toBeVisible({ timeout: 5000 })
-    await commandersItem.click()
+    const commandersButton = page.getByTestId('commanders-panel-button')
+    await expect(commandersButton).toBeVisible({ timeout: 5000 })
+    await commandersButton.click()
   }
 
   test.beforeEach(async ({ page }) => {

@@ -13,9 +13,10 @@ import {
   LogIn,
   LogOut,
   Menu,
-  RotateCcw,
+  Palette,
   Search,
   Settings,
+  Swords,
 } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/components/avatar'
@@ -24,6 +25,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@repo/ui/components/dropdown-menu'
 import {
@@ -34,13 +38,14 @@ import {
   SheetTrigger,
 } from '@repo/ui/components/sheet'
 
+import type { MtgColorTheme } from '../contexts/ThemeContext.js'
 import logoBlue from '../assets/logo_1024_blue.png'
 import logoDeath from '../assets/logo_1024_death.png'
 import logoFire from '../assets/logo_1024_fire.png'
 import logoGreen from '../assets/logo_1024_green.png'
 import logoWarmGold from '../assets/logo_1024_warmgold.png'
 import logo from '../assets/logo_1024x1024.png'
-import { useTheme } from '../contexts/ThemeContext.js'
+import { MTG_THEMES, useTheme } from '../contexts/ThemeContext.js'
 import { useSearchShortcutParts } from '../hooks/useSearchShortcut.js'
 import { ThemeToggle } from './ThemeToggle.js'
 
@@ -76,8 +81,12 @@ interface AppHeaderProps {
   onOpenSettings?: () => void
   /** Callback when search button is clicked (game only) */
   onSearchClick?: () => void
-  /** Callback when reset game button is clicked (game only) */
-  onResetGame?: () => void
+  /** Whether the commanders panel is open (game only) */
+  commandersPanelOpen?: boolean
+  /** Callback to toggle commanders panel (game only) */
+  onCommandersPanelToggle?: () => void
+  /** Shortcut parts for commanders panel, e.g. ['⌘', 'M'] (game only) */
+  commanderShortcutParts?: string[]
 }
 
 // ============================================================================
@@ -128,14 +137,17 @@ function UserMenu() {
         <Button
           variant="ghost"
           className="text-text-secondary hover:text-text-primary flex items-center gap-2"
+          title={user.username}
         >
-          <Avatar className="h-8 w-8">
+          <Avatar className="h-8 w-8 shrink-0">
             <AvatarImage src={user.avatar || undefined} />
             <AvatarFallback className="bg-brand text-white">
               {user.username.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span className="hidden sm:inline">{user.username}</span>
+          <span className="hidden max-w-[8rem] truncate lg:inline">
+            {user.username}
+          </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -149,6 +161,80 @@ function UserMenu() {
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
         </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function SettingsDropdown({ onOpenSettings }: { onOpenSettings?: () => void }) {
+  const { mtgTheme, setMtgTheme } = useTheme()
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-text-muted hover:text-text-primary"
+          title="Audio & video settings"
+          data-testid="settings-button"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="border-surface-3 bg-surface-1 w-56"
+      >
+        {onOpenSettings && (
+          <DropdownMenuItem
+            onClick={onOpenSettings}
+            className="text-text-secondary focus:bg-surface-2 focus:text-text-primary cursor-pointer"
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            Setup Audio & Video
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuLabel className="text-text-muted flex items-center gap-1 text-xs font-normal">
+          <Palette className="h-3 w-3" />
+          Theme
+        </DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={mtgTheme}
+          onValueChange={(value) => setMtgTheme(value as MtgColorTheme)}
+        >
+          {(Object.keys(MTG_THEMES) as MtgColorTheme[]).map((key) => {
+            const theme = MTG_THEMES[key]
+            const iconSvg = theme.iconSvg
+            const iconColor = theme.iconColor
+            return (
+              <DropdownMenuRadioItem
+                key={key}
+                value={key}
+                className="text-text-secondary focus:bg-surface-2 focus:text-foreground cursor-pointer"
+              >
+                <span className="mr-2 flex w-4 items-center justify-center">
+                  {iconSvg && iconColor ? (
+                    <span
+                      className="h-4 w-4 shrink-0 overflow-hidden [&_svg]:block [&_svg]:size-full"
+                      style={{ color: iconColor }}
+                      title={`${theme.label} mana`}
+                      dangerouslySetInnerHTML={{ __html: iconSvg }}
+                    />
+                  ) : (
+                    <Settings className="h-4 w-4" aria-label="Default theme" />
+                  )}
+                </span>
+                <span className="flex-1">{theme.label}</span>
+                {key !== 'none' && (
+                  <span className="text-text-muted ml-2 hidden text-xs sm:inline">
+                    {theme.description.split(',')[0]}
+                  </span>
+                )}
+              </DropdownMenuRadioItem>
+            )
+          })}
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -348,7 +434,9 @@ function GameHeader({
   onCopyLink,
   onOpenSettings,
   onSearchClick,
-  onResetGame,
+  commandersPanelOpen = false,
+  onCommandersPanelToggle,
+  commanderShortcutParts,
 }: AppHeaderProps) {
   const shortcut = useSearchShortcutParts()
   return (
@@ -370,20 +458,6 @@ function GameHeader({
             <ArrowLeft className="mr-2 h-4 w-4" />
             Leave
           </Button>
-
-          {onResetGame && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onResetGame}
-              className="text-text-muted hover:text-text-primary"
-              title="Reset game state"
-              data-testid="reset-game-button"
-            >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Reset game
-            </Button>
-          )}
 
           <div className="bg-surface-3 h-6 w-px" />
 
@@ -434,6 +508,38 @@ function GameHeader({
 
         {/* Right side */}
         <div className="flex items-center gap-3">
+          {/* Commanders – global list, same style as Search */}
+          {onCommandersPanelToggle && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onCommandersPanelToggle}
+              className={`border-surface-3 gap-2 ${
+                commandersPanelOpen
+                  ? 'bg-surface-3 text-text-primary'
+                  : 'bg-surface-2 text-text-muted hover:bg-surface-3 hover:text-text-primary'
+              }`}
+              title={
+                commanderShortcutParts
+                  ? `View and edit commanders list (${commanderShortcutParts.join('')})`
+                  : 'View and edit commanders list'
+              }
+              data-testid="commanders-panel-button"
+            >
+              <Swords className="h-4 w-4" />
+              <span className="hidden sm:inline">Commanders</span>
+              {commanderShortcutParts && commanderShortcutParts.length > 0 && (
+                <kbd className="bg-surface-3 text-text-muted pointer-events-none hidden h-5 select-none items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-75 sm:inline-flex">
+                  {commanderShortcutParts.map((part, i) => (
+                    <span key={i} className="text-xs">
+                      {part}
+                    </span>
+                  ))}
+                </kbd>
+              )}
+            </Button>
+          )}
+
           {/* Search Button */}
           <Button
             variant="outline"
@@ -451,18 +557,7 @@ function GameHeader({
             </kbd>
           </Button>
 
-          <ThemeToggle />
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onOpenSettings}
-            className="text-text-muted hover:text-text-primary"
-            title="Audio & video settings"
-            data-testid="settings-button"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
+          <SettingsDropdown onOpenSettings={onOpenSettings} />
 
           <UserMenu />
         </div>

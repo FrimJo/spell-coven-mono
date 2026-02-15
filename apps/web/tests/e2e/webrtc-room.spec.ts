@@ -6,14 +6,15 @@ import {
 } from '../helpers/auth-storage'
 import { launchPlayer } from '../helpers/launch-player'
 import {
+  collectMediaDiagnostics,
   expectAudioEnergy,
   expectVideoRendering,
+  waitForRemoteCardsStable,
 } from '../helpers/media-assertions'
 import { createRoomViaUI, navigateToTestGame } from '../helpers/test-utils'
 
 test.describe('WebRTC 4-player room', () => {
-  test('players join and render remote video/audio', // eslint-disable-next-line no-empty-pattern -- Playwright fixture signature requires object destructuring
-  async ({}, testInfo) => {
+  test('players join and render remote video/audio', async ({}, testInfo) => { // eslint-disable-next-line no-empty-pattern -- Playwright fixture signature requires object destructuring
     test.setTimeout(180_000)
 
     if (!hasAuthCredentials()) {
@@ -36,16 +37,38 @@ test.describe('WebRTC 4-player room', () => {
       )
     }
 
+    const playerLabels = ['Teferi', 'Jace', 'Chandra', 'Gideon'] as const
     const players = await Promise.all(
       storageStatePaths.map((storageStatePath, index) =>
         launchPlayer({
           baseURL,
           storageStatePath,
           toneHz: 440 + index * 110,
-          label: `Player ${index + 1}`,
+          label: playerLabels[index] ?? `Player ${index + 1}`,
         }),
       ),
     )
+
+    const consoleLogsByPlayer: string[][] = players.map(() => [])
+    players.forEach((player, index) => {
+      const appendLog = (entry: string) => {
+        const logs = consoleLogsByPlayer[index]
+        if (!logs) return
+        logs.push(entry)
+        if (logs.length > 250) logs.shift()
+      }
+
+      player.page.on('console', (msg) => {
+        const type = msg.type()
+        if (type !== 'debug' && type !== 'warning' && type !== 'error') return
+        appendLog(`[console:${type}] ${msg.text()}`)
+      })
+
+      player.page.on('pageerror', (error) => {
+        appendLog(`[pageerror] ${error.message}`)
+      })
+    })
+
     const owner = players[0]
     if (!owner) {
       throw new Error('Expected room owner player to be initialized.')
@@ -65,14 +88,92 @@ test.describe('WebRTC 4-player room', () => {
         ),
       )
 
-      await Promise.all(
-        players.map(async (player) => {
-          const remoteVideo = player.page.locator('video:not([muted])').first()
-          await expect(remoteVideo).toBeVisible({ timeout: 30000 })
-          await expectVideoRendering(player.page, 'video:not([muted])')
-          await expectAudioEnergy(player.page, 'video:not([muted])')
-        }),
-      )
+      const attachFailureDiagnostics = async (
+        failure: unknown,
+      ): Promise<void> => {
+        await Promise.all(
+          players.map(async (player, index) => {
+            const playerLabel = playerLabels[index] ?? `player-${index + 1}`
+
+            const mediaDiagnostics = await collectMediaDiagnostics(
+              player.page,
+              'video:not([muted])',
+            ).catch((error: unknown) => ({
+              error: String(error),
+            }))
+            await testInfo.attach(`webrtc-media-${playerLabel}`, {
+              body: Buffer.from(JSON.stringify(mediaDiagnostics, null, 2)),
+              contentType: 'application/json',
+            })
+
+            const consoleLogs = consoleLogsByPlayer[index] ?? []
+            if (consoleLogs.length > 0) {
+              await testInfo.attach(`webrtc-console-${playerLabel}`, {
+                body: Buffer.from(consoleLogs.join('\n')),
+                contentType: 'text/plain',
+              })
+            }
+
+            const screenshotBuffer = await player.page
+              .screenshot({ fullPage: true })
+              .catch(() => null)
+            if (screenshotBuffer) {
+              await testInfo.attach(`webrtc-screenshot-${playerLabel}`, {
+                body: screenshotBuffer,
+                contentType: 'image/png',
+              })
+            }
+          }),
+        )
+
+        await testInfo.attach('webrtc-failure-summary', {
+          body: Buffer.from(String(failure)),
+          contentType: 'text/plain',
+        })
+      }
+
+      try {
+        await Promise.all(
+          players.map(async (player, index) => {
+            const playerLabel = playerLabels[index] ?? `player-${index + 1}`
+            try {
+              const remoteStates = await waitForRemoteCardsStable(
+                player.page,
+                3,
+              )
+
+              for (const state of remoteStates) {
+                const cardSelector = `[data-testid="remote-player-card"][data-player-id="${state.playerId}"]`
+                const videoSelector = `${cardSelector} [data-testid="remote-player-video"]`
+                const card = player.page.locator(cardSelector)
+
+                await expect(card).toBeVisible({ timeout: 30_000 })
+                await expect(
+                  card.locator('[data-testid="remote-player-video-off"]'),
+                ).toHaveCount(0)
+                await expect(
+                  card.locator('[data-testid="remote-player-offline-warning"]'),
+                ).toHaveCount(0)
+                await expect(
+                  card.locator('[data-testid="remote-player-webrtc-warning"]'),
+                ).toHaveCount(0)
+
+                await expectVideoRendering(player.page, videoSelector)
+                await expectAudioEnergy(player.page, videoSelector)
+              }
+            } catch (error) {
+              throw new Error(
+                `${playerLabel} media assertion failed: ${
+                  error instanceof Error ? error.message : String(error)
+                }`,
+              )
+            }
+          }),
+        )
+      } catch (error) {
+        await attachFailureDiagnostics(error)
+        throw error
+      }
     } finally {
       await Promise.all(
         players.map(async (player) => {
