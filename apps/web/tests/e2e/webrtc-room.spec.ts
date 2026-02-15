@@ -14,7 +14,8 @@ import {
 import { createRoomViaUI, navigateToTestGame } from '../helpers/test-utils'
 
 test.describe('WebRTC 4-player room', () => {
-  test('players join and render remote video/audio', async ({}, testInfo) => { // eslint-disable-next-line no-empty-pattern -- Playwright fixture signature requires object destructuring
+  test('players join and render remote video/audio', async ({}, testInfo) => {
+    // eslint-disable-next-line no-empty-pattern -- Playwright fixture signature requires object destructuring
     test.setTimeout(180_000)
 
     if (!hasAuthCredentials()) {
@@ -88,6 +89,11 @@ test.describe('WebRTC 4-player room', () => {
         ),
       )
 
+      // Let WebRTC establish all peer connections (especially owner's 3 outbound)
+      // and remote track state to settle before requiring every remote card stable.
+      // 30s gives more headroom for 4-peer mesh + mock media under load.
+      await new Promise((r) => setTimeout(r, 30_000))
+
       const attachFailureDiagnostics = async (
         failure: unknown,
       ): Promise<void> => {
@@ -133,43 +139,42 @@ test.describe('WebRTC 4-player room', () => {
       }
 
       try {
-        await Promise.all(
-          players.map(async (player, index) => {
-            const playerLabel = playerLabels[index] ?? `player-${index + 1}`
-            try {
-              const remoteStates = await waitForRemoteCardsStable(
-                player.page,
-                3,
-              )
+        for (let index = 0; index < players.length; index += 1) {
+          const player = players[index]
+          if (!player)
+            throw new Error(`Player at index ${index} not initialized`)
+          const playerLabel = playerLabels[index] ?? `player-${index + 1}`
+          try {
+            // Require all 3 remotes stable so we catch missing/broken streams (e.g. "Camera Off").
+            const remoteStates = await waitForRemoteCardsStable(player.page, 3)
 
-              for (const state of remoteStates) {
-                const cardSelector = `[data-testid="remote-player-card"][data-player-id="${state.playerId}"]`
-                const videoSelector = `${cardSelector} [data-testid="remote-player-video"]`
-                const card = player.page.locator(cardSelector)
+            for (const state of remoteStates) {
+              const cardSelector = `[data-testid="remote-player-card"][data-player-id="${state.playerId}"]`
+              const videoSelector = `${cardSelector} [data-testid="remote-player-video"]`
+              const card = player.page.locator(cardSelector)
 
-                await expect(card).toBeVisible({ timeout: 30_000 })
-                await expect(
-                  card.locator('[data-testid="remote-player-video-off"]'),
-                ).toHaveCount(0)
-                await expect(
-                  card.locator('[data-testid="remote-player-offline-warning"]'),
-                ).toHaveCount(0)
-                await expect(
-                  card.locator('[data-testid="remote-player-webrtc-warning"]'),
-                ).toHaveCount(0)
+              await expect(card).toBeVisible({ timeout: 30_000 })
+              await expect(
+                card.locator('[data-testid="remote-player-video-off"]'),
+              ).toHaveCount(0)
+              await expect(
+                card.locator('[data-testid="remote-player-offline-warning"]'),
+              ).toHaveCount(0)
+              await expect(
+                card.locator('[data-testid="remote-player-webrtc-warning"]'),
+              ).toHaveCount(0)
 
-                await expectVideoRendering(player.page, videoSelector)
-                await expectAudioEnergy(player.page, videoSelector)
-              }
-            } catch (error) {
-              throw new Error(
-                `${playerLabel} media assertion failed: ${
-                  error instanceof Error ? error.message : String(error)
-                }`,
-              )
+              await expectVideoRendering(player.page, videoSelector)
+              await expectAudioEnergy(player.page, videoSelector)
             }
-          }),
-        )
+          } catch (error) {
+            throw new Error(
+              `${playerLabel} media assertion failed: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            )
+          }
+        }
       } catch (error) {
         await attachFailureDiagnostics(error)
         throw error

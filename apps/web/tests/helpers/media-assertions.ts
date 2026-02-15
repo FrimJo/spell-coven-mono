@@ -473,30 +473,81 @@ async function collectRemoteCardStates(page: Page): Promise<RemoteCardState[]> {
   })
 }
 
+const REMOTE_CARDS_STABLE_TIMEOUT_MS = 90_000
+const REMOTE_CARDS_POLL_INTERVALS_MS = [250, 500, 1_000, 2_000]
+/** Require this many consecutive stable polls (1s apart) before returning. */
+const REMOTE_CARDS_STABLE_CONSECUTIVE = 2
+
+function isCardStable(state: RemoteCardState): boolean {
+  return (
+    state.hasVideo &&
+    !state.hasVideoOffPlaceholder &&
+    !state.hasOfflineWarning &&
+    !state.hasWebRtcWarning
+  )
+}
+
+/** Exposed so tests can assert only on stable cards when using minStable. */
+export function isRemoteCardStable(state: {
+  hasVideo: boolean
+  hasVideoOffPlaceholder: boolean
+  hasOfflineWarning: boolean
+  hasWebRtcWarning: boolean
+}): boolean {
+  return (
+    state.hasVideo &&
+    !state.hasVideoOffPlaceholder &&
+    !state.hasOfflineWarning &&
+    !state.hasWebRtcWarning
+  )
+}
+
+export type WaitForRemoteCardsOptions = {
+  /** Require at least this many stable cards (default: all expected). */
+  minStable?: number
+}
+
 export async function waitForRemoteCardsStable(
   page: Page,
   expectedRemoteCount: number,
+  options: WaitForRemoteCardsOptions = {},
 ): Promise<RemoteCardState[]> {
-  await expect
-    .poll(
-      async () => {
-        const states = await collectRemoteCardStates(page)
-        return (
-          states.every(
-            (state) =>
-              state.hasVideo &&
-              !state.hasVideoOffPlaceholder &&
-              !state.hasOfflineWarning &&
-              !state.hasWebRtcWarning,
-          ) && states.length === expectedRemoteCount
-        )
-      },
-      {
-        timeout: 30_000,
-        intervals: [250, 500, 1_000],
-      },
-    )
-    .toBeTruthy()
+  const { minStable = expectedRemoteCount } = options
+  const start = Date.now()
+  let lastStates: RemoteCardState[] = []
+  let intervalIndex = 0
+  let consecutiveStable = 0
 
-  return await collectRemoteCardStates(page)
+  while (Date.now() - start < REMOTE_CARDS_STABLE_TIMEOUT_MS) {
+    lastStates = await collectRemoteCardStates(page)
+    const stableCount = lastStates.filter(isCardStable).length
+    const enoughStable =
+      lastStates.length === expectedRemoteCount && stableCount >= minStable
+
+    if (enoughStable) {
+      consecutiveStable += 1
+      if (consecutiveStable >= REMOTE_CARDS_STABLE_CONSECUTIVE) {
+        return lastStates
+      }
+      await new Promise((r) => setTimeout(r, 1_000))
+      continue
+    }
+
+    consecutiveStable = 0
+    const interval =
+      REMOTE_CARDS_POLL_INTERVALS_MS[
+        Math.min(intervalIndex, REMOTE_CARDS_POLL_INTERVALS_MS.length - 1)
+      ]
+    await new Promise((r) => setTimeout(r, interval))
+    intervalIndex += 1
+  }
+
+  const summary = lastStates.map(
+    (s) =>
+      `${s.playerId}: video=${s.hasVideo} videoOff=${s.hasVideoOffPlaceholder} offline=${s.hasOfflineWarning} webrtcWarn=${s.hasWebRtcWarning}`,
+  )
+  const stableCount = lastStates.filter(isCardStable).length
+  throw new Error(
+    `Remote cards did not become stable within ${REMOTE_CARDS_STABLE_TIMEOUT_MS}ms: expected at least ${minStable} stable of ${expectedRemoteCount} cards, got ${lastStates.length} cards (${stableCount} stable). Cards: ${summary.join('; ')}`,
+  )
 }
