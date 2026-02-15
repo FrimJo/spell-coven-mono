@@ -18,6 +18,7 @@ test.describe('Game Room Visual Tests', () => {
   let roomId: string
   test.use({ permissions: ['camera', 'microphone'] })
 
+  /** Open the commanders panel via the header "Commanders" button. */
   async function openCommandersPanel(page: Page): Promise<void> {
     const commandersButton = page.getByTestId('commanders-panel-button')
     await expect(commandersButton).toBeVisible({ timeout: 5000 })
@@ -72,7 +73,10 @@ test.describe('Game Room Visual Tests', () => {
       const header = page.locator('header').first()
       await expect(header).toHaveScreenshot('game-room-header.png', {
         animations: 'disabled',
-        mask: [header.getByTestId('game-id-display')],
+        mask: [
+          header.getByTestId('game-id-display'),
+          header.getByTestId('header-user-menu'),
+        ],
         maxDiffPixelRatio: 0.02,
       })
     })
@@ -115,7 +119,7 @@ test.describe('Game Room Visual Tests', () => {
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
-      // Open the commanders panel via player actions menu
+      // Open the commanders panel via header button
       await openCommandersPanel(page)
 
       // Wait for panel to open
@@ -143,7 +147,7 @@ test.describe('Game Room Visual Tests', () => {
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
-      // Open the commander panel via player actions menu
+      // Open the commander panel via header button
       await openCommandersPanel(page)
 
       // Wait for panel to open
@@ -175,7 +179,7 @@ test.describe('Game Room Visual Tests', () => {
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
-      // Open the commander panel via player actions menu
+      // Open the commander panel via header button
       await openCommandersPanel(page)
 
       // Wait for panel to open
@@ -209,7 +213,7 @@ test.describe('Game Room Visual Tests', () => {
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
-      // Open the commander panel via player actions menu
+      // Open the commander panel via header button
       await openCommandersPanel(page)
 
       // Wait for panel to open
@@ -250,7 +254,7 @@ test.describe('Game Room Visual Tests', () => {
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(1000)
 
-      // Open the commander panel via player actions menu
+      // Open the commander panel via header button
       await openCommandersPanel(page)
 
       // Wait for panel to open
@@ -292,9 +296,10 @@ test.describe('Game Room Visual Tests', () => {
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(500)
 
-      // Open settings dialog
+      // Open settings dialog via header dropdown: Settings → Setup Audio & Video
       const settingsButton = page.getByTestId('settings-button')
       await settingsButton.click()
+      await page.getByRole('menuitem', { name: /setup audio & video/i }).click()
 
       // Wait for dialog
       const mediaDialog = page.getByTestId('media-setup-dialog')

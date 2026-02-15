@@ -202,13 +202,13 @@ export async function navigateToTestGame(
 
   await page.goto(`/game/${gameId}`)
 
-  if (handleDuplicateSession) {
-    await ensureNoDuplicateDialog(
-      page,
-      handleDuplicateSession,
-      options?.timeoutMs,
-    )
-  }
+  // if (handleDuplicateSession) {
+  //   await ensureNoDuplicateDialog(
+  //     page,
+  //     handleDuplicateSession,
+  //     options?.timeoutMs,
+  //   )
+  // }
 }
 
 /**

@@ -506,9 +506,10 @@ test.describe('Game Room', () => {
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
-      // Click Settings button
+      // Open settings dialog via header dropdown: Settings → Setup Audio & Video
       const settingsButton = page.getByTestId('settings-button')
       await settingsButton.click()
+      await page.getByRole('menuitem', { name: /setup audio & video/i }).click()
 
       // Media setup dialog should appear
       await expect(page.getByTestId('media-setup-dialog')).toBeVisible()
@@ -526,9 +527,10 @@ test.describe('Game Room', () => {
       // Wait for any loading dialogs to settle
       await page.waitForTimeout(2000)
 
-      // Click Settings button with force to bypass any overlay
+      // Open settings dialog via header dropdown: Settings → Setup Audio & Video
       const settingsButton = page.getByTestId('settings-button')
       await settingsButton.click({ force: true })
+      await page.getByRole('menuitem', { name: /setup audio & video/i }).click()
 
       // Wait for dialog
       await expect(page.getByTestId('media-setup-dialog')).toBeVisible()
@@ -557,9 +559,10 @@ test.describe('Game Room', () => {
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
-      // Open settings dialog
+      // Open settings dialog via header dropdown: Settings → Setup Audio & Video
       const settingsButton = page.getByTestId('settings-button')
       await settingsButton.click()
+      await page.getByRole('menuitem', { name: /setup audio & video/i }).click()
 
       // Wait for dialog
       await expect(page.getByTestId('media-setup-dialog')).toBeVisible()
@@ -583,9 +586,10 @@ test.describe('Game Room', () => {
       // Wait for any loading dialogs to settle
       await page.waitForTimeout(2000)
 
-      // Open settings dialog with force to bypass any overlay
+      // Open settings dialog via header dropdown: Settings → Setup Audio & Video
       const settingsButton = page.getByTestId('settings-button')
       await settingsButton.click({ force: true })
+      await page.getByRole('menuitem', { name: /setup audio & video/i }).click()
 
       // Wait for dialog
       await expect(page.getByTestId('media-setup-dialog')).toBeVisible()

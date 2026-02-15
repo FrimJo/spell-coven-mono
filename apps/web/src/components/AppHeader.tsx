@@ -138,6 +138,7 @@ function UserMenu() {
           variant="ghost"
           className="text-text-secondary hover:text-text-primary flex items-center gap-2"
           title={user.username}
+          data-testid="header-user-menu"
         >
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarImage src={user.avatar || undefined} />
