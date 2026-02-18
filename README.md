@@ -6,8 +6,6 @@ A browser-based platform for playing paper Magic: The Gathering remotely with fr
 
 License: [PolyForm Noncommercial 1.0.0 (non-commercial use only)](./LICENSE)
 
-Production: [https://spell-coven.vercel.app](https://spell-coven.vercel.app)
-
 ## License
 
 This project is licensed under the **PolyForm Noncommercial License 1.0.0**.
