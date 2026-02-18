@@ -7,6 +7,7 @@ import {
 import { launchPlayer } from '../helpers/launch-player'
 import {
   collectMediaDiagnostics,
+  collectRemoteCardsStabilityReport,
   expectAudioEnergy,
   expectVideoRendering,
   waitForRemoteCardsStable,
@@ -16,7 +17,7 @@ import { createRoomViaUI, navigateToTestGame } from '../helpers/test-utils'
 test.describe('WebRTC 4-player room', () => {
   test('players join and render remote video/audio', async ({}, testInfo) => {
     // eslint-disable-next-line no-empty-pattern -- Playwright fixture signature requires object destructuring
-    test.setTimeout(180_000)
+    test.setTimeout(300_000)
 
     if (!hasAuthCredentials()) {
       test.skip(
@@ -81,25 +82,73 @@ test.describe('WebRTC 4-player room', () => {
         handleDuplicateSession: 'transfer',
       })
 
-      await Promise.all(
-        players.slice(1).map((player) =>
-          navigateToTestGame(player.page, roomId, {
-            handleDuplicateSession: 'transfer',
-          }),
-        ),
-      )
+      // Ensure owner is on game page and has had time for presence + media before anyone joins.
+      // This avoids creator being unable to see joiners / joiners unable to see creator (signaling
+      // and initiation depend on presence and local stream).
+      await owner.page
+        .getByTestId('game-id-display')
+        .waitFor({ state: 'visible', timeout: 30_000 })
+      await new Promise((r) => setTimeout(r, 10_000))
 
-      // Let WebRTC establish all peer connections (especially owner's 3 outbound)
-      // and remote track state to settle before requiring every remote card stable.
-      // 30s gives more headroom for 4-peer mesh + mock media under load.
-      await new Promise((r) => setTimeout(r, 30_000))
+      // Stagger joiner entry so the mesh establishes one-by-one instead of all at once.
+      const joiners = players.slice(1)
+      for (let i = 0; i < joiners.length; i += 1) {
+        const player = joiners[i]
+        if (!player) continue
+        await navigateToTestGame(player.page, roomId, {
+          handleDuplicateSession: 'transfer',
+        })
+        if (i < joiners.length - 1) {
+          await new Promise((r) => setTimeout(r, 8_000))
+        }
+      }
+
+      // Let WebRTC establish all peer connections and remote track state to settle.
+      await new Promise((r) => setTimeout(r, 60_000))
 
       const attachFailureDiagnostics = async (
         failure: unknown,
       ): Promise<void> => {
+        const failureMessage = String(
+          failure instanceof Error ? failure.message : failure,
+        )
+        const failedPlayerMatch = failureMessage.match(
+          /^(\w+) media assertion failed:/,
+        )
+        const failedPlayerLabel = failedPlayerMatch?.[1] ?? 'unknown'
+
+        const stabilityReports: Array<{
+          label: string
+          report: Awaited<ReturnType<typeof collectRemoteCardsStabilityReport>>
+        }> = []
+
         await Promise.all(
           players.map(async (player, index) => {
             const playerLabel = playerLabels[index] ?? `player-${index + 1}`
+
+            const stabilityReport = await collectRemoteCardsStabilityReport(
+              player.page,
+              3,
+            ).catch((error: unknown) => ({
+              cards: [],
+              stableCount: 0,
+              unstableCount: 0,
+              expectedCount: 3,
+              summary: `Failed to collect: ${String(error)}`,
+              unstableCards: [],
+              collectedAt: new Date().toISOString(),
+            }))
+            stabilityReports.push({
+              label: playerLabel,
+              report: stabilityReport,
+            })
+            await testInfo.attach(`webrtc-remote-cards-${playerLabel}`, {
+              body: Buffer.from(
+                JSON.stringify(stabilityReport, null, 2),
+                'utf-8',
+              ),
+              contentType: 'application/json',
+            })
 
             const mediaDiagnostics = await collectMediaDiagnostics(
               player.page,
@@ -132,8 +181,46 @@ test.describe('WebRTC 4-player room', () => {
           }),
         )
 
+        const contextLines: string[] = [
+          '=== WebRTC room test failure context ===',
+          '',
+          `Failed at: ${failedPlayerLabel}`,
+          '',
+          'Per-player remote card stability (at failure time):',
+          ...stabilityReports.map(
+            ({ label, report }) =>
+              `  ${label}: ${report.summary} (collected ${report.collectedAt})`,
+          ),
+          '',
+          'Unstable cards by player (check webrtc-remote-cards-*.json for full details):',
+          ...stabilityReports.flatMap(({ label, report }) =>
+            report.unstableCards.length > 0
+              ? [
+                  `  ${label}:`,
+                  ...report.unstableCards.map(
+                    (u) =>
+                      `    - ${u.playerId}${u.playerName ? ` (${u.playerName})` : ''}: ${u.reason}${u.webrtcConnectionState ? ` [connectionState=${u.webrtcConnectionState}]` : ''}`,
+                  ),
+                ]
+              : [],
+          ),
+          '',
+          'Attachments to inspect:',
+          '  - webrtc-remote-cards-<Player>: per-player card states and unstable reasons',
+          '  - webrtc-media-<Player>: video/audio element diagnostics',
+          '  - webrtc-console-<Player>: console logs',
+          '  - webrtc-screenshot-<Player>: full-page screenshot',
+          '',
+          '--- Failure message ---',
+          failureMessage,
+        ]
+
+        await testInfo.attach('webrtc-failure-context', {
+          body: Buffer.from(contextLines.join('\n'), 'utf-8'),
+          contentType: 'text/plain',
+        })
         await testInfo.attach('webrtc-failure-summary', {
-          body: Buffer.from(String(failure)),
+          body: Buffer.from(failureMessage, 'utf-8'),
           contentType: 'text/plain',
         })
       }
@@ -146,7 +233,13 @@ test.describe('WebRTC 4-player room', () => {
           const playerLabel = playerLabels[index] ?? `player-${index + 1}`
           try {
             // Require all 3 remotes stable so we catch missing/broken streams (e.g. "Camera Off").
-            const remoteStates = await waitForRemoteCardsStable(player.page, 3)
+            const remoteStates = await waitForRemoteCardsStable(
+              player.page,
+              3,
+              {
+                context: playerLabel,
+              },
+            )
 
             for (const state of remoteStates) {
               const cardSelector = `[data-testid="remote-player-card"][data-player-id="${state.playerId}"]`

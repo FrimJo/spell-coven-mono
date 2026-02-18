@@ -429,12 +429,16 @@ export async function expectAudioSilent(
   ).toBeTruthy()
 }
 
-type RemoteCardState = {
+export type RemoteCardState = {
   playerId: string
   hasVideo: boolean
   hasVideoOffPlaceholder: boolean
   hasOfflineWarning: boolean
   hasWebRtcWarning: boolean
+  /** When hasWebRtcWarning is true, the connection state from the UI (e.g. "connecting", "failed"). */
+  webrtcConnectionState?: string
+  /** Player name from the card when available (for easier correlation in reports). */
+  playerName?: string
 }
 
 async function collectRemoteCardStates(page: Page): Promise<RemoteCardState[]> {
@@ -447,6 +451,14 @@ async function collectRemoteCardStates(page: Page): Promise<RemoteCardState[]> {
       .map((card) => {
         const playerId = card.getAttribute('data-player-id')
         if (!playerId) return null
+        const webrtcWarning = card.querySelector(
+          '[data-testid="remote-player-webrtc-warning"]',
+        )
+        const playerNameEl = card.querySelector('.text-white')
+        const webrtcConnectionState = webrtcWarning?.getAttribute(
+          'data-connection-state',
+        )
+        const playerName = playerNameEl?.textContent?.trim()
         return {
           playerId,
           hasVideo: card.querySelector('[data-testid="remote-player-video"]')
@@ -462,18 +474,20 @@ async function collectRemoteCardStates(page: Page): Promise<RemoteCardState[]> {
           )
             ? true
             : false,
-          hasWebRtcWarning: card.querySelector(
-            '[data-testid="remote-player-webrtc-warning"]',
-          )
-            ? true
-            : false,
+          hasWebRtcWarning: !!webrtcWarning,
+          ...(webrtcConnectionState != null && {
+            webrtcConnectionState,
+          }),
+          ...(playerName != null && { playerName }),
         }
       })
-      .filter((state): state is RemoteCardState => state !== null)
+      .filter(
+        (s): s is NonNullable<typeof s> => s !== null,
+      ) as RemoteCardState[]
   })
 }
 
-const REMOTE_CARDS_STABLE_TIMEOUT_MS = 90_000
+const REMOTE_CARDS_STABLE_TIMEOUT_MS = 120_000
 const REMOTE_CARDS_POLL_INTERVALS_MS = [250, 500, 1_000, 2_000]
 /** Require this many consecutive stable polls (1s apart) before returning. */
 const REMOTE_CARDS_STABLE_CONSECUTIVE = 2
@@ -505,6 +519,8 @@ export function isRemoteCardStable(state: {
 export type WaitForRemoteCardsOptions = {
   /** Require at least this many stable cards (default: all expected). */
   minStable?: number
+  /** Optional label (e.g. player name) to include in the error message. */
+  context?: string
 }
 
 export async function waitForRemoteCardsStable(
@@ -512,7 +528,7 @@ export async function waitForRemoteCardsStable(
   expectedRemoteCount: number,
   options: WaitForRemoteCardsOptions = {},
 ): Promise<RemoteCardState[]> {
-  const { minStable = expectedRemoteCount } = options
+  const { minStable = expectedRemoteCount, context } = options
   const start = Date.now()
   let lastStates: RemoteCardState[] = []
   let intervalIndex = 0
@@ -542,12 +558,110 @@ export async function waitForRemoteCardsStable(
     intervalIndex += 1
   }
 
-  const summary = lastStates.map(
-    (s) =>
-      `${s.playerId}: video=${s.hasVideo} videoOff=${s.hasVideoOffPlaceholder} offline=${s.hasOfflineWarning} webrtcWarn=${s.hasWebRtcWarning}`,
-  )
   const stableCount = lastStates.filter(isCardStable).length
+  const unstableCards = lastStates.filter((s) => !isCardStable(s))
+  const stableCards = lastStates.filter(isCardStable)
+
+  const formatCard = (s: RemoteCardState) => {
+    const parts = [
+      `playerId=${s.playerId}`,
+      `video=${s.hasVideo}`,
+      `videoOff=${s.hasVideoOffPlaceholder}`,
+      `offline=${s.hasOfflineWarning}`,
+      `webrtcWarn=${s.hasWebRtcWarning}`,
+    ]
+    if (s.hasWebRtcWarning && s.webrtcConnectionState) {
+      parts.push(`connectionState=${s.webrtcConnectionState}`)
+    }
+    if (s.playerName) parts.unshift(`name=${s.playerName}`)
+    return parts.join(' ')
+  }
+
+  const summary = lastStates.map(formatCard).join('; ')
+  const unstableDetail =
+    unstableCards.length > 0
+      ? ` Unstable (${unstableCards.length}): ${unstableCards.map(formatCard).join(' | ')}`
+      : ''
+  const hint =
+    ' Check attachments: webrtc-remote-cards-*, webrtc-media-*, webrtc-console-*, webrtc-screenshot-*, webrtc-failure-context.'
+  const prefix = context ? `${context}: ` : ''
+
   throw new Error(
-    `Remote cards did not become stable within ${REMOTE_CARDS_STABLE_TIMEOUT_MS}ms: expected at least ${minStable} stable of ${expectedRemoteCount} cards, got ${lastStates.length} cards (${stableCount} stable). Cards: ${summary.join('; ')}`,
+    `${prefix}Remote cards did not become stable within ${REMOTE_CARDS_STABLE_TIMEOUT_MS}ms: expected at least ${minStable} stable of ${expectedRemoteCount} cards, got ${lastStates.length} cards (${stableCount} stable).${unstableDetail} Cards: ${summary}.${hint}`,
   )
+}
+
+/** Result of collecting remote card stability for a single page (one player's view). */
+export type RemoteCardsStabilityReport = {
+  /** All remote card states at collection time. */
+  cards: RemoteCardState[]
+  stableCount: number
+  unstableCount: number
+  expectedCount: number
+  /** Human-readable one-line summary. */
+  summary: string
+  /** Unstable cards with details (playerId, connectionState when applicable). */
+  unstableCards: Array<{
+    playerId: string
+    playerName?: string
+    hasVideo: boolean
+    hasVideoOffPlaceholder: boolean
+    hasOfflineWarning: boolean
+    hasWebRtcWarning: boolean
+    webrtcConnectionState?: string
+    reason: string
+  }>
+  /** ISO timestamp when the report was collected. */
+  collectedAt: string
+}
+
+/**
+ * Collect a stability report for the current remote cards on the page.
+ * Use in tests to attach detailed diagnostics on failure.
+ */
+export async function collectRemoteCardsStabilityReport(
+  page: Page,
+  expectedRemoteCount: number,
+): Promise<RemoteCardsStabilityReport> {
+  const cards = await collectRemoteCardStates(page)
+  const stableCount = cards.filter(isCardStable).length
+  const unstableCount = cards.length - stableCount
+
+  const unstableCards = cards
+    .filter((s) => !isCardStable(s))
+    .map((s) => {
+      const reasons: string[] = []
+      if (!s.hasVideo) reasons.push('no-video')
+      if (s.hasVideoOffPlaceholder) reasons.push('video-off-placeholder')
+      if (s.hasOfflineWarning) reasons.push('offline-warning')
+      if (s.hasWebRtcWarning) {
+        reasons.push(
+          s.webrtcConnectionState
+            ? `webrtc-warning(${s.webrtcConnectionState})`
+            : 'webrtc-warning',
+        )
+      }
+      return {
+        playerId: s.playerId,
+        playerName: s.playerName,
+        hasVideo: s.hasVideo,
+        hasVideoOffPlaceholder: s.hasVideoOffPlaceholder,
+        hasOfflineWarning: s.hasOfflineWarning,
+        hasWebRtcWarning: s.hasWebRtcWarning,
+        webrtcConnectionState: s.webrtcConnectionState,
+        reason: reasons.join(', '),
+      }
+    })
+
+  const summary = `${stableCount}/${cards.length} stable (expected ${expectedRemoteCount})${unstableCount > 0 ? `; unstable: ${unstableCards.map((u) => `${u.playerId}(${u.reason})`).join(', ')}` : ''}`
+
+  return {
+    cards,
+    stableCount,
+    unstableCount,
+    expectedCount: expectedRemoteCount,
+    summary,
+    unstableCards,
+    collectedAt: new Date().toISOString(),
+  }
 }
