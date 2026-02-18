@@ -10,21 +10,19 @@
 
 import Discord from '@auth/core/providers/discord'
 import { Password } from '@convex-dev/auth/providers/Password'
-import { convexAuth } from '@convex-dev/auth/server'
+import { AuthProviderConfig, convexAuth } from '@convex-dev/auth/server'
 
 import { isE2ePreview } from './env'
 
 export { previewLogin } from './previewLogin'
 
-let providers: [typeof Discord] | [typeof Password]
+const providers: AuthProviderConfig[] = [Discord]
 
 // Only add Discord provider when not running e2e tests
 if (isE2ePreview) {
-  providers = [Password]
-} else {
-  providers = [Discord]
+  providers.push(Password)
 }
-
+console.log({ providers: providers })
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: providers,
 })
