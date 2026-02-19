@@ -83,6 +83,7 @@ async function updateRoomActivity(
  * Base-32 character set (excludes confusing chars: 0, O, 1, I)
  */
 const BASE32_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+const BASE32_ZERO = BASE32_CHARS.charAt(0)
 
 /**
  * Scramble a sequential number to produce a pseudo-random looking value.
@@ -116,16 +117,16 @@ function toBase32Code(num: number, minLength = 6): string {
   let scrambled = scrambleId(num)
 
   if (scrambled === 0) {
-    return BASE32_CHARS[0].repeat(minLength)
+    return BASE32_ZERO.repeat(minLength)
   }
 
   let result = ''
   while (scrambled > 0) {
-    result = BASE32_CHARS[scrambled % 32] + result
+    result = BASE32_CHARS.charAt(scrambled % 32) + result
     scrambled = Math.floor(scrambled / 32)
   }
 
-  return result.padStart(minLength, BASE32_CHARS[0])
+  return result.padStart(minLength, BASE32_ZERO)
 }
 
 /**

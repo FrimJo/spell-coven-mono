@@ -8,9 +8,10 @@
  * @see https://labs.convex.dev/auth
  */
 
+import type { AuthProviderConfig } from '@convex-dev/auth/server'
 import Discord from '@auth/core/providers/discord'
 import { Password } from '@convex-dev/auth/providers/Password'
-import { AuthProviderConfig, convexAuth } from '@convex-dev/auth/server'
+import { convexAuth } from '@convex-dev/auth/server'
 
 import { isE2ePreview } from './env'
 
