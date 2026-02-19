@@ -2,7 +2,7 @@ name: Web E2E
 
 on:
   push:
-    branches: [develop, main]
+    branches: [main]
   pull_request:
     branches: [main, develop]
 
@@ -78,8 +78,22 @@ jobs:
           bun install --frozen-lockfile
         working-directory: .
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: bunx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: bunx playwright install-deps chromium
 
       - name: Deploy Convex (preview) and run E2E
         env:
