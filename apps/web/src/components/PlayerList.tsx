@@ -83,7 +83,7 @@ export function PlayerList({
   ownerId,
   mutedPlayers,
   onToggleMutePlayer,
-  currentUserId,
+  currentUserId: _currentUserId,
   onOpenCommanderDamage,
   seatCount,
   onChangeSeatCount,

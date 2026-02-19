@@ -411,6 +411,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
       commanderDamageDialog &&
       commanderDamageDialog.openForPlayerId === participant.id
     ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCommanderDialogOpen(true)
       commanderDamageDialog.setOpenForPlayerId(null)
     }

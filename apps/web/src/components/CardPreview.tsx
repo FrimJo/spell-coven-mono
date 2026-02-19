@@ -142,6 +142,7 @@ export function CardPreview({ onClose }: CardPreviewProps) {
                     className="absolute inset-0 flex cursor-pointer flex-col items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                     onClick={() => setCardModalOpen(true)}
                     onMouseEnter={() => {
+                      if (!cardImage) return
                       const img = new Image()
                       img.src = toScryfallPngUrl(cardImage)
                     }}

@@ -49,7 +49,7 @@ export const LocalVideoCard = memo(function LocalVideoCard({
   participant,
   currentUser,
   participants,
-  gridIndex = 0,
+  gridIndex: _gridIndex = 0,
 }: LocalVideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const videoContainerRef = useRef<HTMLDivElement>(null)

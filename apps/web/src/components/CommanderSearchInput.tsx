@@ -89,6 +89,9 @@ export function CommanderSearchInput({
   const onCardWasResolved = useEffectEvent((card: ScryfallCard) => {
     onCardResolved?.(card)
   })
+  const onCardWasCleared = useEffectEvent(() => {
+    onCardResolved?.(null)
+  })
 
   const syncExternalValue = useEffectEvent(() => {
     // Only sync if external value differs from machine query
@@ -130,7 +133,7 @@ export function CommanderSearchInput({
       onCardWasResolved(resolvedCard)
     } else if (resolvedCard === null && prevResolvedCardRef.current !== null) {
       prevResolvedCardRef.current = null
-      onCardResolved?.(null)
+      onCardWasCleared()
     }
   }, [resolvedCard])
 
@@ -204,11 +207,6 @@ export function CommanderSearchInput({
 
   const showResults =
     results.length > 0 || effectiveSuggestions.length > 0 || loading
-
-  // Reset highlight when options change (new search or suggestions)
-  useEffect(() => {
-    setHighlightedIndex(options.length === 0 ? -1 : 0)
-  }, [options.length, results.length, effectiveSuggestions.length])
 
   // Scroll highlighted item into view
   useEffect(() => {

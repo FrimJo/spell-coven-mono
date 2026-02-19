@@ -1,5 +1,5 @@
-import { StartClient } from '@tanstack/react-start/client'
 import * as Sentry from '@sentry/react'
+import { StartClient } from '@tanstack/react-start/client'
 import { hydrateRoot } from 'react-dom/client'
 import { ErrorBoundary } from 'react-error-boundary'
 

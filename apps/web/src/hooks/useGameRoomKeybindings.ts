@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 
 type GameRoomShortcutId =
   | 'searchCards'
@@ -49,11 +49,7 @@ export function useGameRoomShortcutDisplayParts(): Record<
   GameRoomShortcutId,
   string[]
 > {
-  const [isMac, setIsMac] = useState(true)
-
-  useEffect(() => {
-    setIsMac(getIsMac())
-  }, [])
+  const isMac = getIsMac()
 
   return useMemo(() => {
     const modifierLabel = isMac ? '⌘' : 'Ctrl'
@@ -66,9 +62,7 @@ export function useGameRoomShortcutDisplayParts(): Record<
   }, [isMac])
 }
 
-export function useGameRoomKeyboardShortcuts(
-  handlers: ShortcutHandlers,
-) {
+export function useGameRoomKeyboardShortcuts(handlers: ShortcutHandlers) {
   const handlersRef = useRef<ShortcutHandlers>(handlers)
 
   useEffect(() => {

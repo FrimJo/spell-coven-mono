@@ -133,16 +133,16 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
       return null
     }
 
-    if (hasVideo) {
-      const liveTracks = videoResult
-        .stream!.getVideoTracks()
+    if (hasVideo && isSuccessState(videoResult) && videoResult.stream) {
+      const liveTracks = videoResult.stream
+        .getVideoTracks()
         .filter((track) => track.readyState === 'live')
       tracks.push(...liveTracks)
     }
 
-    if (hasAudio) {
-      const liveTracks = audioResult
-        .stream!.getAudioTracks()
+    if (hasAudio && isSuccessState(audioResult) && audioResult.stream) {
+      const liveTracks = audioResult.stream
+        .getAudioTracks()
         .filter((track) => track.readyState === 'live')
       tracks.push(...liveTracks)
     }

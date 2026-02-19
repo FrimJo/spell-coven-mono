@@ -17,7 +17,7 @@ import {
   useGameRoomShortcutDisplayParts,
 } from '@/hooks/useGameRoomKeybindings'
 import { api } from '@convex/_generated/api'
-import { useMutation } from 'convex/react'
+import { useMutation as useConvexMutation } from 'convex/react'
 import { toast } from 'sonner'
 
 import { Toaster } from '@repo/ui/components/sonner'
@@ -86,7 +86,7 @@ function GameRoomContent({
     [],
   )
 
-  const resetRoomGameStateMutation = useMutation(api.rooms.resetRoomGameState)
+  const resetRoomGameState = useConvexMutation(api.rooms.resetRoomGameState)
 
   // Muted players state - tracks which remote players are muted by the local user
   const [mutedPlayers, setMutedPlayers] = useState<Set<string>>(new Set())
@@ -242,7 +242,7 @@ function GameRoomContent({
   const handleConfirmReset = useCallback(async () => {
     setIsResetting(true)
     try {
-      await resetRoomGameStateMutation({ roomId })
+      await resetRoomGameState({ roomId })
       setShowResetConfirmDialog(false)
       toast.success('Game state reset')
       clearHistory()
@@ -252,7 +252,7 @@ function GameRoomContent({
     } finally {
       setIsResetting(false)
     }
-  }, [roomId, resetRoomGameStateMutation, clearHistory])
+  }, [roomId, resetRoomGameState, clearHistory])
 
   return (
     <div className="bg-surface-0 flex h-screen flex-col">
@@ -340,7 +340,6 @@ function GameRoomContent({
               onCardCrop={query}
               showTestStream={showTestStream}
               onToggleSearchCards={toggleSearchDialog}
-              shortcutParts={shortcutParts}
             />
           </CommanderDamageDialogProvider>
         </CommandersPanelProvider>
@@ -368,10 +367,6 @@ interface GameRoomMainLayoutProps {
   onCardCrop: ReturnType<typeof useCardQueryContext>['query']
   showTestStream: boolean
   onToggleSearchCards: () => void
-  shortcutParts: {
-    toggleCommandersPanel: string[]
-    openCommanderDamage: string[]
-  }
 }
 
 function GameRoomMainLayout({
@@ -393,7 +388,6 @@ function GameRoomMainLayout({
   onCardCrop,
   showTestStream,
   onToggleSearchCards,
-  shortcutParts,
 }: GameRoomMainLayoutProps) {
   const commanderDamageDialog = useCommanderDamageDialog()
 

@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react'
-
 /**
  * Returns whether the user is on a Mac-like platform for keyboard shortcut display.
  * Mac uses ⌘ (Cmd), Windows/Linux use Ctrl.
@@ -19,11 +17,7 @@ function getIsMac(): boolean {
 
 /** Shortcut label for search: "⌘K" on Mac, "Ctrl+K" on Windows/Linux */
 export function useSearchShortcutLabel(): string {
-  const [label, setLabel] = useState('⌘K')
-  useEffect(() => {
-    setLabel(getIsMac() ? '⌘K' : 'Ctrl+K')
-  }, [])
-  return label
+  return getIsMac() ? '⌘K' : 'Ctrl+K'
 }
 
 /**
@@ -32,11 +26,7 @@ export function useSearchShortcutLabel(): string {
  * Windows/Linux: { modifier: 'Ctrl', key: 'K' }
  */
 export function useSearchShortcutParts(): { modifier: string; key: string } {
-  const [parts, setParts] = useState({ modifier: '⌘', key: 'K' })
-  useEffect(() => {
-    setParts(
-      getIsMac() ? { modifier: '⌘', key: 'K' } : { modifier: 'Ctrl', key: 'K' },
-    )
-  }, [])
-  return parts
+  return getIsMac()
+    ? { modifier: '⌘', key: 'K' }
+    : { modifier: 'Ctrl', key: 'K' }
 }

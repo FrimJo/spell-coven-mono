@@ -3,8 +3,8 @@ import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query
 
 import { ErrorPage } from './components/ErrorPage.js'
 import { NotFoundPage } from './components/NotFoundPage.js'
-import * as TanstackQuery from './integrations/tanstack-query/root-provider.js'
 import { registerSentryRouterInstrumentation } from './integrations/sentry/router.js'
+import * as TanstackQuery from './integrations/tanstack-query/root-provider.js'
 // Import the generated route tree
 import { routeTree } from './routeTree.gen.js'
 

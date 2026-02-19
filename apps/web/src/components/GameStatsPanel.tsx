@@ -285,7 +285,7 @@ export function GameStatsPanel({
   // Wrapper to auto-save when Commander 1 is selected or cleared (empty input / deselect)
   const onCommander1Resolved = async (
     playerId: string,
-    card: Parameters<typeof baseOnCommander1Resolved>[0],
+    card: Parameters<typeof baseOnCommander1Resolved>[1],
   ) => {
     const editState = editStateByPlayerId[playerId]
     baseOnCommander1Resolved(playerId, card)
@@ -321,7 +321,7 @@ export function GameStatsPanel({
   // Wrapper to auto-save when Commander 2 is selected or cleared (empty input / deselect)
   const onCommander2Resolved = (
     playerId: string,
-    card: Parameters<typeof baseOnCommander2Resolved>[0],
+    card: Parameters<typeof baseOnCommander2Resolved>[1],
   ) => {
     const editState = editStateByPlayerId[playerId]
     baseOnCommander2Resolved(playerId, card)

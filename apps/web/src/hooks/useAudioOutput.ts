@@ -18,7 +18,7 @@
  * - No errors are thrown - graceful degradation
  */
 
-import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export type AudioOutputDevice = Pick<
   globalThis.MediaDeviceInfo,
@@ -112,13 +112,19 @@ export function useAudioOutput(
   const audioElementRef = useRef<HTMLAudioElement | null>(null)
   const isEnumeratingRef = useRef(false)
 
-  const handleDeviceChanged = useEffectEvent((deviceId: string) => {
-    onDeviceChanged?.(deviceId)
-  })
+  const handleDeviceChanged = useCallback(
+    (deviceId: string) => {
+      onDeviceChanged?.(deviceId)
+    },
+    [onDeviceChanged],
+  )
 
-  const handleError = useEffectEvent((error: Error) => {
-    onError?.(error)
-  })
+  const handleError = useCallback(
+    (error: Error) => {
+      onError?.(error)
+    },
+    [onError],
+  )
 
   // Check for setSinkId support
   useEffect(() => {
@@ -220,7 +226,7 @@ export function useAudioOutput(
       isEnumeratingRef.current = false
       setIsLoading(false)
     }
-  }, [currentDeviceId])
+  }, [currentDeviceId, handleError])
 
   /**
    * Set the audio output device
@@ -269,7 +275,7 @@ export function useAudioOutput(
         throw error
       }
     },
-    [isSupported],
+    [isSupported, handleDeviceChanged, handleError],
   )
 
   /**
@@ -345,7 +351,7 @@ export function useAudioOutput(
     } finally {
       setIsTesting(false)
     }
-  }, [currentDeviceId, isSupported])
+  }, [currentDeviceId, isSupported, handleError])
 
   // Initial device enumeration
   useEffect(() => {
