@@ -5,10 +5,12 @@ export default defineConfig({
   testMatch: ['e2e/**/*.spec.ts', 'visual/**/*.spec.ts', '**/*.setup.ts'],
   timeout: 60_000,
   globalTeardown: './tests/global-teardown.ts',
-  // Use same snapshot basename on all platforms so CI (Linux) and local (e.g. darwin) share one baseline
+  // Use same snapshot basename on all platforms so CI (Linux) and local (e.g. darwin) share one baseline.
+  // Explicit {testDir}/{testFilePath}-snapshots so CI and local resolve to the same path as committed.
   expect: {
     toHaveScreenshot: {
-      pathTemplate: '{snapshotDir}/{arg}-{projectName}{ext}',
+      pathTemplate:
+        '{testDir}/{testFilePath}-snapshots/{arg}-{projectName}{ext}',
     },
   },
   /* Run tests in files in parallel */
