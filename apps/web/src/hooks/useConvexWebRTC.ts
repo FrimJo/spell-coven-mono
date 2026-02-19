@@ -58,7 +58,13 @@ export function useConvexWebRTC({
 
   const webrtcManagerRef = useRef<WebRTCManager | null>(null)
   const onErrorRef = useRef(onError)
-  const previousRemotePlayerIdsRef = useRef<string[]>([])
+  /**
+   * Tracks which remote peer IDs we have already initiated or acknowledged a
+   * connection for.  Only IDs that we actively called (shouldInitiate) or that
+   * successfully called us (incoming offer creates the PC) belong here.
+   * Using a Set for O(1) lookups.
+   */
+  const initiatedPeersRef = useRef<Set<string>>(new Set())
   const localStreamRef = useRef<MediaStream | null>(localStream)
 
   // Queue for signals that arrive before manager is ready
@@ -76,16 +82,21 @@ export function useConvexWebRTC({
 
   // Handle incoming signals from Convex
   const handleSignal = useCallback((signal: WebRTCSignal) => {
-    if (webrtcManagerRef.current) {
-      webrtcManagerRef.current.handleSignal(signal).catch((err) => {
-        const error = err instanceof Error ? err : new Error(String(err))
-        setWebrtcError(error)
-        onErrorRef.current?.(error)
-      })
-    } else {
-      // Queue signal for later processing when manager and local stream are ready
+    const manager = webrtcManagerRef.current
+
+    // Queue signals when manager isn't ready or local stream isn't set.
+    // Processing an offer without local tracks produces a media-less answer
+    // that causes the initiator's connection to stay stuck at "connecting".
+    if (!manager || !manager.hasLocalStream()) {
       pendingSignalsRef.current.push(signal)
+      return
     }
+
+    manager.handleSignal(signal).catch((err) => {
+      const error = err instanceof Error ? err : new Error(String(err))
+      setWebrtcError(error)
+      onErrorRef.current?.(error)
+    })
   }, [])
 
   // Handle signaling errors
@@ -128,6 +139,7 @@ export function useConvexWebRTC({
     }
 
     let isDestroyed = false
+    const initiatedPeers = initiatedPeersRef.current
 
     console.log('[ConvexWebRTC:Hook] Initializing WebRTC manager...')
 
@@ -142,6 +154,9 @@ export function useConvexWebRTC({
       {
         onRemoteStream: (peerId, stream) => {
           if (!isDestroyed) {
+            // Mark peer as connected so the peer-connection effect won't
+            // try to re-initiate a call to them.
+            initiatedPeers.add(peerId)
             setRemoteStreams((prev) => {
               const next = new Map(prev)
               if (stream) {
@@ -194,6 +209,7 @@ export function useConvexWebRTC({
       console.log('[ConvexWebRTC:Hook] Destroying WebRTC manager')
       webrtcManager.destroy()
       webrtcManagerRef.current = null
+      initiatedPeers.clear()
     }
   }, [localPlayerId, roomId, presenceReady, isSignalingInitialized])
 
@@ -245,8 +261,6 @@ export function useConvexWebRTC({
       return
     }
 
-    // Check both the prop AND that the manager actually has the stream set
-    // This prevents race conditions where the prop exists but hasn't been set on the manager yet
     if (!localStream || !webrtcManagerRef.current.hasLocalStream()) {
       console.log(
         '[ConvexWebRTC:Hook] Skipping - local stream not ready on manager',
@@ -254,77 +268,154 @@ export function useConvexWebRTC({
       return
     }
 
-    const previousRemotePlayerIds = previousRemotePlayerIdsRef.current
-    console.log('[ConvexWebRTC:Hook] Previous remote player IDs:', [
-      ...previousRemotePlayerIds,
-    ])
+    const initiated = initiatedPeersRef.current
+    console.log('[ConvexWebRTC:Hook] Already-initiated peers:', [...initiated])
 
-    // Connect to new remote peers
     if (remotePlayerIds.length === 0) {
       console.log('[ConvexWebRTC:Hook] No remote players to connect to')
     }
 
-    for (const remotePlayerId of remotePlayerIds) {
-      if (remotePlayerId !== localPlayerId) {
-        // Only call if this peer wasn't in the previous list
-        if (!previousRemotePlayerIds.includes(remotePlayerId)) {
-          // To avoid race conditions where both peers try to call each other,
-          // only the peer with the lexicographically smaller ID initiates the call
-          const shouldInitiate = localPlayerId < remotePlayerId
+    const currentRemoteSet = new Set(remotePlayerIds)
 
-          if (shouldInitiate) {
+    for (const remotePlayerId of remotePlayerIds) {
+      if (remotePlayerId === localPlayerId) continue
+
+      if (initiated.has(remotePlayerId)) {
+        // Already initiated or peer already called us — skip
+        continue
+      }
+
+      // Determine who should initiate: peer with lexicographically smaller ID
+      const shouldInitiate = localPlayerId < remotePlayerId
+
+      if (shouldInitiate) {
+        console.log(
+          `[ConvexWebRTC:Hook] Initiating call to peer: ${remotePlayerId} in room ${roomId} (we have smaller ID)`,
+        )
+        initiated.add(remotePlayerId)
+        webrtcManagerRef.current
+          .callPeer(remotePlayerId, roomId)
+          .then(() => {
             console.log(
-              `[ConvexWebRTC:Hook] Initiating call to peer: ${remotePlayerId} in room ${roomId} (we have smaller ID)`,
+              `[ConvexWebRTC:Hook] Successfully initiated call to ${remotePlayerId}`,
             )
-            webrtcManagerRef.current
-              .callPeer(remotePlayerId, roomId)
-              .then(() => {
-                console.log(
-                  `[ConvexWebRTC:Hook] Successfully initiated call to ${remotePlayerId}`,
-                )
-              })
-              .catch((err) => {
-                console.error(
-                  `[ConvexWebRTC:Hook] Error calling peer ${remotePlayerId}:`,
-                  err,
-                )
-                const callError =
-                  err instanceof Error ? err : new Error(String(err))
-                setWebrtcError(callError)
-                onErrorRef.current?.(callError)
-              })
-          } else {
-            console.log(
-              `[ConvexWebRTC:Hook] Waiting for peer ${remotePlayerId} to call us (they have smaller ID)`,
+          })
+          .catch((err) => {
+            console.error(
+              `[ConvexWebRTC:Hook] Error calling peer ${remotePlayerId}:`,
+              err,
             )
-          }
-        } else {
-          console.log(
-            `[ConvexWebRTC:Hook] Skipping peer ${remotePlayerId} - already connected`,
-          )
-        }
+            // Remove from initiated so it can be retried
+            initiated.delete(remotePlayerId)
+            const callError =
+              err instanceof Error ? err : new Error(String(err))
+            setWebrtcError(callError)
+            onErrorRef.current?.(callError)
+          })
+      } else {
+        // We expect the remote peer to call us. Don't add to initiated set —
+        // the handleSignal path will create the PC when the offer arrives.
+        console.log(
+          `[ConvexWebRTC:Hook] Waiting for peer ${remotePlayerId} to call us (they have smaller ID)`,
+        )
       }
     }
 
     // Close connections to peers that are no longer in the list
-    for (const peerId of previousRemotePlayerIds) {
-      if (!remotePlayerIds.includes(peerId)) {
+    for (const peerId of initiated) {
+      if (!currentRemoteSet.has(peerId)) {
         console.log(`[ConvexWebRTC:Hook] Closing connection to peer: ${peerId}`)
         webrtcManagerRef.current.closePeer(peerId)
+        initiated.delete(peerId)
       }
     }
-
-    // Update ref for next comparison
-    previousRemotePlayerIdsRef.current = remotePlayerIds
-    console.log('[ConvexWebRTC:Hook] Updated previous remote player IDs ref:', [
-      ...previousRemotePlayerIdsRef.current,
-    ])
   }, [
     remotePlayerIds,
     isSignalingInitialized,
     roomId,
     localPlayerId,
     localStream,
+  ])
+
+  // Periodically check for stuck connections and retry.
+  // A connection stuck at "connecting" for too long likely means the signaling
+  // handshake failed silently (e.g. the offer/answer was lost).
+  useEffect(() => {
+    if (!isSignalingInitialized || !webrtcManagerRef.current) return
+
+    const STUCK_THRESHOLD_MS = 30_000
+    const CHECK_INTERVAL_MS = 5_000
+    const connectingSinceMs = new Map<string, number>()
+
+    const interval = window.setInterval(() => {
+      const manager = webrtcManagerRef.current
+      if (!manager || !localStream) return
+
+      for (const [peerId, state] of connectionStates) {
+        if (state !== 'connecting') {
+          connectingSinceMs.delete(peerId)
+          continue
+        }
+
+        const now = Date.now()
+        const firstSeen = connectingSinceMs.get(peerId) ?? now
+        if (!connectingSinceMs.has(peerId)) {
+          connectingSinceMs.set(peerId, firstSeen)
+        }
+        const connectingForMs = now - firstSeen
+        if (connectingForMs < STUCK_THRESHOLD_MS) {
+          continue
+        }
+
+        // Check how long this peer has been in connecting state by looking
+        // at whether we already initiated. If so, try tearing down and
+        // re-initiating after a threshold.
+        const initiated = initiatedPeersRef.current
+        if (!initiated.has(peerId)) continue
+
+        console.log(
+          `[ConvexWebRTC:Hook] Peer ${peerId} stuck at "connecting" for ${connectingForMs}ms, attempting reconnect`,
+        )
+        manager.closePeer(peerId)
+        initiated.delete(peerId)
+        connectingSinceMs.delete(peerId)
+        setConnectionStates((prev) => {
+          const next = new Map(prev)
+          next.delete(peerId)
+          return next
+        })
+
+        // Re-initiate if we should be the caller
+        if (localPlayerId < peerId) {
+          initiated.add(peerId)
+          manager.callPeer(peerId, roomId).catch((err) => {
+            console.error(
+              `[ConvexWebRTC:Hook] Reconnect callPeer failed for ${peerId}:`,
+              err,
+            )
+            initiated.delete(peerId)
+          })
+        }
+      }
+
+      // Drop peers no longer present in connection states.
+      const currentPeerIds = new Set(connectionStates.keys())
+      for (const trackedPeerId of Array.from(connectingSinceMs.keys())) {
+        if (!currentPeerIds.has(trackedPeerId)) {
+          connectingSinceMs.delete(trackedPeerId)
+        }
+      }
+    }, CHECK_INTERVAL_MS)
+
+    return () => {
+      clearInterval(interval)
+    }
+  }, [
+    isSignalingInitialized,
+    connectionStates,
+    localStream,
+    localPlayerId,
+    roomId,
   ])
 
   return {
