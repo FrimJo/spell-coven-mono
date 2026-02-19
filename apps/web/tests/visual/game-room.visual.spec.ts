@@ -13,8 +13,14 @@ import {
  * Visual regression tests for the game room.
  * These tests capture and compare screenshots of the game room UI,
  * including commander viewing and selection flows.
+ *
+ * Baselines are Linux-only (same as CI). When not on Linux, tests are skipped.
+ * To update snapshots: run the "Update visual snapshots" workflow in GitHub Actions.
  */
-test.describe('Game Room Visual Tests', () => {
+const isLinux = process.platform === 'linux'
+const visualDescribe = isLinux ? test.describe : test.describe.skip
+
+visualDescribe('Game Room Visual Tests', () => {
   let roomId: string
   test.use({ permissions: ['camera', 'microphone'] })
 

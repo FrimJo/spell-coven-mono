@@ -4,10 +4,18 @@ import { setDesktopViewport } from '../helpers/test-utils'
 /**
  * Visual regression tests for the landing page.
  * These tests capture and compare screenshots to detect unintended UI changes.
+ *
+ * Baselines are Linux-only (same as CI) to avoid Mac vs Linux font/layout diffs.
+ * When not on Linux, these tests are skipped. To update snapshots: run the
+ * "Update visual snapshots" workflow in GitHub Actions, download the artifact,
+ * and commit the snapshot files.
  */
 test.use({ useAuth: false })
 
-test.describe('Landing Page Visual Tests', () => {
+const isLinux = process.platform === 'linux'
+const visualDescribe = isLinux ? test.describe : test.describe.skip
+
+visualDescribe('Landing Page Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
     // Use unauthenticated state for consistent visuals
     await page.goto('/')

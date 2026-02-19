@@ -49,6 +49,16 @@ export default defineConfig({
     {
       name: 'chromium',
       testMatch: ['e2e/**/*.spec.ts', 'visual/**/*.spec.ts'],
+      testIgnore: ['e2e/torture/**'],
+      use: {
+        ...devices['Desktop Chrome'],
+        permissions: ['microphone', 'camera'],
+      },
+      dependencies: ['room-setup'],
+    },
+    {
+      name: 'torture',
+      testMatch: ['e2e/torture/**/*.spec.ts'],
       use: {
         ...devices['Desktop Chrome'],
         permissions: ['microphone', 'camera'],
