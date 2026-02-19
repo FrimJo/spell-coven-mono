@@ -161,8 +161,10 @@ const SpeedInsightsProduction = lazy(() =>
 )
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const isE2ETest =
+    typeof navigator !== 'undefined' && navigator.webdriver === true
   const [showDevtools, setShowDevtools] = useState(
-    import.meta.env.MODE === 'development',
+    import.meta.env.MODE === 'development' && !isE2ETest,
   )
 
   useEffect(() => {
@@ -229,7 +231,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <AuthProvider>
               {children}
               <Suspense fallback={null}>
-                {showDevtools && (
+                {!isE2ETest && showDevtools && (
                   <TanStackDevtoolsProduction
                     config={{
                       position: 'bottom-right',

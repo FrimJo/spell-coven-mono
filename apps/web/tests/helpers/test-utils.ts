@@ -169,7 +169,7 @@ export async function navigateToTestGame(
   },
 ): Promise<void> {
   const ensureMediaSetup = options?.ensureMediaSetup ?? true
-  const handleDuplicateSession = options?.handleDuplicateSession
+  const _handleDuplicateSession = options?.handleDuplicateSession
 
   if (ensureMediaSetup) {
     await page.addInitScript((key) => {

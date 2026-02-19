@@ -560,7 +560,6 @@ export async function waitForRemoteCardsStable(
 
   const stableCount = lastStates.filter(isCardStable).length
   const unstableCards = lastStates.filter((s) => !isCardStable(s))
-  const stableCards = lastStates.filter(isCardStable)
 
   const formatCard = (s: RemoteCardState) => {
     const parts = [

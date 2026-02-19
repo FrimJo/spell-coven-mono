@@ -6,8 +6,6 @@
  * Uses per-worker auth storage state to authenticate.
  */
 
-import { dirname, resolve } from 'path'
-import { fileURLToPath } from 'url'
 import { test as setup } from '@playwright/test'
 
 import {
@@ -19,9 +17,6 @@ import {
   readCachedRoomId,
   writeRoomState,
 } from './helpers/test-utils'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
 
 setup(
   'create a game room via the landing page',
