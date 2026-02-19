@@ -4,10 +4,10 @@ set -euo pipefail
 MODE="${1:-build}"
 
 case "$MODE" in
-  build|e2e|e2e-ui)
+  build|e2e|e2e-ui|e2e:torture|e2e:visual-update)
     ;;
   *)
-    echo "Unsupported mode: $MODE (expected: build | e2e | e2e-ui)" >&2
+    echo "Unsupported mode: $MODE (expected: build | e2e | e2e-ui | e2e:torture | e2e:visual-update)" >&2
     exit 2
     ;;
 esac
@@ -104,5 +104,11 @@ case "$MODE" in
     ;;
   e2e-ui)
     (cd apps/web && PREVIEW_LOGIN_CODE=$PREVIEW_LOGIN_CODE bun run e2e:ui)
+    ;;
+  e2e:torture)
+    (cd apps/web && PREVIEW_LOGIN_CODE=$PREVIEW_LOGIN_CODE bun run e2e:torture)
+    ;;
+  e2e:visual-update)
+    (cd apps/web && PREVIEW_LOGIN_CODE=$PREVIEW_LOGIN_CODE bun run e2e:visual:update)
     ;;
 esac
