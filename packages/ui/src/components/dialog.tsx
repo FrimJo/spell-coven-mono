@@ -70,18 +70,22 @@ function DialogContent({
   style,
   ...props
 }: DialogContentProps) {
+  const [containerEl, setContainerEl] = React.useState<HTMLElement | null>(null)
   const [position, setPosition] = React.useState<{
     left: number
     top: number
   } | null>(null)
 
   React.useLayoutEffect(() => {
-    if (!centerInRef?.current || !forceReposition) {
+    const container = centerInRef?.current ?? null
+    setContainerEl(container)
+
+    if (!container || !forceReposition) {
       setPosition(null)
       return
     }
     const updatePosition = () => {
-      const rect = centerInRef.current?.getBoundingClientRect()
+      const rect = container.getBoundingClientRect()
       if (rect) {
         setPosition({
           left: rect.left + rect.width / 2,
@@ -91,13 +95,12 @@ function DialogContent({
     }
     updatePosition()
     const observer = new ResizeObserver(updatePosition)
-    observer.observe(centerInRef.current)
+    observer.observe(container)
     return () => observer.disconnect()
   }, [centerInRef, forceReposition])
 
-  const useCustomPosition = centerInRef && position !== null
-  const container = centerInRef?.current ?? undefined
-  const scopeOverlayToContainer = Boolean(container)
+  const useCustomPosition = Boolean(containerEl) && position !== null
+  const scopeOverlayToContainer = Boolean(containerEl)
 
   const overlay = scopeOverlayToContainer ? (
     <DialogOverlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 absolute inset-0 z-50 bg-black/50" />
@@ -135,7 +138,10 @@ function DialogContent({
   )
 
   return (
-    <DialogPortal container={container} data-slot="dialog-portal">
+    <DialogPortal
+      container={containerEl ?? undefined}
+      data-slot="dialog-portal"
+    >
       {scopeOverlayToContainer ? (
         <div className="absolute inset-0">
           {overlay}
