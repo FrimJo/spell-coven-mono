@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useEffectEvent, useState } from 'react'
 import {
   createRootRouteWithContext,
   HeadContent,
@@ -161,13 +161,19 @@ const SpeedInsightsProduction = lazy(() =>
 )
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const isE2ETest =
-    typeof navigator !== 'undefined' && navigator.webdriver === true
   const [showDevtools, setShowDevtools] = useState(
-    import.meta.env.MODE === 'development' && !isE2ETest,
+    import.meta.env.MODE === 'development',
   )
 
+  const handleShowDevtools = useEffectEvent(() => {
+    setShowDevtools(false)
+  })
+
   useEffect(() => {
+    if (navigator.webdriver === true) {
+      handleShowDevtools()
+    }
+
     // @ts-expect-error: Enable toogle devtools in production
     window.toggleDevtools = () => setShowDevtools((old) => !old)
   }, [])
@@ -231,7 +237,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <AuthProvider>
               {children}
               <Suspense fallback={null}>
-                {!isE2ETest && showDevtools && (
+                {showDevtools && (
                   <TanStackDevtoolsProduction
                     config={{
                       position: 'bottom-right',

@@ -24,8 +24,9 @@ import { createRoomViaUI, navigateToTestGame } from './test-utils'
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-export const PLAYER_LABELS = ['Teferi', 'Jace', 'Chandra', 'Gideon'] as const
+// Must match backend preview names for worker slots 0..3. See convex/previewLogin.ts
+// pickPreviewNameForSlot(slot) → PREVIEW_NAMES[slot % PREVIEW_NAMES.length].
+export const PLAYER_LABELS = ['Jace', 'Chandra', 'Liliana', 'Gideon'] as const
 export const PLAYER_COUNT = 4
 export const EXPECTED_REMOTES = PLAYER_COUNT - 1
 export const MAX_ALLOWED_CONNECTING_MS = 25_000
@@ -362,7 +363,7 @@ export async function setupStableRoom(
     )
   }
 
-  const { baseURL, testInfo } = opts
+  const { baseURL } = opts
 
   // Phase 1: Auth storage
   const assignedUserIds = new Set<string>()

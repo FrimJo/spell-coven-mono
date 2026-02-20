@@ -1,9 +1,11 @@
 /**
  * WebRTC 4-player toggle matrix test.
  *
- * For each of the 4 players (sender), toggle camera and mic on/off and
- * assert that ALL other 3 players (receivers) observe the correct state
- * transition. This is a full NxN observation matrix.
+ * Ensures video and audio work flawlessly when turning video on/off and
+ * muting/unmuting: every receiver must observe the correct state. For each
+ * of the 4 players (sender), toggle camera and mic on/off and assert that
+ * ALL other 3 players (receivers) observe the correct state transition
+ * (full NxN observation matrix).
  *
  * Flow:
  *   1. Bootstrap a stable 4-player room (shared harness).
