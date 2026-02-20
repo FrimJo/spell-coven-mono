@@ -7,7 +7,10 @@
  *   1. Rapid toggle bursts   – each player hammers camera/mic 10 times.
  *   2. Concurrent toggle storm – all 4 players toggle simultaneously.
  *   3. Player reload/rejoin   – one player reloads mid-session, room recovers.
- *   4. Final health check     – all streams converge back to healthy state.
+ *   4. Soak loop              – repeated toggle + rejoin cycles to detect
+ *                               listener accumulation and watchdog regressions.
+ *   5. Final health check     – all streams converge back to healthy state,
+ *                               no excessive peer connection accumulation.
  *
  * Verifies no prolonged `connecting`/`failed` states and that all remote
  * cards return to a stable state after each phase.
@@ -230,12 +233,62 @@ test.describe('WebRTC 4-player torture', () => {
       console.log('[Torture:P3] Room recovered after player rejoin.')
 
       // ================================================================
-      // Phase 4: Final comprehensive health check
+      // Phase 4: Soak loop – repeated toggle/rejoin cycles
+      // Detects listener accumulation, watchdog regressions, and
+      // state leaks across multiple recovery cycles.
       // ================================================================
-      console.log('[Torture] === Phase 4: Final health check ===')
+      console.log(
+        '[Torture] === Phase 4: Soak loop (toggle + rejoin cycles) ===',
+      )
+      const SOAK_CYCLES = 3
+      for (let cycle = 0; cycle < SOAK_CYCLES; cycle++) {
+        console.log(`[Torture:P4] Soak cycle ${cycle + 1}/${SOAK_CYCLES}`)
+
+        // All players toggle camera+mic concurrently (2 rounds)
+        for (let round = 0; round < 2; round++) {
+          await Promise.all(
+            pages.map((page) => clickVideoToggle(page).catch(() => {})),
+          )
+          await new Promise((r) => setTimeout(r, jitterMs(600)))
+          await Promise.all(
+            pages.map((page) => clickAudioToggle(page).catch(() => {})),
+          )
+          await new Promise((r) => setTimeout(r, jitterMs(1000)))
+        }
+
+        // Player 1 (Chandra) reloads mid-cycle
+        const soakRejoinIdx = 1
+        const soakRejoinLabel = PLAYER_LABELS[soakRejoinIdx]!
+        const soakRejoinPlayer = harness.players[soakRejoinIdx]!
+        console.log(
+          `[Torture:P4] ${soakRejoinLabel}: reloading in soak cycle ${cycle + 1}...`,
+        )
+        await injectPeerConnectionCapture(soakRejoinPlayer.page)
+        await navigateToTestGame(soakRejoinPlayer.page, harness.roomId, {
+          handleDuplicateSession: 'transfer',
+        })
+        await soakRejoinPlayer.page
+          .waitForLoadState('networkidle', { timeout: 30_000 })
+          .catch(() => {})
+        await soakRejoinPlayer.page
+          .getByTestId('game-id-display')
+          .waitFor({ state: 'visible', timeout: 30_000 })
+
+        await new Promise((r) => setTimeout(r, 15_000))
+        await assertRoomRecovers(pages, PLAYER_LABELS, `SoakCycle${cycle + 1}`)
+        console.log(`[Torture:P4] Room recovered in soak cycle ${cycle + 1}.`)
+      }
+
+      // Full media health after soak
+      await assertAllPlayersMediaHealthy(harness, testInfo)
+      console.log('[Torture:P4] Full media health confirmed after soak loop.')
+
+      // ================================================================
+      // Phase 5: Final comprehensive health check
+      // ================================================================
+      console.log('[Torture] === Phase 5: Final health check ===')
       await assertAllPlayersMediaHealthy(harness, testInfo)
 
-      // Also verify peer connection quality
       for (let idx = 0; idx < pages.length; idx++) {
         const page = pages[idx]!
         const label = PLAYER_LABELS[idx]!
@@ -253,6 +306,36 @@ test.describe('WebRTC 4-player torture', () => {
             failedPeers.length,
             `${label}: found ${failedPeers.length} failed peer connections at end of torture test`,
           ).toBe(0)
+
+          // Verify no excessive peer connection accumulation (listener leak proxy)
+          // After soak, we should have at most ~2x EXPECTED_REMOTES connections
+          // (active + recently-closed replacements).
+          expect(
+            peerDiag.peers.length,
+            `${label}: excessive RTCPeerConnection count (${peerDiag.peers.length}) suggests listener/connection leak`,
+          ).toBeLessThanOrEqual(EXPECTED_REMOTES * 4)
+        }
+      }
+
+      // Verify max connecting duration across the full test
+      for (let idx = 0; idx < pages.length; idx++) {
+        const page = pages[idx]!
+        const label = PLAYER_LABELS[idx]!
+        const finalReadiness = await waitForAllConnectionsReady(
+          page,
+          EXPECTED_REMOTES,
+          label,
+          10_000,
+        )
+        if (finalReadiness.ready) {
+          const maxObservedMs = Math.max(
+            0,
+            ...Object.values(finalReadiness.maxConnectingDurationsMs),
+          )
+          expect(
+            maxObservedMs,
+            `${label}: final connecting duration too long (${maxObservedMs}ms)`,
+          ).toBeLessThanOrEqual(30_000)
         }
       }
 
