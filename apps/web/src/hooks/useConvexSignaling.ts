@@ -6,7 +6,7 @@
  */
 
 import type { WebRTCSignal } from '@/types/webrtc-signal'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { validateWebRTCSignal } from '@/types/webrtc-signal'
 import { api } from '@convex/_generated/api'
 import { useMutation, useQuery } from 'convex/react'
@@ -64,14 +64,14 @@ export function useConvexSignaling({
   // Track which signals we've already processed to avoid duplicates
   const processedSignalsRef = useRef<Set<string>>(new Set())
 
-  // Store callbacks in refs to avoid re-subscribing on every callback change
-  const onSignalRef = useRef(onSignal)
-  const onErrorRef = useRef(onError)
+  // Effect events: always see latest callbacks without becoming dependencies
+  const emitSignal = useEffectEvent((signal: WebRTCSignal) => {
+    onSignal?.(signal)
+  })
 
-  useEffect(() => {
-    onSignalRef.current = onSignal
-    onErrorRef.current = onError
-  }, [onSignal, onError])
+  const emitError = useEffectEvent((err: Error) => {
+    onError?.(err)
+  })
 
   // Convex mutation for sending signals
   const sendSignalMutation = useMutation(api.signals.sendSignal)
@@ -130,7 +130,7 @@ export function useConvexSignaling({
           '[ConvexSignaling] Signal validation failed:',
           validation.error,
         )
-        onErrorRef.current?.(validation.error)
+        emitError(validation.error)
         continue
       }
 
@@ -140,7 +140,7 @@ export function useConvexSignaling({
         'type:',
         validation.data.type,
       )
-      onSignalRef.current?.(validation.data)
+      emitSignal(validation.data)
     }
 
     // Advance the watermark (with overlap) so subsequent queries are smaller.
@@ -221,7 +221,7 @@ export function useConvexSignaling({
         const error = err instanceof Error ? err : new Error(String(err))
         console.error('[ConvexSignaling] Failed to send signal:', error)
         setError(error)
-        onErrorRef.current?.(error)
+        emitError(error)
         throw error
       }
     },

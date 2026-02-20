@@ -31,6 +31,8 @@ export class WebRTCManager {
   private localStreamGeneration = 0
   private trackStatePollInterval: number | null = null
   private pendingCandidates = new Map<string, CandidateSignal[]>()
+  /** Per-peer disposers for remote track event listeners */
+  private trackListenerDisposers = new Map<string, Array<() => void>>()
 
   constructor(
     private readonly localPeerId: string,
@@ -95,6 +97,7 @@ export class WebRTCManager {
       this.peers.delete(from)
       this.remoteStreams.delete(from)
       this.pendingCandidates.delete(from)
+      this.disposeTrackListeners(from)
       peerInfo = undefined
     }
 
@@ -328,14 +331,22 @@ export class WebRTCManager {
         this.updateTrackState(remotePeerId, stream)
         this.startTrackStatePolling()
 
-        // Listen for mute/unmute/ended on video track for immediate Camera Off feedback
         if (event.track.kind === 'video') {
-          const onVideoTrackStateChange = () => {
+          const track = event.track
+          const onChange = () => {
             this.updateTrackState(remotePeerId, stream)
           }
-          event.track.addEventListener('mute', onVideoTrackStateChange)
-          event.track.addEventListener('unmute', onVideoTrackStateChange)
-          event.track.addEventListener('ended', onVideoTrackStateChange)
+          track.addEventListener('mute', onChange)
+          track.addEventListener('unmute', onChange)
+          track.addEventListener('ended', onChange)
+
+          const disposers = this.trackListenerDisposers.get(remotePeerId) ?? []
+          disposers.push(() => {
+            track.removeEventListener('mute', onChange)
+            track.removeEventListener('unmute', onChange)
+            track.removeEventListener('ended', onChange)
+          })
+          this.trackListenerDisposers.set(remotePeerId, disposers)
         }
       }
     }
@@ -438,6 +449,19 @@ export class WebRTCManager {
   }
 
   /**
+   * Remove all track event listeners registered for a peer.
+   */
+  private disposeTrackListeners(peerId: string): void {
+    const disposers = this.trackListenerDisposers.get(peerId)
+    if (disposers) {
+      for (const dispose of disposers) {
+        dispose()
+      }
+      this.trackListenerDisposers.delete(peerId)
+    }
+  }
+
+  /**
    * Close connection to a peer
    */
   closePeer(peerId: string): void {
@@ -446,6 +470,7 @@ export class WebRTCManager {
       peerInfo.pc.close()
       this.peers.delete(peerId)
       this.remoteStreams.delete(peerId)
+      this.disposeTrackListeners(peerId)
     }
   }
 
@@ -455,12 +480,14 @@ export class WebRTCManager {
   destroy(): void {
     this.stopTrackStatePolling()
 
-    for (const [_peerId, peerInfo] of this.peers) {
+    for (const [peerId, peerInfo] of this.peers) {
       peerInfo.pc.close()
+      this.disposeTrackListeners(peerId)
     }
 
     this.peers.clear()
     this.remoteStreams.clear()
+    this.trackListenerDisposers.clear()
     this.localStream = null
     this.pendingCandidates.clear()
   }
