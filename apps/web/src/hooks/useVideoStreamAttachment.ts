@@ -4,7 +4,7 @@
  */
 
 import type { TrackState } from '@/types/connection'
-import { useEffect, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef } from 'react'
 
 interface UseVideoStreamAttachmentOptions {
   /** Map of player IDs to their MediaStreams */
@@ -33,9 +33,17 @@ export function useVideoStreamAttachment({
   onVideoPlaying,
   onVideoStopped,
 }: UseVideoStreamAttachmentOptions) {
-  // Track last known states to detect actual changes
   const lastStreamsRef = useRef<Map<string, MediaStream | null>>(new Map())
   const lastTrackStatesRef = useRef<Map<string, TrackState>>(new Map())
+  const pendingTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+
+  const onPlaying = useEffectEvent((playerId: string) => {
+    onVideoPlaying?.(playerId)
+  })
+
+  const onStopped = useEffectEvent((playerId: string) => {
+    onVideoStopped?.(playerId)
+  })
 
   useEffect(() => {
     // Quick check: compare sizes first
@@ -43,7 +51,6 @@ export function useVideoStreamAttachment({
       remoteStreams.size === lastStreamsRef.current.size &&
       trackStates.size === lastTrackStatesRef.current.size
     ) {
-      // Check if any streams changed
       let streamsChanged = false
       for (const [id, stream] of remoteStreams) {
         if (lastStreamsRef.current.get(id) !== stream) {
@@ -52,7 +59,6 @@ export function useVideoStreamAttachment({
         }
       }
 
-      // Check if any track states changed
       let trackStatesChanged = false
       if (!streamsChanged) {
         for (const [id, state] of trackStates) {
@@ -68,15 +74,13 @@ export function useVideoStreamAttachment({
         }
       }
 
-      // Early return if nothing changed
       if (!streamsChanged && !trackStatesChanged) {
         return
       }
     }
 
-    // Update refs with current state
-    lastStreamsRef.current = new Map(remoteStreams)
-    lastTrackStatesRef.current = new Map(trackStates)
+    // Snapshot the *previous* state before overwriting so per-player diffs are correct
+    const prevTrackStates = lastTrackStatesRef.current
 
     // Process each stream
     for (const [playerId, stream] of remoteStreams) {
@@ -86,17 +90,15 @@ export function useVideoStreamAttachment({
       const trackState = trackStates.get(playerId)
       const currentAttachedStream = attachedStreamsRef.current.get(playerId)
 
-      // Handle no stream case
       if (!stream) {
         if (currentAttachedStream && videoElement.srcObject) {
           videoElement.srcObject = null
           attachedStreamsRef.current.set(playerId, null)
-          onVideoStopped?.(playerId)
+          onStopped(playerId)
         }
         continue
       }
 
-      // Determine if video track is live
       const hasLiveVideoTrack =
         trackState?.videoEnabled ??
         stream.getVideoTracks().some((t) => t.readyState === 'live')
@@ -108,31 +110,28 @@ export function useVideoStreamAttachment({
         : currentSrcObject === null
       const attachedStreamMatches = currentAttachedStream === stream
 
-      // Check if track state changed (for forcing reload when tracks are replaced)
-      const lastTrackState = lastTrackStatesRef.current.get(playerId)
+      const prevTrackState = prevTrackStates.get(playerId)
       const trackStateChanged =
-        lastTrackState?.videoEnabled !== trackState?.videoEnabled
+        prevTrackState !== undefined &&
+        prevTrackState.videoEnabled !== trackState?.videoEnabled
 
-      // Update if needed OR if track state changed (to handle replaceTrack scenarios)
       if (
         !hasCorrectSrcObject ||
         !attachedStreamMatches ||
         (trackStateChanged && shouldHaveStream)
       ) {
         if (shouldHaveStream) {
-          // Attach stream or force reload if track state changed
           if (currentSrcObject && currentSrcObject !== stream) {
             videoElement.srcObject = null
           }
 
-          // Force reload by clearing and resetting srcObject if track was re-enabled
           if (trackStateChanged && currentSrcObject === stream) {
             console.log(
               `[useVideoStreamAttachment] Force reload for ${playerId} due to track state change`,
             )
             videoElement.srcObject = null
-            // Small delay to ensure the clear takes effect
-            setTimeout(() => {
+            const timer = setTimeout(() => {
+              pendingTimersRef.current.delete(timer)
               videoElement.srcObject = stream
               videoElement.load()
               videoElement.play().catch((error) => {
@@ -144,6 +143,7 @@ export function useVideoStreamAttachment({
                 }
               })
             }, 10)
+            pendingTimersRef.current.add(timer)
           } else {
             videoElement.srcObject = stream
             videoElement.load()
@@ -158,21 +158,31 @@ export function useVideoStreamAttachment({
           }
 
           attachedStreamsRef.current.set(playerId, stream)
-          onVideoPlaying?.(playerId)
+          onPlaying(playerId)
         } else {
-          // Clear stream
           videoElement.srcObject = null
-          attachedStreamsRef.current.set(playerId, stream) // Keep ref for audio
-          onVideoStopped?.(playerId)
+          attachedStreamsRef.current.set(playerId, stream)
+          onStopped(playerId)
         }
       }
+    }
+
+    // Update snapshot refs *after* processing so next run diffs correctly
+    lastStreamsRef.current = new Map(remoteStreams)
+    lastTrackStatesRef.current = new Map(trackStates)
+
+    return () => {
+      for (const timer of pendingTimersRef.current) {
+        clearTimeout(timer)
+      }
+      pendingTimersRef.current.clear()
     }
   }, [
     remoteStreams,
     trackStates,
     videoElementsRef,
     attachedStreamsRef,
-    onVideoPlaying,
-    onVideoStopped,
+    onPlaying,
+    onStopped,
   ])
 }

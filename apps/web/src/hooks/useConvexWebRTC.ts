@@ -7,13 +7,22 @@
 
 import type { ConnectionState, TrackState } from '@/types/connection'
 import type { WebRTCSignal } from '@/types/webrtc-signal'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { WebRTCManager } from '@/lib/webrtc/WebRTCManager'
 
 import { useConvexSignaling } from './useConvexSignaling'
 
 const RECONNECT_COOLDOWN_MS = 60_000
 const MAX_RECONNECT_ATTEMPTS = 3
+const STUCK_THRESHOLD_MS = 30_000
+const CHECK_INTERVAL_MS = 5_000
 
 interface UseConvexWebRTCProps {
   localPlayerId: string
@@ -60,7 +69,6 @@ export function useConvexWebRTC({
   const [webrtcError, setWebrtcError] = useState<Error | null>(null)
 
   const webrtcManagerRef = useRef<WebRTCManager | null>(null)
-  const onErrorRef = useRef(onError)
   /**
    * Tracks which remote peer IDs we have already initiated or acknowledged a
    * connection for.  Only IDs that we actively called (shouldInitiate) or that
@@ -70,13 +78,16 @@ export function useConvexWebRTC({
   const initiatedPeersRef = useRef<Set<string>>(new Set())
   const localStreamRef = useRef<MediaStream | null>(localStream)
 
-  // Queue for signals that arrive before manager is ready
   const pendingSignalsRef = useRef<WebRTCSignal[]>([])
 
   // Per-peer reconnect tracking: { attempts, lastAttemptAt }
   const reconnectAttemptsRef = useRef<
     Map<string, { attempts: number; lastAttemptAt: number }>
   >(new Map())
+
+  // Persistent watchdog bookkeeping (survives effect re-runs)
+  const connectingSinceMsRef = useRef<Map<string, number>>(new Map())
+  const connectionStatesRef = useRef(connectionStates)
 
   // Stabilize remotePlayerIds so the peer-connection effect only re-runs
   // when the actual set of IDs changes, not on every array reference change.
@@ -85,15 +96,24 @@ export function useConvexWebRTC({
     return sorted
   }, [remotePlayerIds])
 
-  // Keep local stream ref up to date
+  // Keep refs in sync for use in non-reactive callbacks
   useEffect(() => {
     localStreamRef.current = localStream
   }, [localStream])
 
-  // Update error callback ref
   useEffect(() => {
-    onErrorRef.current = onError
-  }, [onError])
+    connectionStatesRef.current = connectionStates
+  }, [connectionStates])
+
+  // Effect events: always read latest props without becoming dependencies
+  const onWebrtcError = useEffectEvent((err: Error) => {
+    setWebrtcError(err)
+    onError?.(err)
+  })
+
+  const sendSignalLatest = useEffectEvent(async (signal: WebRTCSignal) => {
+    await sendSignal(signal)
+  })
 
   // Handle incoming signals from Convex
   const handleSignal = useCallback((signal: WebRTCSignal) => {
@@ -109,15 +129,13 @@ export function useConvexWebRTC({
 
     manager.handleSignal(signal).catch((err) => {
       const error = err instanceof Error ? err : new Error(String(err))
-      setWebrtcError(error)
-      onErrorRef.current?.(error)
+      onWebrtcError(error)
     })
   }, [])
 
   // Handle signaling errors
   const handleSignalingError = useCallback((err: Error) => {
-    setWebrtcError(err)
-    onErrorRef.current?.(err)
+    onWebrtcError(err)
   }, [])
 
   // Use Convex signaling hook
@@ -136,11 +154,16 @@ export function useConvexWebRTC({
   // Derive combined error from signaling and webrtc errors
   const error = signalingError ?? webrtcError
 
-  // Store sendSignal in a ref for WebRTCManager
-  const sendSignalRef = useRef(sendSignal)
-  useEffect(() => {
-    sendSignalRef.current = sendSignal
-  }, [sendSignal])
+  /** Reset all session-scoped state when manager is torn down / recreated. */
+  const resetSessionState = useEffectEvent(() => {
+    pendingSignalsRef.current = []
+    reconnectAttemptsRef.current.clear()
+    connectingSinceMsRef.current.clear()
+    setRemoteStreams(new Map())
+    setConnectionStates(new Map())
+    setTrackStates(new Map())
+    setWebrtcError(null)
+  })
 
   // Initialize WebRTC manager when signaling is ready
   useEffect(() => {
@@ -158,19 +181,16 @@ export function useConvexWebRTC({
 
     console.log('[ConvexWebRTC:Hook] Initializing WebRTC manager...')
 
-    // Create WebRTC manager with sendSignal callback
     const webrtcManager = new WebRTCManager(
       localPlayerId,
       async (signal: WebRTCSignal) => {
         if (!isDestroyed) {
-          await sendSignalRef.current(signal)
+          await sendSignalLatest(signal)
         }
       },
       {
         onRemoteStream: (peerId, stream) => {
           if (!isDestroyed) {
-            // Mark peer as connected so the peer-connection effect won't
-            // try to re-initiate a call to them.
             initiatedPeers.add(peerId)
             setRemoteStreams((prev) => {
               const next = new Map(prev)
@@ -187,9 +207,6 @@ export function useConvexWebRTC({
           if (!isDestroyed) {
             setConnectionStates((prev) => new Map(prev).set(peerId, state))
 
-            // When a connection fails or is closed (e.g. remote peer
-            // reloaded), remove from initiated set so the next offer from
-            // that peer (or our re-initiation attempt) can proceed.
             if (state === 'failed' || state === 'disconnected') {
               initiatedPeers.delete(peerId)
             }
@@ -200,10 +217,9 @@ export function useConvexWebRTC({
             setTrackStates((prev) => new Map(prev).set(peerId, state))
           }
         },
-        onError: (peerId, err) => {
+        onError: (_peerId, err) => {
           if (!isDestroyed) {
-            setWebrtcError(err)
-            onErrorRef.current?.(err)
+            onWebrtcError(err)
           }
         },
       },
@@ -211,8 +227,6 @@ export function useConvexWebRTC({
 
     webrtcManagerRef.current = webrtcManager
 
-    // Set local stream immediately if it already exists
-    // This prevents race conditions where peer connection effect runs before local stream effect
     if (localStreamRef.current) {
       console.log(
         '[ConvexWebRTC:Hook] Setting existing local stream on newly created manager',
@@ -222,16 +236,13 @@ export function useConvexWebRTC({
 
     console.log('[ConvexWebRTC:Hook] WebRTC manager initialized')
 
-    // Note: Don't replay signals here - wait for local stream to be set first
-    // Signals will be replayed in the local stream effect
-
-    // Cleanup
     return () => {
       isDestroyed = true
       console.log('[ConvexWebRTC:Hook] Destroying WebRTC manager')
       webrtcManager.destroy()
       webrtcManagerRef.current = null
       initiatedPeers.clear()
+      resetSessionState()
     }
   }, [localPlayerId, roomId, presenceReady, isSignalingInitialized])
 
@@ -245,7 +256,6 @@ export function useConvexWebRTC({
       console.log('[ConvexWebRTC:Hook] Setting local stream on WebRTC manager')
       webrtcManagerRef.current.setLocalStream(localStream)
 
-      // Replay any queued signals now that we have both manager AND local stream
       if (localStream && pendingSignalsRef.current.length > 0) {
         console.log(
           `[ConvexWebRTC:Hook] Replaying ${pendingSignalsRef.current.length} queued signals after local stream set`,
@@ -257,8 +267,7 @@ export function useConvexWebRTC({
           webrtcManagerRef.current?.handleSignal(signal).catch((err) => {
             const error = err instanceof Error ? err : new Error(String(err))
             console.error('[ConvexWebRTC:Hook] Error replaying signal:', error)
-            setWebrtcError(error)
-            onErrorRef.current?.(error)
+            onWebrtcError(error)
           })
         }
       }
@@ -328,8 +337,7 @@ export function useConvexWebRTC({
             initiated.delete(remotePlayerId)
             const callError =
               err instanceof Error ? err : new Error(String(err))
-            setWebrtcError(callError)
-            onErrorRef.current?.(callError)
+            onWebrtcError(callError)
           })
       } else {
         console.log(
@@ -338,7 +346,6 @@ export function useConvexWebRTC({
       }
     }
 
-    // Close connections to peers that are no longer in the list
     for (const peerId of initiated) {
       if (!currentRemoteSet.has(peerId)) {
         console.log(`[ConvexWebRTC:Hook] Closing connection to peer: ${peerId}`)
@@ -356,18 +363,19 @@ export function useConvexWebRTC({
 
   // Periodically check for stuck connections and retry with rate limiting.
   // Per-peer cooldown and max attempts prevent unbounded signaling churn.
+  // The watchdog reads latest state from refs so the interval is stable and
+  // `connectingSinceMs` bookkeeping persists across React state updates.
   useEffect(() => {
     if (!isSignalingInitialized || !webrtcManagerRef.current) return
 
-    const STUCK_THRESHOLD_MS = 30_000
-    const CHECK_INTERVAL_MS = 5_000
-    const connectingSinceMs = new Map<string, number>()
-
     const interval = window.setInterval(() => {
       const manager = webrtcManagerRef.current
-      if (!manager || !localStream) return
+      if (!manager || !localStreamRef.current) return
 
-      for (const [peerId, state] of connectionStates) {
+      const states = connectionStatesRef.current
+      const connectingSinceMs = connectingSinceMsRef.current
+
+      for (const [peerId, state] of states) {
         if (state !== 'connecting') {
           connectingSinceMs.delete(peerId)
           continue
@@ -386,14 +394,12 @@ export function useConvexWebRTC({
         const initiated = initiatedPeersRef.current
         if (!initiated.has(peerId)) continue
 
-        // Rate-limit reconnect attempts per peer
         const tracker = reconnectAttemptsRef.current.get(peerId)
         if (tracker) {
           if (tracker.attempts >= MAX_RECONNECT_ATTEMPTS) {
             if (now - tracker.lastAttemptAt < RECONNECT_COOLDOWN_MS) {
               continue
             }
-            // Cooldown elapsed -- reset counter
             tracker.attempts = 0
           }
         }
@@ -430,8 +436,8 @@ export function useConvexWebRTC({
         }
       }
 
-      // Drop peers no longer present in connection states.
-      const currentPeerIds = new Set(connectionStates.keys())
+      // Drop peers no longer tracked
+      const currentPeerIds = new Set(states.keys())
       for (const trackedPeerId of Array.from(connectingSinceMs.keys())) {
         if (!currentPeerIds.has(trackedPeerId)) {
           connectingSinceMs.delete(trackedPeerId)
@@ -442,13 +448,7 @@ export function useConvexWebRTC({
     return () => {
       clearInterval(interval)
     }
-  }, [
-    isSignalingInitialized,
-    connectionStates,
-    localStream,
-    localPlayerId,
-    roomId,
-  ])
+  }, [isSignalingInitialized, localPlayerId, roomId])
 
   return {
     localStream,

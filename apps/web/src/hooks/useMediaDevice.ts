@@ -15,7 +15,7 @@ import type {
   AsyncResourcePending,
   AsyncResourceSuccess,
 } from '@/types/async-resource'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useEffectEvent, useMemo } from 'react'
 import { getMediaStream } from '@/lib/media-stream-manager'
 import { shouldShowPermissionDialog } from '@/lib/permission-storage'
 import { useQuery } from '@tanstack/react-query'
@@ -120,8 +120,15 @@ export function useMediaDevice(
     enabled: externalEnabled = true,
   } = options
 
-  const onDeviceChangedRef = useRef(onDeviceChanged)
-  const onErrorRef = useRef(onError)
+  const emitDeviceChanged = useEffectEvent(
+    (deviceId: string, stream: MediaStream) => {
+      onDeviceChanged?.(deviceId, stream)
+    },
+  )
+
+  const emitError = useEffectEvent((err: Error) => {
+    onError?.(err)
+  })
 
   // Check if user has declined our custom permission dialog
   // If declined, we should NOT trigger the native browser dialog
@@ -175,11 +182,6 @@ export function useMediaDevice(
     [mediaDevices, kind],
   )
 
-  useEffect(() => {
-    onDeviceChangedRef.current = onDeviceChanged
-    onErrorRef.current = onError
-  }, [onDeviceChanged, onError])
-
   const {
     data,
     isPending: isGettingStream,
@@ -222,13 +224,12 @@ export function useMediaDevice(
     const stream = data?.stream
     if (!stream) return
 
-    // Notify consumer about new stream
-    onDeviceChangedRef.current?.(selectedDeviceId, stream)
+    emitDeviceChanged(selectedDeviceId, stream)
   }, [data?.stream, selectedDeviceId])
 
   useEffect(() => {
     if (enumerationError) {
-      onErrorRef.current?.(enumerationError)
+      emitError(enumerationError)
     }
   }, [enumerationError])
 
