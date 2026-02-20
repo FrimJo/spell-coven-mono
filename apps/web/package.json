@@ -18,7 +18,8 @@
     "e2e:ui": "bun run playwright test --ui",
     "e2e:visual": "bun run playwright test tests/visual/",
     "e2e:visual:update": "bun run playwright test tests/visual/ --update-snapshots",
-    "e2e:torture": "bun run playwright test --project=torture"
+    "e2e:torture": "bun run playwright test --project=torture",
+    "e2e:torture:ui": "bun run playwright test --project=torture --ui"
   },
   "devDependencies": {
     "@huggingface/transformers": "^3.7.5",

@@ -1,14 +1,16 @@
 /**
  * WebRTC 4-player torture / stress test.
  *
- * Exercises the streaming stack under adversarial conditions:
+ * Ensures video and audio work flawlessly even when used recklessly:
+ * connecting/disconnecting, turning video on/off, muting/unmuting, and
+ * mid-session rejoin. Exercises the streaming stack under adversarial conditions:
  *   1. Rapid toggle bursts   – each player hammers camera/mic 10 times.
  *   2. Concurrent toggle storm – all 4 players toggle simultaneously.
  *   3. Player reload/rejoin   – one player reloads mid-session, room recovers.
  *   4. Final health check     – all streams converge back to healthy state.
  *
- * The test verifies that no prolonged `connecting`/`failed` states occur and
- * that all remote cards return to a stable state after each phase.
+ * Verifies no prolonged `connecting`/`failed` states and that all remote
+ * cards return to a stable state after each phase.
  */
 
 import type { Page } from '@playwright/test'
