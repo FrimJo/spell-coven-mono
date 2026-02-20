@@ -11,6 +11,15 @@ import { validateWebRTCSignal } from '@/types/webrtc-signal'
 import { api } from '@convex/_generated/api'
 import { useMutation, useQuery } from 'convex/react'
 
+/**
+ * Safety overlap subtracted from the watermark so we don't miss signals
+ * that were inserted slightly out of order (clock skew / replication lag).
+ */
+const SINCE_OVERLAP_MS = 2_000
+
+/** Max entries in the dedupe set before we prune the oldest half. */
+const MAX_DEDUPE_ENTRIES = 500
+
 interface UseConvexSignalingProps {
   roomId: string
   localPeerId: string
@@ -48,11 +57,12 @@ export function useConvexSignaling({
   const [isInitialized, setIsInitialized] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
+  // Incremental watermark: only fetch signals created after this timestamp.
+  // Kept as state so changing it re-subscribes the Convex reactive query.
+  const [sinceMs, setSinceMs] = useState(0)
+
   // Track which signals we've already processed to avoid duplicates
   const processedSignalsRef = useRef<Set<string>>(new Set())
-
-  // Track the last signal timestamp we've seen for the "since" parameter
-  const lastSignalTimestampRef = useRef<number>(0)
 
   // Store callbacks in refs to avoid re-subscribing on every callback change
   const onSignalRef = useRef(onSignal)
@@ -70,23 +80,26 @@ export function useConvexSignaling({
     sendSignalRef.current = sendSignalMutation
   })
 
-  // Query for receiving signals - reactive subscription
-  // Using 'since: 0' initially to get recent signals, then updates reactively
+  // Query for receiving signals - reactive subscription with incremental watermark.
+  // The `since` value advances as we process signals, so each reactive push
+  // only returns new rows instead of the entire 60-second window.
   const signalsQuery = useQuery(
     api.signals.listSignals,
     enabled && localPeerId
       ? {
           roomId: convexRoomId,
-          since: 0, // Get all recent signals; we filter processed ones client-side
+          since: sinceMs,
         }
       : 'skip',
   )
 
-  // Process incoming signals
+  // Process incoming signals and advance watermark
   useEffect(() => {
     if (!enabled || !signalsQuery || signalsQuery.length === 0) {
       return
     }
+
+    let maxTimestamp = 0
 
     for (const signal of signalsQuery) {
       // Skip already processed signals (using Convex document ID as unique identifier)
@@ -98,9 +111,8 @@ export function useConvexSignaling({
       // Mark as processed
       processedSignalsRef.current.add(signalId)
 
-      // Update last seen timestamp for potential future optimization
-      if (signal.createdAt > lastSignalTimestampRef.current) {
-        lastSignalTimestampRef.current = signal.createdAt
+      if (signal.createdAt > maxTimestamp) {
+        maxTimestamp = signal.createdAt
       }
 
       // Convert Convex signal format to WebRTCSignal format
@@ -130,6 +142,21 @@ export function useConvexSignaling({
       )
       onSignalRef.current?.(validation.data)
     }
+
+    // Advance the watermark (with overlap) so subsequent queries are smaller.
+    if (maxTimestamp > 0) {
+      const nextSince = Math.max(0, maxTimestamp - SINCE_OVERLAP_MS)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- advancing incremental watermark based on processed query results
+      setSinceMs((prev) => Math.max(prev, nextSince))
+    }
+
+    // Prune dedupe set if it grows too large
+    if (processedSignalsRef.current.size > MAX_DEDUPE_ENTRIES) {
+      const entries = Array.from(processedSignalsRef.current)
+      processedSignalsRef.current = new Set(
+        entries.slice(entries.length - MAX_DEDUPE_ENTRIES / 2),
+      )
+    }
     // eslint-disable-next-line @tanstack/query/no-unstable-deps -- flase positive, signalsQuery is not from tanstack query
   }, [signalsQuery, enabled, localPeerId, convexRoomId])
 
@@ -151,8 +178,8 @@ export function useConvexSignaling({
     if (!enabled) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state when hook becomes disabled
       setIsInitialized(false)
+      setSinceMs(0)
       processedSignalsRef.current.clear()
-      lastSignalTimestampRef.current = 0
     }
   }, [enabled, convexRoomId])
 

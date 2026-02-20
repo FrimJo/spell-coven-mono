@@ -78,13 +78,9 @@ export const sendSignal = mutation({
 /**
  * List signals for a user since a given timestamp
  *
- * Returns signals where:
- * - toUserId matches the requesting user, OR
- * - toUserId is null (broadcast)
- *
- * Filters out signals from the requesting user.
- *
- * NOTE: userId is passed as parameter for Phase 3. Phase 5 will use getAuthUserId.
+ * Runs two targeted index queries (direct + broadcast) to avoid reading
+ * signals destined for other peers. Results are merged and sorted by
+ * createdAt so the caller sees a consistent timeline.
  */
 export const listSignals = query({
   args: {
@@ -99,19 +95,27 @@ export const listSignals = query({
 
     await requireActiveRoomMember(ctx, roomId, userId)
 
-    const signals = await ctx.db
+    // Targeted signals: toUserId === userId
+    const directSignals = await ctx.db
       .query('roomSignals')
-      .withIndex('by_roomId_createdAt', (q) =>
-        q.eq('roomId', roomId).gt('createdAt', since),
+      .withIndex('by_roomId_toUserId_createdAt', (q) =>
+        q.eq('roomId', roomId).eq('toUserId', userId).gt('createdAt', since),
       )
       .collect()
 
-    // Filter to signals intended for this user or broadcast
-    return signals.filter(
-      (s) =>
-        s.fromUserId !== userId &&
-        (s.toUserId === null || s.toUserId === userId),
-    )
+    // Broadcast signals: toUserId === null
+    const broadcastSignals = await ctx.db
+      .query('roomSignals')
+      .withIndex('by_roomId_toUserId_createdAt', (q) =>
+        q.eq('roomId', roomId).eq('toUserId', null).gt('createdAt', since),
+      )
+      .collect()
+
+    const merged = [...directSignals, ...broadcastSignals]
+      .filter((s) => s.fromUserId !== userId)
+      .sort((a, b) => a.createdAt - b.createdAt)
+
+    return merged
   },
 })
 
@@ -145,29 +149,29 @@ export const cleanupSignals = mutation({
  * Clean up old signals across all rooms
  *
  * Internal mutation called by the cron job to remove expired signals.
- * Removes signals older than SIGNAL_TTL_MS from all rooms.
+ * Uses the global by_createdAt index to read only expired rows instead
+ * of scanning the entire table.
  */
 export const cleanupAllSignals = internalMutation({
   args: {},
   handler: async (ctx) => {
     const threshold = Date.now() - SIGNAL_TTL_MS
 
-    // Query all signals and filter by createdAt
-    // Note: Without a global createdAt index, we scan all signals
-    const allSignals = await ctx.db.query('roomSignals').collect()
+    const oldSignals = await ctx.db
+      .query('roomSignals')
+      .withIndex('by_createdAt', (q) => q.lt('createdAt', threshold))
+      .collect()
 
-    const oldSignals = allSignals.filter((s) => s.createdAt < threshold)
-
-    let deleted = 0
     for (const signal of oldSignals) {
       await ctx.db.delete(signal._id)
-      deleted++
     }
 
-    if (deleted > 0) {
-      console.log(`[SignalCleanup] Deleted ${deleted} expired signals`)
+    if (oldSignals.length > 0) {
+      console.log(
+        `[SignalCleanup] Deleted ${oldSignals.length} expired signals`,
+      )
     }
 
-    return { deleted }
+    return { deleted: oldSignals.length }
   },
 })

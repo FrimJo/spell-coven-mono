@@ -7,10 +7,13 @@
 
 import type { ConnectionState, TrackState } from '@/types/connection'
 import type { WebRTCSignal } from '@/types/webrtc-signal'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { WebRTCManager } from '@/lib/webrtc/WebRTCManager'
 
 import { useConvexSignaling } from './useConvexSignaling'
+
+const RECONNECT_COOLDOWN_MS = 60_000
+const MAX_RECONNECT_ATTEMPTS = 3
 
 interface UseConvexWebRTCProps {
   localPlayerId: string
@@ -69,6 +72,18 @@ export function useConvexWebRTC({
 
   // Queue for signals that arrive before manager is ready
   const pendingSignalsRef = useRef<WebRTCSignal[]>([])
+
+  // Per-peer reconnect tracking: { attempts, lastAttemptAt }
+  const reconnectAttemptsRef = useRef<
+    Map<string, { attempts: number; lastAttemptAt: number }>
+  >(new Map())
+
+  // Stabilize remotePlayerIds so the peer-connection effect only re-runs
+  // when the actual set of IDs changes, not on every array reference change.
+  const stableRemotePlayerIds = useMemo(() => {
+    const sorted = [...remotePlayerIds].sort()
+    return sorted
+  }, [remotePlayerIds])
 
   // Keep local stream ref up to date
   useEffect(() => {
@@ -171,6 +186,13 @@ export function useConvexWebRTC({
         onConnectionStateChange: (peerId, state) => {
           if (!isDestroyed) {
             setConnectionStates((prev) => new Map(prev).set(peerId, state))
+
+            // When a connection fails or is closed (e.g. remote peer
+            // reloaded), remove from initiated set so the next offer from
+            // that peer (or our re-initiation attempt) can proceed.
+            if (state === 'failed' || state === 'disconnected') {
+              initiatedPeers.delete(peerId)
+            }
           }
         },
         onTrackStateChange: (peerId, state) => {
@@ -243,12 +265,12 @@ export function useConvexWebRTC({
     }
   }, [localStream])
 
-  // Connect to remote peers
+  // Connect to remote peers (uses stableRemotePlayerIds to avoid churn)
   useEffect(() => {
     console.log('[ConvexWebRTC:Hook] Peer connection effect triggered:', {
       isSignalingInitialized,
-      remotePlayerIds: [...remotePlayerIds],
-      remotePlayerIdsLength: remotePlayerIds.length,
+      remotePlayerIds: [...stableRemotePlayerIds],
+      remotePlayerIdsLength: stableRemotePlayerIds.length,
       localPlayerId,
       roomId,
       hasLocalStream: !!localStream,
@@ -271,21 +293,19 @@ export function useConvexWebRTC({
     const initiated = initiatedPeersRef.current
     console.log('[ConvexWebRTC:Hook] Already-initiated peers:', [...initiated])
 
-    if (remotePlayerIds.length === 0) {
+    if (stableRemotePlayerIds.length === 0) {
       console.log('[ConvexWebRTC:Hook] No remote players to connect to')
     }
 
-    const currentRemoteSet = new Set(remotePlayerIds)
+    const currentRemoteSet = new Set(stableRemotePlayerIds)
 
-    for (const remotePlayerId of remotePlayerIds) {
+    for (const remotePlayerId of stableRemotePlayerIds) {
       if (remotePlayerId === localPlayerId) continue
 
       if (initiated.has(remotePlayerId)) {
-        // Already initiated or peer already called us — skip
         continue
       }
 
-      // Determine who should initiate: peer with lexicographically smaller ID
       const shouldInitiate = localPlayerId < remotePlayerId
 
       if (shouldInitiate) {
@@ -305,7 +325,6 @@ export function useConvexWebRTC({
               `[ConvexWebRTC:Hook] Error calling peer ${remotePlayerId}:`,
               err,
             )
-            // Remove from initiated so it can be retried
             initiated.delete(remotePlayerId)
             const callError =
               err instanceof Error ? err : new Error(String(err))
@@ -313,8 +332,6 @@ export function useConvexWebRTC({
             onErrorRef.current?.(callError)
           })
       } else {
-        // We expect the remote peer to call us. Don't add to initiated set —
-        // the handleSignal path will create the PC when the offer arrives.
         console.log(
           `[ConvexWebRTC:Hook] Waiting for peer ${remotePlayerId} to call us (they have smaller ID)`,
         )
@@ -330,16 +347,15 @@ export function useConvexWebRTC({
       }
     }
   }, [
-    remotePlayerIds,
+    stableRemotePlayerIds,
     isSignalingInitialized,
     roomId,
     localPlayerId,
     localStream,
   ])
 
-  // Periodically check for stuck connections and retry.
-  // A connection stuck at "connecting" for too long likely means the signaling
-  // handshake failed silently (e.g. the offer/answer was lost).
+  // Periodically check for stuck connections and retry with rate limiting.
+  // Per-peer cooldown and max attempts prevent unbounded signaling churn.
   useEffect(() => {
     if (!isSignalingInitialized || !webrtcManagerRef.current) return
 
@@ -367,11 +383,20 @@ export function useConvexWebRTC({
           continue
         }
 
-        // Check how long this peer has been in connecting state by looking
-        // at whether we already initiated. If so, try tearing down and
-        // re-initiating after a threshold.
         const initiated = initiatedPeersRef.current
         if (!initiated.has(peerId)) continue
+
+        // Rate-limit reconnect attempts per peer
+        const tracker = reconnectAttemptsRef.current.get(peerId)
+        if (tracker) {
+          if (tracker.attempts >= MAX_RECONNECT_ATTEMPTS) {
+            if (now - tracker.lastAttemptAt < RECONNECT_COOLDOWN_MS) {
+              continue
+            }
+            // Cooldown elapsed -- reset counter
+            tracker.attempts = 0
+          }
+        }
 
         console.log(
           `[ConvexWebRTC:Hook] Peer ${peerId} stuck at "connecting" for ${connectingForMs}ms, attempting reconnect`,
@@ -385,8 +410,15 @@ export function useConvexWebRTC({
           return next
         })
 
-        // Re-initiate if we should be the caller
         if (localPlayerId < peerId) {
+          const entry = reconnectAttemptsRef.current.get(peerId) ?? {
+            attempts: 0,
+            lastAttemptAt: 0,
+          }
+          entry.attempts++
+          entry.lastAttemptAt = now
+          reconnectAttemptsRef.current.set(peerId, entry)
+
           initiated.add(peerId)
           manager.callPeer(peerId, roomId).catch((err) => {
             console.error(
