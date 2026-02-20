@@ -105,7 +105,9 @@ export default defineSchema({
   })
     .index('by_roomId', ['roomId'])
     .index('by_roomId_createdAt', ['roomId', 'createdAt'])
-    .index('by_roomId_toUserId', ['roomId', 'toUserId']),
+    .index('by_roomId_toUserId', ['roomId', 'toUserId'])
+    .index('by_roomId_toUserId_createdAt', ['roomId', 'toUserId', 'createdAt'])
+    .index('by_createdAt', ['createdAt']),
 
   /**
    * roomBans - Persistent ban records

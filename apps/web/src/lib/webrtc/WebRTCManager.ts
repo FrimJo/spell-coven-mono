@@ -28,6 +28,7 @@ export class WebRTCManager {
   private peers = new Map<string, PeerInfo>()
   private remoteStreams = new Map<string, MediaStream>()
   private localStream: MediaStream | null = null
+  private localStreamGeneration = 0
   private trackStatePollInterval: number | null = null
   private pendingCandidates = new Map<string, CandidateSignal[]>()
 
@@ -45,12 +46,14 @@ export class WebRTCManager {
   }
 
   /**
-   * Set the local media stream
+   * Set the local media stream.
+   * Increments a generation counter so that concurrent replaceTrack calls
+   * from a previous stream are superseded by the latest one.
    */
   setLocalStream(stream: MediaStream | null): void {
     this.localStream = stream
+    this.localStreamGeneration++
 
-    // Update all existing peer connections with new stream
     for (const [peerId, peerInfo] of this.peers) {
       this.updatePeerTracks(peerInfo.pc, peerId)
     }
@@ -81,15 +84,26 @@ export class WebRTCManager {
 
     // Get or create peer connection
     let peerInfo = this.peers.get(from)
+
+    // On a new offer from an already-known peer (e.g. after page reload /
+    // rejoin), tear down the stale connection and create a fresh one.
+    if (peerInfo && type === 'offer') {
+      console.debug(
+        `[WebRTC] Received new offer from known peer ${from} (state: ${peerInfo.pc.connectionState}). Replacing stale connection.`,
+      )
+      peerInfo.pc.close()
+      this.peers.delete(from)
+      this.remoteStreams.delete(from)
+      this.pendingCandidates.delete(from)
+      peerInfo = undefined
+    }
+
     if (!peerInfo) {
-      // For offers, create a new peer connection
       if (type === 'offer') {
         const pc = this.createPeerConnection(from, roomId)
         peerInfo = { pc, roomId }
         this.peers.set(from, peerInfo)
       } else {
-        // For other signals, we need an existing connection
-        // Candidates can arrive before connection is ready - queue them
         if (type === 'candidate') {
           this.queueCandidate(from, signal)
           return
@@ -333,40 +347,53 @@ export class WebRTCManager {
   }
 
   /**
-   * Update peer connection tracks with local stream
+   * Find the sender for a given media kind using transceivers.
+   * Unlike `getSenders().find(s => s.track?.kind)`, this works even after
+   * `replaceTrack(null)` has set `sender.track` to null.
+   */
+  private findSenderByKind(
+    pc: RTCPeerConnection,
+    kind: 'video' | 'audio',
+  ): RTCRtpSender | undefined {
+    for (const transceiver of pc.getTransceivers()) {
+      if (transceiver.receiver.track.kind === kind) {
+        return transceiver.sender
+      }
+    }
+    return undefined
+  }
+
+  /**
+   * Update peer connection tracks with local stream.
+   * Uses a generation counter so that if setLocalStream is called rapidly,
+   * only the most recent stream's replaceTrack calls take effect.
    */
   private updatePeerTracks(pc: RTCPeerConnection, peerId: string): void {
-    if (!this.localStream) {
-      return
-    }
+    const stream = this.localStream
+    const gen = this.localStreamGeneration
 
-    const senders = pc.getSenders()
+    const videoTrack = stream?.getVideoTracks()[0] ?? null
+    const audioTrack = stream?.getAudioTracks()[0] ?? null
 
-    // Update video track
-    const videoTrack = this.localStream.getVideoTracks()[0]
-    const videoSender = senders.find((s) => s.track?.kind === 'video')
-    if (videoSender && videoTrack) {
+    const videoSender = this.findSenderByKind(pc, 'video')
+    const audioSender = this.findSenderByKind(pc, 'audio')
+
+    if (videoSender) {
       videoSender.replaceTrack(videoTrack).catch((err) => {
+        if (this.localStreamGeneration !== gen) return
         console.error(`Failed to replace video track for ${peerId}:`, err)
       })
-    } else if (videoTrack && !videoSender) {
-      pc.addTrack(videoTrack, this.localStream)
-    } else if (videoSender && !videoTrack) {
-      // Local user turned off video - remove track so peers see Camera Off immediately
-      videoSender.replaceTrack(null).catch((err) => {
-        console.error(`Failed to remove video track for ${peerId}:`, err)
-      })
+    } else if (videoTrack && stream) {
+      pc.addTrack(videoTrack, stream)
     }
 
-    // Update audio track
-    const audioTrack = this.localStream.getAudioTracks()[0]
-    const audioSender = senders.find((s) => s.track?.kind === 'audio')
-    if (audioSender && audioTrack) {
+    if (audioSender) {
       audioSender.replaceTrack(audioTrack).catch((err) => {
+        if (this.localStreamGeneration !== gen) return
         console.error(`Failed to replace audio track for ${peerId}:`, err)
       })
-    } else if (audioTrack && !audioSender) {
-      pc.addTrack(audioTrack, this.localStream)
+    } else if (audioTrack && stream) {
+      pc.addTrack(audioTrack, stream)
     }
   }
 
