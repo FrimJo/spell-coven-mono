@@ -19,7 +19,8 @@
     "format": "bunx turbo run format --continue -- --cache --cache-location .cache/.prettiercache",
     "format:fix": "bunx turbo run format -- --write",
     "typecheck": "bunx turbo run typecheck",
-    "preflight": "bunx turbo run typecheck && bunx turbo run lint && bunx turbo run format"
+    "react:doctor": "node ./scripts/react-doctor-preflight.mjs",
+    "preflight": "bunx turbo run typecheck && bunx turbo run lint && bunx turbo run format && bun run react:doctor"
   },
   "devDependencies": {
     "@auth/core": "^0.37.0",
