@@ -121,7 +121,7 @@ export const listSignals = query({
  * Removes signals older than SIGNAL_TTL_MS.
  * Should be called periodically (e.g., via scheduled function).
  */
-export const cleanupSignals = mutation({
+export const cleanupSignals = internalMutation({
   args: { roomId: v.string() },
   handler: async (ctx, { roomId }) => {
     const threshold = Date.now() - SIGNAL_TTL_MS
