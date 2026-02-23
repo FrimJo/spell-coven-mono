@@ -4,6 +4,7 @@ const githubLicenseUrl =
   'https://github.com/FrimJo/spell-coven-mono/blob/main/LICENSE'
 
 export const Route = createFileRoute('/license')({
+  ssr: true,
   component: LicenseRoute,
 })
 

@@ -9,6 +9,8 @@ import {
 // import globalCss from '@repo/ui/styles/globals.css?url'
 import globalCss from '@repo/ui/styles/globals.css?url'
 
+import { ErrorPage } from '../components/ErrorPage.js'
+import { NotFoundPage } from '../components/NotFoundPage.js'
 import { AuthProvider } from '../contexts/AuthContext.js'
 import { ThemeProvider } from '../contexts/ThemeContext.js'
 import { ConvexProvider } from '../integrations/convex/provider.js'
@@ -23,12 +25,58 @@ const siteName = 'Spell Coven'
 const siteDescription =
   'Play paper Magic: The Gathering remotely with video chat and card recognition. Use your physical cards, see your opponents, and enjoy the authentic experience. Free, browser-based, no downloads required.'
 const ogImageUrl = `${siteUrl}/og-image.png`
+const themeBootstrapScript = `
+(() => {
+  try {
+    const themeKey = 'spell-coven-theme';
+    const mtgThemeKey = 'spell-coven-mtg-theme';
+    const storedTheme = localStorage.getItem(themeKey);
+    const storedMtgTheme = localStorage.getItem(mtgThemeKey);
+
+    const theme =
+      storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system'
+        ? storedTheme
+        : 'dark';
+
+    const resolvedTheme =
+      theme === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : theme;
+
+    const root = document.documentElement;
+    if (resolvedTheme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+
+    if (
+      storedMtgTheme === 'none' ||
+      storedMtgTheme === 'white' ||
+      storedMtgTheme === 'blue' ||
+      storedMtgTheme === 'black' ||
+      storedMtgTheme === 'red' ||
+      storedMtgTheme === 'green'
+    ) {
+      if (storedMtgTheme === 'none') {
+        root.removeAttribute('data-mtg-theme');
+      } else {
+        root.setAttribute('data-mtg-theme', storedMtgTheme);
+      }
+    }
+  } catch {
+    // no-op: use default styles
+  }
+})();
+`
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   loader: async () => {
     // Client-side loader - return minimal data
     return {}
   },
+  notFoundComponent: NotFoundPage,
+  errorComponent: ErrorPage,
   head: () => ({
     meta: [
       {
@@ -181,54 +229,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-(() => {
-  try {
-    const themeKey = 'spell-coven-theme';
-    const mtgThemeKey = 'spell-coven-mtg-theme';
-    const storedTheme = localStorage.getItem(themeKey);
-    const storedMtgTheme = localStorage.getItem(mtgThemeKey);
-
-    const theme =
-      storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system'
-        ? storedTheme
-        : 'dark';
-
-    const resolvedTheme =
-      theme === 'system'
-        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-        : theme;
-
-    const root = document.documentElement;
-    if (resolvedTheme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-
-    if (
-      storedMtgTheme === 'none' ||
-      storedMtgTheme === 'white' ||
-      storedMtgTheme === 'blue' ||
-      storedMtgTheme === 'black' ||
-      storedMtgTheme === 'red' ||
-      storedMtgTheme === 'green'
-    ) {
-      if (storedMtgTheme === 'none') {
-        root.removeAttribute('data-mtg-theme');
-      } else {
-        root.setAttribute('data-mtg-theme', storedMtgTheme);
-      }
-    }
-  } catch {
-    // no-op: use default styles
-  }
-})();
-`,
-          }}
-        />
+        <script>{themeBootstrapScript}</script>
         <HeadContent />
       </head>
       <body className="bg-surface-0 min-h-screen">
