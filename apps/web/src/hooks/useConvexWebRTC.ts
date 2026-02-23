@@ -105,17 +105,16 @@ export function useConvexWebRTC({
     connectionStatesRef.current = connectionStates
   }, [connectionStates])
 
-  // Effect events: always read latest props without becoming dependencies
-  const onWebrtcError = useEffectEvent((err: Error) => {
-    setWebrtcError(err)
-    onError?.(err)
-  })
+  // Ref for error handler so it can be called from callbacks without useEffectEvent rules
+  const onWebrtcErrorRef = useRef(onError)
+  useEffect(() => {
+    onWebrtcErrorRef.current = (err: Error) => {
+      setWebrtcError(err)
+      onError?.(err)
+    }
+  }, [onError])
 
-  const sendSignalLatest = useEffectEvent(async (signal: WebRTCSignal) => {
-    await sendSignal(signal)
-  })
-
-  // Handle incoming signals from Convex
+  // Handle incoming signals from Convex (must be defined before useConvexSignaling)
   const handleSignal = useCallback((signal: WebRTCSignal) => {
     const manager = webrtcManagerRef.current
 
@@ -129,16 +128,16 @@ export function useConvexWebRTC({
 
     manager.handleSignal(signal).catch((err) => {
       const error = err instanceof Error ? err : new Error(String(err))
-      onWebrtcError(error)
+      onWebrtcErrorRef.current?.(error)
     })
   }, [])
 
   // Handle signaling errors
   const handleSignalingError = useCallback((err: Error) => {
-    onWebrtcError(err)
+    onWebrtcErrorRef.current?.(err)
   }, [])
 
-  // Use Convex signaling hook
+  // Use Convex signaling hook (before sendSignalLatest so sendSignal is in scope)
   const {
     send: sendSignal,
     isInitialized: isSignalingInitialized,
@@ -149,6 +148,10 @@ export function useConvexWebRTC({
     enabled: !!localPlayerId && !!roomId && presenceReady,
     onSignal: handleSignal,
     onError: handleSignalingError,
+  })
+
+  const sendSignalLatest = useEffectEvent(async (signal: WebRTCSignal) => {
+    await sendSignal(signal)
   })
 
   // Derive combined error from signaling and webrtc errors
@@ -219,7 +222,7 @@ export function useConvexWebRTC({
         },
         onError: (_peerId, err) => {
           if (!isDestroyed) {
-            onWebrtcError(err)
+            onWebrtcErrorRef.current?.(err)
           }
         },
       },
@@ -267,7 +270,7 @@ export function useConvexWebRTC({
           webrtcManagerRef.current?.handleSignal(signal).catch((err) => {
             const error = err instanceof Error ? err : new Error(String(err))
             console.error('[ConvexWebRTC:Hook] Error replaying signal:', error)
-            onWebrtcError(error)
+            onWebrtcErrorRef.current?.(error)
           })
         }
       }
@@ -337,7 +340,7 @@ export function useConvexWebRTC({
             initiated.delete(remotePlayerId)
             const callError =
               err instanceof Error ? err : new Error(String(err))
-            onWebrtcError(callError)
+            onWebrtcErrorRef.current?.(callError)
           })
       } else {
         console.log(

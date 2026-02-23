@@ -73,6 +73,11 @@ export function useConvexSignaling({
     onError?.(err)
   })
 
+  const onErrorRef = useRef(onError)
+  useEffect(() => {
+    onErrorRef.current = onError
+  }, [onError])
+
   // Convex mutation for sending signals
   const sendSignalMutation = useMutation(api.signals.sendSignal)
   const sendSignalRef = useRef(sendSignalMutation)
@@ -221,7 +226,7 @@ export function useConvexSignaling({
         const error = err instanceof Error ? err : new Error(String(err))
         console.error('[ConvexSignaling] Failed to send signal:', error)
         setError(error)
-        emitError(error)
+        onErrorRef.current?.(error)
         throw error
       }
     },
