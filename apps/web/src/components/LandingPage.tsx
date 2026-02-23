@@ -1,10 +1,10 @@
 import type { AuthUser } from '@/contexts/AuthContext'
+import type { FallbackProps } from 'react-error-boundary'
 import { useMemo, useState } from 'react'
 import { env } from '@/env'
 import { sessionStorage } from '@/lib/session-storage'
 import { api } from '@convex/_generated/api'
 import { useNavigate } from '@tanstack/react-router'
-import { ErrorBoundary } from 'react-error-boundary'
 import { useMutation, useQuery } from 'convex/react'
 import {
   AlertTriangle,
@@ -25,6 +25,7 @@ import {
   Users,
   Video,
 } from 'lucide-react'
+import { ErrorBoundary } from 'react-error-boundary'
 
 import { Button } from '@repo/ui/components/button'
 import {
@@ -379,7 +380,10 @@ export function LandingPage({
                       )}
                     </Button>
 
-                    <ErrorBoundary fallback={<LandingActionErrorFallback />}>
+                    <ErrorBoundary
+                      FallbackComponent={LandingActionErrorFallback}
+                      resetKeys={[isAuthenticated]}
+                    >
                       <LandingJoinActions
                         isAuthenticated={isAuthenticated}
                         dialogs={dialogs}
@@ -420,7 +424,7 @@ export function LandingPage({
                 )}
               </div>
 
-              <ErrorBoundary fallback={<LandingLiveStatsErrorFallback />}>
+              <ErrorBoundary FallbackComponent={LandingLiveStatsErrorFallback}>
                 <LandingLiveStats />
               </ErrorBoundary>
             </div>
@@ -1017,7 +1021,10 @@ function LandingJoinActions({
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="border-surface-3 bg-surface-1">
+            <DropdownMenuContent
+              align="end"
+              className="border-surface-3 bg-surface-1"
+            >
               <DropdownMenuItem
                 onClick={onJoinClick}
                 className="text-text-secondary hover:text-white"
@@ -1031,11 +1038,15 @@ function LandingJoinActions({
 
         <Dialog
           open={dialogs.join}
-          onOpenChange={(open) => setDialogs((prev) => ({ ...prev, join: open }))}
+          onOpenChange={(open) =>
+            setDialogs((prev) => ({ ...prev, join: open }))
+          }
         >
           <DialogContent className="border-border-muted bg-surface-1">
             <DialogHeader>
-              <DialogTitle className="text-text-primary">Join a Game</DialogTitle>
+              <DialogTitle className="text-text-primary">
+                Join a Game
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
@@ -1117,12 +1128,15 @@ function LandingJoinActions({
   )
 }
 
-function LandingActionErrorFallback() {
+function LandingActionErrorFallback({ resetErrorBoundary }: FallbackProps) {
   return (
-    <div className="border-warning/40 bg-warning/10 text-warning flex h-14 min-w-[240px] items-center gap-2 rounded-xl border px-4 text-sm font-medium">
-      <AlertTriangle className="h-4 w-4" />
-      <span>The portal fizzles. Use Create Game while we reconnect.</span>
-    </div>
+    <button
+      onClick={resetErrorBoundary}
+      className="border-warning/40 bg-warning/10 text-warning hover:bg-warning/20 flex h-14 min-w-[240px] cursor-pointer items-center gap-2 rounded-xl border px-4 text-sm font-medium transition-colors"
+    >
+      <AlertTriangle className="h-4 w-4 shrink-0" />
+      <span>The portal fizzles. Click to retry.</span>
+    </button>
   )
 }
 
@@ -1178,10 +1192,10 @@ function LandingLiveStats() {
   )
 }
 
-function LandingLiveStatsErrorFallback() {
+function LandingLiveStatsErrorFallback({ resetErrorBoundary }: FallbackProps) {
   return (
     <div className="mt-8 w-full max-w-xl rounded-2xl border border-red-500/30 bg-red-950/20 p-4 backdrop-blur-sm">
-      <div className="text-red-300 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider">
+      <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-red-300">
         <AlertTriangle className="h-4 w-4" />
         Leyline Distortion
       </div>
@@ -1189,6 +1203,12 @@ function LandingLiveStatsErrorFallback() {
         We could not read live Convex signals. The battlefield remains stable,
         but live counters are hidden until mana flows again.
       </p>
+      <button
+        onClick={resetErrorBoundary}
+        className="text-brand-muted-foreground hover:text-brand mt-3 cursor-pointer text-sm font-medium underline underline-offset-2 transition-colors"
+      >
+        Retry
+      </button>
     </div>
   )
 }
