@@ -42,7 +42,7 @@ export function CardResult({
 
       {/* Low Confidence Warning */}
       {showLowConfidenceWarning && (
-        <div className="rounded-md bg-warning/10 px-3 py-2 text-sm text-warning-foreground dark:text-warning-muted-foreground">
+        <div className="bg-warning/10 text-warning-foreground dark:text-warning-muted-foreground rounded-md px-3 py-2 text-sm">
           Low confidence match. Try a clearer view of the card.
         </div>
       )}

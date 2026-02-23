@@ -73,7 +73,11 @@ function DropdownMenuContent({
         )}
         {...props}
       >
-        {hasChildren ? children : <DropdownMenuEmpty>{emptyMessage}</DropdownMenuEmpty>}
+        {hasChildren ? (
+          children
+        ) : (
+          <DropdownMenuEmpty>{emptyMessage}</DropdownMenuEmpty>
+        )}
       </DropdownMenuPrimitive.Content>
     </DropdownMenuPrimitive.Portal>
   )

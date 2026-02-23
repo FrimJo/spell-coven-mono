@@ -15,22 +15,22 @@
  */
 export interface CardQueryResult {
   /** Card name (e.g., "Lightning Bolt") */
-  name: string;
+  name: string
 
   /** Set code (e.g., "LEA", "M21") */
-  set: string;
+  set: string
 
   /** Cosine similarity score between 0.0 and 1.0 */
-  score: number;
+  score: number
 
   /** Optional link to Scryfall card page */
-  scryfall_uri?: string;
+  scryfall_uri?: string
 
   /** Optional URL to card art crop image */
-  image_url?: string;
+  image_url?: string
 
   /** Optional URL to full card image */
-  card_url?: string;
+  card_url?: string
 }
 
 /**
@@ -40,16 +40,16 @@ export interface CardQueryResult {
  */
 export interface CardQueryState {
   /** Current query status */
-  status: "idle" | "querying" | "success" | "error";
+  status: 'idle' | 'querying' | 'success' | 'error'
 
   /** Query result (present when status is 'success') */
-  result: CardQueryResult | null;
+  result: CardQueryResult | null
 
   /** Error message (present when status is 'error') */
-  error: string | null;
+  error: string | null
 
   /** Base64 data URL of cropped canvas for debugging */
-  croppedImageBase64: string | null;
+  croppedImageBase64: string | null
 }
 
 /**
@@ -59,13 +59,13 @@ export interface CardQueryState {
  */
 export interface ModelLoadingState {
   /** Whether model/embeddings are currently loading */
-  isLoading: boolean;
+  isLoading: boolean
 
   /** Progress message (e.g., "Loading embeddings...", "Downloading CLIP model...") */
-  progress: string;
+  progress: string
 
   /** Whether system is ready for queries */
-  isReady: boolean;
+  isReady: boolean
 }
 
 /**
@@ -75,13 +75,13 @@ export interface ModelLoadingState {
  */
 export interface CroppedCardData {
   /** Canvas containing cropped card (224×224px) */
-  canvas: HTMLCanvasElement;
+  canvas: HTMLCanvasElement
 
   /** When the crop was created (for cancellation tracking) */
-  timestamp: number;
+  timestamp: number
 
   /** Whether canvas contains non-empty image data */
-  hasData: boolean;
+  hasData: boolean
 }
 
 // Note: Component prop interfaces are defined in their respective component files
@@ -92,13 +92,13 @@ export interface CroppedCardData {
  */
 export interface UseCardQueryReturn {
   /** Current query state */
-  state: CardQueryState;
+  state: CardQueryState
 
   /** Function to start a new query */
-  query: (canvas: HTMLCanvasElement) => Promise<void>;
+  query: (canvas: HTMLCanvasElement) => Promise<void>
 
   /** Function to cancel pending query */
-  cancel: () => void;
+  cancel: () => void
 }
 
 /**
@@ -106,10 +106,10 @@ export interface UseCardQueryReturn {
  */
 export interface CanvasValidationResult {
   /** Whether canvas is valid for querying */
-  isValid: boolean;
+  isValid: boolean
 
   /** Error message if invalid */
-  error?: string;
+  error?: string
 }
 
 /**
@@ -125,25 +125,25 @@ export const CARD_QUERY_CONSTANTS = {
 
   /** Maximum query timeout (milliseconds) */
   QUERY_TIMEOUT_MS: 10000,
-} as const;
+} as const
 
 /**
  * Type guard to check if a value is a valid CardQueryResult
  */
 export function isCardQueryResult(value: unknown): value is CardQueryResult {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== 'object' || value === null) return false
 
-  const result = value as Partial<CardQueryResult>;
+  const result = value as Partial<CardQueryResult>
 
   return (
-    typeof result.name === "string" &&
+    typeof result.name === 'string' &&
     result.name.length > 0 &&
-    typeof result.set === "string" &&
+    typeof result.set === 'string' &&
     result.set.length > 0 &&
-    typeof result.score === "number" &&
+    typeof result.score === 'number' &&
     result.score >= 0 &&
     result.score <= 1
-  );
+  )
 }
 
 /**
@@ -160,42 +160,42 @@ export function validateCanvas(
     return {
       isValid: false,
       error: `Invalid canvas dimensions: expected ${CARD_QUERY_CONSTANTS.CANVAS_WIDTH}x${CARD_QUERY_CONSTANTS.CANVAS_HEIGHT}, got ${canvas.width}x${canvas.height}`,
-    };
+    }
   }
 
   // Check context accessibility
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext('2d')
   if (!ctx) {
     return {
       isValid: false,
-      error: "Could not get 2d context from canvas",
-    };
+      error: 'Could not get 2d context from canvas',
+    }
   }
 
   // Check for non-empty image data
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const hasData = imageData.data.some((pixel) => pixel !== 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const hasData = imageData.data.some((pixel) => pixel !== 0)
 
   if (!hasData) {
     return {
       isValid: false,
-      error: "Canvas is empty - no valid card detected",
-    };
+      error: 'Canvas is empty - no valid card detected',
+    }
   }
 
-  return { isValid: true };
+  return { isValid: true }
 }
 
 /**
  * Checks if a query result has low confidence
  */
 export function isLowConfidence(score: number): boolean {
-  return score < CARD_QUERY_CONSTANTS.LOW_CONFIDENCE_THRESHOLD;
+  return score < CARD_QUERY_CONSTANTS.LOW_CONFIDENCE_THRESHOLD
 }
 
 /**
  * Converts canvas to base64 data URL for debugging
  */
 export function canvasToBase64(canvas: HTMLCanvasElement): string {
-  return canvas.toDataURL("image/png");
+  return canvas.toDataURL('image/png')
 }
