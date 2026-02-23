@@ -1,7 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "cd ../.. && bun install",
-  "buildCommand": "cd ../.. && if [ \"$VERCEL_ENV\" = \"preview\" ]; then bash ./scripts/convex-preview.sh build; else bunx convex deploy --cmd \"bun run build\"; fi",
-  "outputDirectory": "dist/client",
-  "rewrites": [{ "source": "/(.*)", "destination": "/_shell.html" }]
+  "buildCommand": "cd ../.. && if [ \"$VERCEL_ENV\" = \"preview\" ]; then bash ./scripts/convex-preview.sh build; else bunx convex deploy --cmd \"bun run build\"; fi"
 }
