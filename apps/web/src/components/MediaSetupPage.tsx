@@ -87,7 +87,7 @@ export function MediaSetupPage({ onComplete, onCancel }: MediaSetupPageProps) {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmCancel}
-              className="bg-warning hover:bg-warning text-white"
+              className="bg-warning hover:bg-warning/90 text-black"
             >
               Leave Anyway
             </AlertDialogAction>
