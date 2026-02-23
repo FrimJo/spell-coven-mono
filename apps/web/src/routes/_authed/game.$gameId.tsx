@@ -111,6 +111,7 @@ function RouteErrorReporter({
 }
 
 export const Route = createFileRoute('/_authed/game/$gameId')({
+  ssr: false,
   component: GameRoomRoute,
   beforeLoad: async ({ location, params }) => {
     // Check if media devices are configured before entering game room

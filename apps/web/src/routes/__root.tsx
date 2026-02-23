@@ -9,6 +9,8 @@ import {
 // import globalCss from '@repo/ui/styles/globals.css?url'
 import globalCss from '@repo/ui/styles/globals.css?url'
 
+import { ErrorPage } from '../components/ErrorPage.js'
+import { NotFoundPage } from '../components/NotFoundPage.js'
 import { AuthProvider } from '../contexts/AuthContext.js'
 import { ThemeProvider } from '../contexts/ThemeContext.js'
 import { ConvexProvider } from '../integrations/convex/provider.js'
@@ -29,6 +31,8 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     // Client-side loader - return minimal data
     return {}
   },
+  notFoundComponent: NotFoundPage,
+  errorComponent: ErrorPage,
   head: () => ({
     meta: [
       {

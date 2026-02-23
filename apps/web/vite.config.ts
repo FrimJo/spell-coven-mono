@@ -86,7 +86,7 @@ function tanStackStartPreviewPlugin() {
   }
 }
 
-// SPA mode - static CDN deployment
+// Hybrid rendering: SSR for landing page, SPA-style client rendering elsewhere.
 export default defineConfig(({ mode: _mode }) => {
   const release =
     process.env.VITE_VERCEL_GIT_COMMIT_SHA ??
@@ -122,7 +122,7 @@ export default defineConfig(({ mode: _mode }) => {
       // mkcert is only needed for local HTTPS development
       mkcert({ savePath: './certificates' }),
       tailwindcss(),
-      tanstackStart({ spa: { enabled: true } }),
+      tanstackStart(),
       viteReact(), // Must come after tanstackStart()
       tanStackStartPreviewPlugin(),
       ...(sentryPlugin ? [sentryPlugin] : []),
