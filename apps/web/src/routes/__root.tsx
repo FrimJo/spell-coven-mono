@@ -5,14 +5,23 @@ import {
   HeadContent,
   Scripts,
 } from '@tanstack/react-router'
+import { createServerFn } from '@tanstack/react-start'
+import { getRequestHeader } from '@tanstack/react-start/server'
 
-// import globalCss from '@repo/ui/styles/globals.css?url'
 import globalCss from '@repo/ui/styles/globals.css?url'
 
+import type {
+  MtgColorTheme,
+  ResolvedTheme,
+  Theme,
+} from '../contexts/ThemeContext.js'
 import { ErrorPage } from '../components/ErrorPage.js'
 import { NotFoundPage } from '../components/NotFoundPage.js'
 import { AuthProvider } from '../contexts/AuthContext.js'
-import { ThemeProvider } from '../contexts/ThemeContext.js'
+import {
+  parseThemeFromCookies,
+  ThemeProvider,
+} from '../contexts/ThemeContext.js'
 import { ConvexProvider } from '../integrations/convex/provider.js'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools.js'
 
@@ -20,60 +29,57 @@ export interface MyRouterContext {
   queryClient: QueryClient
 }
 
+const getThemeFromCookies = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const cookieHeader = getRequestHeader('Cookie') ?? ''
+    return parseThemeFromCookies(cookieHeader)
+  },
+)
+
 const siteUrl = 'https://spell-coven.vercel.app/'
 const siteName = 'Spell Coven'
 const siteDescription =
   'Play paper Magic: The Gathering remotely with video chat and card recognition. Use your physical cards, see your opponents, and enjoy the authentic experience. Free, browser-based, no downloads required.'
 const ogImageUrl = `${siteUrl}/og-image.png`
+// Runs synchronously before React hydrates to apply the correct theme class
+// and MTG attribute so there is no flash.  Reads from cookies; falls back to
+// localStorage for one-time migration of pre-cookie preferences.
+// Cookie names must stay in sync with THEME_COOKIE / MTG_THEME_COOKIE in
+// ThemeContext.tsx.
 const themeBootstrapScript = `
 (() => {
   try {
-    const themeKey = 'spell-coven-theme';
-    const mtgThemeKey = 'spell-coven-mtg-theme';
-    const storedTheme = localStorage.getItem(themeKey);
-    const storedMtgTheme = localStorage.getItem(mtgThemeKey);
+    var C = document.cookie;
+    function cv(n) {
+      var m = C.match(new RegExp('(?:^|;\\\\s*)' + n + '=([^;]*)'));
+      return m ? decodeURIComponent(m[1]) : null;
+    }
 
-    const theme =
-      storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system'
-        ? storedTheme
-        : 'dark';
+    var theme = cv('sc-theme');
+    if (theme !== 'light' && theme !== 'dark' && theme !== 'system') theme = 'dark';
 
-    const resolvedTheme =
-      theme === 'system'
-        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-        : theme;
+    var resolved = theme === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : theme;
 
-    const root = document.documentElement;
-    if (resolvedTheme === 'dark') {
-      root.classList.add('dark');
+    var root = document.documentElement;
+    if (resolved === 'dark') root.classList.add('dark');
+    else root.classList.remove('dark');
+
+    var mtg = cv('sc-mtg-theme');
+    if (mtg === 'white' || mtg === 'blue' || mtg === 'black' || mtg === 'red' || mtg === 'green') {
+      root.setAttribute('data-mtg-theme', mtg);
     } else {
-      root.classList.remove('dark');
+      root.removeAttribute('data-mtg-theme');
     }
-
-    if (
-      storedMtgTheme === 'none' ||
-      storedMtgTheme === 'white' ||
-      storedMtgTheme === 'blue' ||
-      storedMtgTheme === 'black' ||
-      storedMtgTheme === 'red' ||
-      storedMtgTheme === 'green'
-    ) {
-      if (storedMtgTheme === 'none') {
-        root.removeAttribute('data-mtg-theme');
-      } else {
-        root.setAttribute('data-mtg-theme', storedMtgTheme);
-      }
-    }
-  } catch {
-    // no-op: use default styles
-  }
+  } catch(e) {}
 })();
 `
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   loader: async () => {
-    // Client-side loader - return minimal data
-    return {}
+    const themeSnapshot = await getThemeFromCookies()
+    return { themeSnapshot }
   },
   notFoundComponent: NotFoundPage,
   errorComponent: ErrorPage,
@@ -208,7 +214,19 @@ const SpeedInsightsProduction = lazy(() =>
   })),
 )
 
+function resolveServerTheme(theme: Theme): ResolvedTheme {
+  // Server cannot resolve 'system'; default to 'dark'.
+  return theme === 'system' ? 'dark' : theme
+}
+
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const { themeSnapshot } = Route.useLoaderData()
+
+  const serverResolved = resolveServerTheme(themeSnapshot.theme)
+  const htmlClass = serverResolved === 'dark' ? 'dark' : undefined
+  const mtgAttr: MtgColorTheme | undefined =
+    themeSnapshot.mtgTheme !== 'none' ? themeSnapshot.mtgTheme : undefined
+
   const [showDevtools, setShowDevtools] = useState(
     import.meta.env.MODE === 'development',
   )
@@ -227,13 +245,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={htmlClass}
+      data-mtg-theme={mtgAttr}
+      suppressHydrationWarning
+    >
       <head>
         <script>{themeBootstrapScript}</script>
         <HeadContent />
       </head>
       <body className="bg-surface-0 min-h-screen">
-        <ThemeProvider defaultTheme="dark">
+        <ThemeProvider
+          defaultTheme={themeSnapshot.theme}
+          defaultMtgTheme={themeSnapshot.mtgTheme}
+        >
           <ConvexProvider>
             <AuthProvider>
               {children}

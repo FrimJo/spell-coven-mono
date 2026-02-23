@@ -39,6 +39,9 @@
     "lint": {
       "dependsOn": ["^lint"]
     },
+    "doctor": {
+      "dependsOn": ["^doctor"]
+    },
     "typecheck": {
       "dependsOn": ["^typecheck"]
     },

@@ -3,7 +3,7 @@
  *
  * Supports light, dark, and system preference modes.
  * Also supports MTG color themes (White, Blue, Black, Red, Green).
- * Persists preference to localStorage.
+ * Persists preference to cookies (no localStorage).
  */
 
 import type { ReactNode } from 'react'
@@ -29,20 +29,79 @@ function svgForInline(raw: string) {
 }
 
 // ============================================================================
-// Types
+// Cookie contract
+// Keep cookie names and valid-value lists in sync with the bootstrap script
+// in __root.tsx (they are duplicated there as string literals).
 // ============================================================================
 
-export type Theme = 'light' | 'dark' | 'system'
+export const THEME_COOKIE = 'sc-theme'
+export const MTG_THEME_COOKIE = 'sc-mtg-theme'
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
+
+const VALID_THEMES = ['light', 'dark', 'system'] as const
+const VALID_MTG_THEMES = [
+  'none',
+  'white',
+  'blue',
+  'black',
+  'red',
+  'green',
+] as const
+
+// ============================================================================
+// Types (derived from the valid-value tuples above)
+// ============================================================================
+
+export type Theme = (typeof VALID_THEMES)[number]
 export type ResolvedTheme = 'light' | 'dark'
 
 /** MTG color themes based on the five colors of Magic */
-export type MtgColorTheme =
-  | 'none'
-  | 'white'
-  | 'blue'
-  | 'black'
-  | 'red'
-  | 'green'
+export type MtgColorTheme = (typeof VALID_MTG_THEMES)[number]
+
+const DEFAULT_THEME: Theme = 'dark'
+const DEFAULT_MTG_THEME: MtgColorTheme = 'none'
+
+/** Extract a single cookie value from a raw Cookie header string. */
+export function parseCookieValue(
+  cookieHeader: string,
+  name: string,
+): string | null {
+  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))
+  return match?.[1] != null ? decodeURIComponent(match[1]) : null
+}
+
+/** Parse both theme cookies from a raw Cookie header string. */
+export function parseThemeFromCookies(cookieHeader: string): {
+  theme: Theme
+  mtgTheme: MtgColorTheme
+} {
+  const rawTheme = parseCookieValue(cookieHeader, THEME_COOKIE)
+  const rawMtgTheme = parseCookieValue(cookieHeader, MTG_THEME_COOKIE)
+
+  const theme = VALID_THEMES.includes(rawTheme as Theme)
+    ? (rawTheme as Theme)
+    : DEFAULT_THEME
+  const mtgTheme = VALID_MTG_THEMES.includes(rawMtgTheme as MtgColorTheme)
+    ? (rawMtgTheme as MtgColorTheme)
+    : DEFAULT_MTG_THEME
+
+  return { theme, mtgTheme }
+}
+
+/** Read theme preferences from `document.cookie` (client only). */
+function readThemeFromClientCookies(): {
+  theme: Theme
+  mtgTheme: MtgColorTheme
+} {
+  if (typeof document === 'undefined')
+    return { theme: DEFAULT_THEME, mtgTheme: DEFAULT_MTG_THEME }
+  return parseThemeFromCookies(document.cookie)
+}
+
+/** Write a theme cookie on the client. */
+function setThemeCookie(name: string, value: string) {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`
+}
 
 /** Icon color per MTG theme (matches mana symbol identity) */
 const MTG_THEME_COLORS: Record<Exclude<MtgColorTheme, 'none'>, string> = {
@@ -110,17 +169,16 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
-const STORAGE_KEY = 'spell-coven-theme'
-const MTG_THEME_STORAGE_KEY = 'spell-coven-mtg-theme'
-
 // ============================================================================
 // Theme Provider
 // ============================================================================
 
 interface ThemeProviderProps {
   children: ReactNode
-  /** Default theme to use if no preference is stored */
+  /** Initial theme from server/loader so SSR and client first paint match. */
   defaultTheme?: Theme
+  /** Initial MTG theme from server/loader so SSR and client first paint match. */
+  defaultMtgTheme?: MtgColorTheme
 }
 
 /**
@@ -164,38 +222,24 @@ function applyMtgThemeToDocument(mtgTheme: MtgColorTheme) {
 export function ThemeProvider({
   children,
   defaultTheme = 'dark',
+  defaultMtgTheme,
 }: ThemeProviderProps) {
-  // Initialize theme from localStorage or default
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return defaultTheme
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored === 'light' || stored === 'dark' || stored === 'system') {
-      return stored
-    }
-    return defaultTheme
-  })
+  // Use loader/snapshot values when provided so server and client first paint match (avoids hydration mismatch on theme-dependent logo etc).
+  const [theme, setThemeState] = useState<Theme>(
+    () =>
+      defaultTheme ??
+      (typeof window === 'undefined'
+        ? 'dark'
+        : readThemeFromClientCookies().theme),
+  )
 
-  // Initialize MTG theme from localStorage
-  const [mtgTheme, setMtgThemeState] = useState<MtgColorTheme>(() => {
-    if (typeof window === 'undefined') return 'none'
-    const stored = localStorage.getItem(MTG_THEME_STORAGE_KEY)
-    if (
-      stored === 'none' ||
-      stored === 'white' ||
-      stored === 'blue' ||
-      stored === 'black' ||
-      stored === 'red' ||
-      stored === 'green'
-    ) {
-      return stored
-    }
-    return 'none'
-  })
-
-  // Compute effective theme - when flag is disabled, always use 'dark'
-  const effectiveTheme = useMemo<Theme>(() => {
-    return theme
-  }, [theme])
+  const [mtgTheme, setMtgThemeState] = useState<MtgColorTheme>(
+    () =>
+      defaultMtgTheme ??
+      (typeof window === 'undefined'
+        ? 'none'
+        : readThemeFromClientCookies().mtgTheme),
+  )
 
   // Track system theme separately for 'system' theme mode
   const [systemResolvedTheme, setSystemResolvedTheme] = useState<ResolvedTheme>(
@@ -238,12 +282,12 @@ export function ThemeProvider({
 
   const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme)
-    localStorage.setItem(STORAGE_KEY, newTheme)
+    setThemeCookie(THEME_COOKIE, newTheme)
   }, [])
 
   const setMtgTheme = useCallback((newMtgTheme: MtgColorTheme) => {
     setMtgThemeState(newMtgTheme)
-    localStorage.setItem(MTG_THEME_STORAGE_KEY, newMtgTheme)
+    setThemeCookie(MTG_THEME_COOKIE, newMtgTheme)
   }, [])
 
   const toggleTheme = useCallback(() => {
@@ -253,7 +297,7 @@ export function ThemeProvider({
   }, [resolvedTheme, setTheme])
 
   const value: ThemeContextValue = {
-    theme: effectiveTheme,
+    theme,
     resolvedTheme,
     setTheme,
     toggleTheme,
