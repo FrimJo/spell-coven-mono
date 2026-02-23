@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react'
 const AUTH_RETURN_TO_KEY = 'auth-return-to'
 
 export const Route = createFileRoute('/_authed')({
+  ssr: false,
   component: AuthedLayout,
 })
 
