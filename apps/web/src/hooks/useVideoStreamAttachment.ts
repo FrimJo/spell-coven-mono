@@ -46,6 +46,7 @@ export function useVideoStreamAttachment({
   })
 
   useEffect(() => {
+    const pendingTimers = pendingTimersRef.current
     // Quick check: compare sizes first
     if (
       remoteStreams.size === lastStreamsRef.current.size &&
@@ -172,17 +173,10 @@ export function useVideoStreamAttachment({
     lastTrackStatesRef.current = new Map(trackStates)
 
     return () => {
-      for (const timer of pendingTimersRef.current) {
+      for (const timer of pendingTimers) {
         clearTimeout(timer)
       }
-      pendingTimersRef.current.clear()
+      pendingTimers.clear()
     }
-  }, [
-    remoteStreams,
-    trackStates,
-    videoElementsRef,
-    attachedStreamsRef,
-    onPlaying,
-    onStopped,
-  ])
+  }, [remoteStreams, trackStates, videoElementsRef, attachedStreamsRef])
 }
