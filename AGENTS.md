@@ -23,7 +23,7 @@ This guide consolidates the most relevant operational knowledge for agents worki
 ## Tooling & Commands
 
 - **Development environment:** Assume a dev server is already running; attempt to connect/use the existing instance before starting a new one.
-- **Type checking:** `bun typescheck`
+- **Type checking:** `bun typecheck`
 - **Lint (auto-fix):** `bun lint:fix`
 - **Format (auto-fix):** `bun format:fix`
 - **Run tests:** `bun test`
