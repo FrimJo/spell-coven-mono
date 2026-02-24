@@ -230,6 +230,38 @@ test.describe('Media Setup Page', () => {
   })
 
   test.describe('Persistence', () => {
+    test('should persist exact default camera, microphone, and speaker IDs', async ({
+      page,
+    }) => {
+      await page.goto('/setup')
+      await clearStorage(page)
+
+      await expect(page.getByText('Setup Audio & Video')).toBeVisible({
+        timeout: 10000,
+      })
+
+      // Enable video first so camera and microphone controls are available.
+      const switches = page.getByRole('switch')
+      const videoSwitch = switches.first()
+      await videoSwitch.click()
+      await expect(page.getByText('Camera Source')).toBeVisible()
+
+      const completeButton = page.getByTestId('media-setup-complete-button')
+      await expect(completeButton).toBeEnabled({ timeout: 10000 })
+      await completeButton.click()
+      await expect(page).toHaveURL('/')
+
+      const prefs = await getMediaPreferences(page)
+      expect(prefs).toMatchObject({
+        videoinput: 'mock-camera-1',
+        audioinput: 'mock-mic-1',
+      })
+      expect(['mock-speaker-1', null]).toContain(
+        (prefs?.audiooutput as string | null | undefined) ?? null,
+      )
+      expect(typeof prefs?.timestamp).toBe('number')
+    })
+
     test('should persist device preferences to localStorage', async ({
       page,
     }) => {

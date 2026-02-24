@@ -13,14 +13,8 @@ import {
  * Visual regression tests for the game room.
  * These tests capture and compare screenshots of the game room UI,
  * including commander viewing and selection flows.
- *
- * Baselines are Linux-only (same as CI). When not on Linux, tests are skipped.
- * To update snapshots: run the "Update visual snapshots" workflow in GitHub Actions.
  */
-const isLinux = process.platform === 'linux'
-const visualDescribe = isLinux ? test.describe : test.describe.skip
-
-visualDescribe('Game Room Visual Tests', () => {
+test.describe('Game Room Visual Tests', () => {
   let roomId: string
   test.use({ permissions: ['camera', 'microphone'] })
 
@@ -163,10 +157,9 @@ visualDescribe('Game Room Visual Tests', () => {
 
       // Click on the Setup tab if it exists
       const setupTab = panel.getByRole('tab', { name: /setup/i })
-      if (await setupTab.isVisible()) {
-        await setupTab.click()
-        await page.waitForTimeout(300)
-      }
+      await expect(setupTab).toBeVisible()
+      await setupTab.click()
+      await page.waitForTimeout(300)
 
       await expect(panel).toHaveScreenshot('commander-panel-setup-tab.png', {
         animations: 'disabled',
@@ -195,10 +188,9 @@ visualDescribe('Game Room Visual Tests', () => {
 
       // Click on the Damage tab
       const damageTab = panel.getByRole('tab', { name: /damage/i })
-      if (await damageTab.isVisible()) {
-        await damageTab.click()
-        await page.waitForTimeout(300)
-      }
+      await expect(damageTab).toBeVisible()
+      await damageTab.click()
+      await page.waitForTimeout(300)
 
       await expect(panel).toHaveScreenshot('commander-panel-damage-tab.png', {
         animations: 'disabled',
@@ -229,24 +221,22 @@ visualDescribe('Game Room Visual Tests', () => {
 
       // Navigate to setup tab if needed
       const setupTab = panel.getByRole('tab', { name: /setup/i })
-      if (await setupTab.isVisible()) {
-        await setupTab.click()
-        await page.waitForTimeout(300)
-      }
+      await expect(setupTab).toBeVisible()
+      await setupTab.click()
+      await page.waitForTimeout(300)
 
       // Find and click on commander slot to open search
       // The CommanderSlot component should have a way to add/change commander
       const addCommanderButton = panel.getByText(/add commander/i).first()
-      if (await addCommanderButton.isVisible()) {
-        await addCommanderButton.click()
-        await page.waitForTimeout(300)
+      await expect(addCommanderButton).toBeVisible()
+      await addCommanderButton.click()
+      await page.waitForTimeout(300)
 
-        // Capture the search input state
-        await expect(panel).toHaveScreenshot('commander-search-open.png', {
-          animations: 'disabled',
-          maxDiffPixelRatio: 0.02,
-        })
-      }
+      // Capture the search input state
+      await expect(panel).toHaveScreenshot('commander-search-open.png', {
+        animations: 'disabled',
+        maxDiffPixelRatio: 0.02,
+      })
     })
 
     test('commander search - with results', async ({ page }) => {
@@ -270,23 +260,21 @@ visualDescribe('Game Room Visual Tests', () => {
 
       // Navigate to setup tab if needed
       const setupTab = panel.getByRole('tab', { name: /setup/i })
-      if (await setupTab.isVisible()) {
-        await setupTab.click()
-        await page.waitForTimeout(300)
-      }
+      await expect(setupTab).toBeVisible()
+      await setupTab.click()
+      await page.waitForTimeout(300)
 
       // Find commander search input and type a search query
       const searchInput = panel.getByPlaceholder(/search/i).first()
-      if (await searchInput.isVisible()) {
-        await searchInput.click()
-        await searchInput.fill('Atraxa')
-        await page.waitForTimeout(1000) // Wait for search results
+      await expect(searchInput).toBeVisible()
+      await searchInput.click()
+      await searchInput.fill('Atraxa')
+      await page.waitForTimeout(1000) // Wait for search results
 
-        await expect(panel).toHaveScreenshot('commander-search-results.png', {
-          animations: 'disabled',
-          maxDiffPixelRatio: 0.02,
-        })
-      }
+      await expect(panel).toHaveScreenshot('commander-search-results.png', {
+        animations: 'disabled',
+        maxDiffPixelRatio: 0.02,
+      })
     })
   })
 

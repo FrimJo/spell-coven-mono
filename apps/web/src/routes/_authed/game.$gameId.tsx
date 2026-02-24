@@ -5,6 +5,8 @@ import { GameRoom } from '@/components/GameRoom'
 import { NotFoundPage } from '@/components/NotFoundPage'
 import { RoomFullDialog } from '@/components/RoomFullDialog'
 import { useAuth } from '@/contexts/AuthContext'
+import { env } from '@/env'
+import { checkRoomAccessServer } from '@/integrations/convex/server-client'
 import { loadEmbeddingsAndMetaFromPackage } from '@/lib/clip-search'
 import { sessionStorage } from '@/lib/session-storage'
 import { api } from '@convex/_generated/api'
@@ -38,17 +40,6 @@ const gameSearchSchema = z.object({
     .boolean()
     .default(defaultValues.testStream)
     .describe('Show a synthetic test stream in an empty slot for development'),
-})
-
-// Zod schema for validating the gameId path parameter
-const gameParamsSchema = z.object({
-  gameId: z
-    .string()
-    .min(1, 'Game ID is required')
-    .regex(
-      GAME_ID_PATTERN,
-      'Game ID must be a 6-character uppercase alphanumeric code',
-    ),
 })
 
 // Key for localStorage where media device preferences are stored
@@ -98,10 +89,14 @@ function RouteErrorReporter({
 
 export const Route = createFileRoute('/_authed/game/$gameId')({
   ssr: false,
-  component: GameRoomRoute,
-  notFoundComponent: NotFoundPage,
-  beforeLoad: async ({ location }) => {
-    // Check if media devices are configured before entering game room
+  component: GameRoomPage,
+  beforeLoad: async ({ params, location }) => {
+    // notFound() renders blank with ssr: false — validate here only to
+    // skip the media-config redirect for malformed IDs.
+    if (!GAME_ID_PATTERN.test(params.gameId)) {
+      return
+    }
+
     const mediaConfigured = isMediaConfigured()
     if (!mediaConfigured) {
       throw redirect({
@@ -109,12 +104,21 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
         search: { returnTo: location.pathname },
       })
     }
-    // Room access (not_found / banned) is handled in the component via useQuery
-    // so we avoid router notFound() which can render blank with ssr: false.
   },
   loaderDeps: ({ search }) => ({ detector: search.detector }),
-  loader: async ({ deps }) => {
-    // Load embeddings database if card detection is enabled (detector param is set)
+  loader: async ({ params, deps }) => {
+    if (!GAME_ID_PATTERN.test(params.gameId)) {
+      return { roomNotFound: true }
+    }
+
+    const access = await checkRoomAccessServer(
+      env.VITE_CONVEX_URL,
+      params.gameId,
+    )
+    if (access.status === 'not_found') {
+      return { roomNotFound: true }
+    }
+
     if (deps.detector) {
       console.log(
         '[game.$gameId loader] Detector enabled, preloading embeddings database...',
@@ -124,11 +128,10 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
         console.log('[game.$gameId loader] Embeddings database loaded')
       } catch (err) {
         console.error('[game.$gameId loader] Failed to load embeddings:', err)
-        // Don't block page load - lazy loading will retry when query runs
       }
     }
 
-    return {}
+    return { roomNotFound: false }
   },
   pendingComponent: () => (
     <div className="bg-surface-0 flex h-screen items-center justify-center">
@@ -159,23 +162,20 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
   },
 })
 
-function GameRoomRoute() {
+function GameRoomPage() {
   const { gameId } = Route.useParams()
-  if (!GAME_ID_PATTERN.test(gameId)) {
-    return <NotFoundPage />
-  }
-
-  return <ValidatedGameRoomRoute />
-}
-
-function ValidatedGameRoomRoute() {
-  const { gameId } = Route.useParams()
+  const { roomNotFound } = Route.useLoaderData()
   const { detector, usePerspectiveWarp, testStream } = Route.useSearch()
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  // Check room access for capacity (reactive query)
-  const roomAccess = useQuery(api.rooms.checkRoomAccess, { roomId: gameId })
+  // Format or room-existence failures are resolved in the loader — render
+  // the 404 immediately without firing the authenticated Convex query.
+  const skipQuery = !GAME_ID_PATTERN.test(gameId) || roomNotFound
+  const roomAccess = useQuery(
+    api.rooms.checkRoomAccess,
+    skipQuery ? 'skip' : { roomId: gameId },
+  )
 
   const handleLeaveGame = () => {
     sessionStorage.clearGameState()
@@ -186,7 +186,11 @@ function ValidatedGameRoomRoute() {
     navigate({ to: '/' })
   }
 
-  // Show loading state while room access is being checked
+  if (skipQuery) {
+    return <NotFoundPage />
+  }
+
+  // Show loading state while authenticated room access is being checked
   if (roomAccess === undefined) {
     return (
       <div className="bg-surface-0 flex h-screen items-center justify-center">
@@ -207,7 +211,6 @@ function ValidatedGameRoomRoute() {
     )
   }
 
-  // Show 404 for missing or banned room (covers client hydration when beforeLoad skipped on server)
   if (roomAccess.status === 'not_found' || roomAccess.status === 'banned') {
     return <NotFoundPage />
   }

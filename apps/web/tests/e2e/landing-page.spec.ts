@@ -1,7 +1,12 @@
 import type { Page } from '@playwright/test'
 
 import { expect, test } from '../helpers/fixtures'
-import { setDesktopViewport, setMobileViewport } from '../helpers/test-utils'
+import {
+  getOrCreateRoomId,
+  setDesktopViewport,
+  setMobileViewport,
+  STORAGE_KEYS,
+} from '../helpers/test-utils'
 
 const MTG_THEME_BRAND_COLORS = {
   white: '#d4af37',
@@ -142,6 +147,7 @@ test.describe('Landing Page', () => {
       })
       const page = await context.newPage()
       await setDesktopViewport(page)
+      await page.goto('/')
 
       // Create Game and Join Game buttons should not be visible
       const createGameButton = page.getByRole('button', {
@@ -336,6 +342,69 @@ test.describe('Landing Page', () => {
       await expect(page.locator('#how-it-works')).toBeInViewport()
 
       await context.close()
+    })
+  })
+
+  test.describe('Authenticated Actions', () => {
+    test('should create a game and show a shareable room link', async ({
+      page,
+    }) => {
+      await setDesktopViewport(page)
+      await page.goto('/')
+
+      const createButton = page.getByTestId('create-game-button')
+      await expect(createButton).toBeVisible({ timeout: 10000 })
+      await createButton.click()
+
+      await expect(
+        page.getByText('Game room created successfully!'),
+      ).toBeVisible({
+        timeout: 20000,
+      })
+      await expect(page.getByText(/\/game\/[A-Z0-9]{6}/)).toBeVisible()
+      await expect(
+        page.getByRole('button', { name: /Enter Game Room/i }),
+      ).toBeEnabled()
+    })
+
+    test('should require a non-empty join code and navigate using trimmed input', async ({
+      page,
+    }) => {
+      const roomId = await getOrCreateRoomId(page, {
+        fresh: true,
+        persist: false,
+      })
+
+      await page.goto('/')
+      await page.evaluate((key) => {
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            videoinput: 'mock-camera-1',
+            audioinput: 'mock-mic-1',
+            audiooutput: 'mock-speaker-1',
+            timestamp: Date.now(),
+          }),
+        )
+      }, STORAGE_KEYS.MEDIA_DEVICES)
+
+      await page.getByTestId('join-game-button').click()
+      await expect(
+        page.getByRole('heading', { name: 'Join a Game' }),
+      ).toBeVisible()
+
+      const joinInput = page.getByTestId('join-game-id-input')
+      const joinSubmitButton = page.getByTestId('join-game-submit-button')
+
+      await expect(joinSubmitButton).toBeDisabled()
+      await joinInput.fill('   ')
+      await expect(joinSubmitButton).toBeDisabled()
+
+      await joinInput.fill(`  ${roomId}  `)
+      await expect(joinSubmitButton).toBeEnabled()
+      await joinSubmitButton.click()
+
+      await expect(page).toHaveURL(`/game/${roomId}`)
     })
   })
 

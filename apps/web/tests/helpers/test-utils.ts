@@ -169,7 +169,7 @@ export async function navigateToTestGame(
   },
 ): Promise<void> {
   const ensureMediaSetup = options?.ensureMediaSetup ?? true
-  const _handleDuplicateSession = options?.handleDuplicateSession
+  const handleDuplicateSession = options?.handleDuplicateSession
 
   if (ensureMediaSetup) {
     await page.addInitScript((key) => {
@@ -202,13 +202,13 @@ export async function navigateToTestGame(
 
   await page.goto(`/game/${gameId}`)
 
-  // if (handleDuplicateSession) {
-  //   await ensureNoDuplicateDialog(
-  //     page,
-  //     handleDuplicateSession,
-  //     options?.timeoutMs,
-  //   )
-  // }
+  if (handleDuplicateSession) {
+    await ensureNoDuplicateDialog(
+      page,
+      handleDuplicateSession,
+      options?.timeoutMs,
+    )
+  }
 }
 
 /**

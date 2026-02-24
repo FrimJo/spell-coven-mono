@@ -97,4 +97,43 @@ test.describe('Duplicate Session Dialog', () => {
     await expect(page2).toHaveURL(/\/$/, { timeout: 10000 })
     await expect(page1).toHaveURL(new RegExp(`/game/${roomId}$`))
   })
+
+  test('escape key does not dismiss duplicate-session dialog', async ({
+    page: page1,
+    context,
+  }) => {
+    if (!hasAuthStorageState()) {
+      test.skip(
+        true,
+        'Auth storage state missing. Run auth.setup.ts or the full Playwright project chain.',
+      )
+    }
+
+    const page2 = await context.newPage()
+
+    await mockMediaDevices(page1)
+    await mockGetUserMedia(page1)
+    await mockMediaDevices(page2)
+    await mockGetUserMedia(page2)
+
+    const roomId = await getOrCreateRoomId(page1, {
+      fresh: true,
+      persist: false,
+    })
+
+    await navigateToTestGame(page1, roomId, {
+      handleDuplicateSession: 'transfer',
+    })
+    await expect(page1.getByText(roomId)).toBeVisible({ timeout: 10000 })
+
+    await navigateToTestGame(page2, roomId)
+    const dialogTitle = page2.getByText('Already Connected', { exact: true })
+    await expect(dialogTitle).toBeVisible({ timeout: 10000 })
+
+    await page2.keyboard.press('Escape')
+    await expect(dialogTitle).toBeVisible()
+
+    await expect(page2).toHaveURL(new RegExp(`/game/${roomId}$`))
+    await expect(page1).toHaveURL(new RegExp(`/game/${roomId}$`))
+  })
 })
