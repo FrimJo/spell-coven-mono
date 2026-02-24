@@ -2,16 +2,15 @@ import type { ReactNode } from 'react'
 import { Suspense, useEffect, useRef } from 'react'
 import { ErrorFallback } from '@/components/ErrorFallback'
 import { GameRoom } from '@/components/GameRoom'
+import { NotFoundPage } from '@/components/NotFoundPage'
 import { RoomFullDialog } from '@/components/RoomFullDialog'
 import { useAuth } from '@/contexts/AuthContext'
-import { convex } from '@/integrations/convex/provider'
 import { loadEmbeddingsAndMetaFromPackage } from '@/lib/clip-search'
 import { sessionStorage } from '@/lib/session-storage'
 import { api } from '@convex/_generated/api'
 import * as Sentry from '@sentry/react'
 import {
   createFileRoute,
-  notFound,
   redirect,
   stripSearchParams,
   useNavigate,
@@ -26,6 +25,8 @@ const defaultValues = {
   usePerspectiveWarp: true, // Use OpenCV quad for precise perspective correction
   testStream: false, // Show a synthetic test stream in an empty slot
 }
+
+const GAME_ID_PATTERN = /^[A-Z0-9]{6}$/
 
 const gameSearchSchema = z.object({
   detector: z.enum(['opencv', 'detr', 'owl-vit', 'yolov8']).optional(),
@@ -45,28 +46,13 @@ const gameParamsSchema = z.object({
     .string()
     .min(1, 'Game ID is required')
     .regex(
-      /^[A-Z0-9]{6}$/,
+      GAME_ID_PATTERN,
       'Game ID must be a 6-character uppercase alphanumeric code',
     ),
 })
 
 // Key for localStorage where media device preferences are stored
 const MEDIA_DEVICES_KEY = 'mtg-selected-media-devices'
-
-/**
- * Check if the user can access the room.
- * Returns the access status: 'ok', 'not_found', 'banned', or 'full'.
- */
-async function checkRoomAccess(
-  roomId: string,
-): Promise<
-  | { status: 'ok' }
-  | { status: 'not_found' }
-  | { status: 'banned' }
-  | { status: 'full'; currentCount: number; maxCount: number }
-> {
-  return await convex.query(api.rooms.checkRoomAccess, { roomId })
-}
 
 /**
  * Check if user has completed media setup.
@@ -113,25 +99,18 @@ function RouteErrorReporter({
 export const Route = createFileRoute('/_authed/game/$gameId')({
   ssr: false,
   component: GameRoomRoute,
-  beforeLoad: async ({ location, params }) => {
+  notFoundComponent: NotFoundPage,
+  beforeLoad: async ({ location }) => {
     // Check if media devices are configured before entering game room
     const mediaConfigured = isMediaConfigured()
     if (!mediaConfigured) {
-      // Redirect to setup page with return URL
       throw redirect({
         to: '/setup',
         search: { returnTo: location.pathname },
       })
     }
-
-    // Check if room exists and user is not banned
-    // Note: "full" check is done in component to show dialog instead of redirect
-    const roomAccess = await checkRoomAccess(params.gameId)
-    if (roomAccess.status === 'not_found' || roomAccess.status === 'banned') {
-      // Show same error for both 'not_found' and 'banned' (security - don't reveal ban status)
-      throw notFound()
-    }
-    // Room full check is handled in the component to show RoomFullDialog
+    // Room access (not_found / banned) is handled in the component via useQuery
+    // so we avoid router notFound() which can render blank with ssr: false.
   },
   loaderDeps: ({ search }) => ({ detector: search.detector }),
   loader: async ({ deps }) => {
@@ -178,12 +157,18 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
   search: {
     middlewares: [stripSearchParams(defaultValues)],
   },
-  params: {
-    parse: (params) => gameParamsSchema.parse(params),
-  },
 })
 
 function GameRoomRoute() {
+  const { gameId } = Route.useParams()
+  if (!GAME_ID_PATTERN.test(gameId)) {
+    return <NotFoundPage />
+  }
+
+  return <ValidatedGameRoomRoute />
+}
+
+function ValidatedGameRoomRoute() {
   const { gameId } = Route.useParams()
   const { detector, usePerspectiveWarp, testStream } = Route.useSearch()
   const navigate = useNavigate()
@@ -220,6 +205,11 @@ function GameRoomRoute() {
         </div>
       </div>
     )
+  }
+
+  // Show 404 for missing or banned room (covers client hydration when beforeLoad skipped on server)
+  if (roomAccess.status === 'not_found' || roomAccess.status === 'banned') {
+    return <NotFoundPage />
   }
 
   // Show room full dialog if room is at capacity
