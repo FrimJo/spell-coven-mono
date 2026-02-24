@@ -29,13 +29,6 @@ import { ErrorBoundary } from 'react-error-boundary'
 
 import { Button } from '@repo/ui/components/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@repo/ui/components/dialog'
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -55,6 +48,7 @@ import logo from '../assets/logo_1024x1024.png'
 import { useTheme } from '../contexts/ThemeContext.js'
 import { AppHeader } from './AppHeader.js'
 import { CreateGameDialog } from './CreateGameDialog.js'
+import { JoinGameDialog } from './JoinGameDialog.js'
 import { RoomNotFoundDialog } from './RoomNotFoundDialog.js'
 import SpotlightCard from './SpotlightCard'
 
@@ -95,7 +89,6 @@ export function LandingPage({
             : mtgTheme === 'green'
               ? logoGreen
               : logo
-  const [joinGameId, setJoinGameId] = useState('')
   const [dialogs, setDialogs] = useState({
     join: false,
     create: false,
@@ -197,10 +190,9 @@ export function LandingPage({
     setDialogs((prev) => ({ ...prev, join: true }))
   }
 
-  const handleJoin = () => {
-    if (joinGameId.trim() && user) {
-      // Use Discord username from auth
-      handleJoinGame(user.username, joinGameId.trim())
+  const handleJoin = (validatedGameId: string) => {
+    if (validatedGameId && user) {
+      handleJoinGame(user.username, validatedGameId)
     }
   }
 
@@ -388,8 +380,6 @@ export function LandingPage({
                         isAuthenticated={isAuthenticated}
                         dialogs={dialogs}
                         setDialogs={setDialogs}
-                        joinGameId={joinGameId}
-                        setJoinGameId={setJoinGameId}
                         onJoinClick={handleJoinClick}
                         onJoin={handleJoin}
                         onRejoinLastRoom={handleRejoinLastRoom}
@@ -974,10 +964,8 @@ interface LandingJoinActionsProps {
       create: boolean
     }>
   >
-  joinGameId: string
-  setJoinGameId: React.Dispatch<React.SetStateAction<string>>
   onJoinClick: () => void
-  onJoin: () => void
+  onJoin: (validatedGameId: string) => void
   onRejoinLastRoom: (roomId: string) => void
 }
 
@@ -985,8 +973,6 @@ function LandingJoinActions({
   isAuthenticated,
   dialogs,
   setDialogs,
-  joinGameId,
-  setJoinGameId,
   onJoinClick,
   onJoin,
   onRejoinLastRoom,
@@ -995,6 +981,9 @@ function LandingJoinActions({
     api.players.getActiveRoomForUser,
     isAuthenticated ? {} : 'skip',
   )
+
+  const handleJoinDialogChange = (open: boolean) =>
+    setDialogs((prev) => ({ ...prev, join: open }))
 
   if (activeRoomQuery?.roomId) {
     return (
@@ -1036,95 +1025,34 @@ function LandingJoinActions({
           </DropdownMenu>
         </div>
 
-        <Dialog
+        <JoinGameDialog
           open={dialogs.join}
-          onOpenChange={(open) =>
-            setDialogs((prev) => ({ ...prev, join: open }))
-          }
-        >
-          <DialogContent className="border-border-muted bg-surface-1">
-            <DialogHeader>
-              <DialogTitle className="text-text-primary">
-                Join a Game
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="game-id" className="text-text-secondary">
-                  Game ID
-                </Label>
-                <Input
-                  id="game-id"
-                  placeholder="Enter game ID (e.g., ABC123)"
-                  value={joinGameId}
-                  onChange={(e) => setJoinGameId(e.target.value)}
-                  className="border-surface-3 bg-surface-0 text-text-primary"
-                  onKeyDown={(e) => e.key === 'Enter' && onJoin()}
-                  data-testid="join-game-id-input"
-                />
-              </div>
-              <Button
-                onClick={onJoin}
-                disabled={!joinGameId.trim()}
-                className="bg-brand hover:bg-brand w-full text-white"
-                data-testid="join-game-submit-button"
-              >
-                Join Game Room
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          onOpenChange={handleJoinDialogChange}
+          onJoin={onJoin}
+        />
       </>
     )
   }
 
   return (
-    <Dialog
-      open={dialogs.join}
-      onOpenChange={(open) => setDialogs((prev) => ({ ...prev, join: open }))}
-    >
-      <DialogTrigger asChild>
-        <Button
-          size="lg"
-          variant="outline"
-          className="border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2 h-14 min-w-[200px] gap-2 text-lg font-semibold hover:text-white"
-          onClick={onJoinClick}
-          data-testid="join-game-button"
-        >
-          <Play className="h-5 w-5" />
-          Join Game
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="border-border-muted bg-surface-1">
-        <DialogHeader>
-          <DialogTitle className="text-text-primary">Join a Game</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="game-id" className="text-text-secondary">
-              Game ID
-            </Label>
-            <Input
-              id="game-id"
-              placeholder="Enter game ID (e.g., ABC123)"
-              value={joinGameId}
-              onChange={(e) => setJoinGameId(e.target.value)}
-              className="border-surface-3 bg-surface-0 text-text-primary"
-              onKeyDown={(e) => e.key === 'Enter' && onJoin()}
-              data-testid="join-game-id-input"
-            />
-          </div>
-          <Button
-            onClick={onJoin}
-            disabled={!joinGameId.trim()}
-            className="bg-brand hover:bg-brand w-full text-white"
-            data-testid="join-game-submit-button"
-          >
-            Join Game Room
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Button
+        size="lg"
+        variant="outline"
+        className="border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2 h-14 min-w-[200px] gap-2 text-lg font-semibold hover:text-white"
+        onClick={onJoinClick}
+        data-testid="join-game-button"
+      >
+        <Play className="h-5 w-5" />
+        Join Game
+      </Button>
+
+      <JoinGameDialog
+        open={dialogs.join}
+        onOpenChange={handleJoinDialogChange}
+        onJoin={onJoin}
+      />
+    </>
   )
 }
 

@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { env } from '@/env'
 import { checkRoomAccessServer } from '@/integrations/convex/server-client'
 import { loadEmbeddingsAndMetaFromPackage } from '@/lib/clip-search'
+import { GAME_ID_PATTERN } from '@/lib/game-id'
 import { sessionStorage } from '@/lib/session-storage'
 import { api } from '@convex/_generated/api'
 import * as Sentry from '@sentry/react'
@@ -27,8 +28,6 @@ const defaultValues = {
   usePerspectiveWarp: true, // Use OpenCV quad for precise perspective correction
   testStream: false, // Show a synthetic test stream in an empty slot
 }
-
-const GAME_ID_PATTERN = /^[A-Z0-9]{6}$/
 
 const gameSearchSchema = z.object({
   detector: z.enum(['opencv', 'detr', 'owl-vit', 'yolov8']).optional(),
