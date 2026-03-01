@@ -11,6 +11,7 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 
+import { enforceRateLimit } from './abuse'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import { internal } from './_generated/api'
 import { mutation, query } from './_generated/server'
@@ -30,6 +31,10 @@ import {
  * Presence timeout threshold in milliseconds (30 seconds)
  */
 const PRESENCE_THRESHOLD_MS = 30_000
+const JOIN_ROOM_WINDOW_MS = 10_000
+const MAX_JOIN_ROOM_PER_WINDOW = 20
+const HEARTBEAT_WINDOW_MS = 10_000
+const MAX_HEARTBEATS_PER_WINDOW = 30
 
 async function requireActiveRoomMember(
   ctx: MutationCtx | QueryCtx,
@@ -76,6 +81,13 @@ export const joinRoom = mutation({
     if (!userId) {
       throw new AuthRequiredError()
     }
+
+    await enforceRateLimit(ctx, {
+      key: `joinRoom:user:${userId}`,
+      maxCalls: MAX_JOIN_ROOM_PER_WINDOW,
+      windowMs: JOIN_ROOM_WINDOW_MS,
+      label: 'joinRoom',
+    })
 
     // Check if room exists
     const room = await ctx.db
@@ -327,6 +339,13 @@ export const heartbeat = mutation({
     if (!userId) {
       throw new AuthRequiredError()
     }
+
+    await enforceRateLimit(ctx, {
+      key: `heartbeat:user:${userId}`,
+      maxCalls: MAX_HEARTBEATS_PER_WINDOW,
+      windowMs: HEARTBEAT_WINDOW_MS,
+      label: 'heartbeat',
+    })
 
     const player = await ctx.db
       .query('roomPlayers')

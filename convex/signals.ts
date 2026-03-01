@@ -9,7 +9,9 @@
 
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
+import z from 'zod'
 
+import { enforceRateLimit } from './abuse'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import { internalMutation, mutation, query } from './_generated/server'
 import { AuthRequiredError } from './errors'
@@ -19,6 +21,38 @@ import { AuthRequiredError } from './errors'
  */
 const SIGNAL_TTL_MS = 60_000
 const PRESENCE_THRESHOLD_MS = 30_000
+const SIGNAL_WINDOW_MS = 10_000
+const MAX_SIGNALS_PER_WINDOW = 100
+const MAX_SDP_LENGTH = 20_000
+const MAX_ICE_CANDIDATE_LENGTH = 2_000
+
+const signalPayloadSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('offer'),
+    payload: z.object({
+      sdp: z.string().min(1).max(MAX_SDP_LENGTH),
+    }),
+  }),
+  z.object({
+    type: z.literal('answer'),
+    payload: z.object({
+      sdp: z.string().min(1).max(MAX_SDP_LENGTH),
+    }),
+  }),
+  z.object({
+    type: z.literal('candidate'),
+    payload: z.object({
+      candidate: z.string().min(1).max(MAX_ICE_CANDIDATE_LENGTH),
+      sdpMid: z.string().nullable().optional(),
+      sdpMLineIndex: z.number().nullable().optional(),
+      usernameFragment: z.string().nullable().optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('leave'),
+    payload: z.undefined().optional(),
+  }),
+])
 
 async function requireActiveRoomMember(
   ctx: MutationCtx | QueryCtx,
@@ -44,6 +78,30 @@ async function requireActiveRoomMember(
   }
 }
 
+async function requireActiveTargetMember(
+  ctx: MutationCtx,
+  roomId: string,
+  toUserId: string,
+): Promise<void> {
+  const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
+  const target = await ctx.db
+    .query('roomPlayers')
+    .withIndex('by_roomId_userId', (q) =>
+      q.eq('roomId', roomId).eq('userId', toUserId),
+    )
+    .filter((q) =>
+      q.and(
+        q.neq(q.field('status'), 'left'),
+        q.gt(q.field('lastSeenAt'), presenceThreshold),
+      ),
+    )
+    .first()
+
+  if (!target) {
+    throw new AuthRequiredError('Signal target must be an active room member')
+  }
+}
+
 /**
  * Send a signaling message
  *
@@ -65,11 +123,31 @@ export const sendSignal = mutation({
     }
 
     await requireActiveRoomMember(ctx, roomId, fromUserId)
+
+    if (toUserId !== null) {
+      await requireActiveTargetMember(ctx, roomId, toUserId)
+    }
+
+    await enforceRateLimit(ctx, {
+      key: `sendSignal:user:${fromUserId}`,
+      maxCalls: MAX_SIGNALS_PER_WINDOW,
+      windowMs: SIGNAL_WINDOW_MS,
+      label: 'sendSignal',
+    })
+    await enforceRateLimit(ctx, {
+      key: `sendSignal:room:${roomId}`,
+      maxCalls: MAX_SIGNALS_PER_WINDOW * 4,
+      windowMs: SIGNAL_WINDOW_MS,
+      label: 'sendSignalRoom',
+    })
+
+    const validatedPayload = signalPayloadSchema.parse(payload)
+
     await ctx.db.insert('roomSignals', {
       roomId,
       fromUserId,
       toUserId,
-      payload,
+      payload: validatedPayload,
       createdAt: Date.now(),
     })
   },
@@ -121,7 +199,7 @@ export const listSignals = query({
  * Removes signals older than SIGNAL_TTL_MS.
  * Should be called periodically (e.g., via scheduled function).
  */
-export const cleanupSignals = mutation({
+export const cleanupSignals = internalMutation({
   args: { roomId: v.string() },
   handler: async (ctx, { roomId }) => {
     const threshold = Date.now() - SIGNAL_TTL_MS

@@ -28,7 +28,7 @@ export default defineSchema({
    * Each room has a unique roomId (short shareable code) and an owner.
    */
   rooms: defineTable({
-    /** Short shareable room code (e.g., "ABC123" - 6 character base-32 code) */
+    /** Short shareable room code (e.g., "A1BC2DEF" - 8 character base-32 code) */
     roomId: v.string(),
     /** Discord user ID of the room owner */
     ownerId: v.string(),
@@ -98,8 +98,11 @@ export default defineSchema({
     fromUserId: v.string(),
     /** Target user ID (null = broadcast to all peers) */
     toUserId: v.union(v.string(), v.null()),
-    /** Signal payload (SDP, ICE candidate, etc.) */
-    payload: v.any(),
+    /** Signal payload (validated shape with type discriminator) */
+    payload: v.object({
+      type: v.string(),
+      payload: v.optional(v.any()),
+    }),
     /** When signal was created */
     createdAt: v.number(),
   })
@@ -138,6 +141,23 @@ export default defineSchema({
     /** Total count */
     count: v.number(),
   }).index('by_name', ['name']),
+
+
+  /**
+   * abuseRateLimits - Per-key request counters for fixed windows
+   *
+   * Used for abuse resistance on high-frequency mutations.
+   */
+  abuseRateLimits: defineTable({
+    /** Compound limiter key (e.g. "sendSignal:user:xyz") */
+    key: v.string(),
+    /** Number of requests observed in current window */
+    count: v.number(),
+    /** Start timestamp (ms) of current fixed window */
+    windowStartedAt: v.number(),
+    /** Last update timestamp */
+    updatedAt: v.number(),
+  }).index('by_key', ['key']),
 
   /**
    * userActiveRooms - Pointer to the user's current active room

@@ -48,4 +48,14 @@ crons.interval(
   internal.rooms.cleanupInactiveRooms,
 )
 
+
+/**
+ * Clean up stale abuse rate-limit buckets every hour.
+ */
+crons.interval(
+  'cleanup abuse rate limits',
+  { hours: 1 },
+  internal.abuse.cleanupRateLimits,
+)
+
 export default crons

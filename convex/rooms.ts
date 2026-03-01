@@ -83,50 +83,16 @@ async function updateRoomActivity(
  * Base-32 character set (excludes confusing chars: 0, O, 1, I)
  */
 const BASE32_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
-const BASE32_ZERO = BASE32_CHARS.charAt(0)
+const ROOM_ID_LENGTH = 8
+const MAX_ROOM_ID_ATTEMPTS = 8
 
-/**
- * Scramble a sequential number to produce a pseudo-random looking value.
- * Uses a Linear Congruential Generator (LCG) for deterministic, collision-free mapping.
- *
- * @param n - Sequential counter value (0, 1, 2, ...)
- * @returns Scrambled number in range [0, 32^6)
- */
-function scrambleId(n: number): number {
-  const MAX = 32 ** 6 // 1,073,741,824 - max value for 6-digit base-32
-  const MULTIPLIER = 1103515245 // LCG multiplier (odd, coprime with 2^30)
-  const INCREMENT = 12345 // Offset to avoid 0 → 0
-
-  return (((n * MULTIPLIER + INCREMENT) % MAX) + MAX) % MAX
-}
-
-/**
- * Convert a number to base-32 code with minimum length padding
- *
- * @param num - The number to convert (0-indexed, so room #1 uses value 0)
- * @param minLength - Minimum length of the resulting code (default: 6)
- * @returns Base-32 encoded string padded to minLength
- *
- * @example
- * toBase32Code(0) // "K3FVMR" (scrambled)
- * toBase32Code(1) // "5PVS8H" (scrambled)
- * toBase32Code(2) // "RBL5U7" (scrambled)
- */
-function toBase32Code(num: number, minLength = 6): string {
-  // Scramble the sequential number to look random
-  let scrambled = scrambleId(num)
-
-  if (scrambled === 0) {
-    return BASE32_ZERO.repeat(minLength)
+function generateRandomRoomId(length = ROOM_ID_LENGTH): string {
+  let roomId = ''
+  for (let i = 0; i < length; i += 1) {
+    const randomIndex = Math.floor(Math.random() * BASE32_CHARS.length)
+    roomId += BASE32_CHARS.charAt(randomIndex)
   }
-
-  let result = ''
-  while (scrambled > 0) {
-    result = BASE32_CHARS.charAt(scrambled % 32) + result
-    scrambled = Math.floor(scrambled / 32)
-  }
-
-  return result.padStart(minLength, BASE32_ZERO)
+  return roomId
 }
 
 /**
@@ -171,41 +137,29 @@ export const createRoom = mutation({
       }
     }
 
-    // Get or create counter for rooms
-    let counter = await ctx.db
-      .query('counters')
-      .withIndex('by_name', (q) => q.eq('name', 'rooms'))
-      .first()
-
-    if (!counter) {
-      await ctx.db.insert('counters', { name: 'rooms', count: 0 })
-      // Query again to get the full document with _creationTime
-      counter = await ctx.db
-        .query('counters')
-        .withIndex('by_name', (q) => q.eq('name', 'rooms'))
+    for (let attempt = 0; attempt < MAX_ROOM_ID_ATTEMPTS; attempt += 1) {
+      const roomId = generateRandomRoomId()
+      const existingRoom = await ctx.db
+        .query('rooms')
+        .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
         .first()
-      if (!counter) {
-        throw new Error('Failed to create counter')
+
+      if (existingRoom) {
+        continue
       }
+
+      await ctx.db.insert('rooms', {
+        roomId,
+        ownerId: userId,
+        createdAt: now,
+        seatCount: 4,
+        lastActivityAt: now,
+      })
+
+      return { roomId, waitMs: null }
     }
 
-    // Increment counter atomically
-    const newCount = counter.count + 1
-    await ctx.db.patch(counter._id, { count: newCount })
-
-    // Generate sequential room code (newCount - 1 because we want 0-indexed)
-    const roomId = toBase32Code(newCount - 1)
-
-    // Create room with default seat count
-    await ctx.db.insert('rooms', {
-      roomId,
-      ownerId: userId,
-      createdAt: now,
-      seatCount: 4,
-      lastActivityAt: now,
-    })
-
-    return { roomId, waitMs: null }
+    throw new Error('Failed to allocate unique room ID')
   },
 })
 

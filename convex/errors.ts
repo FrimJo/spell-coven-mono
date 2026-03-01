@@ -28,6 +28,9 @@ export const ErrorCode = {
   // Validation
   MISSING_USER_ID: 'MISSING_USER_ID',
 
+  // Abuse / throttling
+  RATE_LIMITED: 'RATE_LIMITED',
+
   // Server/Internal
 } as const
 
@@ -89,6 +92,13 @@ export class CannotTargetSelfError extends AppError {
   constructor(action = 'target') {
     super(ErrorCode.CANNOT_TARGET_SELF, `Cannot ${action} yourself`)
     this.name = 'CannotTargetSelfError'
+  }
+}
+
+export class RateLimitedError extends AppError {
+  constructor(message = 'Too many requests. Please slow down.') {
+    super(ErrorCode.RATE_LIMITED, message)
+    this.name = 'RateLimitedError'
   }
 }
 

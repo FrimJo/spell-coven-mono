@@ -5,7 +5,7 @@ import z from 'zod'
 import type { DataModel } from './_generated/dataModel'
 import { api, internal } from './_generated/api'
 import { action } from './_generated/server'
-import { isE2ePreview } from './env'
+import { isE2ePreview, isPreviewAuthAllowed } from './env'
 
 const previewTokensSchema = z.object({
   tokens: z.object({
@@ -106,7 +106,7 @@ export const previewLogin = action({
     workerSlot: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    if (!isE2ePreview) {
+    if (!isE2ePreview || !isPreviewAuthAllowed) {
       throw new Error('Unauthorized')
     }
 
