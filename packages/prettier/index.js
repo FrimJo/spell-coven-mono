@@ -13,7 +13,7 @@ const config = {
     'prettier-plugin-tailwindcss',
   ],
   tailwindStylesheet: fileURLToPath(
-    new URL('../../tooling/tailwind/web.css', import.meta.url),
+    new URL('../tailwind/web.css', import.meta.url),
   ),
   tailwindFunctions: ['cn'],
   importOrder: [
