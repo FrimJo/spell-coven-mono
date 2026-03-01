@@ -54,6 +54,7 @@ function LandingPageContent() {
         onRefreshInvite={() => {}}
         isRefreshingInvite={false}
         user={user}
+        isAuthLoading={isAuthLoading}
         onSignIn={signIn}
         onPreviewSignIn={signInWithPreviewCode}
       />
