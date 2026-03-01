@@ -214,9 +214,7 @@ test.describe('WebRTC 4-player torture', () => {
 
       console.log(`[Torture:P3] ${rejoinLabel}: reloading page...`)
       await injectPeerConnectionCapture(rejoinPlayer.page)
-      await navigateToTestGame(rejoinPlayer.page, harness.roomId, {
-        handleDuplicateSession: 'transfer',
-      })
+      await navigateToTestGame(rejoinPlayer.page, harness.roomId)
       await rejoinPlayer.page
         .waitForLoadState('networkidle', { timeout: 30_000 })
         .catch(() => {})
@@ -264,9 +262,7 @@ test.describe('WebRTC 4-player torture', () => {
           `[Torture:P4] ${soakRejoinLabel}: reloading in soak cycle ${cycle + 1}...`,
         )
         await injectPeerConnectionCapture(soakRejoinPlayer.page)
-        await navigateToTestGame(soakRejoinPlayer.page, harness.roomId, {
-          handleDuplicateSession: 'transfer',
-        })
+        await navigateToTestGame(soakRejoinPlayer.page, harness.roomId)
         await soakRejoinPlayer.page
           .waitForLoadState('networkidle', { timeout: 30_000 })
           .catch(() => {})

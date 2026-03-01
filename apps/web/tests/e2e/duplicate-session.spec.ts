@@ -36,9 +36,7 @@ test.describe('Duplicate Session Dialog', () => {
       persist: false,
     })
 
-    await navigateToTestGame(page1, roomId, {
-      handleDuplicateSession: 'transfer',
-    })
+    await navigateToTestGame(page1, roomId)
     // Wait for game room to load before checking header controls
     await expect(page1.getByText(roomId)).toBeVisible({ timeout: 10000 })
     await expect(page1.getByTestId('leave-game-button')).toBeVisible({
@@ -79,9 +77,7 @@ test.describe('Duplicate Session Dialog', () => {
       persist: false,
     })
 
-    await navigateToTestGame(page1, roomId, {
-      handleDuplicateSession: 'transfer',
-    })
+    await navigateToTestGame(page1, roomId)
     // Wait for game room to load before checking header controls
     await expect(page1.getByText(roomId)).toBeVisible({ timeout: 10000 })
     await expect(page1.getByTestId('leave-game-button')).toBeVisible({
@@ -121,9 +117,7 @@ test.describe('Duplicate Session Dialog', () => {
       persist: false,
     })
 
-    await navigateToTestGame(page1, roomId, {
-      handleDuplicateSession: 'transfer',
-    })
+    await navigateToTestGame(page1, roomId)
     await expect(page1.getByText(roomId)).toBeVisible({ timeout: 10000 })
 
     await navigateToTestGame(page2, roomId)

@@ -66,9 +66,7 @@ test.describe('Session Storage', () => {
         { gameId: roomId, key: STORAGE_KEYS.GAME_STATE },
       )
 
-      await navigateToTestGame(page, roomId, {
-        handleDuplicateSession: 'transfer',
-      })
+      await navigateToTestGame(page, roomId)
 
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
@@ -111,9 +109,7 @@ test.describe('Session Storage', () => {
         { gameId: roomId, key: STORAGE_KEYS.GAME_STATE },
       )
 
-      await navigateToTestGame(page, roomId, {
-        handleDuplicateSession: 'transfer',
-      })
+      await navigateToTestGame(page, roomId)
 
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
@@ -167,9 +163,7 @@ test.describe('Session Storage', () => {
         { gameId: roomId, key: STORAGE_KEYS.GAME_STATE },
       )
 
-      await navigateToTestGame(page, roomId, {
-        handleDuplicateSession: 'transfer',
-      })
+      await navigateToTestGame(page, roomId)
 
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
@@ -329,9 +323,7 @@ test.describe('Session Storage', () => {
         { gameId: roomId, key: STORAGE_KEYS.GAME_STATE },
       )
 
-      await navigateToTestGame(page, roomId, {
-        handleDuplicateSession: 'transfer',
-      })
+      await navigateToTestGame(page, roomId)
 
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })

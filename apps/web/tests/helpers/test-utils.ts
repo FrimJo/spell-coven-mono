@@ -164,12 +164,9 @@ export async function navigateToTestGame(
   gameId = getRoomId(),
   options?: {
     ensureMediaSetup?: boolean
-    handleDuplicateSession?: 'transfer' | 'home'
-    timeoutMs?: number
   },
 ): Promise<void> {
   const ensureMediaSetup = options?.ensureMediaSetup ?? true
-  const handleDuplicateSession = options?.handleDuplicateSession
 
   if (ensureMediaSetup) {
     await page.addInitScript((key) => {
@@ -201,14 +198,6 @@ export async function navigateToTestGame(
   }
 
   await page.goto(`/game/${gameId}`)
-
-  if (handleDuplicateSession) {
-    await ensureNoDuplicateDialog(
-      page,
-      handleDuplicateSession,
-      options?.timeoutMs,
-    )
-  }
 }
 
 /**
@@ -223,28 +212,6 @@ export async function ensureAuthWarm(page: Page): Promise<void> {
   await expect(page.getByTestId('create-game-button')).toBeVisible({
     timeout: 15000,
   })
-}
-
-/**
- * Dismiss duplicate-session dialog if it appears.
- */
-export async function ensureNoDuplicateDialog(
-  page: Page,
-  action: 'home' | 'transfer' = 'transfer',
-  timeoutMs = 5000,
-): Promise<void> {
-  const duplicateDialogTitle = page.getByText('Already Connected', {
-    exact: true,
-  })
-  const dialogVisible = await duplicateDialogTitle
-    .waitFor({ state: 'visible', timeout: timeoutMs })
-    .then(() => true)
-    .catch(() => false)
-  if (dialogVisible) {
-    const actionLabel = action === 'home' ? 'Return to Home' : 'Transfer here'
-    await page.getByRole('button', { name: actionLabel }).click()
-    await expect(duplicateDialogTitle).toBeHidden({ timeout: 10000 })
-  }
 }
 
 /**

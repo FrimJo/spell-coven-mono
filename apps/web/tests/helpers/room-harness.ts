@@ -421,9 +421,7 @@ export async function setupStableRoom(
   // Phase 4: Create room via owner
   const owner = players[0]!
   const roomId = await createRoomViaUI(owner.page)
-  await navigateToTestGame(owner.page, roomId, {
-    handleDuplicateSession: 'transfer',
-  })
+  await navigateToTestGame(owner.page, roomId)
   await owner.page
     .getByTestId('game-id-display')
     .waitFor({ state: 'visible', timeout: 30_000 })
@@ -435,9 +433,7 @@ export async function setupStableRoom(
     const joiner = joiners[i]!
     const joinerLabel = PLAYER_LABELS[i + 1]!
 
-    await navigateToTestGame(joiner.page, roomId, {
-      handleDuplicateSession: 'transfer',
-    })
+    await navigateToTestGame(joiner.page, roomId)
     await joiner.page
       .waitForLoadState('networkidle', { timeout: 30_000 })
       .catch(() => {})
