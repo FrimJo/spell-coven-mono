@@ -155,12 +155,6 @@ test.describe('Game Room Visual Tests', () => {
       await expect(panel).toBeVisible({ timeout: 5000 })
       await page.waitForTimeout(300)
 
-      // Click on the Setup tab if it exists
-      const setupTab = panel.getByRole('tab', { name: /setup/i })
-      await expect(setupTab).toBeVisible()
-      await setupTab.click()
-      await page.waitForTimeout(300)
-
       await expect(panel).toHaveScreenshot('commander-panel-setup-tab.png', {
         animations: 'disabled',
         maxDiffPixelRatio: 0.02,
@@ -184,12 +178,6 @@ test.describe('Game Room Visual Tests', () => {
       // Wait for panel to open
       const panel = page.getByRole('dialog', { name: /commanders/i })
       await expect(panel).toBeVisible({ timeout: 5000 })
-      await page.waitForTimeout(300)
-
-      // Click on the Damage tab
-      const damageTab = panel.getByRole('tab', { name: /damage/i })
-      await expect(damageTab).toBeVisible()
-      await damageTab.click()
       await page.waitForTimeout(300)
 
       await expect(panel).toHaveScreenshot('commander-panel-damage-tab.png', {
@@ -217,12 +205,6 @@ test.describe('Game Room Visual Tests', () => {
       // Wait for panel to open
       const panel = page.getByRole('dialog', { name: /commanders/i })
       await expect(panel).toBeVisible({ timeout: 5000 })
-      await page.waitForTimeout(300)
-
-      // Navigate to setup tab if needed
-      const setupTab = panel.getByRole('tab', { name: /setup/i })
-      await expect(setupTab).toBeVisible()
-      await setupTab.click()
       await page.waitForTimeout(300)
 
       // Find and click on commander slot to open search
@@ -256,12 +238,6 @@ test.describe('Game Room Visual Tests', () => {
       // Wait for panel to open
       const panel = page.getByRole('dialog', { name: /commanders/i })
       await expect(panel).toBeVisible({ timeout: 5000 })
-      await page.waitForTimeout(300)
-
-      // Navigate to setup tab if needed
-      const setupTab = panel.getByRole('tab', { name: /setup/i })
-      await expect(setupTab).toBeVisible()
-      await setupTab.click()
       await page.waitForTimeout(300)
 
       // Find commander search input and type a search query

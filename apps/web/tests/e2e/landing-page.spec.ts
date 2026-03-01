@@ -31,6 +31,7 @@ const MTG_THEME_LABELS: Record<keyof typeof MTG_THEME_BRAND_COLORS, string> = {
 test.describe('Landing Page', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
+    await page.waitForLoadState('networkidle')
   })
 
   test.describe('Page Structure', () => {
@@ -205,6 +206,7 @@ test.describe('Landing Page', () => {
       const page = await context.newPage()
 
       await page.goto('/')
+      await page.waitForLoadState('networkidle')
       await setMobileViewport(page)
 
       // Open mobile menu
