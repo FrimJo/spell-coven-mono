@@ -8,7 +8,8 @@ import { defineConfig } from 'vite'
 import mkcert from 'vite-plugin-mkcert'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 
-// Hybrid rendering: SSR for landing page, SPA-style client rendering elsewhere.
+// Hybrid rendering: static prerendering for landing + license pages,
+// SPA-style client rendering elsewhere.
 export default defineConfig(({ mode: mode }) => {
   const release =
     process.env.VITE_VERCEL_GIT_COMMIT_SHA ??
@@ -44,7 +45,12 @@ export default defineConfig(({ mode: mode }) => {
       // mkcert is only needed for local HTTPS development
       mkcert({ savePath: './certificates' }),
       tailwindcss(),
-      tanstackStart(),
+      tanstackStart({
+        prerender: {
+          enabled: true,
+          crawlLinks: false,
+        },
+      }),
       mode === 'production' ? nitro() : false,
       viteReact(), // Must come after tanstackStart()
       ...(sentryPlugin ? [sentryPlugin] : []),
