@@ -231,13 +231,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     import.meta.env.MODE === 'development',
   )
 
-  const handleShowDevtools = useEffectEvent(() => {
+  const suppressDevtools = useEffectEvent(() => {
     setShowDevtools(false)
   })
 
   useEffect(() => {
     if (navigator.webdriver === true) {
-      handleShowDevtools()
+      suppressDevtools()
     }
 
     // @ts-expect-error: Enable toogle devtools in production
