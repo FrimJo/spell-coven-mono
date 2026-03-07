@@ -91,10 +91,11 @@ export function useConvexWebRTC({
 
   // Stabilize remotePlayerIds so the peer-connection effect only re-runs
   // when the actual set of IDs changes, not on every array reference change.
-  const stableRemotePlayerIds = useMemo(() => {
-    const sorted = [...remotePlayerIds].sort()
-    return sorted
-  }, [remotePlayerIds])
+  const remoteIdsKey = [...remotePlayerIds].sort().join('\0')
+  const stableRemotePlayerIds = useMemo(
+    () => remoteIdsKey.split('\0').filter(Boolean),
+    [remoteIdsKey],
+  )
 
   // Keep refs in sync for use in non-reactive callbacks
   useEffect(() => {
@@ -210,7 +211,9 @@ export function useConvexWebRTC({
           if (!isDestroyed) {
             setConnectionStates((prev) => new Map(prev).set(peerId, state))
 
-            if (state === 'failed' || state === 'disconnected') {
+            if (state === 'connected') {
+              reconnectAttemptsRef.current.delete(peerId)
+            } else if (state === 'failed' || state === 'disconnected') {
               initiatedPeers.delete(peerId)
             }
           }
@@ -435,6 +438,9 @@ export function useConvexWebRTC({
               err,
             )
             initiated.delete(peerId)
+            const reconnectError =
+              err instanceof Error ? err : new Error(String(err))
+            onWebrtcErrorRef.current?.(reconnectError)
           })
         }
       }

@@ -73,17 +73,21 @@ export function useConvexSignaling({
     onError?.(err)
   })
 
+  // Ref for onError: needed in `send` (a useCallback) where useEffectEvent
+  // cannot be called. Effects use `emitError` above instead.
   const onErrorRef = useRef(onError)
   useEffect(() => {
     onErrorRef.current = onError
   }, [onError])
 
-  // Convex mutation for sending signals
+  // Convex mutation for sending signals.
+  // Ref keeps `send` stable while always calling the latest mutation instance.
   const sendSignalMutation = useMutation(api.signals.sendSignal)
   const sendSignalRef = useRef(sendSignalMutation)
   useEffect(() => {
     sendSignalRef.current = sendSignalMutation
-  })
+    // eslint-disable-next-line @tanstack/query/no-unstable-deps -- false positive: this is Convex useMutation, not TanStack Query
+  }, [sendSignalMutation])
 
   // Query for receiving signals - reactive subscription with incremental watermark.
   // The `since` value advances as we process signals, so each reactive push
