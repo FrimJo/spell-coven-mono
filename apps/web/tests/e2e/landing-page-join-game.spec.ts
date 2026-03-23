@@ -1,17 +1,22 @@
 import { expect, test } from '../helpers/fixtures'
-import { getOrCreateRoomId, STORAGE_KEYS } from '../helpers/test-utils'
+import {
+  getOrCreateRoomId,
+  leaveGameRoom,
+  STORAGE_KEYS,
+} from '../helpers/test-utils'
 
 /**
  * Join Game Dialog e2e tests.
  *
- * Isolated in its own file so the worker gets a fresh user identity
- * with no active room – guaranteeing the plain "Join Game" button is
- * rendered rather than the "Rejoin Game" variant.
+ * Tests are ordered so that the only test that actually enters a game room
+ * (clicks the "Enter" button) is the very last one in the suite.
+ * Every test that joins a room calls `leaveGameRoom` afterwards so the
+ * worker's user has no active room for subsequent tests or runs.
  */
 test.describe('Join Game Dialog', () => {
   /**
    * Helper: open the Join dialog from the landing page.
-   * Assumes the page is already on `/` and authenticated with no active room.
+   * Assumes the page is already on `/` and the user has no active room.
    */
   async function openJoinDialog(page: import('@playwright/test').Page) {
     await page.getByTestId('join-game-button').click()
@@ -34,6 +39,8 @@ test.describe('Join Game Dialog', () => {
       )
     }, STORAGE_KEYS.MEDIA_DEVICES)
   }
+
+  // ── Validation / UI-only tests (no room creation) ─────────────────────
 
   test('should open dialog with MTG-themed heading and disabled submit', async ({
     page,
@@ -103,84 +110,6 @@ test.describe('Join Game Dialog', () => {
     await expect(page.getByTestId('join-game-validation-error')).toBeVisible()
   })
 
-  test('should normalize lowercase input and validate room existence', async ({
-    page,
-  }) => {
-    const roomId = await getOrCreateRoomId(page, {
-      fresh: true,
-      persist: false,
-    })
-    await page.goto('/')
-    await seedMediaPrefs(page)
-    await openJoinDialog(page)
-
-    const input = page.getByTestId('join-game-id-input')
-    await input.fill(roomId.toLowerCase())
-    await page.getByTestId('join-game-submit-button').click()
-
-    // Should show loading state
-    await expect(page.getByText(/Searching the Multiverse/i)).toBeVisible({
-      timeout: 5000,
-    })
-
-    // Should transition to success
-    await expect(page.getByText(/found/i)).toBeVisible({ timeout: 15000 })
-    await expect(page.getByTestId('join-game-enter-button')).toBeVisible()
-
-    await page.getByTestId('join-game-enter-button').click()
-    await expect(page).toHaveURL(`/game/${roomId}`)
-  })
-
-  test('should show spinner during room validation and disable controls', async ({
-    page,
-  }) => {
-    const roomId = await getOrCreateRoomId(page, {
-      fresh: true,
-      persist: false,
-    })
-    await page.goto('/')
-    await openJoinDialog(page)
-
-    const input = page.getByTestId('join-game-id-input')
-    const submitButton = page.getByTestId('join-game-submit-button')
-
-    await input.fill(roomId)
-    await submitButton.click()
-
-    // During checking: input should be disabled, spinner text should appear
-    await expect(input).toBeDisabled({ timeout: 2000 })
-    await expect(page.getByText(/Searching the Multiverse/i)).toBeVisible()
-
-    // Wait for check to finish (success or not)
-    await expect(page.getByText(/found|faded/i)).toBeVisible({
-      timeout: 15000,
-    })
-  })
-
-  test('should show themed error for non-existent room and allow retry', async ({
-    page,
-  }) => {
-    await page.goto('/')
-    await openJoinDialog(page)
-
-    const input = page.getByTestId('join-game-id-input')
-    await input.fill('ZZZZ99')
-    await page.getByTestId('join-game-submit-button').click()
-
-    // Should show loading then error
-    await expect(page.getByText(/faded from the multiverse/i)).toBeVisible({
-      timeout: 15000,
-    })
-
-    // "Try a Different Code" button should be visible
-    const tryAgainButton = page.getByTestId('join-game-try-again-button')
-    await expect(tryAgainButton).toBeVisible()
-    await tryAgainButton.click()
-
-    // Should return to input phase with input enabled
-    await expect(input).toBeEnabled()
-  })
-
   test('should clear validation error when user types new input', async ({
     page,
   }) => {
@@ -223,6 +152,83 @@ test.describe('Join Game Dialog', () => {
     await expect(page.getByTestId('join-game-submit-button')).toBeDisabled()
   })
 
+  test('should show themed error for non-existent room and allow retry', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await openJoinDialog(page)
+
+    const input = page.getByTestId('join-game-id-input')
+    await input.fill('ZZZZ99')
+    await page.getByTestId('join-game-submit-button').click()
+
+    // Should show loading then error
+    await expect(page.getByText(/faded from the multiverse/i)).toBeVisible({
+      timeout: 15000,
+    })
+
+    // "Try a Different Code" button should be visible
+    const tryAgainButton = page.getByTestId('join-game-try-again-button')
+    await expect(tryAgainButton).toBeVisible()
+    await tryAgainButton.click()
+
+    // Should return to input phase with input enabled
+    await expect(input).toBeEnabled()
+  })
+
+  // ── Tests that create rooms (ordered last to avoid polluting state) ───
+
+  test('should show spinner during room validation and disable controls', async ({
+    page,
+  }) => {
+    const roomId = await getOrCreateRoomId(page, {
+      fresh: true,
+      persist: false,
+    })
+    await page.goto('/')
+    await openJoinDialog(page)
+
+    const input = page.getByTestId('join-game-id-input')
+    const submitButton = page.getByTestId('join-game-submit-button')
+
+    await input.fill(roomId)
+    await submitButton.click()
+
+    // During checking: input should be disabled, spinner text should appear
+    await expect(input).toBeDisabled({ timeout: 2000 })
+    await expect(page.getByText(/Searching the Multiverse/i)).toBeVisible()
+
+    // Wait for check to finish (success or not)
+    await expect(page.getByText(/found|faded/i)).toBeVisible({
+      timeout: 15000,
+    })
+  })
+
+  test('should normalize lowercase input and validate room existence', async ({
+    page,
+  }) => {
+    const roomId = await getOrCreateRoomId(page, {
+      fresh: true,
+      persist: false,
+    })
+    await page.goto('/')
+    await seedMediaPrefs(page)
+    await openJoinDialog(page)
+
+    const input = page.getByTestId('join-game-id-input')
+    await input.fill(roomId.toLowerCase())
+    await page.getByTestId('join-game-submit-button').click()
+
+    // Should show loading state
+    await expect(page.getByText(/Searching the Multiverse/i)).toBeVisible({
+      timeout: 5000,
+    })
+
+    // Should transition to success
+    await expect(page.getByText(/found/i)).toBeVisible({ timeout: 15000 })
+    await expect(page.getByTestId('join-game-enter-button')).toBeVisible()
+  })
+
   test('should validate and navigate for a valid existing room (full happy path)', async ({
     page,
   }) => {
@@ -245,5 +251,8 @@ test.describe('Join Game Dialog', () => {
 
     await page.getByTestId('join-game-enter-button').click()
     await expect(page).toHaveURL(`/game/${roomId}`)
+
+    // Clean up: leave the room so the user has no active room for future runs
+    await leaveGameRoom(page)
   })
 })

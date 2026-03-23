@@ -5,6 +5,7 @@ import {
   getMediaPreferences,
   getOrCreateRoomId,
   hasAuthStorageState,
+  leaveGameRoom,
   mockGetUserMedia,
   mockMediaDevices,
   STORAGE_KEYS,
@@ -90,6 +91,8 @@ test.describe('Media Setup Page', () => {
 
       // Should navigate to returnTo path
       await expect(page).toHaveURL(returnPath)
+
+      await leaveGameRoom(page)
     })
   })
 

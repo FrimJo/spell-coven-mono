@@ -201,6 +201,20 @@ export async function navigateToTestGame(
 }
 
 /**
+ * Leave the current game room via the UI so the user's active-room
+ * pointer is cleared server-side. Expects the page to be on a game route
+ * with `leave-game-button` visible.
+ */
+export async function leaveGameRoom(page: Page): Promise<void> {
+  const leaveButton = page.getByTestId('leave-game-button')
+  if (await leaveButton.isVisible().catch(() => false)) {
+    await leaveButton.click()
+    await page.getByTestId('leave-dialog-confirm-button').click()
+    await expect(page).toHaveURL('/')
+  }
+}
+
+/**
  * Ensure auth state is applied by loading the app once (landing page).
  * Use before direct page.goto() to /game/... or /setup so the _authed layout
  * sees the Convex JWT; otherwise the first load of a protected route can

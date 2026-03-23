@@ -2,6 +2,7 @@ import { expect, test } from '../helpers/fixtures'
 import {
   getOrCreateRoomId,
   hasAuthStorageState,
+  leaveGameRoom,
   mockGetUserMedia,
   mockMediaDevices,
   navigateToTestGame,
@@ -52,6 +53,8 @@ test.describe('Duplicate Session Dialog', () => {
 
     await expect(page2).toHaveURL(new RegExp(`/game/${roomId}$`))
     await expect(page1).toHaveURL(/\/$/, { timeout: 10000 })
+
+    await leaveGameRoom(page2)
   })
 
   test('return to home keeps the original tab connected', async ({
@@ -92,6 +95,8 @@ test.describe('Duplicate Session Dialog', () => {
 
     await expect(page2).toHaveURL(/\/$/, { timeout: 10000 })
     await expect(page1).toHaveURL(new RegExp(`/game/${roomId}$`))
+
+    await leaveGameRoom(page1)
   })
 
   test('escape key does not dismiss duplicate-session dialog', async ({
@@ -129,5 +134,10 @@ test.describe('Duplicate Session Dialog', () => {
 
     await expect(page2).toHaveURL(new RegExp(`/game/${roomId}$`))
     await expect(page1).toHaveURL(new RegExp(`/game/${roomId}$`))
+
+    await page2.getByRole('button', { name: 'Return to Home' }).click()
+    await expect(dialogTitle).toBeHidden({ timeout: 10000 })
+
+    await leaveGameRoom(page1)
   })
 })

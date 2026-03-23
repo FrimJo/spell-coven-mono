@@ -6,6 +6,7 @@ import {
   ensureAuthWarm,
   getOrCreateRoomId,
   hasAuthStorageState,
+  leaveGameRoom,
   mockGetUserMedia,
   mockMediaDevices,
   navigateToTestGame,
@@ -49,6 +50,10 @@ test.describe('Game Room', () => {
     // Mock media devices before navigating
     await mockMediaDevices(page)
     await mockGetUserMedia(page)
+  })
+
+  test.afterEach(async ({ page }) => {
+    await leaveGameRoom(page)
   })
 
   const generateRoomId = () => {

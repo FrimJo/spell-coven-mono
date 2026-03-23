@@ -6,6 +6,7 @@ import {
   getMediaPreferences,
   getOrCreateRoomId,
   hasAuthStorageState,
+  leaveGameRoom,
   mockGetUserMedia,
   mockMediaDevices,
   navigateToTestGame,
@@ -32,6 +33,10 @@ test.describe('Session Storage', () => {
     // Mock media devices
     await mockMediaDevices(page)
     await mockGetUserMedia(page)
+  })
+
+  test.afterEach(async ({ page }) => {
+    await leaveGameRoom(page)
   })
 
   test.describe('Game State Persistence', () => {
