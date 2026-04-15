@@ -6,6 +6,10 @@ export interface Participant {
   id: string
   username: string
   avatar?: string | null
+  /** Whether the participant is intentionally publishing camera video */
+  videoEnabled: boolean
+  /** Whether the participant is intentionally publishing microphone audio */
+  audioEnabled: boolean
   joinedAt: number
   /** Unique session ID per browser tab - used for duplicate detection */
   sessionId: string

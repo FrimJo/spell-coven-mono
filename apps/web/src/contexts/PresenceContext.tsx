@@ -20,6 +20,7 @@ import {
   useState,
 } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useConvexPresence } from '@/hooks/useConvexPresence'
 
 export type DisconnectReason = 'kicked' | 'banned' | 'disconnected' | 'left'
@@ -86,6 +87,9 @@ export function PresenceProvider({
   const userId = user?.id ?? ''
   const username = user?.username ?? 'Unknown'
   const avatar = user?.avatar
+  const {
+    mediaPreferences: { videoEnabled, audioEnabled },
+  } = useMediaStreams()
 
   const [isConnected, setIsConnected] = useState(true)
   const [disconnectReason, setDisconnectReason] =
@@ -125,6 +129,8 @@ export function PresenceProvider({
     userId,
     username,
     avatar,
+    videoEnabled,
+    audioEnabled,
     enabled: isConnected,
     onKicked: handleKicked,
     onBanned: handleBanned,

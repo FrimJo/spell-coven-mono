@@ -25,6 +25,8 @@ interface UseConvexPresenceProps {
   userId: string
   username: string
   avatar?: string | null
+  videoEnabled: boolean
+  audioEnabled: boolean
   enabled?: boolean
   /** Called when kicked (temporary - can rejoin) */
   onKicked?: () => void
@@ -100,6 +102,8 @@ export function useConvexPresence({
   userId,
   username,
   avatar,
+  videoEnabled,
+  audioEnabled,
   enabled = true,
   onKicked,
   onBanned,
@@ -132,6 +136,7 @@ export function useConvexPresence({
   const joinRoomMutation = useMutation(api.players.joinRoom)
   const leaveRoomMutation = useMutation(api.players.leaveRoom)
   const heartbeatMutation = useMutation(api.players.heartbeat)
+  const updateMediaStateMutation = useMutation(api.players.updateMediaState)
   const kickMutation = useMutation(api.bans.kickPlayer)
   const banMutation = useMutation(api.bans.banPlayer)
   const setSeatCountMutation = useMutation(api.rooms.setRoomSeatCount)
@@ -140,6 +145,7 @@ export function useConvexPresence({
   const joinRoomRef = useRef(joinRoomMutation)
   const leaveRoomRef = useRef(leaveRoomMutation)
   const heartbeatRef = useRef(heartbeatMutation)
+  const updateMediaStateRef = useRef(updateMediaStateMutation)
   const kickMutationRef = useRef(kickMutation)
   const banMutationRef = useRef(banMutation)
   const setSeatCountRef = useRef(setSeatCountMutation)
@@ -149,6 +155,7 @@ export function useConvexPresence({
     joinRoomRef.current = joinRoomMutation
     leaveRoomRef.current = leaveRoomMutation
     heartbeatRef.current = heartbeatMutation
+    updateMediaStateRef.current = updateMediaStateMutation
     kickMutationRef.current = kickMutation
     banMutationRef.current = banMutation
     setSeatCountRef.current = setSeatCountMutation
@@ -258,6 +265,8 @@ export function useConvexPresence({
         sessionId,
         username,
         avatar: avatar ?? undefined,
+        videoEnabled,
+        audioEnabled,
       })
       .then(() => {
         console.log('[ConvexPresence] Successfully joined room')
@@ -276,7 +285,17 @@ export function useConvexPresence({
   useEffect(() => {
     if (!enabled || !userId || !username || !sessionId || hasJoined) return
     onJoinAttempt()
-  }, [enabled, convexRoomId, userId, username, avatar, sessionId, hasJoined])
+  }, [
+    enabled,
+    convexRoomId,
+    userId,
+    username,
+    avatar,
+    sessionId,
+    hasJoined,
+    videoEnabled,
+    audioEnabled,
+  ])
 
   // Effect Event: leave when disabled (defers setState to avoid sync setState in effect)
   const onLeaveWhenDisabled = useEffectEvent(() => {
@@ -312,7 +331,12 @@ export function useConvexPresence({
     const sendHeartbeat = () => {
       console.log('[ConvexPresence] Sending heartbeat...')
       heartbeatRef
-        .current({ roomId: convexRoomId, sessionId })
+        .current({
+          roomId: convexRoomId,
+          sessionId,
+          videoEnabled,
+          audioEnabled,
+        })
         .then(() => {
           console.log('[ConvexPresence] Heartbeat sent successfully')
         })
@@ -329,7 +353,24 @@ export function useConvexPresence({
     if (!enabled || !hasJoined) return
     const intervalId = startHeartbeatLoop()
     return () => clearInterval(intervalId)
-  }, [enabled, convexRoomId, sessionId, hasJoined])
+  }, [enabled, convexRoomId, sessionId, hasJoined, videoEnabled, audioEnabled])
+
+  useEffect(() => {
+    if (!enabled || !hasJoined) {
+      return
+    }
+
+    updateMediaStateRef
+      .current({
+        roomId: convexRoomId,
+        sessionId,
+        videoEnabled,
+        audioEnabled,
+      })
+      .catch((err) => {
+        console.error('[ConvexPresence] Failed to update media state:', err)
+      })
+  }, [enabled, hasJoined, convexRoomId, sessionId, videoEnabled, audioEnabled])
 
   // Convert Convex players to Participant format
   const participants: Participant[] = useMemo(() => {
@@ -341,6 +382,8 @@ export function useConvexPresence({
         id: player.userId,
         username: player.username,
         avatar: player.avatar,
+        videoEnabled: player.videoEnabled ?? true,
+        audioEnabled: player.audioEnabled ?? true,
         joinedAt: player.joinedAt,
         sessionId: player.sessionId,
         health: player.health,

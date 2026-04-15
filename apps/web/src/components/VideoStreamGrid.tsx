@@ -461,6 +461,26 @@ function isParticipantOnline(lastSeenAt: number, now: number) {
   return now - lastSeenAt < ONLINE_THRESHOLD_MS
 }
 
+function resolvePeerMediaEnabled({
+  presenceEnabled,
+  trackEnabled,
+  fallbackEnabled,
+}: {
+  presenceEnabled: boolean | undefined
+  trackEnabled: boolean | undefined
+  fallbackEnabled: boolean
+}) {
+  if (presenceEnabled === false) {
+    return false
+  }
+
+  if (trackEnabled !== undefined) {
+    return trackEnabled
+  }
+
+  return presenceEnabled ?? fallbackEnabled
+}
+
 function buildRemoteGridSessions({
   players,
   remoteStreams,
@@ -495,8 +515,16 @@ function buildRemoteGridSessions({
       participantData: player.participantData,
       remoteStream: remoteStreams.get(player.id),
       connectionState: connectionStates.get(player.id),
-      peerVideoEnabled: trackState?.videoEnabled ?? fallbackState.video,
-      peerAudioEnabled: trackState?.audioEnabled ?? fallbackState.audio,
+      peerVideoEnabled: resolvePeerMediaEnabled({
+        presenceEnabled: player.participantData.videoEnabled,
+        trackEnabled: trackState?.videoEnabled,
+        fallbackEnabled: fallbackState.video,
+      }),
+      peerAudioEnabled: resolvePeerMediaEnabled({
+        presenceEnabled: player.participantData.audioEnabled,
+        trackEnabled: trackState?.audioEnabled,
+        fallbackEnabled: fallbackState.audio,
+      }),
       isMuted: mutedPlayers.has(player.id),
       isOnline: isParticipantOnline(player.participantData.lastSeenAt, now),
     }
@@ -510,10 +538,14 @@ export function VideoStreamGrid({
   detectorType,
   usePerspectiveWarp = true,
   onCardCrop,
-  mutedPlayers = new Set(),
+  mutedPlayers,
   showTestStream = false,
 }: VideoStreamGridProps) {
   const enableCardDetection = !!detectorType
+  const effectiveMutedPlayers = useMemo(
+    () => mutedPlayers ?? new Set<string>(),
+    [mutedPlayers],
+  )
 
   // Get participants from context (already deduplicated)
   const {
@@ -527,7 +559,7 @@ export function VideoStreamGrid({
 
   // Current time state for computing online status (updates every 5 seconds)
   // This matches the logic in GameRoomSidebar to keep status synchronized
-  const [now, setNow] = useState(Date.now())
+  const [now, setNow] = useState(() => Date.now())
 
   // Update current time periodically to re-evaluate online status
   useEffect(() => {
@@ -620,7 +652,7 @@ export function VideoStreamGrid({
         connectionStates,
         trackStates,
         streamStates,
-        mutedPlayers,
+        mutedPlayers: effectiveMutedPlayers,
         now,
       }),
     [
@@ -629,7 +661,7 @@ export function VideoStreamGrid({
       connectionStates,
       trackStates,
       streamStates,
-      mutedPlayers,
+      effectiveMutedPlayers,
       now,
     ],
   )
