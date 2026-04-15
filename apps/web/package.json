@@ -59,6 +59,7 @@
     "eslint-plugin-react-compiler": "19.1.0-rc.2",
     "framer-motion": "^12.23.26",
     "jsdom": "^26.0.0",
+    "livekit-client": "^2.18.2",
     "lucide-react": "^0.487.0",
     "onnxruntime-web": "^1.23.0",
     "playwright": "catalog:",

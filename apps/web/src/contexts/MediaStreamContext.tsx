@@ -21,15 +21,19 @@ import {
   useRef,
 } from 'react'
 import { useAudioOutput } from '@/hooks/useAudioOutput'
-import { useMediaDevice } from '@/hooks/useMediaDevice'
+import { useLocalMediaSession } from '@/hooks/useLocalMediaSession'
 import { useMediaPermissions } from '@/hooks/useMediaPermissions'
 import { useMediaPreferenceStore } from '@/hooks/useMediaPreferenceStore'
-import { stopMediaStream } from '@/lib/media-stream-manager'
-import { isSuccessState } from '@/types/async-resource'
 
 interface MediaStreamContextValue {
   video: UseMediaDeviceReturn
   audio: UseMediaDeviceReturn
+  previewStream: MediaStream
+  localMediaSession: {
+    previewStream: MediaStream
+    videoTrack: MediaStreamTrack | null
+    audioTrack: MediaStreamTrack | null
+  }
   audioOutput: Pick<
     UseAudioOutputReturn,
     | 'devices'
@@ -87,6 +91,116 @@ interface MediaStreamProviderProps {
   children: ReactNode
 }
 
+function createVideoResource({
+  devices,
+  selectedDeviceId,
+  track,
+  actualResolution,
+  isPending,
+  error,
+}: {
+  devices: MediaDeviceInfo[]
+  selectedDeviceId: string
+  track: MediaStreamTrack | null
+  actualResolution: '1080p' | 'basic' | 'none'
+  isPending: boolean
+  error: Error | null
+}): UseMediaDeviceReturn {
+  const base = {
+    devices,
+    selectedDeviceId,
+  }
+  const stream = track ? new MediaStream([track]) : undefined
+
+  if (isPending) {
+    return {
+      ...base,
+      isPending: true,
+      error,
+      stream: undefined,
+      videoTrack: undefined,
+      audioTrack: undefined,
+      actualResolution: undefined,
+    }
+  }
+
+  if (error) {
+    return {
+      ...base,
+      isPending: false,
+      error,
+      stream: undefined,
+      videoTrack: undefined,
+      audioTrack: undefined,
+      actualResolution: undefined,
+    }
+  }
+
+  return {
+    ...base,
+    isPending: false,
+    error: null,
+    stream,
+    videoTrack: track,
+    audioTrack: null,
+    actualResolution: track ? actualResolution : 'none',
+  } as UseMediaDeviceReturn
+}
+
+function createAudioResource({
+  devices,
+  selectedDeviceId,
+  track,
+  isPending,
+  error,
+}: {
+  devices: MediaDeviceInfo[]
+  selectedDeviceId: string
+  track: MediaStreamTrack | null
+  isPending: boolean
+  error: Error | null
+}): UseMediaDeviceReturn {
+  const base = {
+    devices,
+    selectedDeviceId,
+  }
+  const stream = track ? new MediaStream([track]) : undefined
+
+  if (isPending) {
+    return {
+      ...base,
+      isPending: true,
+      error,
+      stream: undefined,
+      videoTrack: undefined,
+      audioTrack: undefined,
+      actualResolution: undefined,
+    }
+  }
+
+  if (error) {
+    return {
+      ...base,
+      isPending: false,
+      error,
+      stream: undefined,
+      videoTrack: undefined,
+      audioTrack: undefined,
+      actualResolution: undefined,
+    }
+  }
+
+  return {
+    ...base,
+    isPending: false,
+    error: null,
+    stream,
+    videoTrack: null,
+    audioTrack: track,
+    actualResolution: 'none',
+  } as UseMediaDeviceReturn
+}
+
 export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
   const {
     camera: cameraPermission,
@@ -115,16 +229,11 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
 
   const mediaPreferences = useMediaPreferenceStore()
 
-  const videoResult = useMediaDevice({
-    kind: 'videoinput',
-    selectedDeviceId: mediaPreferences.selectedVideoDeviceId,
-    enabled: permissionsGranted && mediaPreferences.videoEnabled,
-  })
-
-  const audioResult = useMediaDevice({
-    kind: 'audioinput',
-    selectedDeviceId: mediaPreferences.selectedAudioInputDeviceId,
-    enabled: permissionsGranted && mediaPreferences.audioEnabled,
+  const localMediaSession = useLocalMediaSession({
+    permissionsGranted,
+    videoEnabled: mediaPreferences.videoEnabled,
+    selectedVideoDeviceId: mediaPreferences.selectedVideoDeviceId,
+    selectedAudioInputDeviceId: mediaPreferences.selectedAudioInputDeviceId,
   })
 
   const audioOutputState = useAudioOutput({
@@ -132,32 +241,24 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
   })
 
   useEffect(() => {
-    const nextDeviceId = videoResult.selectedDeviceId || null
+    const nextDeviceId = localMediaSession.selectedVideoDeviceId || null
     if (
       nextDeviceId &&
       nextDeviceId !== mediaPreferences.selectedVideoDeviceId
     ) {
       mediaPreferences.setSelectedVideoDeviceId(nextDeviceId)
     }
-  }, [
-    videoResult.selectedDeviceId,
-    mediaPreferences.selectedVideoDeviceId,
-    mediaPreferences.setSelectedVideoDeviceId,
-  ])
+  }, [localMediaSession.selectedVideoDeviceId, mediaPreferences])
 
   useEffect(() => {
-    const nextDeviceId = audioResult.selectedDeviceId || null
+    const nextDeviceId = localMediaSession.selectedAudioInputDeviceId || null
     if (
       nextDeviceId &&
       nextDeviceId !== mediaPreferences.selectedAudioInputDeviceId
     ) {
       mediaPreferences.setSelectedAudioInputDeviceId(nextDeviceId)
     }
-  }, [
-    audioResult.selectedDeviceId,
-    mediaPreferences.selectedAudioInputDeviceId,
-    mediaPreferences.setSelectedAudioInputDeviceId,
-  ])
+  }, [localMediaSession.selectedAudioInputDeviceId, mediaPreferences])
 
   useEffect(() => {
     const currentDeviceId = audioOutputState.currentDeviceId || null
@@ -167,11 +268,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     ) {
       mediaPreferences.setSelectedAudioOutputDeviceId(currentDeviceId)
     }
-  }, [
-    audioOutputState.currentDeviceId,
-    mediaPreferences.selectedAudioOutputDeviceId,
-    mediaPreferences.setSelectedAudioOutputDeviceId,
-  ])
+  }, [audioOutputState.currentDeviceId, mediaPreferences])
 
   useEffect(() => {
     const desiredDeviceId =
@@ -183,22 +280,14 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     ) {
       void audioOutputState.setOutputDevice(desiredDeviceId).catch(() => {})
     }
-  }, [
-    mediaPreferences.selectedAudioOutputDeviceId,
-    audioOutputState.devices.length,
-    audioOutputState.currentDeviceId,
-    audioOutputState.setOutputDevice,
-  ])
+  }, [mediaPreferences, audioOutputState])
 
   const setSelectedAudioOutputDeviceId = useCallback(
     async (deviceId: string) => {
       mediaPreferences.setSelectedAudioOutputDeviceId(deviceId)
       await audioOutputState.setOutputDevice(deviceId)
     },
-    [
-      mediaPreferences.setSelectedAudioOutputDeviceId,
-      audioOutputState.setOutputDevice,
-    ],
+    [mediaPreferences, audioOutputState],
   )
 
   const restoreSnapshot = useCallback(
@@ -210,7 +299,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
         void audioOutputState.setOutputDevice(outputDeviceId).catch(() => {})
       }
     },
-    [mediaPreferences.restoreSnapshot, audioOutputState.setOutputDevice],
+    [mediaPreferences, audioOutputState],
   )
 
   const combinedStream = useMemo((): MediaStream | null => {
@@ -218,12 +307,12 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
 
     const hasVideo =
       mediaPreferences.videoEnabled &&
-      isSuccessState(videoResult) &&
-      videoResult.stream
+      localMediaSession.videoTrack &&
+      localMediaSession.videoTrack.readyState === 'live'
     const hasAudio =
       mediaPreferences.audioEnabled &&
-      isSuccessState(audioResult) &&
-      audioResult.stream
+      localMediaSession.audioTrack &&
+      localMediaSession.audioTrack.readyState === 'live'
 
     if (mediaPreferences.videoEnabled && mediaPreferences.audioEnabled) {
       if (!hasVideo || !hasAudio) {
@@ -231,88 +320,80 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
       }
     }
 
-    if (hasVideo && isSuccessState(videoResult) && videoResult.stream) {
-      tracks.push(
-        ...videoResult.stream
-          .getVideoTracks()
-          .filter((track) => track.readyState === 'live'),
-      )
+    if (hasVideo && localMediaSession.videoTrack) {
+      tracks.push(localMediaSession.videoTrack)
     }
 
-    if (hasAudio && isSuccessState(audioResult) && audioResult.stream) {
-      tracks.push(
-        ...audioResult.stream
-          .getAudioTracks()
-          .filter((track) => track.readyState === 'live'),
-      )
+    if (hasAudio && localMediaSession.audioTrack) {
+      tracks.push(localMediaSession.audioTrack)
     }
 
     return tracks.length === 0 ? null : new MediaStream(tracks)
   }, [
-    videoResult,
-    audioResult,
-    mediaPreferences.videoEnabled,
+    localMediaSession.audioTrack,
+    localMediaSession.videoTrack,
     mediaPreferences.audioEnabled,
+    mediaPreferences.videoEnabled,
   ])
 
-  const videoResultRef = useRef(videoResult)
-  const audioResultRef = useRef(audioResult)
-
+  const videoTrackRef = useRef(localMediaSession.videoTrack)
   useEffect(() => {
-    videoResultRef.current = videoResult
-  }, [videoResult])
-
-  useEffect(() => {
-    audioResultRef.current = audioResult
-  }, [audioResult])
+    videoTrackRef.current = localMediaSession.videoTrack
+  }, [localMediaSession.videoTrack])
 
   const toggleVideo = useCallback(
     async (enabled: boolean): Promise<void> => {
       if (!enabled) {
-        const currentVideoResult = videoResultRef.current
-        if (isSuccessState(currentVideoResult) && currentVideoResult.stream) {
-          currentVideoResult.stream
-            .getVideoTracks()
-            .forEach((track) => track.stop())
-        }
+        videoTrackRef.current?.stop()
       }
 
       mediaPreferences.setVideoEnabled(enabled)
     },
-    [mediaPreferences.setVideoEnabled],
+    [mediaPreferences],
   )
 
   const toggleAudio = useCallback(
     (enabled: boolean) => {
-      if (!enabled) {
-        const currentAudioResult = audioResultRef.current
-        if (isSuccessState(currentAudioResult) && currentAudioResult.stream) {
-          currentAudioResult.stream
-            .getAudioTracks()
-            .forEach((track) => track.stop())
-        }
-      }
-
       mediaPreferences.setAudioEnabled(enabled)
     },
-    [mediaPreferences.setAudioEnabled],
+    [mediaPreferences],
   )
 
-  useEffect(() => {
-    return () => {
-      if (isSuccessState(videoResult) && videoResult.stream) {
-        stopMediaStream(videoResult.stream)
-      }
-      if (isSuccessState(audioResult) && audioResult.stream) {
-        stopMediaStream(audioResult.stream)
-      }
-    }
-  }, [videoResult, audioResult])
+  const videoResult = useMemo(
+    () =>
+      createVideoResource({
+        devices: localMediaSession.devices.videoinput,
+        selectedDeviceId: localMediaSession.selectedVideoDeviceId,
+        track: localMediaSession.video.track,
+        actualResolution: localMediaSession.video.actualResolution,
+        isPending: localMediaSession.video.isPending,
+        error: localMediaSession.video.error,
+      }),
+    [localMediaSession],
+  )
+
+  const audioResult = useMemo(
+    () =>
+      createAudioResource({
+        devices: localMediaSession.devices.audioinput,
+        selectedDeviceId: localMediaSession.selectedAudioInputDeviceId,
+        track: localMediaSession.audio.track,
+        isPending: localMediaSession.audio.isPending,
+        error: localMediaSession.audio.error,
+      }),
+    [localMediaSession],
+  )
 
   const value = useMemo<MediaStreamContextValue>(
     () => ({
       video: videoResult,
       audio: audioResult,
+      previewStream: localMediaSession.previewStream,
+      localMediaSession: {
+        previewStream: localMediaSession.previewStream,
+        videoTrack: localMediaSession.videoTrack,
+        audioTrack: localMediaSession.audioTrack,
+      },
       audioOutput: {
         devices: audioOutputState.devices,
         currentDeviceId:
@@ -371,29 +452,12 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     [
       videoResult,
       audioResult,
-      audioOutputState.devices,
-      audioOutputState.currentDeviceId,
-      audioOutputState.testOutput,
-      audioOutputState.isTesting,
-      audioOutputState.isSupported,
-      audioOutputState.error,
-      audioOutputState.isLoading,
-      audioOutputState.refreshDevices,
+      localMediaSession,
+      audioOutputState,
       combinedStream,
       toggleVideo,
       toggleAudio,
-      mediaPreferences.selectedVideoDeviceId,
-      mediaPreferences.selectedAudioInputDeviceId,
-      mediaPreferences.selectedAudioOutputDeviceId,
-      mediaPreferences.videoEnabled,
-      mediaPreferences.audioEnabled,
-      mediaPreferences.hasCommitted,
-      mediaPreferences.setSelectedVideoDeviceId,
-      mediaPreferences.setSelectedAudioInputDeviceId,
-      mediaPreferences.setVideoEnabled,
-      mediaPreferences.setAudioEnabled,
-      mediaPreferences.captureSnapshot,
-      mediaPreferences.commitPreferences,
+      mediaPreferences,
       restoreSnapshot,
       setSelectedAudioOutputDeviceId,
       isCheckingPermissions,

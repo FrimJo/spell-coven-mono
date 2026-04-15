@@ -15,6 +15,7 @@ import type * as crons from "../crons.js";
 import type * as env from "../env.js";
 import type * as errors from "../errors.js";
 import type * as http from "../http.js";
+import type * as media from "../media.js";
 import type * as players from "../players.js";
 import type * as previewAuth from "../previewAuth.js";
 import type * as previewLogin from "../previewLogin.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   env: typeof env;
   errors: typeof errors;
   http: typeof http;
+  media: typeof media;
   players: typeof players;
   previewAuth: typeof previewAuth;
   previewLogin: typeof previewLogin;

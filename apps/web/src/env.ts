@@ -38,6 +38,8 @@ export const env = createEnv({
     VITE_BLOB_STORAGE_URL: z.url().min(1, 'Blob storage URL is required'),
     VITE_SUPPORT_URL: z.url().optional(),
     VITE_CAMERA_FOCUS_CONTROLS_ENABLED: z.coerce.boolean().default(false),
+    VITE_MEDIA_DEBUG: z.coerce.boolean().default(false),
+    VITE_MEDIA_TRANSPORT: z.enum(['p2p', 'sfu']).default('p2p'),
     VITE_PREVIEW_AUTH: z.coerce.boolean().default(false),
   },
 
@@ -52,6 +54,10 @@ export const env = createEnv({
     VITE_EMBEDDINGS_VERSION: import.meta.env.VITE_EMBEDDINGS_VERSION,
     VITE_BLOB_STORAGE_URL: import.meta.env.VITE_BLOB_STORAGE_URL,
     VITE_SUPPORT_URL: import.meta.env.VITE_SUPPORT_URL,
+    VITE_CAMERA_FOCUS_CONTROLS_ENABLED: import.meta.env
+      .VITE_CAMERA_FOCUS_CONTROLS_ENABLED,
+    VITE_MEDIA_DEBUG: import.meta.env.VITE_MEDIA_DEBUG,
+    VITE_MEDIA_TRANSPORT: import.meta.env.VITE_MEDIA_TRANSPORT,
     VITE_PREVIEW_AUTH: import.meta.env.VITE_PREVIEW_AUTH,
   },
 
@@ -100,6 +106,8 @@ export function getClientEnv() {
     VITE_BLOB_STORAGE_URL: env.VITE_BLOB_STORAGE_URL,
     VITE_SUPPORT_URL: env.VITE_SUPPORT_URL,
     VITE_CAMERA_FOCUS_CONTROLS_ENABLED: env.VITE_CAMERA_FOCUS_CONTROLS_ENABLED,
+    VITE_MEDIA_DEBUG: env.VITE_MEDIA_DEBUG,
+    VITE_MEDIA_TRANSPORT: env.VITE_MEDIA_TRANSPORT,
     VITE_PREVIEW_AUTH: env.VITE_PREVIEW_AUTH,
   }
 }
@@ -109,3 +117,6 @@ export function getClientEnv() {
  */
 export const isCameraFocusControlsEnabled =
   env.VITE_CAMERA_FOCUS_CONTROLS_ENABLED
+
+export const mediaTransport = env.VITE_MEDIA_TRANSPORT
+export const isMediaDebugEnabled = env.VITE_MEDIA_DEBUG
