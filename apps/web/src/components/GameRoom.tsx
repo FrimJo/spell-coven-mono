@@ -125,11 +125,7 @@ function GameRoomContent({
 
   // Show dialog until user completes media setup
   const handleDialogComplete = useCallback(async () => {
-    console.log('[GameRoom] Media dialog completed')
-    // Device selections are saved by MediaSetupDialog via useSelectedMediaDevice
-    // No need to save a per-room flag - we check for device settings globally
     setMediaDialogOpen(false)
-    console.log('[GameRoom] Media setup complete')
   }, [])
 
   const handleCopyShareLink = useCallback(() => {
@@ -255,7 +251,7 @@ function GameRoomContent({
   }, [roomId, resetRoomGameState, clearHistory])
 
   return (
-    <div className="bg-surface-0 flex h-screen flex-col">
+    <div className="flex h-screen flex-col bg-surface-0">
       {/* Duplicate Session Dialog - shown when user is already connected from another tab */}
       <DuplicateSessionDialog
         open={showDuplicateDialog}
@@ -413,7 +409,7 @@ function GameRoomMainLayout({
   useGameRoomKeyboardShortcuts(shortcutHandlers)
 
   return (
-    <div className="flex h-full gap-4 p-4">
+    <div className="gap-4 p-4 flex h-full">
       {/* Left Sidebar - Player List */}
       <GameRoomSidebar
         roomId={roomId}

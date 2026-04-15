@@ -74,12 +74,10 @@ interface RemotePlayerCardProps {
   participantData: Participant
   remoteStream: MediaStream | undefined
   connectionState: string | undefined
-  trackState: { videoEnabled: boolean; audioEnabled: boolean } | undefined
-  streamState: { video: boolean; audio: boolean }
+  peerVideoEnabled: boolean
+  peerAudioEnabled: boolean
   remoteVideoRefs: React.MutableRefObject<Map<string, HTMLVideoElement>>
   attachedStreamsRef: React.MutableRefObject<Map<string, MediaStream | null>>
-  trackStates: Map<string, { videoEnabled: boolean; audioEnabled: boolean }>
-  streamStates: Record<string, { video: boolean; audio: boolean }>
   isMuted: boolean
   roomId: string
   localParticipant: Participant | undefined
@@ -98,12 +96,10 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
   participantData,
   remoteStream,
   connectionState,
-  trackState,
-  streamState,
+  peerVideoEnabled,
+  peerAudioEnabled,
   remoteVideoRefs,
   attachedStreamsRef,
-  trackStates,
-  streamStates,
   isMuted,
   roomId,
   localParticipant,
@@ -116,10 +112,6 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
 }: RemotePlayerCardProps) {
   // Local video ref for card detection (separate from the shared remoteVideoRefs map)
   const videoRef = useRef<HTMLVideoElement>(null)
-
-  // Remote players: use trackState which checks if track is 'live'
-  const peerVideoEnabled = trackState?.videoEnabled ?? false
-  const peerAudioEnabled = trackState?.audioEnabled ?? streamState.audio
 
   // Initialize card detector for this remote player's stream
   const { overlayRef, croppedRef, fullResRef } = useCardDetector({
@@ -148,12 +140,12 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
 
   const handleLoadedMetadata = () => {
     const videoElement = remoteVideoRefs.current.get(playerId)
-    const trackState = trackStates.get(playerId)
-    const state = streamStates[playerId] || { video: true, audio: true }
-    const videoEnabled =
-      (trackState?.videoEnabled ?? state.video) && !!remoteStream
-
-    if (videoElement && remoteStream && videoElement.paused && videoEnabled) {
+    if (
+      videoElement &&
+      remoteStream &&
+      videoElement.paused &&
+      peerVideoEnabled
+    ) {
       requestAnimationFrame(() => {
         videoElement.play().catch((error) => {
           if (error.name !== 'AbortError') {
@@ -169,12 +161,12 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
 
   const handleCanPlay = () => {
     const videoElement = remoteVideoRefs.current.get(playerId)
-    const trackState = trackStates.get(playerId)
-    const state = streamStates[playerId] || { video: true, audio: true }
-    const videoEnabled =
-      (trackState?.videoEnabled ?? state.video) && !!remoteStream
-
-    if (videoElement && remoteStream && videoElement.paused && videoEnabled) {
+    if (
+      videoElement &&
+      remoteStream &&
+      videoElement.paused &&
+      peerVideoEnabled
+    ) {
       requestAnimationFrame(() => {
         videoElement.play().catch((error) => {
           if (error.name !== 'AbortError') {
@@ -196,12 +188,12 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
 
   return (
     <Card
-      className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden"
+      className="flex h-full flex-col overflow-hidden border-surface-2 bg-surface-1"
       data-testid="remote-player-card"
       data-player-id={playerId}
       data-player-name={playerName}
     >
-      <div ref={videoContainerRef} className="relative min-h-0 flex-1 bg-black">
+      <div ref={videoContainerRef} className="min-h-0 bg-black relative flex-1">
         {peerVideoEnabled ? (
           <>
             {remoteStream && (
@@ -249,10 +241,10 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
           </>
         )}
 
-        <div className="absolute right-3 top-3 z-10 flex gap-2">
+        <div className="right-3 top-3 gap-2 absolute z-10 flex">
           {!peerAudioEnabled && (
-            <div className="border-destructive/30 bg-destructive/20 flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur-sm">
-              <MicOff className="text-destructive h-4 w-4" />
+            <div className="h-9 w-9 backdrop-blur-sm flex items-center justify-center rounded-lg border border-destructive/30 bg-destructive/20">
+              <MicOff className="h-4 w-4 text-destructive" />
             </div>
           )}
           {/* Show presence-based connection status (matches sidebar) */}
@@ -260,10 +252,10 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
-                  className="border-warning/30 bg-warning/20 flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur-sm"
+                  className="h-9 w-9 backdrop-blur-sm flex items-center justify-center rounded-lg border border-warning/30 bg-warning/20"
                   data-testid="remote-player-offline-warning"
                 >
-                  <Unplug className="text-warning h-4 w-4" />
+                  <Unplug className="h-4 w-4 text-warning" />
                 </div>
               </TooltipTrigger>
               <TooltipContent>
@@ -276,7 +268,7 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
             <div
               data-testid="remote-player-webrtc-warning"
               data-connection-state={connectionState}
-              className={`flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur-sm ${
+              className={`h-9 w-9 backdrop-blur-sm flex items-center justify-center rounded-lg border ${
                 connectionState === 'connecting' ||
                 connectionState === 'reconnecting'
                   ? 'border-warning/30 bg-warning/20'
@@ -287,9 +279,9 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
               title={`Video connection: ${connectionState}`}
             >
               {connectionState === 'failed' ? (
-                <WifiOff className="text-destructive h-4 w-4" />
+                <WifiOff className="h-4 w-4 text-destructive" />
               ) : (
-                <Wifi className="text-warning h-4 w-4" />
+                <Wifi className="h-4 w-4 text-warning" />
               )}
             </div>
           )}
@@ -332,7 +324,6 @@ const TestStreamSlot = memo(function TestStreamSlot({
 
   // Effect Event: create synthetic test stream (mount-only setup)
   const initTestStream = useEffectEvent((): MediaStream => {
-    console.log('[TestStreamSlot] Creating synthetic test stream')
     const videoStream = createSyntheticVideoStream()
     const audioStream = createSilentAudioStream()
     const combinedStream = new MediaStream([
@@ -347,7 +338,6 @@ const TestStreamSlot = memo(function TestStreamSlot({
   useEffect(() => {
     const combinedStream = initTestStream()
     return () => {
-      console.log('[TestStreamSlot] Cleaning up test stream')
       combinedStream.getTracks().forEach((track) => track.stop())
     }
   }, [])
@@ -371,8 +361,8 @@ const TestStreamSlot = memo(function TestStreamSlot({
   })
 
   return (
-    <Card className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden">
-      <div className="relative min-h-0 flex-1 bg-black">
+    <Card className="flex h-full flex-col overflow-hidden border-surface-2 bg-surface-1">
+      <div className="min-h-0 bg-black relative flex-1">
         {testStream ? (
           <>
             <video
@@ -394,7 +384,7 @@ const TestStreamSlot = memo(function TestStreamSlot({
           </>
         ) : (
           <div className="flex h-full items-center justify-center">
-            <Loader2 className="text-brand-muted-foreground h-8 w-8 animate-spin" />
+            <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
           </div>
         )}
 
@@ -403,8 +393,8 @@ const TestStreamSlot = memo(function TestStreamSlot({
         </PlayerNameBadge>
 
         {/* Indicator that this is a test stream */}
-        <div className="absolute left-3 top-3 z-10">
-          <div className="border-brand/30 bg-brand/20 flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs backdrop-blur-sm">
+        <div className="left-3 top-3 absolute z-10">
+          <div className="gap-1.5 px-2 py-1 text-xs backdrop-blur-sm flex items-center rounded-lg border border-brand/30 bg-brand/20">
             <span className="text-brand-foreground">🧪 Test</span>
           </div>
         </div>
@@ -434,6 +424,83 @@ interface VideoStreamGridProps {
 interface StreamState {
   video: boolean
   audio: boolean
+}
+
+interface RemoteGridSession {
+  id: string
+  name: string
+  participantData: Participant
+  remoteStream: MediaStream | undefined
+  connectionState: string | undefined
+  peerVideoEnabled: boolean
+  peerAudioEnabled: boolean
+  isMuted: boolean
+  isOnline: boolean
+}
+
+function buildRemotePlayerIds(participants: Participant[], userId: string) {
+  return participants
+    .filter((participant) => participant.id !== userId)
+    .map((participant) => participant.id)
+}
+
+function buildRemotePlayers(
+  participants: Participant[],
+  localPlayerName: string,
+) {
+  return participants
+    .filter((participant) => participant.username !== localPlayerName)
+    .map((participant) => ({
+      id: participant.id,
+      name: participant.username,
+      participantData: participant,
+    }))
+}
+
+function isParticipantOnline(lastSeenAt: number, now: number) {
+  return now - lastSeenAt < ONLINE_THRESHOLD_MS
+}
+
+function buildRemoteGridSessions({
+  players,
+  remoteStreams,
+  connectionStates,
+  trackStates,
+  streamStates,
+  mutedPlayers,
+  now,
+}: {
+  players: Array<{
+    id: string
+    name: string
+    participantData: Participant
+  }>
+  remoteStreams: Map<string, MediaStream>
+  connectionStates: Map<string, string>
+  trackStates: Map<string, { videoEnabled: boolean; audioEnabled: boolean }>
+  streamStates: Record<string, StreamState>
+  mutedPlayers: Set<string>
+  now: number
+}): RemoteGridSession[] {
+  return players.map((player) => {
+    const fallbackState = streamStates[player.id] || {
+      video: true,
+      audio: true,
+    }
+    const trackState = trackStates.get(player.id)
+
+    return {
+      id: player.id,
+      name: player.name,
+      participantData: player.participantData,
+      remoteStream: remoteStreams.get(player.id),
+      connectionState: connectionStates.get(player.id),
+      peerVideoEnabled: trackState?.videoEnabled ?? fallbackState.video,
+      peerAudioEnabled: trackState?.audioEnabled ?? fallbackState.audio,
+      isMuted: mutedPlayers.has(player.id),
+      isOnline: isParticipantOnline(player.participantData.lastSeenAt, now),
+    }
+  })
 }
 
 export function VideoStreamGrid({
@@ -472,21 +539,10 @@ export function VideoStreamGrid({
   }, [])
 
   // Compute remote player IDs for WebRTC
-  const remotePlayerIds = useMemo(() => {
-    const filtered = gameRoomParticipants
-      .filter((p) => p.id !== userId)
-      .map((p) => p.id)
-    console.log('[WebRTC:VideoStreamGrid] remotePlayerIds calculated:', {
-      allParticipants: gameRoomParticipants.length,
-      localUserId: userId,
-      remotePlayerIds: filtered,
-      gameRoomParticipants: gameRoomParticipants.map((p) => ({
-        id: p.id,
-        username: p.username,
-      })),
-    })
-    return filtered
-  }, [gameRoomParticipants, userId])
+  const remotePlayerIds = useMemo(
+    () => buildRemotePlayerIds(gameRoomParticipants, userId),
+    [gameRoomParticipants, userId],
+  )
 
   // --- Local Media Management (from context) ---
   // Note: Toggle functions are used directly in LocalVideoCard via useMediaStreams()
@@ -520,7 +576,7 @@ export function VideoStreamGrid({
     isInitialized: _isInitialized,
   } = useConvexWebRTC({
     localPlayerId: userId,
-    remotePlayerIds: remotePlayerIds,
+    remotePlayerIds,
     roomId: roomId,
     localStream, // Pass the managed local stream
     presenceReady, // Wait for presence before initializing signaling
@@ -530,31 +586,14 @@ export function VideoStreamGrid({
     },
   })
 
-  // Debug: Log remote streams state
-  // useEffect(() => {
-  //   console.log('[VideoStreamGrid] 🎥 Remote streams update:', {
-  //     size: remoteStreams.size,
-  //     keys: Array.from(remoteStreams.keys()),
-  //     gameRoomParticipants: gameRoomParticipants.map((p) => p.id),
-  //     remotePlayerIds,
-  //   })
-  // }, [remoteStreams, gameRoomParticipants, remotePlayerIds])
-
   // Local stream error and pending state
   const localStreamError = videoError || audioError
   const isLocalStreamPending = isVideoPending || isAudioPending
 
-  // Build remote player list
-  const players = useMemo(() => {
-    return gameRoomParticipants
-      .filter((participant) => participant.username !== localPlayerName)
-      .map((participant) => ({
-        id: participant.id,
-        name: participant.username,
-        // Pass full participant object for stats
-        participantData: participant,
-      }))
-  }, [gameRoomParticipants, localPlayerName])
+  const players = useMemo(
+    () => buildRemotePlayers(gameRoomParticipants, localPlayerName),
+    [gameRoomParticipants, localPlayerName],
+  )
 
   const localParticipant = useMemo(
     () => gameRoomParticipants.find((p) => p.username === localPlayerName),
@@ -571,6 +610,28 @@ export function VideoStreamGrid({
         {},
       ),
     [players],
+  )
+
+  const remoteSessions = useMemo(
+    () =>
+      buildRemoteGridSessions({
+        players,
+        remoteStreams,
+        connectionStates,
+        trackStates,
+        streamStates,
+        mutedPlayers,
+        now,
+      }),
+    [
+      players,
+      remoteStreams,
+      connectionStates,
+      trackStates,
+      streamStates,
+      mutedPlayers,
+      now,
+    ],
   )
 
   // Find local player (not currently used but may be needed for future features)
@@ -602,32 +663,32 @@ export function VideoStreamGrid({
 
   return (
     <LazyMotion features={domAnimation}>
-      <div className={`grid ${getGridClass()} h-full items-stretch gap-4`}>
+      <div className={`grid ${getGridClass()} gap-4 h-full items-stretch`}>
         {/* Render local player with permission gate, loading state, or video */}
         {isCheckingPermissions ? (
-          <div className="border-default bg-surface-2/50 flex h-full items-center justify-center rounded-lg border">
-            <div className="flex flex-col items-center space-y-3">
+          <div className="border-default flex h-full items-center justify-center rounded-lg border bg-surface-2/50">
+            <div className="space-y-3 flex flex-col items-center">
               <div className="relative">
-                <div className="bg-brand/20 flex h-16 w-16 items-center justify-center rounded-full">
-                  <Loader2 className="text-brand-muted-foreground h-8 w-8 animate-spin" />
+                <div className="h-16 w-16 flex items-center justify-center rounded-full bg-brand/20">
+                  <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
                 </div>
               </div>
               <div className="space-y-1 text-center">
-                <p className="text-text-secondary text-sm font-medium">
+                <p className="text-sm font-medium text-text-secondary">
                   Checking Permissions
                 </p>
-                <p className="text-text-muted text-xs">Please wait...</p>
+                <p className="text-xs text-text-muted">Please wait...</p>
               </div>
             </div>
           </div>
         ) : needsPermissionDialog || permissionsBlocked ? (
-          <div className="border-default bg-surface-2/50 h-full rounded-lg border">
+          <div className="border-default h-full rounded-lg border bg-surface-2/50">
             <MediaPermissionGate
               permissions={{ camera: true, microphone: true }}
               loadingFallback={
-                <div className="flex flex-col items-center space-y-3">
-                  <Loader2 className="text-brand-muted-foreground h-8 w-8 animate-spin" />
-                  <p className="text-text-muted text-sm">
+                <div className="space-y-3 flex flex-col items-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
+                  <p className="text-sm text-text-muted">
                     Requesting access...
                   </p>
                 </div>
@@ -638,52 +699,52 @@ export function VideoStreamGrid({
             </MediaPermissionGate>
           </div>
         ) : isLocalStreamPending ? (
-          <div className="border-default bg-surface-2/50 flex h-full items-center justify-center rounded-lg border">
-            <div className="flex flex-col items-center space-y-3">
+          <div className="border-default flex h-full items-center justify-center rounded-lg border bg-surface-2/50">
+            <div className="space-y-3 flex flex-col items-center">
               <div className="relative">
-                <div className="bg-brand/20 flex h-16 w-16 items-center justify-center rounded-full">
-                  <Loader2 className="text-brand-muted-foreground h-8 w-8 animate-spin" />
+                <div className="h-16 w-16 flex items-center justify-center rounded-full bg-brand/20">
+                  <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
                 </div>
-                <div className="bg-brand/10 absolute inset-0 animate-ping rounded-full" />
+                <div className="inset-0 animate-ping absolute rounded-full bg-brand/10" />
               </div>
               <div className="space-y-1 text-center">
-                <p className="text-text-secondary text-sm font-medium">
+                <p className="text-sm font-medium text-text-secondary">
                   Initializing Camera
                 </p>
-                <p className="text-text-muted text-xs">
+                <p className="text-xs text-text-muted">
                   Starting video stream...
                 </p>
               </div>
             </div>
           </div>
         ) : localStreamError ? (
-          <div className="border-destructive/50 bg-surface-2/50 flex h-full items-center justify-center rounded-lg border">
-            <div className="flex flex-col items-center space-y-4 px-6 py-8">
+          <div className="flex h-full items-center justify-center rounded-lg border border-destructive/50 bg-surface-2/50">
+            <div className="space-y-4 px-6 py-8 flex flex-col items-center">
               <div className="relative">
-                <div className="bg-destructive/20 ring-destructive/10 flex h-16 w-16 items-center justify-center rounded-full ring-4">
-                  <AlertCircle className="text-destructive h-8 w-8" />
+                <div className="h-16 w-16 flex items-center justify-center rounded-full bg-destructive/20 ring-4 ring-destructive/10">
+                  <AlertCircle className="h-8 w-8 text-destructive" />
                 </div>
               </div>
               <div className="space-y-2 text-center">
-                <p className="text-text-secondary text-sm font-semibold">
+                <p className="text-sm font-semibold text-text-secondary">
                   Camera Access Failed
                 </p>
-                <p className="text-text-muted max-w-md text-xs leading-relaxed">
+                <p className="max-w-md text-xs leading-relaxed text-text-muted">
                   {localStreamError.message ||
                     'Unable to access your camera. Please check your permissions and try again.'}
                 </p>
               </div>
-              <div className="text-text-muted flex flex-col gap-2 text-xs">
-                <p className="flex items-center gap-1.5">
-                  <span className="bg-surface-3 inline-block h-1 w-1 rounded-full" />
+              <div className="gap-2 text-xs flex flex-col text-text-muted">
+                <p className="gap-1.5 flex items-center">
+                  <span className="h-1 w-1 inline-block rounded-full bg-surface-3" />
                   Check browser permissions
                 </p>
-                <p className="flex items-center gap-1.5">
-                  <span className="bg-surface-3 inline-block h-1 w-1 rounded-full" />
+                <p className="gap-1.5 flex items-center">
+                  <span className="h-1 w-1 inline-block rounded-full bg-surface-3" />
                   Ensure camera is not in use by another app
                 </p>
-                <p className="flex items-center gap-1.5">
-                  <span className="bg-surface-3 inline-block h-1 w-1 rounded-full" />
+                <p className="gap-1.5 flex items-center">
+                  <span className="h-1 w-1 inline-block rounded-full bg-surface-3" />
                   Try refreshing the page
                 </p>
               </div>
@@ -705,42 +766,29 @@ export function VideoStreamGrid({
         )}
 
         {/* Render remote players */}
-        {players.map((player) => {
-          const state = streamStates[player.id] || { video: true, audio: true }
-          const remoteStream = remoteStreams.get(player.id)
-          const connectionState = connectionStates.get(player.id)
-          const trackState = trackStates.get(player.id)
-          const isMuted = mutedPlayers.has(player.id)
-          // Calculate online status based on presence (matches sidebar logic)
-          const isOnline =
-            now - player.participantData.lastSeenAt < ONLINE_THRESHOLD_MS
-
-          return (
-            <RemotePlayerCard
-              key={player.id}
-              playerId={player.id}
-              playerName={player.name}
-              participantData={player.participantData}
-              remoteStream={remoteStream}
-              connectionState={connectionState}
-              trackState={trackState}
-              streamState={state}
-              remoteVideoRefs={remoteVideoRefs}
-              attachedStreamsRef={attachedStreamsRef}
-              trackStates={trackStates}
-              streamStates={streamStates}
-              isMuted={isMuted}
-              roomId={roomId}
-              localParticipant={localParticipant}
-              gameRoomParticipants={gameRoomParticipants}
-              isOnline={isOnline}
-              enableCardDetection={enableCardDetection}
-              detectorType={detectorType}
-              usePerspectiveWarp={usePerspectiveWarp}
-              onCardCrop={onCardCrop}
-            />
-          )
-        })}
+        {remoteSessions.map((player) => (
+          <RemotePlayerCard
+            key={player.id}
+            playerId={player.id}
+            playerName={player.name}
+            participantData={player.participantData}
+            remoteStream={player.remoteStream}
+            connectionState={player.connectionState}
+            peerVideoEnabled={player.peerVideoEnabled}
+            peerAudioEnabled={player.peerAudioEnabled}
+            remoteVideoRefs={remoteVideoRefs}
+            attachedStreamsRef={attachedStreamsRef}
+            isMuted={player.isMuted}
+            roomId={roomId}
+            localParticipant={localParticipant}
+            gameRoomParticipants={gameRoomParticipants}
+            isOnline={player.isOnline}
+            enableCardDetection={enableCardDetection}
+            detectorType={detectorType}
+            usePerspectiveWarp={usePerspectiveWarp}
+            onCardCrop={onCardCrop}
+          />
+        ))}
 
         {/* Test stream slot - rendered when showTestStream is true and there are empty slots */}
         {showTestStream && emptySlots > 0 && (
@@ -759,13 +807,13 @@ export function VideoStreamGrid({
         }).map((_, index) => (
           <Card
             key={`empty-slot-${index}`}
-            className="border-default bg-surface-1/50 flex h-full flex-col overflow-hidden border-dashed"
+            className="border-default flex h-full flex-col overflow-hidden border-dashed bg-surface-1/50"
           >
-            <div className="bg-surface-0/50 relative flex min-h-0 flex-1 items-center justify-center">
+            <div className="min-h-0 relative flex flex-1 items-center justify-center bg-surface-0/50">
               <div className="space-y-4 text-center">
-                <m.div className="bg-brand/10 relative mx-auto flex h-16 w-16 items-center justify-center rounded-full">
+                <m.div className="h-16 w-16 relative mx-auto flex items-center justify-center rounded-full bg-brand/10">
                   <m.div
-                    className="bg-brand/20 absolute inset-0 rounded-full"
+                    className="inset-0 absolute rounded-full bg-brand/20"
                     animate={{
                       scale: [1, 1.4, 1],
                       opacity: [0.5, 0, 0.5],
@@ -784,14 +832,14 @@ export function VideoStreamGrid({
                       ease: 'easeInOut',
                     }}
                   >
-                    <Gamepad2 className="text-brand-muted-foreground h-8 w-8" />
+                    <Gamepad2 className="h-8 w-8 text-brand-muted-foreground" />
                   </m.div>
                 </m.div>
                 <div className="space-y-1">
-                  <p className="text-text-muted text-sm font-medium">
+                  <p className="text-sm font-medium text-text-muted">
                     Open seat
                   </p>
-                  <p className="text-text-muted/60 text-xs">
+                  <p className="text-xs text-text-muted/60">
                     Waiting for player...
                   </p>
                 </div>
@@ -806,19 +854,19 @@ export function VideoStreamGrid({
 
 function VideoStreamGridLoading() {
   return (
-    <div className="border-default bg-surface-2/50 flex h-full items-center justify-center rounded-lg border">
-      <div className="flex flex-col items-center space-y-3">
+    <div className="border-default flex h-full items-center justify-center rounded-lg border bg-surface-2/50">
+      <div className="space-y-3 flex flex-col items-center">
         <div className="relative">
-          <div className="bg-brand/20 flex h-16 w-16 items-center justify-center rounded-full">
-            <Loader2 className="text-brand-muted-foreground h-8 w-8 animate-spin" />
+          <div className="h-16 w-16 flex items-center justify-center rounded-full bg-brand/20">
+            <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
           </div>
-          <div className="bg-brand/10 absolute inset-0 animate-ping rounded-full" />
+          <div className="inset-0 animate-ping absolute rounded-full bg-brand/10" />
         </div>
         <div className="space-y-1 text-center">
-          <p className="text-text-secondary text-sm font-medium">
+          <p className="text-sm font-medium text-text-secondary">
             Loading Video Streams
           </p>
-          <p className="text-text-muted text-xs">Connecting to players...</p>
+          <p className="text-xs text-text-muted">Connecting to players...</p>
         </div>
       </div>
     </div>

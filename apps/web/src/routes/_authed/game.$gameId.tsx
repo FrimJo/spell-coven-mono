@@ -6,6 +6,7 @@ import { NotFoundPage } from '@/components/NotFoundPage'
 import { RoomFullDialog } from '@/components/RoomFullDialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { env } from '@/env'
+import { MEDIA_DEVICE_STORAGE_KEY } from '@/hooks/useMediaPreferenceStore'
 import { checkRoomAccessServer } from '@/integrations/convex/server-client'
 import { loadEmbeddingsAndMetaFromPackage } from '@/lib/clip-search'
 import { GAME_ID_PATTERN } from '@/lib/game-id'
@@ -41,9 +42,6 @@ const gameSearchSchema = z.object({
     .describe('Show a synthetic test stream in an empty slot for development'),
 })
 
-// Key for localStorage where media device preferences are stored
-const MEDIA_DEVICES_KEY = 'mtg-selected-media-devices'
-
 /**
  * Check if user has completed media setup.
  * Returns true if the user has clicked "Complete Setup" at least once.
@@ -54,7 +52,7 @@ function isMediaConfigured(): boolean {
   if (typeof window === 'undefined') return true // Skip check on server
 
   try {
-    const stored = localStorage.getItem(MEDIA_DEVICES_KEY)
+    const stored = localStorage.getItem(MEDIA_DEVICE_STORAGE_KEY)
     if (stored) {
       const parsed = JSON.parse(stored)
       // Check if setup was completed (has timestamp from commitToStorage)
@@ -133,19 +131,19 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
     return { roomNotFound: false }
   },
   pendingComponent: () => (
-    <div className="bg-surface-0 flex h-screen items-center justify-center">
-      <div className="flex flex-col items-center space-y-4">
+    <div className="flex h-screen items-center justify-center bg-surface-0">
+      <div className="space-y-4 flex flex-col items-center">
         <div className="relative">
-          <div className="bg-brand/20 flex h-16 w-16 items-center justify-center rounded-full">
-            <Loader2 className="text-brand-muted-foreground h-8 w-8 animate-spin" />
+          <div className="h-16 w-16 flex items-center justify-center rounded-full bg-brand/20">
+            <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
           </div>
-          <div className="bg-brand/10 absolute inset-0 animate-ping rounded-full" />
+          <div className="inset-0 animate-ping absolute rounded-full bg-brand/10" />
         </div>
         <div className="space-y-1 text-center">
-          <h2 className="text-text-secondary text-lg font-medium">
+          <h2 className="text-lg font-medium text-text-secondary">
             Loading in Game Room
           </h2>
-          <p className="text-text-muted text-sm">Setting up your session...</p>
+          <p className="text-sm text-text-muted">Setting up your session...</p>
         </div>
       </div>
     </div>
@@ -192,16 +190,16 @@ function GameRoomPage() {
   // Show loading state while authenticated room access is being checked
   if (roomAccess === undefined) {
     return (
-      <div className="bg-surface-0 flex h-screen items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
+      <div className="flex h-screen items-center justify-center bg-surface-0">
+        <div className="space-y-4 flex flex-col items-center">
           <div className="relative">
-            <div className="bg-brand/20 flex h-16 w-16 items-center justify-center rounded-full">
-              <Loader2 className="text-brand-muted-foreground h-8 w-8 animate-spin" />
+            <div className="h-16 w-16 flex items-center justify-center rounded-full bg-brand/20">
+              <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
             </div>
-            <div className="bg-brand/10 absolute inset-0 animate-ping rounded-full" />
+            <div className="inset-0 animate-ping absolute rounded-full bg-brand/10" />
           </div>
           <div className="space-y-1 text-center">
-            <h2 className="text-text-secondary text-lg font-medium">
+            <h2 className="text-lg font-medium text-text-secondary">
               Checking room availability...
             </h2>
           </div>
@@ -217,7 +215,7 @@ function GameRoomPage() {
   // Show room full dialog if room is at capacity
   if (roomAccess.status === 'full') {
     return (
-      <div className="bg-surface-0 h-screen">
+      <div className="h-screen bg-surface-0">
         <RoomFullDialog
           open={true}
           onClose={handleClose}

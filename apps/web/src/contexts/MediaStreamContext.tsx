@@ -1,47 +1,69 @@
 /**
- * MediaStreamContext - Centralized media stream management for game sessions
+ * MediaStreamContext - Centralized media stream and preference management
  *
- * This context manages video and audio streams at the page level, ensuring:
- * - Streams are shared across all components (VideoStreamGrid, MediaSetupDialog)
- * - Cleanup only happens when navigating away from the game page
- * - No stream interruption when opening/closing modals
+ * Streams and device selections are owned at the page/session boundary so the
+ * setup flow and the in-room controls share the same source of truth.
  */
+import type { UseAudioOutputReturn } from '@/hooks/useAudioOutput'
 import type { UseMediaDeviceReturn } from '@/hooks/useMediaDevice'
 import type { BrowserPermissionState } from '@/hooks/useMediaPermissions'
+import type {
+  MediaPreferencesSnapshot,
+  MediaPreferenceStore,
+} from '@/hooks/useMediaPreferenceStore'
 import type { ReactNode } from 'react'
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
-  useEffectEvent,
   useMemo,
   useRef,
 } from 'react'
+import { useAudioOutput } from '@/hooks/useAudioOutput'
 import { useMediaDevice } from '@/hooks/useMediaDevice'
 import { useMediaPermissions } from '@/hooks/useMediaPermissions'
-import { useMediaEnabledState } from '@/hooks/useSelectedMediaDevice'
+import { useMediaPreferenceStore } from '@/hooks/useMediaPreferenceStore'
 import { stopMediaStream } from '@/lib/media-stream-manager'
 import { isSuccessState } from '@/types/async-resource'
 
 interface MediaStreamContextValue {
-  // Video stream management
   video: UseMediaDeviceReturn
-  // Audio stream management
   audio: UseMediaDeviceReturn
-  // Combined stream for WebRTC (video + audio tracks)
+  audioOutput: Pick<
+    UseAudioOutputReturn,
+    | 'devices'
+    | 'currentDeviceId'
+    | 'testOutput'
+    | 'isTesting'
+    | 'isSupported'
+    | 'error'
+    | 'isLoading'
+    | 'refreshDevices'
+  > & {
+    setOutputDevice: (deviceId: string) => Promise<void>
+  }
   combinedStream: MediaStream | null
-  // Toggle functions (for runtime toggling during a session)
   toggleVideo: (enabled: boolean) => Promise<void>
   toggleAudio: (enabled: boolean) => void
-  // User preferences for camera/mic enabled (persisted to localStorage)
-  mediaPreferences: {
-    videoEnabled: boolean
-    audioEnabled: boolean
-    setVideoEnabled: (enabled: boolean) => void
-    setAudioEnabled: (enabled: boolean) => void
+  mediaPreferences: Pick<
+    MediaPreferenceStore,
+    | 'selectedVideoDeviceId'
+    | 'selectedAudioInputDeviceId'
+    | 'selectedAudioOutputDeviceId'
+    | 'videoEnabled'
+    | 'audioEnabled'
+    | 'hasCommitted'
+    | 'setVideoEnabled'
+    | 'setAudioEnabled'
+    | 'captureSnapshot'
+    | 'commitPreferences'
+  > & {
+    setSelectedVideoDeviceId: (deviceId: string) => void
+    setSelectedAudioInputDeviceId: (deviceId: string) => void
+    setSelectedAudioOutputDeviceId: (deviceId: string) => Promise<void>
+    restoreSnapshot: (snapshot: MediaPreferencesSnapshot) => void
   }
-  // Permission states
   permissions: {
     camera: {
       browserState: BrowserPermissionState | 'checking'
@@ -66,7 +88,6 @@ interface MediaStreamProviderProps {
 }
 
 export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
-  // Check media permissions first - this determines if we show permission dialog
   const {
     camera: cameraPermission,
     microphone: microphonePermission,
@@ -74,7 +95,6 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     recheckPermissions,
   } = useMediaPermissions()
 
-  // Determine permission states
   const needsPermissionDialog =
     !isCheckingPermissions &&
     (cameraPermission.shouldShowDialog || microphonePermission.shouldShowDialog)
@@ -84,11 +104,6 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     (cameraPermission.browserState === 'denied' ||
       microphonePermission.browserState === 'denied')
 
-  // Permissions are granted if:
-  // - Microphone is granted (required for audio chat)
-  // - Camera is either granted OR still at "prompt" state (which happens when macOS blocks video access)
-  // When macOS blocks camera at system level, browser reports "prompt" but no video devices exist.
-  // In this case, we should still allow the user to proceed with audio-only functionality.
   const microphoneGranted =
     !isCheckingPermissions && microphonePermission.browserState === 'granted'
   const cameraGrantedOrUnavailable =
@@ -98,61 +113,148 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
 
   const permissionsGranted = microphoneGranted && cameraGrantedOrUnavailable
 
-  // Get user's preferences for camera/mic enabled state (persisted to localStorage)
-  const { videoEnabled, audioEnabled, setVideoEnabled, setAudioEnabled } =
-    useMediaEnabledState()
+  const mediaPreferences = useMediaPreferenceStore()
 
-  // Use media device hooks - these are the ONLY instances in the app
-  // Cleanup will happen when this provider unmounts (navigating away from game page)
-  // Only enable stream acquisition if permissions are granted AND the user has enabled the device
   const videoResult = useMediaDevice({
     kind: 'videoinput',
-    enabled: permissionsGranted && videoEnabled,
+    selectedDeviceId: mediaPreferences.selectedVideoDeviceId,
+    enabled: permissionsGranted && mediaPreferences.videoEnabled,
   })
 
   const audioResult = useMediaDevice({
     kind: 'audioinput',
-    enabled: permissionsGranted && audioEnabled,
+    selectedDeviceId: mediaPreferences.selectedAudioInputDeviceId,
+    enabled: permissionsGranted && mediaPreferences.audioEnabled,
   })
 
-  // Combine streams into a single MediaStream for WebRTC
-  // When both video and audio are enabled, wait for BOTH to be ready so the first
-  // WebRTC offer includes both tracks (avoids "everyone shows muted" from video-only offer).
-  // Only include 'live' tracks to avoid using stopped/ended tracks from cache.
+  const audioOutputState = useAudioOutput({
+    initialDeviceId: mediaPreferences.selectedAudioOutputDeviceId ?? 'default',
+  })
+
+  useEffect(() => {
+    const nextDeviceId = videoResult.selectedDeviceId || null
+    if (
+      nextDeviceId &&
+      nextDeviceId !== mediaPreferences.selectedVideoDeviceId
+    ) {
+      mediaPreferences.setSelectedVideoDeviceId(nextDeviceId)
+    }
+  }, [
+    videoResult.selectedDeviceId,
+    mediaPreferences.selectedVideoDeviceId,
+    mediaPreferences.setSelectedVideoDeviceId,
+  ])
+
+  useEffect(() => {
+    const nextDeviceId = audioResult.selectedDeviceId || null
+    if (
+      nextDeviceId &&
+      nextDeviceId !== mediaPreferences.selectedAudioInputDeviceId
+    ) {
+      mediaPreferences.setSelectedAudioInputDeviceId(nextDeviceId)
+    }
+  }, [
+    audioResult.selectedDeviceId,
+    mediaPreferences.selectedAudioInputDeviceId,
+    mediaPreferences.setSelectedAudioInputDeviceId,
+  ])
+
+  useEffect(() => {
+    const currentDeviceId = audioOutputState.currentDeviceId || null
+    if (
+      currentDeviceId &&
+      currentDeviceId !== mediaPreferences.selectedAudioOutputDeviceId
+    ) {
+      mediaPreferences.setSelectedAudioOutputDeviceId(currentDeviceId)
+    }
+  }, [
+    audioOutputState.currentDeviceId,
+    mediaPreferences.selectedAudioOutputDeviceId,
+    mediaPreferences.setSelectedAudioOutputDeviceId,
+  ])
+
+  useEffect(() => {
+    const desiredDeviceId =
+      mediaPreferences.selectedAudioOutputDeviceId ?? 'default'
+
+    if (
+      audioOutputState.devices.length > 0 &&
+      desiredDeviceId !== audioOutputState.currentDeviceId
+    ) {
+      void audioOutputState.setOutputDevice(desiredDeviceId).catch(() => {})
+    }
+  }, [
+    mediaPreferences.selectedAudioOutputDeviceId,
+    audioOutputState.devices.length,
+    audioOutputState.currentDeviceId,
+    audioOutputState.setOutputDevice,
+  ])
+
+  const setSelectedAudioOutputDeviceId = useCallback(
+    async (deviceId: string) => {
+      mediaPreferences.setSelectedAudioOutputDeviceId(deviceId)
+      await audioOutputState.setOutputDevice(deviceId)
+    },
+    [
+      mediaPreferences.setSelectedAudioOutputDeviceId,
+      audioOutputState.setOutputDevice,
+    ],
+  )
+
+  const restoreSnapshot = useCallback(
+    (snapshot: MediaPreferencesSnapshot) => {
+      mediaPreferences.restoreSnapshot(snapshot)
+      const outputDeviceId = snapshot.selectedAudioOutputDeviceId
+
+      if (outputDeviceId) {
+        void audioOutputState.setOutputDevice(outputDeviceId).catch(() => {})
+      }
+    },
+    [mediaPreferences.restoreSnapshot, audioOutputState.setOutputDevice],
+  )
+
   const combinedStream = useMemo((): MediaStream | null => {
     const tracks: MediaStreamTrack[] = []
 
     const hasVideo =
-      videoEnabled && isSuccessState(videoResult) && videoResult.stream
+      mediaPreferences.videoEnabled &&
+      isSuccessState(videoResult) &&
+      videoResult.stream
     const hasAudio =
-      audioEnabled && isSuccessState(audioResult) && audioResult.stream
+      mediaPreferences.audioEnabled &&
+      isSuccessState(audioResult) &&
+      audioResult.stream
 
-    // If both are enabled but one isn't ready yet, don't build a partial stream
-    // so we never send a video-only (or audio-only) offer and cause wrong mute icons.
-    if (videoEnabled && audioEnabled && (!hasVideo || !hasAudio)) {
-      return null
+    if (mediaPreferences.videoEnabled && mediaPreferences.audioEnabled) {
+      if (!hasVideo || !hasAudio) {
+        return null
+      }
     }
 
     if (hasVideo && isSuccessState(videoResult) && videoResult.stream) {
-      const liveTracks = videoResult.stream
-        .getVideoTracks()
-        .filter((track) => track.readyState === 'live')
-      tracks.push(...liveTracks)
+      tracks.push(
+        ...videoResult.stream
+          .getVideoTracks()
+          .filter((track) => track.readyState === 'live'),
+      )
     }
 
     if (hasAudio && isSuccessState(audioResult) && audioResult.stream) {
-      const liveTracks = audioResult.stream
-        .getAudioTracks()
-        .filter((track) => track.readyState === 'live')
-      tracks.push(...liveTracks)
+      tracks.push(
+        ...audioResult.stream
+          .getAudioTracks()
+          .filter((track) => track.readyState === 'live'),
+      )
     }
 
-    if (tracks.length === 0) return null
+    return tracks.length === 0 ? null : new MediaStream(tracks)
+  }, [
+    videoResult,
+    audioResult,
+    mediaPreferences.videoEnabled,
+    mediaPreferences.audioEnabled,
+  ])
 
-    return new MediaStream(tracks)
-  }, [videoResult, audioResult, videoEnabled, audioEnabled])
-
-  // Use refs to avoid recreating callbacks when results change
   const videoResultRef = useRef(videoResult)
   const audioResultRef = useRef(audioResult)
 
@@ -164,77 +266,87 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     audioResultRef.current = audioResult
   }, [audioResult])
 
-  // Toggle video - releases hardware when disabled, re-acquires when enabled
   const toggleVideo = useCallback(
     async (enabled: boolean): Promise<void> => {
       if (!enabled) {
-        // Stop video tracks to release camera hardware
         const currentVideoResult = videoResultRef.current
         if (isSuccessState(currentVideoResult) && currentVideoResult.stream) {
           currentVideoResult.stream
             .getVideoTracks()
-            .forEach((track: MediaStreamTrack) => {
-              track.stop()
-              console.log(
-                '[MediaStreamProvider] Stopped video track to release camera',
-              )
-            })
+            .forEach((track) => track.stop())
         }
       }
-      // Update preference - this controls whether useMediaDevice acquires a new stream
-      setVideoEnabled(enabled)
+
+      mediaPreferences.setVideoEnabled(enabled)
     },
-    [setVideoEnabled],
+    [mediaPreferences.setVideoEnabled],
   )
 
-  // Toggle audio - releases hardware when disabled, re-acquires when enabled
   const toggleAudio = useCallback(
     (enabled: boolean) => {
       if (!enabled) {
-        // Stop audio tracks to release microphone hardware
         const currentAudioResult = audioResultRef.current
         if (isSuccessState(currentAudioResult) && currentAudioResult.stream) {
           currentAudioResult.stream
             .getAudioTracks()
-            .forEach((track: MediaStreamTrack) => {
-              track.stop()
-              console.log(
-                '[MediaStreamProvider] Stopped audio track to release microphone',
-              )
-            })
+            .forEach((track) => track.stop())
         }
       }
-      // Update preference - this controls whether useMediaDevice acquires a new stream
-      setAudioEnabled(enabled)
+
+      mediaPreferences.setAudioEnabled(enabled)
     },
-    [setAudioEnabled],
+    [mediaPreferences.setAudioEnabled],
   )
 
-  const onStreamUnmount = useEffectEvent(() => {
-    console.log('[MediaStreamProvider] Unmounting, cleaning up all streams')
-    if (isSuccessState(videoResult) && videoResult.stream) {
-      stopMediaStream(videoResult.stream)
+  useEffect(() => {
+    return () => {
+      if (isSuccessState(videoResult) && videoResult.stream) {
+        stopMediaStream(videoResult.stream)
+      }
+      if (isSuccessState(audioResult) && audioResult.stream) {
+        stopMediaStream(audioResult.stream)
+      }
     }
-    if (isSuccessState(audioResult) && audioResult.stream) {
-      stopMediaStream(audioResult.stream)
-    }
-  })
-
-  // Cleanup streams when provider unmounts (user navigates away)
-  useEffect(() => onStreamUnmount, [])
+  }, [videoResult, audioResult])
 
   const value = useMemo<MediaStreamContextValue>(
     () => ({
       video: videoResult,
       audio: audioResult,
+      audioOutput: {
+        devices: audioOutputState.devices,
+        currentDeviceId:
+          mediaPreferences.selectedAudioOutputDeviceId ??
+          audioOutputState.currentDeviceId,
+        setOutputDevice: setSelectedAudioOutputDeviceId,
+        testOutput: audioOutputState.testOutput,
+        isTesting: audioOutputState.isTesting,
+        isSupported: audioOutputState.isSupported,
+        error: audioOutputState.error,
+        isLoading: audioOutputState.isLoading,
+        refreshDevices: audioOutputState.refreshDevices,
+      },
       combinedStream,
       toggleVideo,
       toggleAudio,
       mediaPreferences: {
-        videoEnabled,
-        audioEnabled,
-        setVideoEnabled,
-        setAudioEnabled,
+        selectedVideoDeviceId: mediaPreferences.selectedVideoDeviceId,
+        selectedAudioInputDeviceId: mediaPreferences.selectedAudioInputDeviceId,
+        selectedAudioOutputDeviceId:
+          mediaPreferences.selectedAudioOutputDeviceId,
+        videoEnabled: mediaPreferences.videoEnabled,
+        audioEnabled: mediaPreferences.audioEnabled,
+        hasCommitted: mediaPreferences.hasCommitted,
+        setSelectedVideoDeviceId: (deviceId: string) =>
+          mediaPreferences.setSelectedVideoDeviceId(deviceId),
+        setSelectedAudioInputDeviceId: (deviceId: string) =>
+          mediaPreferences.setSelectedAudioInputDeviceId(deviceId),
+        setSelectedAudioOutputDeviceId,
+        setVideoEnabled: mediaPreferences.setVideoEnabled,
+        setAudioEnabled: mediaPreferences.setAudioEnabled,
+        captureSnapshot: mediaPreferences.captureSnapshot,
+        restoreSnapshot,
+        commitPreferences: mediaPreferences.commitPreferences,
       },
       permissions: {
         camera: {
@@ -259,13 +371,31 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     [
       videoResult,
       audioResult,
+      audioOutputState.devices,
+      audioOutputState.currentDeviceId,
+      audioOutputState.testOutput,
+      audioOutputState.isTesting,
+      audioOutputState.isSupported,
+      audioOutputState.error,
+      audioOutputState.isLoading,
+      audioOutputState.refreshDevices,
       combinedStream,
       toggleVideo,
       toggleAudio,
-      videoEnabled,
-      audioEnabled,
-      setVideoEnabled,
-      setAudioEnabled,
+      mediaPreferences.selectedVideoDeviceId,
+      mediaPreferences.selectedAudioInputDeviceId,
+      mediaPreferences.selectedAudioOutputDeviceId,
+      mediaPreferences.videoEnabled,
+      mediaPreferences.audioEnabled,
+      mediaPreferences.hasCommitted,
+      mediaPreferences.setSelectedVideoDeviceId,
+      mediaPreferences.setSelectedAudioInputDeviceId,
+      mediaPreferences.setVideoEnabled,
+      mediaPreferences.setAudioEnabled,
+      mediaPreferences.captureSnapshot,
+      mediaPreferences.commitPreferences,
+      restoreSnapshot,
+      setSelectedAudioOutputDeviceId,
       isCheckingPermissions,
       cameraPermission,
       microphonePermission,
@@ -283,10 +413,6 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
   )
 }
 
-/**
- * Hook to access media streams from the context.
- * Must be used within a MediaStreamProvider.
- */
 export function useMediaStreams(): MediaStreamContextValue {
   const context = useContext(MediaStreamContext)
   if (!context) {
