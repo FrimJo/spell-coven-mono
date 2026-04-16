@@ -100,30 +100,29 @@ export const LocalVideoCard = memo(function LocalVideoCard({
     [],
   )
 
-  // Attach stream to video element when VIDEO TRACKS change
-  // This is separate from the ref callback to prevent flickering:
-  // - Callback refs that depend on props cause React to call old(null) then new(element) when props change
-  // - By using a stable callback ref + useEffect, we update the srcObject without remounting
-  // - We compare actual video track objects, not stream reference, because combinedStream
-  //   creates a new MediaStream object when audio changes (even if video tracks are the same)
+  // Keep video.srcObject in sync with the combinedStream from context.
+  // We skip re-attach only when video tracks AND the MediaStream instance are
+  // both unchanged. The stream identity check is necessary because
+  // combinedStream is rebuilt on audio toggle; the old stream may still
+  // reference stopped audio tracks, which can cause browsers to black out
+  // the video surface.
   useEffect(() => {
     const video = videoRef.current
     if (!video || !stream) return
 
-    // Get video tracks from the new stream
-    const newVideoTracks = stream.getVideoTracks()
-
-    // Get video tracks from the currently attached stream
     const currentStream = video.srcObject as MediaStream | null
+
+    if (currentStream === stream) return
+
+    const newVideoTracks = stream.getVideoTracks()
     const currentVideoTracks = currentStream?.getVideoTracks() ?? []
 
-    // Only re-attach if video tracks have actually changed
-    // This prevents flickering when only audio is toggled
     const tracksAreSame =
       newVideoTracks.length === currentVideoTracks.length &&
       newVideoTracks.every((track, i) => track === currentVideoTracks[i])
 
     if (tracksAreSame) {
+      video.srcObject = stream
       return
     }
 
