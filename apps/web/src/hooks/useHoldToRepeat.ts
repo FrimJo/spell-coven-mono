@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react'
 
+const DEFAULT_REPEAT_INTERVAL = 800
+const DEFAULT_IMMEDIATE_DELTA = 1
+const DEFAULT_REPEAT_DELTA = 10
+
 interface UseHoldToRepeatOptions {
   /**
    * Callback function that receives the delta value to apply
@@ -40,11 +44,16 @@ interface UseHoldToRepeatOptions {
  */
 export function useHoldToRepeat({
   onChange,
-  immediateDelta = 1,
-  repeatDelta = 10,
-  repeatInterval = 1000,
+  immediateDelta = DEFAULT_IMMEDIATE_DELTA,
+  repeatDelta = DEFAULT_REPEAT_DELTA,
+  repeatInterval = DEFAULT_REPEAT_INTERVAL,
 }: UseHoldToRepeatOptions) {
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const onChangeRef = useRef(onChange)
+
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
 
   // Cleanup interval on unmount
   useEffect(() => {
@@ -63,13 +72,13 @@ export function useHoldToRepeat({
         clearInterval(intervalRef.current)
       }
       // Immediate change
-      onChange(immediateDelta)
+      onChangeRef.current(immediateDelta)
       // Start interval for repeated changes
       intervalRef.current = setInterval(() => {
-        onChange(repeatDelta)
+        onChangeRef.current(repeatDelta)
       }, repeatInterval)
     },
-    [onChange, immediateDelta, repeatDelta, repeatInterval],
+    [immediateDelta, repeatDelta, repeatInterval],
   )
 
   const handleStop = useCallback((e: React.MouseEvent | React.TouchEvent) => {
