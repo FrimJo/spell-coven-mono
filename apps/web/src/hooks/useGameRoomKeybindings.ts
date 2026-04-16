@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useEffectEvent, useMemo } from 'react'
 
 type GameRoomShortcutId =
   | 'searchCards'
@@ -63,38 +63,36 @@ export function useGameRoomShortcutDisplayParts(): Record<
 }
 
 export function useGameRoomKeyboardShortcuts(handlers: ShortcutHandlers) {
-  const handlersRef = useRef<ShortcutHandlers>(handlers)
+  const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
+    if (isEditableTarget(event.target)) return
 
-  useEffect(() => {
-    handlersRef.current = handlers
-  }, [handlers])
+    const isModifierPressed = event.metaKey || event.ctrlKey
+    const pressedKey = event.key.toLowerCase()
+
+    for (const shortcut of SHORTCUTS) {
+      const modifierMatches = shortcut.requireModifier
+        ? isModifierPressed
+        : !isModifierPressed
+      const shiftMatches = shortcut.requireShift
+        ? event.shiftKey
+        : !event.shiftKey
+
+      if (
+        modifierMatches &&
+        shiftMatches &&
+        pressedKey === shortcut.key &&
+        handlers[shortcut.id]
+      ) {
+        event.preventDefault()
+        handlers[shortcut.id]?.()
+        return
+      }
+    }
+  })
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (isEditableTarget(event.target)) return
-
-      const isModifierPressed = event.metaKey || event.ctrlKey
-      const pressedKey = event.key.toLowerCase()
-
-      for (const shortcut of SHORTCUTS) {
-        const modifierMatches = shortcut.requireModifier
-          ? isModifierPressed
-          : !isModifierPressed
-        const shiftMatches = shortcut.requireShift
-          ? event.shiftKey
-          : !event.shiftKey
-
-        if (
-          modifierMatches &&
-          shiftMatches &&
-          pressedKey === shortcut.key &&
-          handlersRef.current[shortcut.id]
-        ) {
-          event.preventDefault()
-          handlersRef.current[shortcut.id]?.()
-          return
-        }
-      }
+      onKeyDown(event)
     }
 
     document.addEventListener('keydown', handleKeyDown)
