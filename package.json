@@ -46,8 +46,7 @@
   "workspaces": {
     "packages": [
       "apps/*",
-      "packages/*",
-      "!packages/mtg-image-db"
+      "packages/*"
     ],
     "catalog": {
       "react": "^19.2.0",
