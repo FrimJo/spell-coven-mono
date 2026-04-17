@@ -19,6 +19,6 @@ function normalise(vec: Float32Array): Float32Array {
 
 export async function encodeImage(imageData: ImageData): Promise<Float32Array> {
     const extract = await getExtractor();
-    const output = await extract(imageData);
+    const output = await (extract as any)(imageData);
     return normalise(new Float32Array(output.data));
 }
