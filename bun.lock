@@ -51,6 +51,9 @@
     },
     "apps/web": {
       "name": "@repo/web",
+      "dependencies": {
+        "@repo/card-detection": "workspace:*",
+      },
       "devDependencies": {
         "@huggingface/transformers": "^3.7.5",
         "@ianvs/prettier-plugin-sort-imports": "^4.4.1",

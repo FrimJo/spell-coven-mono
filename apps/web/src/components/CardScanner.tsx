@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertCircle, Camera, CheckCircle2, Scan, X } from 'lucide-react'
 
+import { identifyCard } from '@repo/card-detection'
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
 
@@ -8,22 +9,113 @@ interface CardScannerProps {
   onClose: () => void
 }
 
+type ScanError =
+  | { kind: 'camera'; message: string }
+  | { kind: 'detection'; message: string }
+  | { kind: 'no-match' }
+
 export function CardScanner({ onClose }: CardScannerProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const [scanning, setScanning] = useState(false)
   const [recognizedCard, setRecognizedCard] = useState<string | null>(null)
+  const [error, setError] = useState<ScanError | null>(null)
+  const [cameraReady, setCameraReady] = useState(false)
 
-  const handleScan = () => {
+  const stopStream = useCallback(() => {
+    if (streamRef.current) {
+      for (const track of streamRef.current.getTracks()) {
+        track.stop()
+      }
+      streamRef.current = null
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+    setCameraReady(false)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+          audio: false,
+        })
+        if (cancelled) {
+          for (const track of stream.getTracks()) track.stop()
+          return
+        }
+        streamRef.current = stream
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          await videoRef.current.play().catch(() => {})
+          setCameraReady(true)
+        }
+      } catch (err) {
+        if (cancelled) return
+        const message =
+          err instanceof Error ? err.message : 'Failed to access camera'
+        setError({ kind: 'camera', message })
+      }
+    }
+    void startCamera()
+    return () => {
+      cancelled = true
+      stopStream()
+    }
+  }, [stopStream])
+
+  const handleScan = useCallback(async () => {
+    const video = videoRef.current
+    if (!video || !cameraReady) {
+      setError({ kind: 'camera', message: 'Camera not ready' })
+      return
+    }
+
+    setError(null)
+    setRecognizedCard(null)
     setScanning(true)
-    // Simulate card recognition
-    setTimeout(() => {
-      setRecognizedCard('Lightning Bolt')
+
+    try {
+      const width = video.videoWidth
+      const height = video.videoHeight
+      if (!width || !height) {
+        throw new Error('Video frame not available')
+      }
+
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Failed to acquire 2D canvas context')
+      ctx.drawImage(video, 0, 0, width, height)
+      const imageData = ctx.getImageData(0, 0, width, height)
+
+      const matches = await identifyCard(imageData)
+      if (!matches.length) {
+        setError({ kind: 'no-match' })
+        return
+      }
+      setRecognizedCard(matches[0]!.name)
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Card detection failed'
+      setError({ kind: 'detection', message })
+    } finally {
       setScanning(false)
-    }, 2000)
-  }
+    }
+  }, [cameraReady])
 
   const handleAddToBattlefield = () => {
     // Add card to battlefield logic
     setRecognizedCard(null)
+  }
+
+  const handleClose = () => {
+    stopStream()
+    onClose()
   }
 
   return (
@@ -39,7 +131,7 @@ export function CardScanner({ onClose }: CardScannerProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={onClose}
+              onClick={handleClose}
               className="text-text-muted hover:text-white"
             >
               <X className="h-5 w-5" />
@@ -49,6 +141,19 @@ export function CardScanner({ onClose }: CardScannerProps) {
 
         {/* Scanner View */}
         <div className="bg-surface-0 relative aspect-video">
+          {/* Live webcam feed */}
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+
+          {/* Dim overlay when not actively recognized */}
+          {!recognizedCard && (
+            <div className="absolute inset-0 bg-slate-950/40" />
+          )}
+
           <div className="absolute inset-0 flex items-center justify-center">
             {scanning ? (
               <div className="space-y-4 text-center">
@@ -61,7 +166,7 @@ export function CardScanner({ onClose }: CardScannerProps) {
                 <p className="text-text-muted">Scanning card...</p>
               </div>
             ) : recognizedCard ? (
-              <div className="space-y-4 text-center">
+              <div className="bg-surface-1/90 space-y-4 rounded-lg p-6 text-center backdrop-blur-sm">
                 <div className="bg-success/20 mx-auto flex h-16 w-16 items-center justify-center rounded-full">
                   <CheckCircle2 className="text-success h-8 w-8" />
                 </div>
@@ -89,19 +194,35 @@ export function CardScanner({ onClose }: CardScannerProps) {
               </div>
             ) : (
               <div className="space-y-4 text-center">
-                <div className="border-surface-3 flex h-32 w-32 items-center justify-center rounded-lg border-4 border-dashed">
-                  <Camera className="text-text-muted h-16 w-16" />
-                </div>
-                <div>
-                  <p className="text-text-muted mb-2">Position card in frame</p>
-                  <Button
-                    onClick={handleScan}
-                    className="bg-brand hover:bg-brand text-white"
-                  >
-                    <Scan className="mr-2 h-4 w-4" />
-                    Scan Card
-                  </Button>
-                </div>
+                {error?.kind === 'camera' ? (
+                  <div className="bg-surface-1/90 max-w-sm space-y-3 rounded-lg p-6 backdrop-blur-sm">
+                    <AlertCircle className="text-danger mx-auto h-10 w-10" />
+                    <p className="text-white">Camera unavailable</p>
+                    <p className="text-text-muted text-xs">{error.message}</p>
+                  </div>
+                ) : (
+                  <div className="bg-surface-1/80 space-y-3 rounded-lg p-4 backdrop-blur-sm">
+                    <p className="text-text-muted">Position card in frame</p>
+                    <Button
+                      onClick={handleScan}
+                      disabled={!cameraReady}
+                      className="bg-brand hover:bg-brand text-white"
+                    >
+                      <Scan className="mr-2 h-4 w-4" />
+                      {cameraReady ? 'Scan Card' : 'Starting camera...'}
+                    </Button>
+                    {error?.kind === 'no-match' && (
+                      <p className="text-warning text-xs">
+                        No matching card found. Try again with better lighting.
+                      </p>
+                    )}
+                    {error?.kind === 'detection' && (
+                      <p className="text-danger text-xs">
+                        Detection failed: {error.message}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
