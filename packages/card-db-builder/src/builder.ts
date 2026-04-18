@@ -6,7 +6,9 @@ import { getImageUrl } from './scryfall';
 import { embedImageUrl } from './embedder';
 
 const DIMS = 512;
-const OUT_DIR = join(process.cwd(), 'static', 'card-index');
+// Resolve to repo root regardless of where the script is invoked from.
+// __dirname = packages/card-db-builder/src → up three to repo root.
+const OUT_DIR = join(import.meta.dirname, '..', '..', '..', 'static', 'card-index');
 
 export async function buildIndex(cards: ScryfallCard[]): Promise<void> {
   mkdirSync(OUT_DIR, { recursive: true });
