@@ -1,4 +1,4 @@
-import { pipeline } from '@xenova/transformers';
+import { pipeline, RawImage } from '@xenova/transformers';
 import sharp from 'sharp';
 
 let extractor: Awaited<ReturnType<typeof pipeline>> | null = null;
@@ -26,23 +26,22 @@ export async function embedImageUrl(imageUrl: string): Promise<Float32Array | nu
     if (!res.ok) return null;
     const arrayBuffer = await res.arrayBuffer();
 
-    // Resize to 224×224 (CLIP input size) and convert to raw RGBA
+    // Resize to 224×224 and convert to raw RGB (3 channels — what RawImage expects for CLIP)
     const { data, info } = await sharp(Buffer.from(arrayBuffer))
       .resize(224, 224)
-      .ensureAlpha()
+      .removeAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });
 
-    const imageData = {
-      data: new Uint8ClampedArray(data),
-      width: info.width,
-      height: info.height,
-    };
+    const rawImage = new RawImage(new Uint8Array(data), info.width, info.height, 3);
 
     const extract = await getExtractor();
-    const output = await (extract as any)(imageData);
+    const output = await (extract as any)(rawImage);
     return normalise(new Float32Array(output.data));
-  } catch {
+  } catch (err) {
+    if (process.env.DEBUG_EMBED) {
+      console.error('  embed error:', err instanceof Error ? err.message : err);
+    }
     return null;
   }
 }
