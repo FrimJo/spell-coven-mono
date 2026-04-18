@@ -5,6 +5,9 @@ import { ErrorBoundary } from 'react-error-boundary'
 
 import { ErrorFallback } from './components/ErrorFallback.js'
 import { initializeSentry } from './integrations/sentry/client.js'
+import { registerServiceWorker } from './lib/register-sw.js'
+
+registerServiceWorker()
 
 // Lazy load mock media module only in non-production environments
 // This allows testing webcam UI in browsers that block media device access
