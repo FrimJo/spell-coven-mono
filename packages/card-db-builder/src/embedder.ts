@@ -16,15 +16,20 @@ function normalise(vec: Float32Array): Float32Array {
   return mag === 0 ? vec : vec.map(v => v / mag);
 }
 
+const IMAGE_HEADERS = {
+  'User-Agent': 'spell-casters-mtg/0.1 (https://github.com/tonylam07/spell-casters-mtg)',
+};
+
 export async function embedImageUrl(imageUrl: string): Promise<Float32Array | null> {
   try {
-    const res = await fetch(imageUrl);
+    const res = await fetch(imageUrl, { headers: IMAGE_HEADERS });
     if (!res.ok) return null;
     const arrayBuffer = await res.arrayBuffer();
 
     // Resize to 224×224 (CLIP input size) and convert to raw RGBA
     const { data, info } = await sharp(Buffer.from(arrayBuffer))
       .resize(224, 224)
+      .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });
 
