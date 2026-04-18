@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import cardsRouter from './routes/cards.js';
+import detectRouter from './routes/detect.js';
 
 const app = express();
 
@@ -12,6 +13,7 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/cards', cardsRouter);
+app.use('/api/detect', detectRouter);
 
 const PORT = Number(process.env.PORT ?? 4001);
 
