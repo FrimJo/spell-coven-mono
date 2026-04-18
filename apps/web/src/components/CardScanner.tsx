@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertCircle, Camera, CheckCircle2, Scan, X } from 'lucide-react'
 
-import { identifyCard } from '@repo/card-detection'
+import { identifyCard, type CardMatch } from '@repo/card-detection'
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
 
@@ -14,9 +14,21 @@ type ScanError =
   | { kind: 'detection'; message: string }
   | { kind: 'no-match' }
 
+// HAVE_CURRENT_DATA — enough data for the current playback position
+const HAVE_CURRENT_DATA = 2
+
+class CameraNotReadyError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'CameraNotReadyError'
+  }
+}
+
 export function CardScanner({ onClose }: CardScannerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const cancelledRef = useRef(false)
   const [scanning, setScanning] = useState(false)
   const [recognizedCard, setRecognizedCard] = useState<string | null>(null)
   const [error, setError] = useState<ScanError | null>(null)
@@ -36,7 +48,38 @@ export function CardScanner({ onClose }: CardScannerProps) {
   }, [])
 
   useEffect(() => {
+    cancelledRef.current = false
     let cancelled = false
+
+    const markReadyWhenDecoded = (video: HTMLVideoElement) => {
+      if (cancelled) return
+      if (
+        video.readyState >= HAVE_CURRENT_DATA &&
+        video.videoWidth > 0 &&
+        video.videoHeight > 0
+      ) {
+        setCameraReady(true)
+        return
+      }
+      // Fall back to waiting for metadata + a frame to be decoded.
+      const onReady = () => {
+        if (cancelled) return
+        if (
+          video.readyState >= HAVE_CURRENT_DATA &&
+          video.videoWidth > 0 &&
+          video.videoHeight > 0
+        ) {
+          setCameraReady(true)
+          video.removeEventListener('loadeddata', onReady)
+          video.removeEventListener('loadedmetadata', onReady)
+          video.removeEventListener('canplay', onReady)
+        }
+      }
+      video.addEventListener('loadeddata', onReady)
+      video.addEventListener('loadedmetadata', onReady)
+      video.addEventListener('canplay', onReady)
+    }
+
     async function startCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -48,10 +91,16 @@ export function CardScanner({ onClose }: CardScannerProps) {
           return
         }
         streamRef.current = stream
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-          await videoRef.current.play().catch(() => {})
-          setCameraReady(true)
+        const video = videoRef.current
+        if (video) {
+          video.srcObject = stream
+          try {
+            await video.play()
+          } catch {
+            // autoplay rejection is non-fatal; the readiness check below still runs
+          }
+          if (cancelled) return
+          markReadyWhenDecoded(video)
         }
       } catch (err) {
         if (cancelled) return
@@ -63,11 +112,13 @@ export function CardScanner({ onClose }: CardScannerProps) {
     void startCamera()
     return () => {
       cancelled = true
+      cancelledRef.current = true
       stopStream()
     }
   }, [stopStream])
 
   const handleScan = useCallback(async () => {
+    if (scanning) return
     const video = videoRef.current
     if (!video || !cameraReady) {
       setError({ kind: 'camera', message: 'Camera not ready' })
@@ -81,11 +132,19 @@ export function CardScanner({ onClose }: CardScannerProps) {
     try {
       const width = video.videoWidth
       const height = video.videoHeight
-      if (!width || !height) {
-        throw new Error('Video frame not available')
+      if (
+        !width ||
+        !height ||
+        video.readyState < HAVE_CURRENT_DATA
+      ) {
+        throw new CameraNotReadyError('Video frame not available')
       }
 
-      const canvas = document.createElement('canvas')
+      let canvas = canvasRef.current
+      if (!canvas) {
+        canvas = document.createElement('canvas')
+        canvasRef.current = canvas
+      }
       canvas.width = width
       canvas.height = height
       const ctx = canvas.getContext('2d')
@@ -93,20 +152,28 @@ export function CardScanner({ onClose }: CardScannerProps) {
       ctx.drawImage(video, 0, 0, width, height)
       const imageData = ctx.getImageData(0, 0, width, height)
 
-      const matches = await identifyCard(imageData)
+      const matches: CardMatch[] = await identifyCard(imageData)
+      if (cancelledRef.current) return
       if (!matches.length) {
         setError({ kind: 'no-match' })
         return
       }
       setRecognizedCard(matches[0]!.name)
     } catch (err) {
+      if (cancelledRef.current) return
+      if (err instanceof CameraNotReadyError) {
+        setError({ kind: 'camera', message: err.message })
+        return
+      }
       const message =
         err instanceof Error ? err.message : 'Card detection failed'
       setError({ kind: 'detection', message })
     } finally {
-      setScanning(false)
+      if (!cancelledRef.current) {
+        setScanning(false)
+      }
     }
-  }, [cameraReady])
+  }, [cameraReady, scanning])
 
   const handleAddToBattlefield = () => {
     // Add card to battlefield logic
@@ -114,6 +181,7 @@ export function CardScanner({ onClose }: CardScannerProps) {
   }
 
   const handleClose = () => {
+    cancelledRef.current = true
     stopStream()
     onClose()
   }
