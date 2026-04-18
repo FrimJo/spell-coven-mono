@@ -1,0 +1,51 @@
+# Build context for apps/api/Dockerfile is the repo root.
+# Keep the context lean — exclude everything not needed by the api build.
+
+# Dependencies & build outputs (any workspace)
+**/node_modules
+**/dist
+**/build
+**/.next
+**/.turbo
+**/coverage
+
+# Other apps not needed for api image
+apps/web
+
+# Packages not consumed by api
+packages/card-db-builder
+packages/eslint-config
+packages/prettier
+packages/tailwind
+packages/ui
+
+# Tests
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.test.js
+**/*.spec.ts
+**/*.spec.tsx
+
+# Local & secret files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+
+# Editor / OS noise
+.git
+.gitignore
+.gitattributes
+.github
+.vscode
+.idea
+.DS_Store
+**/*.log
+
+# Docs
+README.md
+docs
+*.md
+!apps/api/README.md

@@ -1,0 +1,20 @@
+# This file is consulted when build context = apps/api/.
+# Our Dockerfile uses repo root as build context (docker build -f apps/api/Dockerfile .),
+# so the root .dockerignore is the effective one. This file is kept for clarity
+# in case someone runs `docker build apps/api/`.
+
+node_modules
+dist
+coverage
+.turbo
+*.log
+.env
+.env.*
+!.env.example
+__tests__
+*.test.ts
+*.test.js
+.git
+.gitignore
+.DS_Store
+README.md
