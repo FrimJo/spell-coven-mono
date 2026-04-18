@@ -154,11 +154,12 @@ export function CardScanner({ onClose }: CardScannerProps) {
 
       const matches: CardMatch[] = await identifyCard(imageData)
       if (cancelledRef.current) return
-      if (!matches.length) {
+      const top = matches[0]
+      if (!top) {
         setError({ kind: 'no-match' })
         return
       }
-      setRecognizedCard(matches[0]!.name)
+      setRecognizedCard(top.name)
     } catch (err) {
       if (cancelledRef.current) return
       if (err instanceof CameraNotReadyError) {
