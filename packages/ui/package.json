@@ -17,7 +17,7 @@
     "lint": "bun run eslint . --max-warnings 0",
     "lint:fix": "bun run eslint . --max-warnings 0 --fix",
     "typecheck": "bun run tsc --noEmit",
-    "doctor": "bunx -y react-doctor@latest . --verbose --yes --no-ami"
+    "doctor": "bunx -y react-doctor@latest . --verbose --yes"
   },
   "peerDependencies": {
     "react": "catalog:",
