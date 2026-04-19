@@ -1,4 +1,6 @@
-const CACHE = 'card-index-v1';
+// Bump this constant any time the embeddings file is regenerated so that
+// clients evict the stale cache via the activate handler below.
+const CACHE = 'card-index-v2';
 const PRECACHE = ['/card-index/card-embeddings.bin', '/card-index/card-metadata.json'];
 
 self.addEventListener('install', event => {
@@ -20,7 +22,8 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  if (PRECACHE.some(path => event.request.url.includes(path))) {
+  const url = new URL(event.request.url);
+  if (PRECACHE.includes(url.pathname)) {
     event.respondWith(
       caches.match(event.request).then(cached => cached ?? fetch(event.request))
     );
