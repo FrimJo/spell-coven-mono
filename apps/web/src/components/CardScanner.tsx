@@ -24,13 +24,33 @@ class CameraNotReadyError extends Error {
   }
 }
 
+function ConfidenceBadge({ confidence }: { confidence: number }) {
+  const pct = Math.round(confidence * 100)
+  const tone =
+    confidence >= 0.8
+      ? 'bg-success/20 text-success'
+      : confidence >= 0.6
+        ? 'bg-warning/20 text-warning'
+        : 'bg-danger/20 text-danger'
+  const label =
+    confidence >= 0.8 ? 'High' : confidence >= 0.6 ? 'Medium' : 'Low'
+  return (
+    <span
+      className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${tone}`}
+    >
+      <span>{label} confidence</span>
+      <span className="opacity-70">· {pct}%</span>
+    </span>
+  )
+}
+
 export function CardScanner({ onClose }: CardScannerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const cancelledRef = useRef(false)
   const [scanning, setScanning] = useState(false)
-  const [recognizedCard, setRecognizedCard] = useState<string | null>(null)
+  const [recognizedCard, setRecognizedCard] = useState<CardMatch | null>(null)
   const [error, setError] = useState<ScanError | null>(null)
   const [cameraReady, setCameraReady] = useState(false)
 
@@ -159,7 +179,7 @@ export function CardScanner({ onClose }: CardScannerProps) {
         setError({ kind: 'no-match' })
         return
       }
-      setRecognizedCard(top.name)
+      setRecognizedCard(top)
     } catch (err) {
       if (cancelledRef.current) return
       if (err instanceof CameraNotReadyError) {
@@ -243,7 +263,8 @@ export function CardScanner({ onClose }: CardScannerProps) {
                   <p className="text-text-muted mb-2 text-sm">
                     Recognized Card:
                   </p>
-                  <p className="text-xl text-white">{recognizedCard}</p>
+                  <p className="text-xl text-white">{recognizedCard.name}</p>
+                  <ConfidenceBadge confidence={recognizedCard.confidence} />
                 </div>
                 <div className="flex justify-center gap-2">
                   <Button
