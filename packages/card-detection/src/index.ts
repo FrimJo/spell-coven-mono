@@ -5,13 +5,13 @@ import { topK } from './search';
 
 export type { CardMatch, CardMetadata } from './types';
 
-export async function identifyCard(imageData: ImageData): Promise<CardMatch[]> {
+export async function identifyCard(imageData: ImageData, k = 3): Promise<CardMatch[]> {
   const [queryEmbedding, index] = await Promise.all([
     encodeImage(imageData),
     getIndex(),
   ]);
 
-  const results = topK(queryEmbedding, index.embeddings, index.dims, 3);
+  const results = topK(queryEmbedding, index.embeddings, index.dims, k);
 
   return results.map(r => {
     const meta = index.metadata[r.index];
