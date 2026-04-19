@@ -1,0 +1,141 @@
+# Weekly card-index rebuild
+#
+# Runs the card-db-builder against Scryfall's unique_artwork bulk, embeds each
+# card image with CLIP, and writes static/card-index/{card-embeddings.bin,
+# card-metadata.json, card-index-version.json}.
+#
+# If the resulting card-index-version.json sha256 differs from what's checked
+# in, a PR is opened against develop. Otherwise the run exits cleanly.
+#
+# Triggers: weekly cron (Sun 06:00 UTC) + manual workflow_dispatch.
+# The CLIP model (~350 MB) is cached under ~/.cache/huggingface to keep
+# subsequent runs fast — only the first cold run pays the download cost.
+
+name: Rebuild card index
+
+on:
+  schedule:
+    - cron: '0 6 * * 0'
+  workflow_dispatch:
+    inputs:
+      format:
+        description: 'Scryfall format to filter by'
+        required: false
+        default: 'standard'
+        type: choice
+        options:
+          - standard
+          - modern
+          - pioneer
+          - legacy
+          - vintage
+          - commander
+          - pauper
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      FORMAT: ${{ inputs.format || 'standard' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Hugging Face model weights
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-clip-v1-${{ hashFiles('packages/card-db-builder/package.json') }}
+          restore-keys: |
+            hf-clip-v1-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Read existing card-index hash
+        id: before
+        run: |
+          if [ -f static/card-index/card-index-version.json ]; then
+            HASH=$(jq -r '.version // ""' static/card-index/card-index-version.json)
+            COUNT=$(jq -r '.count // 0' static/card-index/card-index-version.json)
+          else
+            HASH=""
+            COUNT=0
+          fi
+          echo "hash=${HASH}" >> "$GITHUB_OUTPUT"
+          echo "count=${COUNT}" >> "$GITHUB_OUTPUT"
+          echo "Existing hash: ${HASH}"
+          echo "Existing count: ${COUNT}"
+
+      - name: Rebuild card index
+        timeout-minutes: 90
+        run: bun run --cwd packages/card-db-builder build -- --format=${FORMAT}
+
+      - name: Read new card-index hash
+        id: after
+        run: |
+          if [ ! -f static/card-index/card-index-version.json ]; then
+            echo "card-index-version.json was not generated" >&2
+            exit 1
+          fi
+          HASH=$(jq -r '.version // ""' static/card-index/card-index-version.json)
+          COUNT=$(jq -r '.count // 0' static/card-index/card-index-version.json)
+          echo "hash=${HASH}" >> "$GITHUB_OUTPUT"
+          echo "count=${COUNT}" >> "$GITHUB_OUTPUT"
+          echo "New hash: ${HASH}"
+          echo "New count: ${COUNT}"
+
+      - name: Detect change
+        id: diff
+        run: |
+          if [ "${{ steps.before.outputs.hash }}" = "${{ steps.after.outputs.hash }}" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No change in card-index hash — skipping PR."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Hash changed — will open PR."
+          fi
+
+      - name: Create Pull Request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: develop
+          branch: chore/rebuild-card-index-${{ github.sha }}
+          branch-suffix: short-commit-hash
+          delete-branch: true
+          commit-message: |
+            chore(card-index): weekly rebuild (${{ env.FORMAT }}, ${{ steps.after.outputs.count }} cards)
+          title: "chore(card-index): weekly rebuild (${{ env.FORMAT }}, ${{ steps.after.outputs.count }} cards)"
+          labels: |
+            card-index
+            automated
+          add-paths: |
+            static/card-index/**
+          body: |
+            Automated weekly rebuild of the card index.
+
+            **Format:** `${{ env.FORMAT }}`
+
+            | | Before | After |
+            |---|---|---|
+            | Cards | ${{ steps.before.outputs.count }} | ${{ steps.after.outputs.count }} |
+            | Hash | `${{ steps.before.outputs.hash }}` | `${{ steps.after.outputs.hash }}` |
+
+            Triggered by: `${{ github.event_name }}`
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
