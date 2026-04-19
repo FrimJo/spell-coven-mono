@@ -6,6 +6,7 @@
     "with-env": "dotenv -e ../../.env.development -e ../../.env.development.local -e .env.development -e .env.development.local --",
     "with-test-env": "dotenv -e ../../.env.test  -e ../../.env.test.local -e .env.test -e .env.test.local --",
     "dev": "bun run with-env -- vite dev",
+    "prebuild": "bun run ../../scripts/copy-card-index.ts",
     "build": "bun run with-env -- vite build",
     "serve": "bun run with-env -- vite preview",
     "test": "bun run vitest run",
@@ -21,6 +22,9 @@
     "e2e:visual:update": "bun run playwright test tests/visual/ --update-snapshots",
     "e2e:torture": "bun run playwright test --project=torture",
     "e2e:torture:ui": "bun run playwright test --project=torture --ui"
+  },
+  "dependencies": {
+    "@repo/card-detection": "workspace:*"
   },
   "devDependencies": {
     "@huggingface/transformers": "^3.7.5",

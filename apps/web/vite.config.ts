@@ -51,7 +51,28 @@ export default defineConfig(({ mode: mode }) => {
           crawlLinks: false,
         },
       }),
-      mode === 'production' ? nitro() : false,
+      mode === 'production'
+        ? nitro({
+            // Convex client libs are only meaningful in the browser. Their
+            // providers render as no-op context boundaries during SSR (queries
+            // and subscriptions never fire server-side), so bundling them into
+            // the nitro server output adds ~160 kB of dead weight to the
+            // landing/license SSR chunks. Mark them external so Node resolves
+            // them at runtime instead.
+            rollupConfig: {
+              external: [
+                /^convex(\/.*)?$/,
+                /^@convex-dev\/auth(\/.*)?$/,
+              ],
+            },
+            rolldownConfig: {
+              external: [
+                /^convex(\/.*)?$/,
+                /^@convex-dev\/auth(\/.*)?$/,
+              ],
+            },
+          })
+        : false,
       viteReact(), // Must come after tanstackStart()
       ...(sentryPlugin ? [sentryPlugin] : []),
     ],

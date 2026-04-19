@@ -39,6 +39,9 @@ export const env = createEnv({
     VITE_SUPPORT_URL: z.url().optional(),
     VITE_CAMERA_FOCUS_CONTROLS_ENABLED: z.coerce.boolean().default(false),
     VITE_PREVIEW_AUTH: z.coerce.boolean().default(false),
+
+    // Spell Casters detection API
+    VITE_API_URL: z.url().optional().default('http://localhost:4001'),
   },
 
   /**
@@ -53,6 +56,7 @@ export const env = createEnv({
     VITE_BLOB_STORAGE_URL: import.meta.env.VITE_BLOB_STORAGE_URL,
     VITE_SUPPORT_URL: import.meta.env.VITE_SUPPORT_URL,
     VITE_PREVIEW_AUTH: import.meta.env.VITE_PREVIEW_AUTH,
+    VITE_API_URL: import.meta.env.VITE_API_URL,
   },
 
   /**
@@ -109,3 +113,8 @@ export function getClientEnv() {
  */
 export const isCameraFocusControlsEnabled =
   env.VITE_CAMERA_FOCUS_CONTROLS_ENABLED
+
+/**
+ * Spell Casters detection API base URL
+ */
+export const API_URL = env.VITE_API_URL
