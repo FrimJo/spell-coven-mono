@@ -85,17 +85,17 @@ export function SidebarCard({
 
   return (
     <Card
-      className={`border-surface-2 bg-surface-1 gap-0 overflow-hidden ${fillRemaining ? 'flex max-h-full min-h-0 flex-col' : ''}`}
+      className={`gap-0 overflow-hidden border-surface-2 bg-surface-1 ${fillRemaining ? 'min-h-0 flex max-h-full flex-col' : ''}`}
     >
-      <div className="border-surface-2 bg-surface-0/50 flex items-center justify-between border-b px-3 py-2">
-        <div className="flex items-center gap-2">
-          <Icon className="text-text-muted h-4 w-4" />
-          <span className="text-text-secondary text-sm font-medium">
+      <div className="px-3 py-2 flex items-center justify-between border-b border-surface-2 bg-surface-0/50">
+        <div className="gap-2 flex items-center">
+          <Icon className="h-4 w-4 text-text-muted" />
+          <span className="text-sm font-medium text-text-secondary">
             {title}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-text-muted text-xs" data-testid={countTestId}>
+        <div className="gap-2 flex items-center">
+          <span className="text-xs text-text-muted" data-testid={countTestId}>
             {count}
           </span>
           {headerAction}
@@ -140,7 +140,7 @@ function CardHistoryList({
           size="sm"
           onClick={onClear}
           disabled={!hasHistory}
-          className="text-text-muted hover:text-destructive disabled:text-text-muted/50 h-5 w-5 p-0 disabled:cursor-not-allowed"
+          className="h-5 w-5 p-0 text-text-muted hover:text-destructive disabled:cursor-not-allowed disabled:text-text-muted/50"
           title="Clear history"
         >
           <Trash2 className="h-3 w-3" />
@@ -161,25 +161,25 @@ function CardHistoryList({
                 onSelect(entry)
               }
             }}
-            className={`group flex w-full items-center gap-2 border-l-2 transition-colors ${
+            className={`group gap-2 flex w-full items-center border-l-2 transition-colors ${
               isSelected
-                ? 'bg-surface-2 border-brand cursor-default'
-                : 'hover:bg-surface-2 cursor-pointer border-transparent'
+                ? 'cursor-default border-brand bg-surface-2'
+                : 'cursor-pointer border-transparent hover:bg-surface-2'
             }`}
             aria-pressed={isSelected}
           >
-            <div className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left">
+            <div className="min-w-0 gap-2 px-3 py-2 flex flex-1 items-center text-left">
               {entry.image_url && (
                 <img
                   src={entry.image_url}
                   alt=""
-                  className="h-8 w-6 flex-shrink-0 rounded object-cover"
+                  className="h-8 w-6 rounded flex-shrink-0 object-cover"
                 />
               )}
               <div className="min-w-0 flex-1">
                 <Tooltip delayDuration={700}>
                   <TooltipTrigger asChild>
-                    <span className="text-text-primary block truncate text-sm">
+                    <span className="text-sm block truncate text-text-primary">
                       {entry.name}
                     </span>
                   </TooltipTrigger>
@@ -187,7 +187,7 @@ function CardHistoryList({
                     <p>{entry.name}</p>
                   </TooltipContent>
                 </Tooltip>
-                <div className="text-text-muted text-xs uppercase">
+                <div className="text-xs text-text-muted uppercase">
                   {entry.set}
                 </div>
               </div>
@@ -202,7 +202,7 @@ function CardHistoryList({
                 onRemove(entry)
               }}
               onKeyDown={(e) => e.stopPropagation()}
-              className="text-text-muted hover:text-destructive h-8 w-8 flex-shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100"
+              className="h-8 w-8 p-0 flex-shrink-0 text-text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
               title="Remove from list"
               aria-label={`Remove ${entry.name} from list`}
               data-testid={`recent-card-remove-${entry.id}`}
@@ -356,7 +356,7 @@ function SidebarContent({
 
   return (
     <>
-      <div className="flex h-full w-64 flex-shrink-0 flex-col gap-4">
+      <div className="w-64 gap-4 flex h-full flex-shrink-0 flex-col">
         <div className="flex-shrink-0">
           <PlayerList
             players={playersWithStatus}
@@ -378,7 +378,7 @@ function SidebarContent({
         <div className="flex-shrink-0">
           <CardPreview onClose={clearResult} />
         </div>
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex flex-1 flex-col">
           <CardHistoryList
             history={history}
             onSelect={handleHistorySelect}
@@ -407,14 +407,14 @@ function SidebarContent({
 
 function SidebarLoading() {
   return (
-    <div className="w-64 flex-shrink-0 space-y-4">
+    <div className="w-64 space-y-4 flex-shrink-0">
       {/* Player List Skeleton */}
-      <Card className="border-surface-2 bg-surface-1 p-4">
+      <Card className="p-4 border-surface-2 bg-surface-1">
         <div className="space-y-3">
           {/* Header with "Players" and count */}
           <div className="mb-2 flex items-center justify-between">
-            <Skeleton className="bg-surface-3/50 h-4 w-16" />
-            <Skeleton className="bg-surface-3/50 h-3 w-8" />
+            <Skeleton className="h-4 w-16 bg-surface-3/50" />
+            <Skeleton className="h-3 w-8 bg-surface-3/50" />
           </div>
 
           {/* Player items - show generic loading state */}
@@ -422,11 +422,11 @@ function SidebarLoading() {
             {[1, 2].map((i) => (
               <div
                 key={i}
-                className="border-surface-2 bg-surface-2/50 flex items-center justify-between rounded-lg border p-2"
+                className="p-2 flex items-center justify-between rounded-lg border border-surface-2 bg-surface-2/50"
               >
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <Skeleton className="bg-surface-3/50 h-2 w-2 rounded-full" />
-                  <Skeleton className="bg-surface-3/50 h-4 w-24" />
+                <div className="min-w-0 gap-2 flex flex-1 items-center">
+                  <Skeleton className="h-2 w-2 rounded-full bg-surface-3/50" />
+                  <Skeleton className="h-4 w-24 bg-surface-3/50" />
                 </div>
               </div>
             ))}

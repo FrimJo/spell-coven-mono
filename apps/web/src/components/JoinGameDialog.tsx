@@ -154,7 +154,7 @@ export function JoinGameDialog({
     <LazyMotion features={domAnimation}>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="border-surface-2 bg-surface-1 overflow-hidden sm:max-w-md"
+          className="sm:max-w-md overflow-hidden border-surface-2 bg-surface-1"
           data-testid="join-game-dialog"
         >
           <DialogHeader>
@@ -169,10 +169,10 @@ export function JoinGameDialog({
           </DialogHeader>
 
           <div className="space-y-6 pt-2">
-            <div className="flex flex-col items-center space-y-5 py-2">
+            <div className="space-y-5 py-2 flex flex-col items-center">
               {/* Animated icon */}
               <m.div
-                className="relative flex h-16 w-16 items-center justify-center rounded-full"
+                className="h-16 w-16 relative flex items-center justify-center rounded-full"
                 animate={{
                   backgroundColor:
                     phase === 'success'
@@ -196,7 +196,7 @@ export function JoinGameDialog({
                       }}
                       className="flex items-center justify-center"
                     >
-                      <CheckCircle2 className="text-success h-8 w-8" />
+                      <CheckCircle2 className="h-8 w-8 text-success" />
                     </m.div>
                   ) : phase === 'not_found' || phase === 'error' ? (
                     <m.div
@@ -206,7 +206,7 @@ export function JoinGameDialog({
                       transition={{ duration: 0.3 }}
                       className="flex items-center justify-center"
                     >
-                      <AlertTriangle className="text-destructive h-8 w-8" />
+                      <AlertTriangle className="h-8 w-8 text-destructive" />
                     </m.div>
                   ) : (
                     <m.div
@@ -216,7 +216,7 @@ export function JoinGameDialog({
                       className="flex items-center justify-center"
                     >
                       {phase === 'checking' ? (
-                        <Loader2 className="text-brand-muted-foreground h-8 w-8 animate-spin" />
+                        <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
                       ) : (
                         <m.div
                           animate={{ scale: [1, 1.08, 1] }}
@@ -226,7 +226,7 @@ export function JoinGameDialog({
                             ease: 'easeInOut',
                           }}
                         >
-                          <Swords className="text-brand-muted-foreground h-8 w-8" />
+                          <Swords className="h-8 w-8 text-brand-muted-foreground" />
                         </m.div>
                       )}
                     </m.div>
@@ -238,7 +238,7 @@ export function JoinGameDialog({
                   {phase === 'checking' && (
                     <m.div
                       key="pulse-ring"
-                      className="bg-brand/20 absolute inset-0 rounded-full"
+                      className="inset-0 absolute rounded-full bg-brand/20"
                       initial={{ scale: 1, opacity: 0.5 }}
                       animate={{
                         scale: [1, 1.4, 1],
@@ -259,7 +259,7 @@ export function JoinGameDialog({
                   {phase === 'success' && (
                     <m.div
                       key="success-burst"
-                      className="bg-success/30 absolute inset-0 rounded-full"
+                      className="inset-0 absolute rounded-full bg-success/30"
                       initial={{ scale: 0.8, opacity: 1 }}
                       animate={{ scale: 2, opacity: 0 }}
                       exit={{ opacity: 0 }}
@@ -270,7 +270,7 @@ export function JoinGameDialog({
               </m.div>
 
               {/* Status text */}
-              <p className="text-text-secondary text-center text-sm font-medium">
+              <p className="text-sm font-medium text-center text-text-secondary">
                 {phase === 'checking' && 'Locating the battlefield...'}
                 {phase === 'success' &&
                   `Room ${validatedGameId} found — ready to enter.`}
@@ -282,7 +282,7 @@ export function JoinGameDialog({
               </p>
 
               {/* Input area */}
-              <div className="w-full space-y-2">
+              <div className="space-y-2 w-full">
                 <Label htmlFor="join-game-id" className="text-text-secondary">
                   Game Code
                 </Label>
@@ -297,7 +297,7 @@ export function JoinGameDialog({
                   maxLength={6}
                   autoComplete="off"
                   spellCheck={false}
-                  className={`border-surface-3 bg-surface-0 text-text-primary text-center font-mono text-lg uppercase tracking-widest ${
+                  className={`font-mono text-lg tracking-widest border-surface-3 bg-surface-0 text-center text-text-primary uppercase ${
                     validationError
                       ? 'border-destructive/60 focus-visible:ring-destructive/40'
                       : ''
@@ -308,23 +308,23 @@ export function JoinGameDialog({
                   <m.p
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-destructive text-center text-xs"
+                    className="text-xs text-center text-destructive"
                     data-testid="join-game-validation-error"
                   >
                     {validationError}
                   </m.p>
                 )}
-                <p className="text-text-muted text-center text-xs">
+                <p className="text-xs text-center text-text-muted">
                   6-character code — letters &amp; numbers only
                 </p>
               </div>
 
               {/* Actions */}
-              <div className="w-full space-y-2">
+              <div className="space-y-2 w-full">
                 {phase === 'success' ? (
                   <Button
                     onClick={handleEnterRoom}
-                    className="bg-brand hover:bg-brand w-full text-white transition-all hover:scale-[1.02]"
+                    className="text-white w-full bg-brand transition-all hover:scale-[1.02] hover:bg-brand"
                     size="lg"
                     data-testid="join-game-enter-button"
                   >
@@ -335,7 +335,7 @@ export function JoinGameDialog({
                   <Button
                     onClick={handleTryAgain}
                     variant="outline"
-                    className="border-surface-3 text-text-secondary w-full hover:text-white"
+                    className="hover:text-white w-full border-surface-3 text-text-secondary"
                     size="lg"
                     data-testid="join-game-try-again-button"
                   >
@@ -347,8 +347,8 @@ export function JoinGameDialog({
                     disabled={isSubmitDisabled}
                     className={`w-full transition-all ${
                       isSubmitDisabled
-                        ? 'bg-surface-3 text-text-muted cursor-not-allowed'
-                        : 'bg-brand hover:bg-brand text-white'
+                        ? 'cursor-not-allowed bg-surface-3 text-text-muted'
+                        : 'text-white bg-brand hover:bg-brand'
                     }`}
                     size="lg"
                     data-testid="join-game-submit-button"

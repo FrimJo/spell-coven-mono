@@ -26,27 +26,27 @@ interface RoomNotFoundDialogProps {
 export function RoomNotFoundDialog({ open, onClose }: RoomNotFoundDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="border-surface-2 bg-surface-1 sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-[450px] border-surface-2 bg-surface-1">
         <DialogHeader>
           <div className="mb-2 flex justify-center">
-            <div className="bg-warning/20 flex h-12 w-12 items-center justify-center rounded-full">
-              <AlertCircle className="text-warning-muted-foreground h-6 w-6" />
+            <div className="h-12 w-12 flex items-center justify-center rounded-full bg-warning/20">
+              <AlertCircle className="h-6 w-6 text-warning-muted-foreground" />
             </div>
           </div>
-          <DialogTitle className="text-center text-white">
+          <DialogTitle className="text-white text-center">
             Room Not Found
           </DialogTitle>
-          <DialogDescription className="text-text-muted text-center">
+          <DialogDescription className="text-center text-text-muted">
             The game room you&apos;re trying to join doesn&apos;t exist or is no
             longer available. Please check the room ID and try again, or create
             a new game.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex justify-center pt-4">
+        <div className="pt-4 flex justify-center">
           <Button
             onClick={onClose}
-            className="bg-brand hover:bg-brand gap-2 text-white"
+            className="gap-2 text-white bg-brand hover:bg-brand"
           >
             <Home className="h-4 w-4" />
             Return to Home

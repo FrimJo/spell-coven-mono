@@ -53,17 +53,17 @@ export function AuthRequiredDialog({
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="border-warning/50 bg-surface-1 sm:max-w-[450px] [&>button]:hidden">
+      <DialogContent className="sm:max-w-[450px] border-warning/50 bg-surface-1 [&>button]:hidden">
         <DialogHeader>
           <div className="mb-2 flex justify-center">
-            <div className="bg-warning/20 flex h-12 w-12 items-center justify-center rounded-full">
-              <ShieldAlert className="text-warning h-6 w-6" />
+            <div className="h-12 w-12 flex items-center justify-center rounded-full bg-warning/20">
+              <ShieldAlert className="h-6 w-6 text-warning" />
             </div>
           </div>
-          <DialogTitle className="text-center text-white">
+          <DialogTitle className="text-white text-center">
             Sign In Required
           </DialogTitle>
-          <DialogDescription className="text-text-muted text-center">
+          <DialogDescription className="text-center text-text-muted">
             {message}
           </DialogDescription>
         </DialogHeader>
@@ -71,17 +71,17 @@ export function AuthRequiredDialog({
         <div className="space-y-3 py-4">
           <button
             onClick={onSignIn}
-            className="border-brand/30 bg-brand/30 hover:border-brand/60 hover:bg-brand/40 focus:ring-brand/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
+            className="group p-4 w-full cursor-pointer rounded-lg border border-brand/30 bg-brand/30 text-left transition-all hover:border-brand/60 hover:bg-brand/40 focus:ring-2 focus:ring-brand/50 focus:outline-none"
           >
-            <div className="flex items-start gap-3">
-              <div className="bg-brand/20 group-hover:bg-brand/30 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors">
-                <LogIn className="text-brand-muted-foreground h-5 w-5" />
+            <div className="gap-3 flex items-start">
+              <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-lg bg-brand/20 transition-colors group-hover:bg-brand/30">
+                <LogIn className="h-5 w-5 text-brand-muted-foreground" />
               </div>
               <div>
-                <p className="text-brand-muted-foreground font-medium">
+                <p className="font-medium text-brand-muted-foreground">
                   Sign in with Discord
                 </p>
-                <p className="text-text-muted mt-0.5 text-sm">
+                <p className="mt-0.5 text-sm text-text-muted">
                   Connect your Discord account to join the game.
                 </p>
               </div>
@@ -90,17 +90,17 @@ export function AuthRequiredDialog({
 
           <button
             onClick={onClose}
-            className="border-surface-3 bg-surface-2/50 hover:border-surface-3 hover:bg-surface-2 focus:ring-surface-3/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
+            className="group p-4 w-full cursor-pointer rounded-lg border border-surface-3 bg-surface-2/50 text-left transition-all hover:border-surface-3 hover:bg-surface-2 focus:ring-2 focus:ring-surface-3/50 focus:outline-none"
           >
-            <div className="flex items-start gap-3">
-              <div className="bg-surface-3/50 group-hover:bg-surface-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors">
-                <Home className="text-text-muted h-5 w-5" />
+            <div className="gap-3 flex items-start">
+              <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-lg bg-surface-3/50 transition-colors group-hover:bg-surface-3">
+                <Home className="h-5 w-5 text-text-muted" />
               </div>
               <div>
-                <p className="text-text-secondary font-medium">
+                <p className="font-medium text-text-secondary">
                   Return to Home
                 </p>
-                <p className="text-text-muted mt-0.5 text-sm">
+                <p className="mt-0.5 text-sm text-text-muted">
                   Go back without signing in.
                 </p>
               </div>
@@ -108,8 +108,8 @@ export function AuthRequiredDialog({
           </button>
 
           {showPreviewAuth ? (
-            <div className="border-warning/40 rounded-lg border p-3">
-              <p className="text-warning mb-2 text-sm font-medium">
+            <div className="p-3 rounded-lg border border-warning/40">
+              <p className="mb-2 text-sm font-medium text-warning">
                 Preview only
               </p>
               <div className="space-y-2">
@@ -127,7 +127,7 @@ export function AuthRequiredDialog({
                 <button
                   onClick={handlePreviewSignIn}
                   disabled={!code.trim() || isSubmitting}
-                  className="border-warning/50 bg-warning/20 hover:bg-warning/30 text-warning w-full cursor-pointer rounded-lg border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                  className="px-3 py-2 text-sm w-full cursor-pointer rounded-lg border border-warning/50 bg-warning/20 text-warning transition-colors hover:bg-warning/30 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSubmitting ? 'Signing in...' : 'Sign in with Code'}
                 </button>

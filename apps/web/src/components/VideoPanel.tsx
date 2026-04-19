@@ -14,34 +14,34 @@ export function VideoPanel({ playerName, isLocal }: VideoPanelProps) {
   const [audioEnabled, setAudioEnabled] = useState(true)
 
   return (
-    <Card className="border-surface-2 bg-surface-1 overflow-hidden">
-      <div className="bg-surface-0 relative aspect-video">
+    <Card className="overflow-hidden border-surface-2 bg-surface-1">
+      <div className="aspect-video relative bg-surface-0">
         {/* Simulated Video Feed */}
         {videoEnabled ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+          <div className="inset-0 from-slate-800 to-slate-900 absolute flex items-center justify-center bg-gradient-to-br">
             <div className="space-y-2 text-center">
-              <div className="bg-brand/20 mx-auto flex h-16 w-16 items-center justify-center rounded-full">
-                <Camera className="text-brand-muted-foreground h-8 w-8" />
+              <div className="h-16 w-16 mx-auto flex items-center justify-center rounded-full bg-brand/20">
+                <Camera className="h-8 w-8 text-brand-muted-foreground" />
               </div>
-              <p className="text-text-muted text-sm">
+              <p className="text-sm text-text-muted">
                 {isLocal ? 'Your Camera' : `${playerName}'s Camera`}
               </p>
             </div>
           </div>
         ) : (
-          <div className="bg-surface-0 absolute inset-0 flex items-center justify-center">
+          <div className="inset-0 absolute flex items-center justify-center bg-surface-0">
             <div className="space-y-2 text-center">
-              <VideoOff className="text-text-muted mx-auto h-8 w-8" />
-              <p className="text-text-muted text-sm">Camera Off</p>
+              <VideoOff className="h-8 w-8 mx-auto text-text-muted" />
+              <p className="text-sm text-text-muted">Camera Off</p>
             </div>
           </div>
         )}
 
         {/* Player Name Badge */}
-        <div className="bg-surface-0/80 absolute left-2 top-2 flex items-center gap-2 rounded px-2 py-1 text-sm text-white backdrop-blur-sm">
+        <div className="left-2 top-2 gap-2 rounded px-2 py-1 text-sm text-white backdrop-blur-sm absolute flex items-center bg-surface-0/80">
           {playerName}
           {isLocal && (
-            <span className="bg-brand/30 text-brand-muted-foreground rounded-sm px-1.5 py-0.5 text-xs">
+            <span className="px-1.5 py-0.5 text-xs rounded-sm bg-brand/30 text-brand-muted-foreground">
               You
             </span>
           )}
@@ -49,16 +49,16 @@ export function VideoPanel({ playerName, isLocal }: VideoPanelProps) {
 
         {/* Audio Indicator */}
         {!audioEnabled && (
-          <div className="absolute right-2 top-2">
-            <div className="bg-destructive/20 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-sm">
-              <MicOff className="text-destructive h-4 w-4" />
+          <div className="right-2 top-2 absolute">
+            <div className="h-8 w-8 backdrop-blur-sm flex items-center justify-center rounded-full bg-destructive/20">
+              <MicOff className="h-4 w-4 text-destructive" />
             </div>
           </div>
         )}
 
         {/* Controls */}
         {isLocal && (
-          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-2">
+          <div className="bottom-2 gap-2 absolute left-1/2 flex -translate-x-1/2 items-center">
             <Button
               size="sm"
               variant={videoEnabled ? 'default' : 'destructive'}
@@ -86,7 +86,7 @@ export function VideoPanel({ playerName, isLocal }: VideoPanelProps) {
             <Button
               size="sm"
               variant="outline"
-              className="border-surface-3 h-9 w-9 p-0"
+              className="h-9 w-9 p-0 border-surface-3"
             >
               <Maximize2 className="h-4 w-4" />
             </Button>

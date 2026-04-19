@@ -328,8 +328,8 @@ export function LandingPage({
               </h1>
 
               <p className="mb-8 max-w-xl text-lg leading-relaxed md:text-xl text-text-secondary">
-                Spell Casters lets you play paper MTG remotely through video chat
-                and card recognition. Use your physical cards, see your
+                Spell Casters lets you play paper MTG remotely through video
+                chat and card recognition. Use your physical cards, see your
                 opponents, and enjoy the authentic experience.
               </p>
 
@@ -923,7 +923,9 @@ export function LandingPage({
             </div>
 
             <div className="mt-12 pt-8 text-sm border-t border-border-muted text-center text-text-muted">
-              <p className="mb-2">Spell Casters © {new Date().getFullYear()}</p>
+              <p className="mb-2">
+                Spell Casters © {new Date().getFullYear()}
+              </p>
               <p>
                 Spell Casters is unofficial Fan Content permitted under the Fan
                 Content Policy. Not approved/endorsed by Wizards. Portions of

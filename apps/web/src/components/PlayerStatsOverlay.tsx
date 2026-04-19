@@ -70,8 +70,8 @@ function CommanderDamageTooltipRow({
   const imageUrl = getCommanderImageUrl(entry.commanderId)
 
   return (
-    <div className="hover:bg-surface-2/50 flex min-w-0 items-center gap-2 rounded px-2 py-1.5">
-      <div className="border-border-muted relative h-8 w-8 shrink-0 overflow-hidden rounded border">
+    <div className="min-w-0 gap-2 rounded px-2 py-1.5 flex items-center hover:bg-surface-2/50">
+      <div className="h-8 w-8 rounded relative shrink-0 overflow-hidden border border-border-muted">
         {imageUrl ? (
           <img
             src={imageUrl}
@@ -79,15 +79,15 @@ function CommanderDamageTooltipRow({
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="bg-surface-2 text-text-muted flex h-full w-full items-center justify-center text-[10px] font-bold">
+          <div className="font-bold flex h-full w-full items-center justify-center bg-surface-2 text-[10px] text-text-muted">
             {entry.commanderName.substring(0, 2)}
           </div>
         )}
       </div>
-      <div className="flex w-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="w-0 min-w-0 flex flex-1 flex-col overflow-hidden">
         <Tooltip delayDuration={700}>
           <TooltipTrigger asChild>
-            <span className="text-text-secondary block truncate text-xs font-medium">
+            <span className="text-xs font-medium block truncate text-text-secondary">
               {entry.commanderName}
             </span>
           </TooltipTrigger>
@@ -95,12 +95,12 @@ function CommanderDamageTooltipRow({
             <p>{entry.commanderName}</p>
           </TooltipContent>
         </Tooltip>
-        <span className="text-text-muted block truncate text-[10px]">
+        <span className="block truncate text-[10px] text-text-muted">
           {entry.ownerName}
           {entry.isOwn ? ' (you)' : ''}
         </span>
       </div>
-      <div className="relative flex shrink-0 items-center gap-0.5">
+      <div className="gap-0.5 relative flex shrink-0 items-center">
         {damageDelta.delta < 0 && (
           <DeltaBubble
             delta={damageDelta.delta}
@@ -111,7 +111,7 @@ function CommanderDamageTooltipRow({
         <Button
           size="icon"
           variant="ghost"
-          className="text-text-muted hover:bg-destructive/20 hover:text-destructive h-6 w-6 shrink-0 rounded-md"
+          className="h-6 w-6 shrink-0 rounded-md text-text-muted hover:bg-destructive/20 hover:text-destructive"
           onMouseDown={minus.handleStart}
           onMouseUp={minus.handleStop}
           onMouseLeave={minus.handleStop}
@@ -121,13 +121,13 @@ function CommanderDamageTooltipRow({
         >
           <Minus className="h-3 w-3" />
         </Button>
-        <span className="min-w-[2ch] text-center font-mono text-sm font-bold text-white">
+        <span className="font-mono text-sm font-bold text-white min-w-[2ch] text-center">
           {entry.damage}
         </span>
         <Button
           size="icon"
           variant="ghost"
-          className="text-text-muted hover:bg-success/20 hover:text-success h-6 w-6 shrink-0 rounded-md"
+          className="h-6 w-6 shrink-0 rounded-md text-text-muted hover:bg-success/20 hover:text-success"
           onMouseDown={plus.handleStart}
           onMouseUp={plus.handleStop}
           onMouseLeave={plus.handleStop}
@@ -421,23 +421,23 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
     <>
       <div
         ref={setStatsOverlayRef}
-        className="hover:border-surface-2 hover:bg-surface-0/90 group absolute left-3 top-3 z-10 flex flex-col gap-1.5 rounded-lg border border-transparent bg-transparent p-2 transition-all hover:backdrop-blur-sm"
+        className="group left-3 top-3 gap-1.5 p-2 hover:backdrop-blur-sm absolute z-10 flex flex-col rounded-lg border border-transparent bg-transparent transition-all hover:border-surface-2 hover:bg-surface-0/90"
         data-testid="player-stats-overlay"
       >
         {/* Life */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-destructive flex min-w-[2.5rem] items-center gap-1.5">
+        <div className="gap-3 flex items-center justify-between">
+          <div className="gap-1.5 flex min-w-[2.5rem] items-center text-destructive">
             <Heart className="h-4 w-4 shrink-0" />
-            <span className="min-w-[2ch] text-center font-mono font-bold text-white">
+            <span className="font-mono font-bold text-white min-w-[2ch] text-center">
               {displayHealth}
             </span>
           </div>
 
-          <div className="relative flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="gap-0.5 relative flex items-center opacity-0 transition-opacity group-hover:opacity-100">
             <Button
               size="icon"
               variant="ghost"
-              className="text-text-muted hover:bg-destructive/20 hover:text-destructive h-6 w-6 rounded-md"
+              className="h-6 w-6 rounded-md text-text-muted hover:bg-destructive/20 hover:text-destructive"
               onMouseDown={healthMinus.handleStart}
               onMouseUp={healthMinus.handleStop}
               onMouseLeave={healthMinus.handleStop}
@@ -450,7 +450,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
             <Button
               size="icon"
               variant="ghost"
-              className="text-text-muted hover:bg-success/20 hover:text-success h-6 w-6 rounded-md"
+              className="h-6 w-6 rounded-md text-text-muted hover:bg-success/20 hover:text-success"
               onMouseDown={healthPlus.handleStart}
               onMouseUp={healthPlus.handleStop}
               onMouseLeave={healthPlus.handleStop}
@@ -470,19 +470,19 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
         </div>
 
         {/* Poison */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-success flex min-w-[2.5rem] items-center gap-1.5">
+        <div className="gap-3 flex items-center justify-between">
+          <div className="gap-1.5 flex min-w-[2.5rem] items-center text-success">
             <Skull className="h-4 w-4 shrink-0" />
-            <span className="min-w-[2ch] text-center font-mono font-bold text-white">
+            <span className="font-mono font-bold text-white min-w-[2ch] text-center">
               {displayPoison}
             </span>
           </div>
 
-          <div className="relative flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="gap-0.5 relative flex items-center opacity-0 transition-opacity group-hover:opacity-100">
             <Button
               size="icon"
               variant="ghost"
-              className="text-text-muted hover:bg-destructive/20 hover:text-destructive h-6 w-6 rounded-md"
+              className="h-6 w-6 rounded-md text-text-muted hover:bg-destructive/20 hover:text-destructive"
               onMouseDown={poisonMinus.handleStart}
               onMouseUp={poisonMinus.handleStop}
               onMouseLeave={poisonMinus.handleStop}
@@ -495,7 +495,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
             <Button
               size="icon"
               variant="ghost"
-              className="text-text-muted hover:bg-success/20 hover:text-success h-6 w-6 rounded-md"
+              className="h-6 w-6 rounded-md text-text-muted hover:bg-success/20 hover:text-success"
               onMouseDown={poisonPlus.handleStart}
               onMouseUp={poisonPlus.handleStop}
               onMouseLeave={poisonPlus.handleStop}
@@ -515,7 +515,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
         </div>
 
         {/* Commander Damage */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="gap-3 flex items-center justify-between">
           <Dialog
             open={commanderDialogOpen}
             onOpenChange={(open) => {
@@ -525,18 +525,18 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
               }
             }}
           >
-            <div className="text-brand-muted-foreground flex min-w-[2.5rem] items-center gap-1.5">
+            <div className="gap-1.5 flex min-w-[2.5rem] items-center text-brand-muted-foreground">
               <Swords className="h-4 w-4 shrink-0" />
-              <span className="min-w-[2ch] text-center font-mono font-bold text-white">
+              <span className="font-mono font-bold text-white min-w-[2ch] text-center">
                 {displayedCommanderDamage}
               </span>
             </div>
-            <div className="relative flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="gap-0.5 relative flex items-center opacity-0 transition-opacity group-hover:opacity-100">
               <DialogTrigger asChild>
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="text-text-muted hover:bg-brand/20 hover:text-brand h-6 gap-1 rounded-md px-2 text-xs"
+                  className="h-6 gap-1 px-2 text-xs rounded-md text-text-muted hover:bg-brand/20 hover:text-brand"
                   aria-label="Edit commander damage"
                 >
                   <span>DMG</span>
@@ -546,20 +546,20 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
             <DialogContent
               centerInRef={videoContainerRef}
               forceReposition={commanderDialogOpen}
-              className="border-surface-2 bg-surface-1 text-text-secondary w-[300px] max-w-[calc(100vw-2rem)] p-0"
+              className="p-0 w-[300px] max-w-[calc(100vw-2rem)] border-surface-2 bg-surface-1 text-text-secondary"
             >
               <DialogTitle className="sr-only">Commander damage</DialogTitle>
-              <div className="flex min-w-0 flex-col overflow-hidden">
+              <div className="min-w-0 flex flex-col overflow-hidden">
                 {/* Header */}
-                <div className="border-surface-2/80 flex items-center gap-2 border-b px-3 py-2.5">
-                  <div className="bg-brand/15 text-brand flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
+                <div className="gap-2 px-3 py-2.5 flex items-center border-b border-surface-2/80">
+                  <div className="h-7 w-7 flex shrink-0 items-center justify-center rounded-md bg-brand/15 text-brand">
                     <Swords className="h-3.5 w-3.5" />
                   </div>
                   <div>
-                    <p className="text-text-primary text-sm font-semibold">
+                    <p className="text-sm font-semibold text-text-primary">
                       Commander damage
                     </p>
-                    <p className="text-text-muted text-[11px]">
+                    <p className="text-[11px] text-text-muted">
                       Track combat damage dealt by commanders
                     </p>
                   </div>
@@ -567,7 +567,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
 
                 {/* Show my commanders toggle (only when current user has commanders in game) */}
                 {hasOwnCommandersInGame && (
-                  <div className="border-surface-2/80 flex items-center gap-2 border-b px-3 py-2">
+                  <div className="gap-2 px-3 py-2 flex items-center border-b border-surface-2/80">
                     <Checkbox
                       id="commander-damage-show-own"
                       checked={showOwnCommanders}
@@ -578,7 +578,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                     />
                     <Label
                       htmlFor="commander-damage-show-own"
-                      className="text-text-secondary cursor-pointer text-xs font-medium"
+                      className="text-xs font-medium cursor-pointer text-text-secondary"
                     >
                       Show my commanders
                     </Label>
@@ -586,9 +586,9 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                 )}
 
                 {/* Commander list or empty state */}
-                <div className="flex min-h-[44px] min-w-0 flex-col">
+                <div className="min-w-0 flex min-h-[44px] flex-col">
                   {visibleCommandersList.length > 0 ? (
-                    <div className="flex max-h-[240px] min-w-0 flex-col gap-0.5 overflow-y-auto overflow-x-hidden p-2 px-3">
+                    <div className="min-w-0 gap-0.5 p-2 px-3 flex max-h-[240px] flex-col overflow-x-hidden overflow-y-auto">
                       {visibleCommandersList.map((entry) => (
                         <CommanderDamageTooltipRow
                           key={`${entry.ownerUserId}:${entry.commanderId}`}
@@ -598,17 +598,17 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                       ))}
                     </div>
                   ) : (
-                    <div className="text-text-muted flex min-h-[52px] flex-col items-center justify-center gap-3 px-4 py-4 text-center">
-                      <div className="bg-surface-2/50 flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+                    <div className="gap-3 px-4 py-4 flex min-h-[52px] flex-col items-center justify-center text-center text-text-muted">
+                      <div className="h-9 w-9 flex shrink-0 items-center justify-center rounded-full bg-surface-2/50">
                         <Users className="h-4 w-4 opacity-60" />
                       </div>
                       <div className="space-y-0.5">
-                        <p className="text-text-secondary text-xs font-medium">
+                        <p className="text-xs font-medium text-text-secondary">
                           {isEmptyBecauseOwnHidden
                             ? "Other players haven't chosen their commanders yet"
                             : 'No commanders in this game yet'}
                         </p>
-                        <p className="text-[11px] leading-relaxed">
+                        <p className="leading-relaxed text-[11px]">
                           {isEmptyBecauseOwnHidden
                             ? 'Open the commanders panel to help set commanders for other players.'
                             : 'Add commanders in the panel to start tracking damage.'}
@@ -618,7 +618,7 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                         <Button
                           variant="secondary"
                           size="sm"
-                          className="h-8 gap-2 text-xs font-medium shadow-sm transition-all hover:shadow"
+                          className="h-8 gap-2 text-xs font-medium shadow-sm hover:shadow transition-all"
                           onClick={() => {
                             setCommanderDialogOpen(false)
                             commanderDamageDialog?.setOpenForPlayerId(null)

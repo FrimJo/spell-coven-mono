@@ -30,7 +30,7 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
   }
 
   return (
-    <div className="bg-surface-0 relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden bg-surface-0">
       <style>{`
         @keyframes float {
           0% { transform: translateY(0px); }
@@ -53,25 +53,25 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
       `}</style>
 
       {/* Background with gradient overlay */}
-      <div className="bg-linear-to-br absolute inset-0 from-red-900/20 via-slate-950 to-purple-900/20" />
+      <div className="inset-0 from-red-900/20 via-slate-950 to-purple-900/20 absolute bg-linear-to-br" />
 
       {/* Animated background elements */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="bg-destructive/10 absolute left-20 top-20 h-64 w-64 animate-pulse rounded-full blur-3xl" />
-        <div className="bg-brand/10 absolute bottom-20 right-20 h-96 w-96 animate-pulse rounded-full blur-3xl delay-1000" />
+      <div className="inset-0 pointer-events-none absolute overflow-hidden">
+        <div className="left-20 top-20 h-64 w-64 animate-pulse blur-3xl absolute rounded-full bg-destructive/10" />
+        <div className="bottom-20 right-20 h-96 w-96 animate-pulse blur-3xl absolute rounded-full bg-brand/10 delay-1000" />
       </div>
 
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 text-center">
+      <div className="px-4 relative z-10 flex min-h-screen flex-col items-center justify-center text-center">
         {/* Logo/Icon Area */}
-        <div className="animate-float relative mb-8">
-          <div className="bg-destructive/20 absolute inset-0 animate-pulse rounded-full blur-3xl" />
-          <div className="border-surface-2 bg-surface-0/50 relative z-10 flex h-32 w-32 items-center justify-center rounded-3xl border backdrop-blur-sm">
-            <AlertTriangle className="text-destructive h-16 w-16" />
+        <div className="animate-float mb-8 relative">
+          <div className="inset-0 animate-pulse blur-3xl absolute rounded-full bg-destructive/20" />
+          <div className="h-32 w-32 rounded-3xl backdrop-blur-sm relative z-10 flex items-center justify-center border border-surface-2 bg-surface-0/50">
+            <AlertTriangle className="h-16 w-16 text-destructive" />
           </div>
 
           {/* Decorative sparkles */}
-          <Sparkles className="animate-sparkle text-warning absolute -left-6 top-0 h-6 w-6 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
-          <Sparkles className="animate-sparkle text-destructive absolute -right-4 bottom-4 h-5 w-5 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)] delay-700" />
+          <Sparkles className="animate-sparkle -left-6 top-0 h-6 w-6 absolute text-warning drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
+          <Sparkles className="animate-sparkle -right-4 bottom-4 h-5 w-5 absolute text-destructive drop-shadow-[0_0_8px_rgba(248,113,113,0.8)] delay-700" />
         </div>
 
         {/* Text Content */}
@@ -82,22 +82,22 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
           <div className="space-y-2">
             <h2 className="text-3xl font-bold text-white md:text-4xl">
               Spell{' '}
-              <span className="bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
+              <span className="from-red-400 to-orange-400 bg-gradient-to-r bg-clip-text text-transparent">
                 Fizzled
               </span>
             </h2>
-            <p className="text-text-muted mx-auto max-w-md text-lg">
+            <p className="max-w-md text-lg mx-auto text-text-muted">
               {error?.message ||
                 'Something went wrong while casting that spell. The mana pool has been drained.'}
             </p>
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <div className="gap-4 sm:flex-row flex flex-col items-center justify-center">
             {reset && (
               <Button
                 size="lg"
-                className="bg-destructive shadow-destructive/25 hover:bg-destructive h-12 min-w-[160px] gap-2 font-medium text-white shadow-lg"
+                className="h-12 gap-2 font-medium text-white shadow-lg min-w-[160px] bg-destructive shadow-destructive/25 hover:bg-destructive"
                 onClick={reset}
               >
                 <RefreshCw className="h-4 w-4" />
@@ -107,7 +107,7 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
             <Button
               variant="outline"
               size="lg"
-              className="border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2 h-12 min-w-[160px] gap-2 font-medium hover:text-white"
+              className="h-12 gap-2 font-medium hover:text-white min-w-[160px] border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2"
               onClick={handleReturnHome}
             >
               <Home className="h-4 w-4" />
@@ -117,7 +117,7 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
         </div>
 
         {/* Footer Text */}
-        <div className="text-text-muted absolute bottom-8 text-sm">
+        <div className="bottom-8 text-sm absolute text-text-muted">
           Spell Casters
         </div>
       </div>
