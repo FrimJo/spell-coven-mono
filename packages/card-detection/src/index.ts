@@ -13,9 +13,13 @@ export async function identifyCard(imageData: ImageData): Promise<CardMatch[]> {
 
   const results = topK(queryEmbedding, index.embeddings, index.dims, 3);
 
-  return results.map(r => ({
-    name: index.metadata[r.index]!.name,
-    scryfallId: index.metadata[r.index]!.scryfallId,
-    confidence: Math.max(0, Math.min(1, r.similarity)),
-  }));
+  return results.map(r => {
+    const meta = index.metadata[r.index];
+    if (!meta) throw new Error(`metadata missing for index ${r.index}`);
+    return {
+      name: meta.name,
+      scryfallId: meta.scryfallId,
+      confidence: Math.max(0, Math.min(1, r.similarity)),
+    };
+  });
 }
