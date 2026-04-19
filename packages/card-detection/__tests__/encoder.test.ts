@@ -1,9 +1,17 @@
 import { encodeImage } from '../src/encoder';
 
-jest.mock('@xenova/transformers', () => ({
+jest.mock('@huggingface/transformers', () => ({
   pipeline: jest.fn().mockResolvedValue(
     jest.fn().mockResolvedValue({ data: new Float32Array(512).fill(0.1) })
   ),
+  RawImage: class {
+    constructor(
+      public data: Uint8Array,
+      public width: number,
+      public height: number,
+      public channels: number,
+    ) {}
+  },
 }));
 
 describe('encodeImage', () => {

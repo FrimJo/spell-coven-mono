@@ -2,8 +2,9 @@ import { identifyCard } from '../src/index';
 import * as encoder from '../src/encoder';
 import * as loader from '../src/loader';
 
-jest.mock('@xenova/transformers', () => ({
+jest.mock('@huggingface/transformers', () => ({
   pipeline: jest.fn(),
+  RawImage: class {},
 }));
 jest.mock('../src/encoder');
 jest.mock('../src/loader');
