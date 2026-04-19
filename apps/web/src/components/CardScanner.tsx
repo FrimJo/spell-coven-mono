@@ -4,6 +4,11 @@ import { AlertCircle, Camera, CheckCircle2, Scan, X } from 'lucide-react'
 import { identifyCard, type CardMatch } from '@repo/card-detection'
 import { Button } from '@repo/ui/components/button'
 import { Card } from '@repo/ui/components/card'
+import {
+  isOpenCVLoaded,
+  loadOpenCV,
+  refineCardEdges,
+} from '@/lib/card-edge-refiner'
 
 interface CardScannerProps {
   onClose: () => void
@@ -186,6 +191,14 @@ export function CardScanner({ onClose }: CardScannerProps) {
       }
     }
     void startCamera()
+    // Kick off OpenCV.js loading in parallel; it's used at scan-time for
+    // perspective warping. If it fails, handleScan falls back to the
+    // unrefined guide crop.
+    if (!isOpenCVLoaded()) {
+      loadOpenCV().catch(() => {
+        // non-fatal — warp is a best-effort refinement
+      })
+    }
     return () => {
       cancelled = true
       cancelledRef.current = true
@@ -241,7 +254,25 @@ export function CardScanner({ onClose }: CardScannerProps) {
         canvas.height = ch
         ctx.drawImage(video, 0, 0, cw, ch)
       }
-      const imageData = ctx.getImageData(0, 0, cw, ch)
+      // Best-effort perspective warp: refine edges on the guide crop so an
+      // angled/tilted card is rectified before CLIP sees it. Falls back to
+      // the unrefined canvas if OpenCV hasn't loaded yet or no clean
+      // quadrilateral is found.
+      let sourceCanvas: HTMLCanvasElement = canvas
+      if (isOpenCVLoaded()) {
+        const refined = refineCardEdges(canvas)
+        if (refined.success && refined.refinedCanvas) {
+          sourceCanvas = refined.refinedCanvas
+        }
+      }
+      const finalCtx = sourceCanvas.getContext('2d')
+      if (!finalCtx) throw new Error('Failed to acquire 2D canvas context')
+      const imageData = finalCtx.getImageData(
+        0,
+        0,
+        sourceCanvas.width,
+        sourceCanvas.height,
+      )
 
       const matches: CardMatch[] = await identifyCard(imageData)
       if (cancelledRef.current) return
