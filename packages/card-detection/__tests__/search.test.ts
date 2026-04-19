@@ -12,9 +12,9 @@ describe('topK', () => {
 
     const results = topK(query, stored, dims, 2);
 
-    expect(results[0].index).toBe(0);
-    expect(results[0].similarity).toBeCloseTo(1.0, 5);
-    expect(results[1].index).toBe(1);
+    expect(results[0]!.index).toBe(0);
+    expect(results[0]!.similarity).toBeCloseTo(1.0, 5);
+    expect(results[1]!.index).toBe(1);
     expect(results.length).toBe(2);
   });
 
@@ -37,11 +37,11 @@ describe('topK', () => {
 
     const results = topK(query, stored, dims, 3);
 
-    expect(results[0].index).toBe(1);
-    expect(results[0].similarity).toBeCloseTo(1.0, 5);
-    expect(results[1].index).toBe(0);
-    expect(results[1].similarity).toBeCloseTo(sqrt2, 5);
-    expect(results[2].index).toBe(2);
-    expect(results[2].similarity).toBeCloseTo(0, 5);
+    expect(results[0]!.index).toBe(1);
+    expect(results[0]!.similarity).toBeCloseTo(1.0, 5);
+    expect(results[1]!.index).toBe(0);
+    expect(results[1]!.similarity).toBeCloseTo(sqrt2, 5);
+    expect(results[2]!.index).toBe(2);
+    expect(results[2]!.similarity).toBeCloseTo(0, 5);
   });
 });

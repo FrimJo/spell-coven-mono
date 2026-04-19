@@ -1,7 +1,7 @@
 import { pipeline, RawImage } from '@huggingface/transformers';
 import sharp from 'sharp';
 
-let extractor: Awaited<ReturnType<typeof pipeline>> | null = null;
+let extractor: any = null;
 
 async function getExtractor() {
   if (!extractor) {

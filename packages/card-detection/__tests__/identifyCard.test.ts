@@ -39,11 +39,11 @@ describe('identifyCard', () => {
     const results = await identifyCard(fakeImageData);
 
     expect(results).toHaveLength(2);
-    expect(results[0].name).toBe('Lightning Bolt');
-    expect(results[0].scryfallId).toBe('abc-123');
-    expect(results[0].confidence).toBeCloseTo(1.0, 5);
-    expect(results[1].name).toBe('Counterspell');
-    expect(results[1].confidence).toBeCloseTo(0, 5);
+    expect(results[0]!.name).toBe('Lightning Bolt');
+    expect(results[0]!.scryfallId).toBe('abc-123');
+    expect(results[0]!.confidence).toBeCloseTo(1.0, 5);
+    expect(results[1]!.name).toBe('Counterspell');
+    expect(results[1]!.confidence).toBeCloseTo(0, 5);
   });
 
   it('clamps negative similarity to 0 in confidence', async () => {
