@@ -70,6 +70,8 @@ export const joinRoom = mutation({
     sessionId: v.string(),
     username: v.string(),
     avatar: v.optional(v.string()),
+    audioEnabled: v.boolean(),
+    videoEnabled: v.boolean(),
   },
   handler: async (ctx, { roomId, sessionId, username, avatar }) => {
     const userId = await getAuthUserId(ctx)

@@ -258,6 +258,8 @@ export function useConvexPresence({
         sessionId,
         username,
         avatar: avatar ?? undefined,
+        audioEnabled: true,
+        videoEnabled: true,
       })
       .then(() => {
         console.log('[ConvexPresence] Successfully joined room')
