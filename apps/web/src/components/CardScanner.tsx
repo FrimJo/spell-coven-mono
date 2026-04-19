@@ -268,8 +268,9 @@ export function CardScanner({ onClose }: CardScannerProps) {
   }, [cameraReady, scanning])
 
   const handleAddToBattlefield = () => {
-    // Add card to battlefield logic
+    // TODO: wire to game state once battlefield store is decided
     setRecognizedCard(null)
+    onClose()
   }
 
   const handleClose = () => {
