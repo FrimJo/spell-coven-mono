@@ -49,7 +49,6 @@ export function useMediaSetupController({
   const snapshotRef = useRef(captureSnapshot())
 
   const videoDevices = videoResult.devices
-  const audioInputDevices = audioResult.devices
   const audioInputStream = isSuccessState(audioResult)
     ? audioResult.stream
     : undefined

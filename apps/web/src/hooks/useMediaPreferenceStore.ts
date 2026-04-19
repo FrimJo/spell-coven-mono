@@ -98,12 +98,7 @@ export function useMediaPreferenceStore(): MediaPreferenceStore {
     }
 
     persistMediaDevices(state)
-  }, [
-    state.selectedVideoDeviceId,
-    state.selectedAudioInputDeviceId,
-    state.selectedAudioOutputDeviceId,
-    state.hasCommitted,
-  ])
+  }, [state])
 
   const setSelectedVideoDeviceId = useCallback((deviceId: string | null) => {
     setState((current) =>

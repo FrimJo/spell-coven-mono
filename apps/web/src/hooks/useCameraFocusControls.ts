@@ -99,6 +99,7 @@ export function useCameraFocusControls({
     const videoTrack = stream?.getVideoTracks()[0]
     if (!videoTrack) {
       activeTrackIdRef.current = null
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing external MediaStream track state
       setFocusCapabilities(null)
       setIsFocusSupportForced(false)
       return () => {
@@ -169,6 +170,7 @@ export function useCameraFocusControls({
     initializedTrackIdRef.current = currentTrackId
 
     if (focusCapabilities.initialFocusMode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- initializing from async track capabilities
       setFocusMode(focusCapabilities.initialFocusMode)
     }
     if (focusCapabilities.initialFocusDistance !== undefined) {

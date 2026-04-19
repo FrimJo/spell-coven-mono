@@ -150,13 +150,13 @@ export function useMediaDevice(
     if (data?.stream && selectedDeviceId) {
       emitDeviceChanged(selectedDeviceId, data.stream)
     }
-  }, [data?.stream, selectedDeviceId, emitDeviceChanged])
+  }, [data?.stream, selectedDeviceId])
 
   useEffect(() => {
     if (enumerationError) {
       emitError(enumerationError)
     }
-  }, [enumerationError, emitError])
+  }, [enumerationError])
 
   return useMemo((): UseMediaDeviceReturn => {
     const isPending = isGettingStream || isEnumerating

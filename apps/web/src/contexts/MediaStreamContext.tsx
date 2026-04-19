@@ -139,11 +139,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     ) {
       mediaPreferences.setSelectedVideoDeviceId(nextDeviceId)
     }
-  }, [
-    videoResult.selectedDeviceId,
-    mediaPreferences.selectedVideoDeviceId,
-    mediaPreferences.setSelectedVideoDeviceId,
-  ])
+  }, [videoResult.selectedDeviceId, mediaPreferences])
 
   useEffect(() => {
     const nextDeviceId = audioResult.selectedDeviceId || null
@@ -153,11 +149,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     ) {
       mediaPreferences.setSelectedAudioInputDeviceId(nextDeviceId)
     }
-  }, [
-    audioResult.selectedDeviceId,
-    mediaPreferences.selectedAudioInputDeviceId,
-    mediaPreferences.setSelectedAudioInputDeviceId,
-  ])
+  }, [audioResult.selectedDeviceId, mediaPreferences])
 
   useEffect(() => {
     const currentDeviceId = audioOutputState.currentDeviceId || null
@@ -167,11 +159,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     ) {
       mediaPreferences.setSelectedAudioOutputDeviceId(currentDeviceId)
     }
-  }, [
-    audioOutputState.currentDeviceId,
-    mediaPreferences.selectedAudioOutputDeviceId,
-    mediaPreferences.setSelectedAudioOutputDeviceId,
-  ])
+  }, [audioOutputState.currentDeviceId, mediaPreferences])
 
   useEffect(() => {
     const desiredDeviceId =
@@ -183,22 +171,14 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     ) {
       void audioOutputState.setOutputDevice(desiredDeviceId).catch(() => {})
     }
-  }, [
-    mediaPreferences.selectedAudioOutputDeviceId,
-    audioOutputState.devices.length,
-    audioOutputState.currentDeviceId,
-    audioOutputState.setOutputDevice,
-  ])
+  }, [mediaPreferences, audioOutputState])
 
   const setSelectedAudioOutputDeviceId = useCallback(
     async (deviceId: string) => {
       mediaPreferences.setSelectedAudioOutputDeviceId(deviceId)
       await audioOutputState.setOutputDevice(deviceId)
     },
-    [
-      mediaPreferences.setSelectedAudioOutputDeviceId,
-      audioOutputState.setOutputDevice,
-    ],
+    [mediaPreferences, audioOutputState],
   )
 
   const restoreSnapshot = useCallback(
@@ -210,7 +190,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
         void audioOutputState.setOutputDevice(outputDeviceId).catch(() => {})
       }
     },
-    [mediaPreferences.restoreSnapshot, audioOutputState.setOutputDevice],
+    [mediaPreferences, audioOutputState],
   )
 
   const combinedStream = useMemo((): MediaStream | null => {
@@ -248,12 +228,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     }
 
     return tracks.length === 0 ? null : new MediaStream(tracks)
-  }, [
-    videoResult,
-    audioResult,
-    mediaPreferences.videoEnabled,
-    mediaPreferences.audioEnabled,
-  ])
+  }, [videoResult, audioResult, mediaPreferences])
 
   const videoResultRef = useRef(videoResult)
   const audioResultRef = useRef(audioResult)
@@ -279,7 +254,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
 
       mediaPreferences.setVideoEnabled(enabled)
     },
-    [mediaPreferences.setVideoEnabled],
+    [mediaPreferences],
   )
 
   const toggleAudio = useCallback(
@@ -295,7 +270,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
 
       mediaPreferences.setAudioEnabled(enabled)
     },
-    [mediaPreferences.setAudioEnabled],
+    [mediaPreferences],
   )
 
   useEffect(() => {
@@ -371,29 +346,11 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     [
       videoResult,
       audioResult,
-      audioOutputState.devices,
-      audioOutputState.currentDeviceId,
-      audioOutputState.testOutput,
-      audioOutputState.isTesting,
-      audioOutputState.isSupported,
-      audioOutputState.error,
-      audioOutputState.isLoading,
-      audioOutputState.refreshDevices,
+      audioOutputState,
       combinedStream,
       toggleVideo,
       toggleAudio,
-      mediaPreferences.selectedVideoDeviceId,
-      mediaPreferences.selectedAudioInputDeviceId,
-      mediaPreferences.selectedAudioOutputDeviceId,
-      mediaPreferences.videoEnabled,
-      mediaPreferences.audioEnabled,
-      mediaPreferences.hasCommitted,
-      mediaPreferences.setSelectedVideoDeviceId,
-      mediaPreferences.setSelectedAudioInputDeviceId,
-      mediaPreferences.setVideoEnabled,
-      mediaPreferences.setAudioEnabled,
-      mediaPreferences.captureSnapshot,
-      mediaPreferences.commitPreferences,
+      mediaPreferences,
       restoreSnapshot,
       setSelectedAudioOutputDeviceId,
       isCheckingPermissions,
