@@ -1,4 +1,4 @@
-import type { CardMetadata } from './types';
+import type { CardIndexVersion, CardMetadata } from './types';
 
 export interface CardIndex {
   embeddings: Float32Array;
@@ -7,6 +7,7 @@ export interface CardIndex {
 }
 
 let cached: CardIndex | null = null;
+let cachedVersion: string | null = null;
 
 const isNode =
   typeof process !== 'undefined' &&
@@ -52,13 +53,35 @@ async function loadFromFetch(): Promise<CardIndex> {
   };
 }
 
+async function loadVersionFromFs(): Promise<string> {
+  const { readFile } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+  const path = join(process.cwd(), 'static', 'card-index', 'card-index-version.json');
+  const text = await readFile(path, 'utf-8');
+  return (JSON.parse(text) as CardIndexVersion).version;
+}
+
+async function loadVersionFromFetch(): Promise<string> {
+  const res = await fetch('/card-index/card-index-version.json');
+  if (!res.ok) throw new Error(`Version fetch failed: ${res.status}`);
+  const doc = await res.json() as CardIndexVersion;
+  return doc.version;
+}
+
 export async function getIndex(): Promise<CardIndex> {
   if (cached) return cached;
   cached = isNode ? await loadFromFs() : await loadFromFetch();
   return cached;
 }
 
+export async function getIndexVersion(): Promise<string> {
+  if (cachedVersion) return cachedVersion;
+  cachedVersion = isNode ? await loadVersionFromFs() : await loadVersionFromFetch();
+  return cachedVersion;
+}
+
 // Exported for tests only
 export function __resetCache(): void {
   cached = null;
+  cachedVersion = null;
 }

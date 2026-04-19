@@ -9,3 +9,10 @@ export interface CardMetadata {
   scryfallId: string;
   set: string;
 }
+
+export interface CardIndexVersion {
+  version: string;
+  format: string;
+  count: number;
+  builtAt: string;
+}
