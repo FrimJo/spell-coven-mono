@@ -1,0 +1,12 @@
+.turbo
+**/.turbo
+**/.output
+**/.nitro
+node_modules
+**/node_modules
+test-results
+playwright-report
+coverage
+*.log
+.git
+landing.png
