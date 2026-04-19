@@ -19,8 +19,8 @@
  */
 
 // Storage key for persisting mock mode
-const MOCK_MEDIA_STORAGE_KEY = 'spell-coven-mock-media-enabled'
-const MOCK_MEDIA_MODE_KEY = 'spell-coven-mock-media-mode'
+const MOCK_MEDIA_STORAGE_KEY = 'spell-casters-mock-media-enabled'
+const MOCK_MEDIA_MODE_KEY = 'spell-casters-mock-media-mode'
 
 // Default video URL for realistic mock (card demo video)
 const DEFAULT_VIDEO_URL = '/card_demo.webm'

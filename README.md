@@ -1,8 +1,8 @@
 ![landing page of application](landing.png)
 
-# Spell Coven - MTG Remote Play Platform
+# Spell Casters - MTG Remote Play Platform
 
-A browser-based platform for playing paper Magic: The Gathering remotely with friends. Spell Coven enables MTG players to play their physical cards online through video chat, card recognition, and game management tools—all running in your browser with no downloads required.
+A browser-based platform for playing paper Magic: The Gathering remotely with friends. Spell Casters enables MTG players to play their physical cards online through video chat, card recognition, and game management tools—all running in your browser with no downloads required.
 
 License: [PolyForm Noncommercial 1.0.0 (non-commercial use only)](./LICENSE)
 
@@ -23,11 +23,11 @@ If you want to use this project commercially, contact the maintainer to obtain a
 
 ## About This Project
 
-**This is a hobby project.** I'm a full-time web developer, and Spell Coven is my playground for exploring cutting-edge AI tools and staying in the loop with what's possible in modern web development. It's a passion project born from my love of Magic: The Gathering and curiosity about emerging technologies like browser-based machine learning, WebRTC, and computer vision.
+**This is a hobby project.** I'm a full-time web developer, and Spell Casters is my playground for exploring cutting-edge AI tools and staying in the loop with what's possible in modern web development. It's a passion project born from my love of Magic: The Gathering and curiosity about emerging technologies like browser-based machine learning, WebRTC, and computer vision.
 
 ## Vision
 
-Spell Coven aims to provide a comprehensive remote play experience for Magic: The Gathering players, competing with platforms like SpellTable by offering:
+Spell Casters aims to provide a comprehensive remote play experience for Magic: The Gathering players, competing with platforms like SpellTable by offering:
 
 - **Multi-party Video & Voice**: Browser-based video chat optimized for overhead camera views of playmats (2-4 players per game)
 - **Intelligent Card Recognition**: Computer vision powered by CLIP to identify cards in real-time and display rulings/details
@@ -66,7 +66,7 @@ Future enhancements on the roadmap:
 
 ## Target Use Case
 
-Spell Coven is designed for Magic: The Gathering players who want to play with their physical cards remotely against friends. The platform enables:
+Spell Casters is designed for Magic: The Gathering players who want to play with their physical cards remotely against friends. The platform enables:
 
 - **Remote Play Sessions**: Play paper MTG with friends across distances using video chat
 - **Casual & Competitive Play**: Support for various formats (Commander, Modern, Standard, etc.) with power level indicators
@@ -105,7 +105,7 @@ steps.
 
 ## What's inside?
 
-This Turborepo monorepo houses all applications and packages needed to drive the Spell Coven platform:
+This Turborepo monorepo houses all applications and packages needed to drive the Spell Casters platform:
 
 ### Apps and Packages
 
@@ -162,7 +162,7 @@ This Turborepo has some additional tools already setup for you:
 To build all apps and packages, run the following command:
 
 ```
-cd spell-coven-mono
+cd spell-casters-mono
 
 # With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
 turbo build

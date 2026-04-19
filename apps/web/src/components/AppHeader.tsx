@@ -116,11 +116,11 @@ function Logo({ size = 'default' }: { size?: 'default' | 'small' }) {
     <div className="flex items-center gap-2">
       <img
         src={logoSrc}
-        alt="Spell Coven Logo"
+        alt="Spell Casters Logo"
         className={`${sizeClasses} ${roundedClasses} object-contain`}
       />
       <span className={`${textClasses} text-text-primary font-bold`}>
-        Spell Coven
+        Spell Casters
       </span>
     </div>
   )
@@ -282,7 +282,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
           ))}
 
           <a
-            href="https://github.com/FrimJo/spell-coven-mono"
+            href="https://github.com/FrimJo/spell-casters-mono"
             target="_blank"
             rel="noopener noreferrer"
             className="text-text-secondary hover:text-text-primary flex items-center gap-1.5 transition-colors"
@@ -350,7 +350,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
 
                 {/* GitHub link in mobile menu */}
                 <a
-                  href="https://github.com/FrimJo/spell-coven-mono"
+                  href="https://github.com/FrimJo/spell-casters-mono"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-text-secondary hover:bg-surface-2 hover:text-text-primary flex items-center gap-3 rounded-lg px-4 py-3 text-lg font-medium transition-colors"

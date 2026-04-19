@@ -122,7 +122,7 @@ export function ErrorFallback({
         </div>
 
         <div className="text-text-muted absolute bottom-8 text-sm">
-          Spell Coven
+          Spell Casters
         </div>
       </div>
     </div>

@@ -23,10 +23,10 @@ export const TEST_GAME_ID = 'TEST01'
 /** Storage keys used by the application */
 export const STORAGE_KEYS = {
   MEDIA_DEVICES: 'mtg-selected-media-devices',
-  GAME_STATE: 'spell-coven:game-state',
-  CREATOR_INVITE: 'spell-coven:creator-invite',
-  SESSION_ID: 'spell-coven-session-id',
-  PERMISSION_PREFS: 'spell-coven:media-permission-prefs',
+  GAME_STATE: 'spell-casters:game-state',
+  CREATOR_INVITE: 'spell-casters:creator-invite',
+  SESSION_ID: 'spell-casters-session-id',
+  PERMISSION_PREFS: 'spell-casters:media-permission-prefs',
 } as const
 
 const __filename = fileURLToPath(import.meta.url)

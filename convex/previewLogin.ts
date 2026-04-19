@@ -77,7 +77,7 @@ function buildPreviewHandle(code: string, baseName: string): string {
 }
 
 function buildPreviewEmail(handle: string): string {
-  return `preview+${handle}@preview.spell-coven.local`
+  return `preview+${handle}@preview.spell-casters.local`
 }
 
 async function signInOrSignUp(

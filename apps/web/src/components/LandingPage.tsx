@@ -328,7 +328,7 @@ export function LandingPage({
               </h1>
 
               <p className="mb-8 max-w-xl text-lg leading-relaxed md:text-xl text-text-secondary">
-                Spell Coven lets you play paper MTG remotely through video chat
+                Spell Casters lets you play paper MTG remotely through video chat
                 and card recognition. Use your physical cards, see your
                 opponents, and enjoy the authentic experience.
               </p>
@@ -419,7 +419,7 @@ export function LandingPage({
                 <div className="inset-0 animate-pulse blur-3xl absolute rounded-full bg-brand/20" />
                 <img
                   src={logoSrc}
-                  alt="Spell Coven Logo"
+                  alt="Spell Casters Logo"
                   className="relative z-10 h-full w-full object-contain"
                   style={{
                     filter: 'drop-shadow(0 0 30px var(--brand-glow))',
@@ -808,11 +808,11 @@ export function LandingPage({
                 <div className="gap-2 flex items-center">
                   <img
                     src={logo}
-                    alt="Spell Coven Logo"
+                    alt="Spell Casters Logo"
                     className="h-8 w-8 rounded-lg object-contain grayscale transition-all hover:grayscale-0"
                   />
                   <span className="text-lg font-bold text-text-primary">
-                    Spell Coven
+                    Spell Casters
                   </span>
                 </div>
                 <p className="max-w-xs text-sm text-text-muted">
@@ -888,10 +888,10 @@ export function LandingPage({
                   Open Source
                 </h4>
                 <p className="mb-4 text-sm text-text-muted">
-                  Spell Coven is open source. Contribute or star us on GitHub!
+                  Spell Casters is open source. Contribute or star us on GitHub!
                 </p>
                 <a
-                  href="https://github.com/FrimJo/spell-coven-mono"
+                  href="https://github.com/FrimJo/spell-casters-mono"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="gap-2 px-4 py-2 text-sm font-medium inline-flex items-center rounded-full border border-surface-3 bg-surface-1/50 text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary"
@@ -907,7 +907,7 @@ export function LandingPage({
                     Support
                   </h4>
                   <p className="mb-4 text-sm text-text-muted">
-                    Enjoying Spell Coven? Support ongoing development.
+                    Enjoying Spell Casters? Support ongoing development.
                   </p>
                   <a
                     href={supportUrl}
@@ -923,9 +923,9 @@ export function LandingPage({
             </div>
 
             <div className="mt-12 pt-8 text-sm border-t border-border-muted text-center text-text-muted">
-              <p className="mb-2">Spell Coven © {new Date().getFullYear()}</p>
+              <p className="mb-2">Spell Casters © {new Date().getFullYear()}</p>
               <p>
-                Spell Coven is unofficial Fan Content permitted under the Fan
+                Spell Casters is unofficial Fan Content permitted under the Fan
                 Content Policy. Not approved/endorsed by Wizards. Portions of
                 the materials used are property of Wizards of the Coast.
                 ©Wizards of the Coast LLC.

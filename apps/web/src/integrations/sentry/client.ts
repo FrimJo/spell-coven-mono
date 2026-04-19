@@ -2,7 +2,7 @@ import { env } from '@/env'
 import * as Sentry from '@sentry/react'
 
 const globalForSentry = globalThis as typeof globalThis & {
-  __spellCovenSentryInitialized?: boolean
+  __spellCastersSentryInitialized?: boolean
 }
 
 const SENSITIVE_QUERY_KEYS = new Set([
@@ -95,7 +95,7 @@ function sanitizeEvent(
 }
 
 export function initializeSentry() {
-  if (globalForSentry.__spellCovenSentryInitialized) return
+  if (globalForSentry.__spellCastersSentryInitialized) return
 
   const environment =
     import.meta.env.SENTRY_ENVIRONMENT ?? import.meta.env.MODE ?? 'development'
@@ -110,7 +110,7 @@ export function initializeSentry() {
     new URL(env.VITE_CONVEX_URL).origin,
     /^https:\/\/.*\.convex\.cloud/i,
     /^https:\/\/.*\.convex\.site/i,
-    /^https:\/\/.*\.spell-coven/i,
+    /^https:\/\/.*\.spell-casters/i,
     /^http:\/\/localhost:1234/i,
   ]
 
@@ -161,9 +161,9 @@ export function initializeSentry() {
   }
 
   Sentry.setContext('app', {
-    name: 'spell-coven-web',
+    name: 'spell-casters-web',
     environment,
   })
 
-  globalForSentry.__spellCovenSentryInitialized = true
+  globalForSentry.__spellCastersSentryInitialized = true
 }

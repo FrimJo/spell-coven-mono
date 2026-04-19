@@ -62,7 +62,7 @@ Recommended steps in your CI workflow:
    ```bash
    export SENTRY_AUTH_TOKEN=...
    export VITE_SENTRY_ORG=your-org
-   export VITE_SENTRY_PROJECT=spell-coven-web
+   export VITE_SENTRY_PROJECT=spell-casters-web
    ```
 
 3. Run the web build (`bun run build` in `apps/web`). The plugin uploads the source maps.

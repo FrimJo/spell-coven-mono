@@ -92,8 +92,8 @@ Owners can kick or ban players via `useConvexPresence`.
 
 Client session storage is used for:
 
-- `spell-coven:game-state` (gameId, playerName, timestamp)
-- `spell-coven-session-id` (per-tab sessionId)
+- `spell-casters:game-state` (gameId, playerName, timestamp)
+- `spell-casters-session-id` (per-tab sessionId)
 
 Validation enforces a 6-character uppercase code and a 24-hour max age.
 

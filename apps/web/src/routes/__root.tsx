@@ -36,8 +36,8 @@ const getThemeFromCookies = createServerFn({ method: 'GET' }).handler(
   },
 )
 
-const siteUrl = 'https://spell-coven.vercel.app/'
-const siteName = 'Spell Coven'
+const siteUrl = 'https://spell-casters.vercel.app/'
+const siteName = 'Spell Casters'
 const siteDescription =
   'Play paper Magic: The Gathering remotely with video chat and card recognition. Use your physical cards, see your opponents, and enjoy the authentic experience. Free, browser-based, no downloads required.'
 const ogImageUrl = `${siteUrl}/og-image.png`

@@ -6,7 +6,7 @@ interface GameState {
   timestamp: number
 }
 
-const GAME_STATE_KEY = 'spell-coven:game-state'
+const GAME_STATE_KEY = 'spell-casters:game-state'
 
 export interface CreatorInviteState {
   channelId: string
@@ -21,7 +21,7 @@ export interface CreatorInviteState {
   maxSeats?: number
 }
 
-const CREATOR_INVITE_KEY = 'spell-coven:creator-invite'
+const CREATOR_INVITE_KEY = 'spell-casters:creator-invite'
 
 function validateGameState(data: unknown): GameState | null {
   if (!data || typeof data !== 'object') return null

@@ -9,7 +9,7 @@
  * - "dont-ask": Permanent decline, don't show dialog again
  */
 
-const STORAGE_KEY = 'spell-coven:media-permission-prefs'
+const STORAGE_KEY = 'spell-casters:media-permission-prefs'
 
 /** Days to wait before showing dialog again after "remind later" */
 const REMIND_AFTER_DAYS = 7

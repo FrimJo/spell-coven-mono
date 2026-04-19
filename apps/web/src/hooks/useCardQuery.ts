@@ -21,7 +21,7 @@ import { validateCanvas } from '@/types/card-query'
 const MAX_HISTORY_ENTRIES = 30
 
 /** Prefix for localStorage key */
-const STORAGE_KEY_PREFIX = 'spell-coven:card-history:'
+const STORAGE_KEY_PREFIX = 'spell-casters:card-history:'
 
 /**
  * Load card history from localStorage for a specific room

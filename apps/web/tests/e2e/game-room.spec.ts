@@ -567,7 +567,7 @@ test.describe('Game Room', () => {
   })
 
   test.describe('Recent Cards', () => {
-    const CARD_HISTORY_KEY_PREFIX = 'spell-coven:card-history:'
+    const CARD_HISTORY_KEY_PREFIX = 'spell-casters:card-history:'
 
     test('should remove a card from Recent Cards when clicking remove icon on hover', async ({
       page,

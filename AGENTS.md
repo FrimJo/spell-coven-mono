@@ -1,4 +1,4 @@
-# Spell Coven Agent Guide
+# Spell Casters Agent Guide
 
 ## Purpose
 

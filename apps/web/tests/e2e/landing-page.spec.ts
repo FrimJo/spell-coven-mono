@@ -35,7 +35,7 @@ test.describe('Landing Page', () => {
     }) => {
       // Header
       await expect(page.locator('header')).toBeVisible()
-      await expect(page.getByText('Spell Coven').first()).toBeVisible()
+      await expect(page.getByText('Spell Casters').first()).toBeVisible()
 
       // Hero section
       await expect(
@@ -282,14 +282,14 @@ test.describe('Landing Page', () => {
 
       await expect(githubLink).toHaveAttribute(
         'href',
-        'https://github.com/FrimJo/spell-coven-mono',
+        'https://github.com/FrimJo/spell-casters-mono',
       )
       await expect(githubLink).toHaveAttribute('target', '_blank')
     })
 
     test('should display copyright text', async ({ page }) => {
       await expect(
-        page.locator('footer').getByText(/Spell Coven ©/i),
+        page.locator('footer').getByText(/Spell Casters ©/i),
       ).toBeVisible()
     })
   })

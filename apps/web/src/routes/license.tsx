@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 const githubLicenseUrl =
-  'https://github.com/FrimJo/spell-coven-mono/blob/main/LICENSE'
+  'https://github.com/FrimJo/spell-casters-mono/blob/main/LICENSE'
 
 export const Route = createFileRoute('/license')({
   ssr: true,

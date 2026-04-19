@@ -80,7 +80,7 @@ const HEARTBEAT_INTERVAL_MS = 10_000
 function getOrCreateSessionId(): string {
   if (typeof window === 'undefined') return ''
 
-  const storageKey = 'spell-coven-session-id'
+  const storageKey = 'spell-casters-session-id'
   let sessionId = sessionStorage.getItem(storageKey)
 
   if (!sessionId) {
