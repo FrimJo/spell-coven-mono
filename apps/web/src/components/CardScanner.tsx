@@ -44,10 +44,66 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
   )
 }
 
+interface CropRect {
+  sx: number
+  sy: number
+  sw: number
+  sh: number
+}
+
+// Map the guide's CSS rect to source-pixel coords on the video, accounting for
+// `object-cover` scaling (video is scaled to cover the container, then centered).
+function computeGuideCrop(
+  video: HTMLVideoElement,
+  guide: HTMLElement,
+): CropRect | null {
+  const videoRect = video.getBoundingClientRect()
+  const guideRect = guide.getBoundingClientRect()
+  const { videoWidth, videoHeight } = video
+  if (
+    videoRect.width <= 0 ||
+    videoRect.height <= 0 ||
+    guideRect.width <= 0 ||
+    guideRect.height <= 0 ||
+    videoWidth <= 0 ||
+    videoHeight <= 0
+  ) {
+    return null
+  }
+
+  // object-cover: the source is scaled by max(containerW/srcW, containerH/srcH)
+  // and centered, so part of one axis is cropped out of view.
+  const scale = Math.max(
+    videoRect.width / videoWidth,
+    videoRect.height / videoHeight,
+  )
+  const displayedW = videoWidth * scale
+  const displayedH = videoHeight * scale
+  const offsetX = (videoRect.width - displayedW) / 2
+  const offsetY = (videoRect.height - displayedH) / 2
+
+  const guideCssX = guideRect.left - videoRect.left - offsetX
+  const guideCssY = guideRect.top - videoRect.top - offsetY
+
+  let sx = guideCssX / scale
+  let sy = guideCssY / scale
+  let sw = guideRect.width / scale
+  let sh = guideRect.height / scale
+
+  sx = Math.max(0, Math.min(videoWidth, sx))
+  sy = Math.max(0, Math.min(videoHeight, sy))
+  sw = Math.max(0, Math.min(videoWidth - sx, sw))
+  sh = Math.max(0, Math.min(videoHeight - sy, sh))
+
+  if (sw < 1 || sh < 1) return null
+  return { sx, sy, sw, sh }
+}
+
 export function CardScanner({ onClose }: CardScannerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const guideRef = useRef<HTMLDivElement | null>(null)
   const cancelledRef = useRef(false)
   const [scanning, setScanning] = useState(false)
   const [recognizedCard, setRecognizedCard] = useState<CardMatch | null>(null)
@@ -165,12 +221,27 @@ export function CardScanner({ onClose }: CardScannerProps) {
         canvas = document.createElement('canvas')
         canvasRef.current = canvas
       }
-      canvas.width = width
-      canvas.height = height
       const ctx = canvas.getContext('2d')
       if (!ctx) throw new Error('Failed to acquire 2D canvas context')
-      ctx.drawImage(video, 0, 0, width, height)
-      const imageData = ctx.getImageData(0, 0, width, height)
+
+      const guide = guideRef.current
+      const crop = guide ? computeGuideCrop(video, guide) : null
+      let cw: number
+      let ch: number
+      if (crop) {
+        cw = Math.round(crop.sw)
+        ch = Math.round(crop.sh)
+        canvas.width = cw
+        canvas.height = ch
+        ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, cw, ch)
+      } else {
+        cw = width
+        ch = height
+        canvas.width = cw
+        canvas.height = ch
+        ctx.drawImage(video, 0, 0, cw, ch)
+      }
+      const imageData = ctx.getImageData(0, 0, cw, ch)
 
       const matches: CardMatch[] = await identifyCard(imageData)
       if (cancelledRef.current) return
@@ -320,7 +391,10 @@ export function CardScanner({ onClose }: CardScannerProps) {
           {/* Scanning Frame Overlay */}
           {!recognizedCard && (
             <div className="pointer-events-none absolute inset-0">
-              <div className="border-brand/30 absolute left-1/2 top-1/2 h-96 w-64 -translate-x-1/2 -translate-y-1/2 rounded-lg border-2">
+              <div
+                ref={guideRef}
+                className="border-brand/30 absolute left-1/2 top-1/2 h-96 w-64 -translate-x-1/2 -translate-y-1/2 rounded-lg border-2"
+              >
                 {/* Corner indicators */}
                 <div className="border-brand absolute left-0 top-0 h-8 w-8 rounded-tl-lg border-l-4 border-t-4" />
                 <div className="border-brand absolute right-0 top-0 h-8 w-8 rounded-tr-lg border-r-4 border-t-4" />
