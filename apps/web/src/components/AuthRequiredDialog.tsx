@@ -90,10 +90,10 @@ export function AuthRequiredDialog({
 
           <button
             onClick={() => onSignIn('google')}
-            className="group p-4 w-full cursor-pointer rounded-lg border border-surface-3 bg-white/95 text-left transition-all hover:bg-white focus:ring-2 focus:ring-surface-3/50 focus:outline-none"
+            className="group p-4 bg-white/95 hover:bg-white w-full cursor-pointer rounded-lg border border-surface-3 text-left transition-all focus:ring-2 focus:ring-surface-3/50 focus:outline-none"
           >
             <div className="gap-3 flex items-start">
-              <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-lg bg-white">
+              <div className="h-10 w-10 bg-white flex shrink-0 items-center justify-center rounded-lg">
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"

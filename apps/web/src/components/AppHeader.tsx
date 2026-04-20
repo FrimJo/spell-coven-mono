@@ -420,7 +420,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                     size="lg"
                     variant="outline"
                     onClick={() => onSignIn?.('google')}
-                    className="h-14 gap-3 text-lg font-semibold w-full bg-white text-gray-800 hover:bg-gray-100"
+                    className="h-14 gap-3 text-lg font-semibold bg-white text-gray-800 hover:bg-gray-100 w-full"
                   >
                     <svg className="h-6 w-6" viewBox="0 0 24 24">
                       <path

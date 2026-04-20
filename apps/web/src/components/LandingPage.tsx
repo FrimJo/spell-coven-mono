@@ -409,7 +409,7 @@ export function LandingPage({
                     <Button
                       size="lg"
                       variant="outline"
-                      className="group h-14 gap-3 text-lg font-semibold relative min-w-[260px] overflow-hidden border bg-white text-gray-800 transition-all hover:scale-105 hover:bg-gray-100"
+                      className="group h-14 gap-3 text-lg font-semibold bg-white text-gray-800 hover:bg-gray-100 relative min-w-[260px] overflow-hidden border transition-all hover:scale-105"
                       onClick={() => onSignIn?.('google')}
                     >
                       <svg
