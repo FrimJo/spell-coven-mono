@@ -1,0 +1,8 @@
+.turbo
+.output
+node_modules
+.nitro
+test-results
+playwright-report
+coverage
+*.log
