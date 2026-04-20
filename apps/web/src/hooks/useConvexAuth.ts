@@ -42,8 +42,8 @@ export interface UseConvexAuthReturn {
   isLoading: boolean
   /** Whether user is authenticated */
   isAuthenticated: boolean
-  /** Sign in with Discord */
-  signIn: () => Promise<void>
+  /** Sign in with the given OAuth provider (default: discord) */
+  signIn: (provider?: 'discord' | 'google') => Promise<void>
   /** Sign in using preview login code */
   signInWithPreviewCode: (code: string) => Promise<void>
   /** Sign out */
@@ -95,16 +95,19 @@ export function useConvexAuthHook(): UseConvexAuthReturn {
         }
       : null
 
-  // Sign in with Discord OAuth
-  const signIn = useCallback(async () => {
-    try {
-      await convexSignIn('discord')
-      // redirectTo is handled by Convex Auth based on SITE_URL config
-    } catch (error) {
-      console.error('[ConvexAuth] Sign in failed:', error)
-      throw error
-    }
-  }, [convexSignIn])
+  // Sign in with the chosen OAuth provider (defaults to discord)
+  const signIn = useCallback(
+    async (provider: 'discord' | 'google' = 'discord') => {
+      try {
+        await convexSignIn(provider)
+        // redirectTo is handled by Convex Auth based on SITE_URL config
+      } catch (error) {
+        console.error('[ConvexAuth] Sign in failed:', error)
+        throw error
+      }
+    },
+    [convexSignIn],
+  )
 
   // Sign out
   const signOut = useCallback(async () => {

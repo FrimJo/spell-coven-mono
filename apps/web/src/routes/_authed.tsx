@@ -20,12 +20,12 @@ function AuthedLayout() {
     signInWithPreviewCode,
   } = useAuth()
 
-  const handleSignIn = async () => {
+  const handleSignIn = async (provider: 'discord' | 'google' = 'discord') => {
     if (typeof window !== 'undefined') {
       const returnTo = `${window.location.pathname}${window.location.search}`
       window.sessionStorage.setItem(AUTH_RETURN_TO_KEY, returnTo)
     }
-    await signIn()
+    await signIn(provider)
   }
 
   const handleClose = () => {

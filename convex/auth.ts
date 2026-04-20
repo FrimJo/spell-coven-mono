@@ -10,6 +10,7 @@
 
 import type { AuthProviderConfig } from '@convex-dev/auth/server'
 import Discord from '@auth/core/providers/discord'
+import Google from '@auth/core/providers/google'
 import { Password } from '@convex-dev/auth/providers/Password'
 import { convexAuth } from '@convex-dev/auth/server'
 
@@ -17,7 +18,7 @@ import { isE2ePreview } from './env'
 
 export { previewLogin } from './previewLogin'
 
-const providers: AuthProviderConfig[] = [Discord]
+const providers: AuthProviderConfig[] = [Discord, Google]
 
 // Only add Discord provider when not running e2e tests
 if (isE2ePreview) {

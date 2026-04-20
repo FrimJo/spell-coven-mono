@@ -26,8 +26,8 @@ interface AuthContextValue {
   isLoading: boolean
   /** Whether user is authenticated */
   isAuthenticated: boolean
-  /** Sign in with Discord */
-  signIn: () => Promise<void>
+  /** Sign in with the given OAuth provider (default: discord) */
+  signIn: (provider?: 'discord' | 'google') => Promise<void>
   /** Sign in using preview login code */
   signInWithPreviewCode: (code: string) => Promise<void>
   /** Sign out */

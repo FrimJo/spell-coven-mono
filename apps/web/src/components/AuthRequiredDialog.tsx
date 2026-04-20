@@ -22,7 +22,7 @@ import { Label } from '@repo/ui/components/label'
 
 interface AuthRequiredDialogProps {
   open: boolean
-  onSignIn: () => void
+  onSignIn: (provider?: 'discord' | 'google') => void | Promise<void>
   onClose: () => void
   onPreviewSignIn?: (code: string) => Promise<void> | void
   /** Optional message to show in the dialog */
@@ -70,7 +70,7 @@ export function AuthRequiredDialog({
 
         <div className="space-y-3 py-4">
           <button
-            onClick={onSignIn}
+            onClick={() => onSignIn('discord')}
             className="group p-4 w-full cursor-pointer rounded-lg border border-brand/30 bg-brand/30 text-left transition-all hover:border-brand/60 hover:bg-brand/40 focus:ring-2 focus:ring-brand/50 focus:outline-none"
           >
             <div className="gap-3 flex items-start">
@@ -83,6 +83,40 @@ export function AuthRequiredDialog({
                 </p>
                 <p className="mt-0.5 text-sm text-text-muted">
                   Connect your Discord account to join the game.
+                </p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => onSignIn('google')}
+            className="group p-4 w-full cursor-pointer rounded-lg border border-surface-3 bg-white/95 text-left transition-all hover:bg-white focus:ring-2 focus:ring-surface-3/50 focus:outline-none"
+          >
+            <div className="gap-3 flex items-start">
+              <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-lg bg-white">
+                <svg className="h-5 w-5" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.44c-.28 1.49-1.13 2.75-2.41 3.6v3h3.89c2.28-2.1 3.59-5.2 3.59-8.84z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.96-1.07 7.95-2.9l-3.89-3c-1.08.72-2.45 1.16-4.06 1.16-3.13 0-5.78-2.11-6.73-4.96H1.25v3.09C3.23 21.3 7.31 24 12 24z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.27 14.3c-.24-.72-.38-1.49-.38-2.3s.14-1.58.38-2.3V6.61H1.25C.45 8.2 0 9.96 0 12s.45 3.8 1.25 5.39l4.02-3.09z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.74c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.19 15.24 0 12 0 7.31 0 3.23 2.7 1.25 6.61l4.02 3.09C6.22 6.85 8.87 4.74 12 4.74z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Sign in with Google</p>
+                <p className="mt-0.5 text-sm text-gray-600">
+                  Use your Google account to join the game.
                 </p>
               </div>
             </div>
