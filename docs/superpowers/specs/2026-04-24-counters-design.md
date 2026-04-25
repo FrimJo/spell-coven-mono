@@ -21,11 +21,13 @@ Let players track on-card counters (Commander format) and player-level resources
 
 ### Convex schema (additive)
 
+The existing `counters` table is for sequential ID generation — name collision avoided by calling the new table `trackedCards`. The existing `roomPlayers.poison` field is reused as-is. IDs follow the existing convention (`roomId`/`userId` are Discord ID strings, not `v.id(...)`).
+
 ```ts
-// convex/schema.ts
+// convex/schema.ts — new table
 trackedCards: defineTable({
-  gameId: v.id('games'),
-  ownerId: v.id('users'),       // player whose tile this card belongs to
+  roomId: v.string(),
+  ownerUserId: v.string(),      // Discord user ID of card's owner
   scryfallId: v.string(),       // for art lookup
   name: v.string(),             // cached for display when offline
   // Counter map. Keys are well-known type strings; values are non-negative ints.
@@ -42,18 +44,16 @@ trackedCards: defineTable({
   }),
   createdAt: v.number(),
 })
-  .index('by_game', ['gameId'])
-  .index('by_owner', ['gameId', 'ownerId'])
+  .index('by_room', ['roomId'])
+  .index('by_room_owner', ['roomId', 'ownerUserId'])
 
-// Player-level resources (poison/energy/experience) extend an existing
-// per-player game state — propose adding to the existing players doc:
-playerResources: v.optional(
-  v.object({
-    poison: v.optional(v.number()),
-    energy: v.optional(v.number()),
-    experience: v.optional(v.number()),
-  }),
-)
+// convex/schema.ts — extend existing roomPlayers
+//   Existing fields: roomId, userId, sessionId, username, avatar, health,
+//                    poison, commanders, commanderDamage, status, joinedAt, lastSeenAt
+//   Add:
+energy: v.optional(v.number()),
+experience: v.optional(v.number()),
+// poison is REUSED — already exists.
 ```
 
 ### Counter types — display
