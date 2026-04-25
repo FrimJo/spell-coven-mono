@@ -1,8 +1,9 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { Participant } from '@/types/participant'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useCardDetector } from '@/hooks/useCardDetector'
+import { useVideoOrientation } from '@/hooks/useVideoOrientation'
 import { attachVideoStream } from '@/lib/video-stream-utils'
 
 import { PlayerStatsOverlay } from './PlayerStatsOverlay'
@@ -14,6 +15,17 @@ import {
   LocalMediaControls,
   VideoDisabledPlaceholder,
 } from './PlayerVideoCardParts'
+import { VideoOrientationContextMenu } from './VideoOrientationContextMenu'
+
+// Container that holds the video + detection overlay; the orientation
+// transform is applied here so the overlay stays aligned with the video.
+const ORIENTED_CONTAINER_BASE: React.CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  zIndex: 0,
+  transformOrigin: 'center center',
+  transition: 'transform 150ms ease-out',
+}
 
 // Extract inline style to prevent recreation
 const LOCAL_VIDEO_STYLE: React.CSSProperties = {
@@ -140,27 +152,36 @@ export const LocalVideoCard = memo(function LocalVideoCard({
   const hasVideoStream =
     videoEnabled && stream && stream.getVideoTracks().length > 0
 
+  // Orientation: per-tile rotation/mirror persisted to localStorage
+  const orientation = useVideoOrientation('local')
+  const orientedContainerStyle = useMemo<React.CSSProperties>(
+    () => ({ ...ORIENTED_CONTAINER_BASE, transform: orientation.transform }),
+    [orientation.transform],
+  )
+
   return (
     <PlayerVideoCard ref={videoContainerRef}>
       {hasVideoStream ? (
-        <>
-          <video
-            ref={handleVideoRef}
-            autoPlay
-            muted
-            playsInline
-            style={LOCAL_VIDEO_STYLE}
-          />
-          {enableCardDetection && overlayRef && (
-            <CardDetectionOverlay overlayRef={overlayRef} />
-          )}
-          {enableCardDetection && croppedRef && (
-            <CroppedCanvas croppedRef={croppedRef} />
-          )}
-          {enableCardDetection && fullResRef && (
-            <FullResCanvas fullResRef={fullResRef} />
-          )}
-        </>
+        <VideoOrientationContextMenu orientation={orientation}>
+          <div style={orientedContainerStyle}>
+            <video
+              ref={handleVideoRef}
+              autoPlay
+              muted
+              playsInline
+              style={LOCAL_VIDEO_STYLE}
+            />
+            {enableCardDetection && overlayRef && (
+              <CardDetectionOverlay overlayRef={overlayRef} />
+            )}
+            {enableCardDetection && croppedRef && (
+              <CroppedCanvas croppedRef={croppedRef} />
+            )}
+            {enableCardDetection && fullResRef && (
+              <FullResCanvas fullResRef={fullResRef} />
+            )}
+          </div>
+        </VideoOrientationContextMenu>
       ) : (
         <VideoDisabledPlaceholder />
       )}

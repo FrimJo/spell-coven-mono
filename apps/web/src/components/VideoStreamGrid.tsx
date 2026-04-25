@@ -13,6 +13,7 @@ import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { usePresence } from '@/contexts/PresenceContext'
 import { useCardDetector } from '@/hooks/useCardDetector'
 import { useConvexWebRTC } from '@/hooks/useConvexWebRTC'
+import { useVideoOrientation } from '@/hooks/useVideoOrientation'
 import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
 import {
   createSilentAudioStream,
@@ -48,6 +49,17 @@ import {
   PlayerNameBadge,
   VideoDisabledPlaceholder,
 } from './PlayerVideoCardParts'
+import { VideoOrientationContextMenu } from './VideoOrientationContextMenu'
+
+// Container that holds the video + detection overlay; rotation/mirror
+// transform is applied here so overlays stay aligned with the video.
+const ORIENTED_CONTAINER_BASE: React.CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  zIndex: 0,
+  transformOrigin: 'center center',
+  transition: 'transform 150ms ease-out',
+}
 
 /**
  * Threshold for considering a player "online" (15 seconds)
@@ -186,6 +198,13 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
 
   const videoContainerRef = useRef<HTMLDivElement>(null)
 
+  // Per-tile rotation/mirror, keyed by participant id
+  const orientation = useVideoOrientation(`remote:${playerId}`)
+  const orientedContainerStyle = useMemo<React.CSSProperties>(
+    () => ({ ...ORIENTED_CONTAINER_BASE, transform: orientation.transform }),
+    [orientation.transform],
+  )
+
   return (
     <Card
       className="flex h-full flex-col overflow-hidden border-surface-2 bg-surface-1"
@@ -195,30 +214,32 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
     >
       <div ref={videoContainerRef} className="min-h-0 bg-black relative flex-1">
         {peerVideoEnabled ? (
-          <>
-            {remoteStream && (
-              <video
-                data-testid="remote-player-video"
-                ref={handleVideoRef}
-                autoPlay
-                playsInline
-                muted={isMuted}
-                style={VIDEO_ELEMENT_STYLE}
-                onLoadedMetadata={handleLoadedMetadata}
-                onCanPlay={handleCanPlay}
-                onError={handleVideoError}
-              />
-            )}
-            {enableCardDetection && overlayRef && (
-              <CardDetectionOverlay overlayRef={overlayRef} />
-            )}
-            {enableCardDetection && croppedRef && (
-              <CroppedCanvas croppedRef={croppedRef} />
-            )}
-            {enableCardDetection && fullResRef && (
-              <FullResCanvas fullResRef={fullResRef} />
-            )}
-          </>
+          <VideoOrientationContextMenu orientation={orientation}>
+            <div style={orientedContainerStyle}>
+              {remoteStream && (
+                <video
+                  data-testid="remote-player-video"
+                  ref={handleVideoRef}
+                  autoPlay
+                  playsInline
+                  muted={isMuted}
+                  style={VIDEO_ELEMENT_STYLE}
+                  onLoadedMetadata={handleLoadedMetadata}
+                  onCanPlay={handleCanPlay}
+                  onError={handleVideoError}
+                />
+              )}
+              {enableCardDetection && overlayRef && (
+                <CardDetectionOverlay overlayRef={overlayRef} />
+              )}
+              {enableCardDetection && croppedRef && (
+                <CroppedCanvas croppedRef={croppedRef} />
+              )}
+              {enableCardDetection && fullResRef && (
+                <FullResCanvas fullResRef={fullResRef} />
+              )}
+            </div>
+          </VideoOrientationContextMenu>
         ) : (
           <div data-testid="remote-player-video-off">
             <VideoDisabledPlaceholder />
