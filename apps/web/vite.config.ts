@@ -60,18 +60,10 @@ export default defineConfig(({ mode: mode }) => {
             // landing/license SSR chunks. Mark them external so Node resolves
             // them at runtime instead.
             rollupConfig: {
-              external: [
-                /^convex(\/.*)?$/,
-                /^@convex-dev\/auth(\/.*)?$/,
-                /^use-sync-external-store(\/.*)?$/,
-              ],
+              external: [/^convex(\/.*)?$/, /^@convex-dev\/auth(\/.*)?$/],
             },
             rolldownConfig: {
-              external: [
-                /^convex(\/.*)?$/,
-                /^@convex-dev\/auth(\/.*)?$/,
-                /^use-sync-external-store(\/.*)?$/,
-              ],
+              external: [/^convex(\/.*)?$/, /^@convex-dev\/auth(\/.*)?$/],
             },
           })
         : false,
