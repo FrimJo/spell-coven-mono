@@ -26,12 +26,15 @@ import { ErrorBoundary } from 'react-error-boundary'
 import { z } from 'zod'
 
 const defaultValues = {
+  detector: 'opencv' as const, // Default detector — drives both boundary detection and CLIP recognition
   usePerspectiveWarp: true, // Use OpenCV quad for precise perspective correction
   testStream: false, // Show a synthetic test stream in an empty slot
 }
 
 const gameSearchSchema = z.object({
-  detector: z.enum(['opencv', 'detr', 'owl-vit', 'yolov8']).optional(),
+  detector: z
+    .enum(['opencv', 'detr', 'owl-vit', 'yolov8'])
+    .default(defaultValues.detector),
   usePerspectiveWarp: z
     .boolean()
     .default(defaultValues.usePerspectiveWarp)
