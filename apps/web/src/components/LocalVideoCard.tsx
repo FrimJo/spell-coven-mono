@@ -1,6 +1,7 @@
 import type { DetectorType } from '@/lib/detectors'
 import type { Participant } from '@/types/participant'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCardQueryContext } from '@/contexts/CardQueryContext'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { useCardDetector } from '@/hooks/useCardDetector'
 import { useVideoOrientation } from '@/hooks/useVideoOrientation'
@@ -90,14 +91,24 @@ export const LocalVideoCard = memo(function LocalVideoCard({
   )
 
   // Initialize card detector (only when stream exists)
-  const { overlayRef, croppedRef, fullResRef } = useCardDetector({
-    videoRef: videoRef,
-    enableCardDetection: enableCardDetection && !!stream,
-    detectorType,
-    usePerspectiveWarp,
-    onCrop: onCardCrop,
-    reinitializeTrigger: stream ? 1 : 0,
-  })
+  const { overlayRef, croppedRef, fullResRef, getCroppedCanvas } =
+    useCardDetector({
+      videoRef: videoRef,
+      enableCardDetection: enableCardDetection && !!stream,
+      detectorType,
+      usePerspectiveWarp,
+      onCrop: onCardCrop,
+      reinitializeTrigger: stream ? 1 : 0,
+    })
+
+  // Card-query context: lets a click on the live tile trigger CLIP recognition
+  // against whatever the detector last cropped (independent of the auto-loop).
+  const cardQuery = useCardQueryContext()
+  const handleIdentifyClick = useCallback(() => {
+    const canvas = getCroppedCanvas()
+    if (!canvas) return
+    void cardQuery.query(canvas)
+  }, [cardQuery, getCroppedCanvas])
 
   // Audio muted state is derived from context's audioEnabled preference
   const isAudioMuted = !audioEnabled
@@ -152,18 +163,36 @@ export const LocalVideoCard = memo(function LocalVideoCard({
   const hasVideoStream =
     videoEnabled && stream && stream.getVideoTracks().length > 0
 
-  // Orientation: per-tile rotation/mirror persisted to localStorage
+  // Orientation + zoom: per-tile transform persisted to localStorage
   const orientation = useVideoOrientation('local')
   const orientedContainerStyle = useMemo<React.CSSProperties>(
     () => ({ ...ORIENTED_CONTAINER_BASE, transform: orientation.transform }),
     [orientation.transform],
   )
 
+  // Mouse-wheel zoom (Shift+Wheel to avoid hijacking page scroll)
+  const handleWheel = useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      if (!event.shiftKey) return
+      event.preventDefault()
+      if (event.deltaY < 0) orientation.zoomIn()
+      else if (event.deltaY > 0) orientation.zoomOut()
+    },
+    [orientation],
+  )
+
   return (
     <PlayerVideoCard ref={videoContainerRef}>
       {hasVideoStream ? (
         <VideoOrientationContextMenu orientation={orientation}>
-          <div style={orientedContainerStyle}>
+          <div
+            style={orientedContainerStyle}
+            onClick={handleIdentifyClick}
+            onWheel={handleWheel}
+            role="button"
+            tabIndex={-1}
+            aria-label="Click to identify card"
+          >
             <video
               ref={handleVideoRef}
               autoPlay

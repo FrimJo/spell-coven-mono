@@ -1,5 +1,5 @@
 /**
- * Per-tile webcam orientation: 0/90/180/270 rotation + horizontal mirror.
+ * Per-tile webcam orientation: 0/90/180/270 rotation + horizontal mirror + zoom.
  * State is persisted to localStorage keyed by tileId so a user's preferred
  * orientation for a given seat sticks across reloads.
  */
@@ -7,26 +7,46 @@ import { useCallback, useEffect, useState } from 'react'
 
 export type Rotation = 0 | 90 | 180 | 270
 
+export const ZOOM_MIN = 1
+export const ZOOM_MAX = 4
+export const ZOOM_STEP = 0.25
+
 export interface VideoOrientationState {
   rotation: Rotation
   mirrored: boolean
+  zoom: number
 }
 
 const STORAGE_PREFIX = 'spell-casters:tile-orientation:'
 const VALID_ROTATIONS: ReadonlyArray<Rotation> = [0, 90, 180, 270]
 
+const DEFAULT_STATE: VideoOrientationState = {
+  rotation: 0,
+  mirrored: false,
+  zoom: 1,
+}
+
+function clampZoom(z: number): number {
+  if (!Number.isFinite(z)) return 1
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z))
+}
+
 function load(tileId: string): VideoOrientationState {
-  if (typeof window === 'undefined') return { rotation: 0, mirrored: false }
+  if (typeof window === 'undefined') return DEFAULT_STATE
   try {
     const raw = localStorage.getItem(STORAGE_PREFIX + tileId)
-    if (!raw) return { rotation: 0, mirrored: false }
+    if (!raw) return DEFAULT_STATE
     const parsed = JSON.parse(raw) as Partial<VideoOrientationState>
     const rotation = VALID_ROTATIONS.includes(parsed.rotation as Rotation)
       ? (parsed.rotation as Rotation)
       : 0
-    return { rotation, mirrored: Boolean(parsed.mirrored) }
+    return {
+      rotation,
+      mirrored: Boolean(parsed.mirrored),
+      zoom: clampZoom(typeof parsed.zoom === 'number' ? parsed.zoom : 1),
+    }
   } catch {
-    return { rotation: 0, mirrored: false }
+    return DEFAULT_STATE
   }
 }
 
@@ -44,6 +64,9 @@ export interface UseVideoOrientationReturn extends VideoOrientationState {
   rotateLeft: () => void
   rotateRight: () => void
   toggleMirror: () => void
+  zoomIn: () => void
+  zoomOut: () => void
+  setZoom: (zoom: number) => void
   reset: () => void
 }
 
@@ -86,21 +109,38 @@ export function useVideoOrientation(tileId: string): UseVideoOrientationReturn {
     [state, update],
   )
 
-  const reset = useCallback(
-    () => update({ rotation: 0, mirrored: false }),
-    [update],
+  const setZoom = useCallback(
+    (zoom: number) => update({ ...state, zoom: clampZoom(zoom) }),
+    [state, update],
   )
 
-  // Compose transform; mirror is applied first so rotation appears intuitive
-  const transform = `${state.mirrored ? 'scaleX(-1) ' : ''}rotate(${state.rotation}deg)`
+  const zoomIn = useCallback(
+    () => update({ ...state, zoom: clampZoom(state.zoom + ZOOM_STEP) }),
+    [state, update],
+  )
+
+  const zoomOut = useCallback(
+    () => update({ ...state, zoom: clampZoom(state.zoom - ZOOM_STEP) }),
+    [state, update],
+  )
+
+  const reset = useCallback(() => update(DEFAULT_STATE), [update])
+
+  // Compose transform: mirror → rotate → scale.
+  // Order matters; rotation around centre then scale yields intuitive zoom.
+  const transform = `${state.mirrored ? 'scaleX(-1) ' : ''}rotate(${state.rotation}deg) scale(${state.zoom})`
 
   return {
     rotation: state.rotation,
     mirrored: state.mirrored,
+    zoom: state.zoom,
     transform,
     rotateLeft,
     rotateRight,
     toggleMirror,
+    zoomIn,
+    zoomOut,
+    setZoom,
     reset,
   }
 }

@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { useCardQueryContext } from '@/contexts/CardQueryContext'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { usePresence } from '@/contexts/PresenceContext'
 import { useCardDetector } from '@/hooks/useCardDetector'
@@ -126,15 +127,16 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
   const videoRef = useRef<HTMLVideoElement>(null)
 
   // Initialize card detector for this remote player's stream
-  const { overlayRef, croppedRef, fullResRef } = useCardDetector({
-    videoRef: videoRef,
-    enableCardDetection:
-      enableCardDetection && peerVideoEnabled && !!remoteStream,
-    detectorType,
-    usePerspectiveWarp,
-    onCrop: onCardCrop,
-    reinitializeTrigger: remoteStream ? 1 : 0,
-  })
+  const { overlayRef, croppedRef, fullResRef, getCroppedCanvas } =
+    useCardDetector({
+      videoRef: videoRef,
+      enableCardDetection:
+        enableCardDetection && peerVideoEnabled && !!remoteStream,
+      detectorType,
+      usePerspectiveWarp,
+      onCrop: onCardCrop,
+      reinitializeTrigger: remoteStream ? 1 : 0,
+    })
 
   // Combined ref handler - updates both local ref and shared map
   const handleVideoRef = (element: HTMLVideoElement | null) => {
@@ -198,12 +200,28 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
 
   const videoContainerRef = useRef<HTMLDivElement>(null)
 
-  // Per-tile rotation/mirror, keyed by participant id
+  // Per-tile rotation/mirror/zoom, keyed by participant id
   const orientation = useVideoOrientation(`remote:${playerId}`)
   const orientedContainerStyle = useMemo<React.CSSProperties>(
     () => ({ ...ORIENTED_CONTAINER_BASE, transform: orientation.transform }),
     [orientation.transform],
   )
+
+  // Click-to-identify: run CLIP recognition on whatever the detector last cropped
+  const cardQuery = useCardQueryContext()
+  const handleIdentifyClick = () => {
+    const canvas = getCroppedCanvas()
+    if (!canvas) return
+    void cardQuery.query(canvas)
+  }
+
+  // Shift+wheel to zoom this tile
+  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (!event.shiftKey) return
+    event.preventDefault()
+    if (event.deltaY < 0) orientation.zoomIn()
+    else if (event.deltaY > 0) orientation.zoomOut()
+  }
 
   return (
     <Card
@@ -215,7 +233,14 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
       <div ref={videoContainerRef} className="min-h-0 bg-black relative flex-1">
         {peerVideoEnabled ? (
           <VideoOrientationContextMenu orientation={orientation}>
-            <div style={orientedContainerStyle}>
+            <div
+              style={orientedContainerStyle}
+              onClick={handleIdentifyClick}
+              onWheel={handleWheel}
+              role="button"
+              tabIndex={-1}
+              aria-label="Click to identify card"
+            >
               {remoteStream && (
                 <video
                   data-testid="remote-player-video"
