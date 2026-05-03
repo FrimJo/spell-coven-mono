@@ -315,10 +315,10 @@ export function LandingPage({
                 </span>
               </div>
 
-              <h1 className="mb-6 text-5xl md:text-7xl lg:text-8xl text-text-primary">
+              <h1 className="mb-6 text-5xl md:text-7xl lg:text-8xl leading-[1.08] text-text-primary">
                 Play Magic
                 <span
-                  className="mt-2 block bg-clip-text text-transparent"
+                  className="mt-2 pb-2 block bg-clip-text text-transparent"
                   style={{
                     backgroundImage: `linear-gradient(to right, var(--gradient-from), var(--gradient-to))`,
                   }}
