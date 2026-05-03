@@ -1,3 +1,5 @@
+import type { Page } from '@playwright/test'
+
 import { expect, test } from '../helpers/fixtures'
 import {
   clearStorage,
@@ -10,6 +12,66 @@ import {
   mockMediaDevices,
   STORAGE_KEYS,
 } from '../helpers/test-utils'
+
+async function selectDeviceOption(
+  page: Page,
+  currentText: string | RegExp,
+  optionName: string,
+): Promise<void> {
+  const trigger = page
+    .locator('[data-slot="select-trigger"]')
+    .filter({ hasText: currentText })
+    .first()
+
+  await expect(trigger).toBeVisible()
+  await expect(trigger).toBeEnabled()
+  await trigger.click()
+
+  const option = page.getByRole('option', { name: optionName, exact: true })
+  await expect(option).toBeVisible()
+
+  // Playwright UI can hang on high-level click/keyboard actions for Radix
+  // portalled options, so dispatch the mouse pointer sequence Radix listens for.
+  await option.evaluate((element) => {
+    const eventInit: PointerEventInit = {
+      bubbles: true,
+      cancelable: true,
+      pointerType: 'mouse',
+      button: 0,
+    }
+
+    element.dispatchEvent(new PointerEvent('pointermove', eventInit))
+    element.dispatchEvent(new PointerEvent('pointerup', eventInit))
+  })
+
+  await expect(
+    page
+      .locator('[data-slot="select-trigger"]')
+      .filter({ hasText: optionName }),
+  ).toBeVisible()
+}
+
+async function ensureVideoEnabled(page: Page): Promise<void> {
+  const videoSwitch = page.getByRole('switch').first()
+  await expect(videoSwitch).toBeVisible()
+
+  if ((await videoSwitch.getAttribute('data-state')) !== 'checked') {
+    await videoSwitch.click()
+  }
+
+  await expect(videoSwitch).toHaveAttribute('data-state', 'checked')
+  await expect(page.getByText('Camera Source')).toBeVisible()
+}
+
+async function completeMediaSetup(page: Page): Promise<void> {
+  const completeButton = page.getByTestId('media-setup-complete-button')
+  await expect(completeButton).toBeEnabled({ timeout: 10000 })
+  await completeButton.evaluate((button) => {
+    const htmlButton = button as HTMLButtonElement
+    htmlButton.click()
+  })
+  await expect(page).toHaveURL('/')
+}
 
 /**
  * Media setup page e2e tests.
@@ -233,35 +295,57 @@ test.describe('Media Setup Page', () => {
   })
 
   test.describe('Persistence', () => {
-    test('should persist exact default camera, microphone, and speaker IDs', async ({
+    test('should persist default camera, microphone, and speaker IDs', async ({
       page,
     }) => {
       await page.goto('/setup')
       await clearStorage(page)
+      await page.reload()
 
       await expect(page.getByText('Setup Audio & Video')).toBeVisible({
         timeout: 10000,
       })
 
-      // Enable video first so camera and microphone controls are available.
-      const switches = page.getByRole('switch')
-      const videoSwitch = switches.first()
-      await videoSwitch.click()
-      await expect(page.getByText('Camera Source')).toBeVisible()
+      await ensureVideoEnabled(page)
 
-      const completeButton = page.getByTestId('media-setup-complete-button')
-      await expect(completeButton).toBeEnabled({ timeout: 10000 })
-      await completeButton.click()
-      await expect(page).toHaveURL('/')
+      await completeMediaSetup(page)
 
       const prefs = await getMediaPreferences(page)
       expect(prefs).toMatchObject({
         videoinput: 'mock-camera-1',
         audioinput: 'mock-mic-1',
+        audiooutput: 'default',
       })
-      expect(['mock-speaker-1', null]).toContain(
-        (prefs?.audiooutput as string | null | undefined) ?? null,
+      expect(typeof prefs?.timestamp).toBe('number')
+    })
+
+    test('should persist user-selected device IDs', async ({ page }) => {
+      await page.goto('/setup')
+      await clearStorage(page)
+      await page.reload()
+
+      await expect(page.getByText('Setup Audio & Video')).toBeVisible({
+        timeout: 10000,
+      })
+
+      await ensureVideoEnabled(page)
+
+      await selectDeviceOption(page, 'Mock Camera 1', 'Mock Camera 2')
+      await selectDeviceOption(page, 'Mock Microphone 1', 'Mock Microphone 2')
+      await selectDeviceOption(
+        page,
+        /System Default|Select speaker/,
+        'Mock Speaker 1',
       )
+
+      await completeMediaSetup(page)
+
+      const prefs = await getMediaPreferences(page)
+      expect(prefs).toMatchObject({
+        videoinput: 'mock-camera-2',
+        audioinput: 'mock-mic-2',
+        audiooutput: 'mock-speaker-1',
+      })
       expect(typeof prefs?.timestamp).toBe('number')
     })
 

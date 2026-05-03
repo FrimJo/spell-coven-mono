@@ -206,10 +206,28 @@ export async function navigateToTestGame(
  * with `leave-game-button` visible.
  */
 export async function leaveGameRoom(page: Page): Promise<void> {
+  const confirmButton = page.getByTestId('leave-dialog-confirm-button')
+  if (await confirmButton.isVisible().catch(() => false)) {
+    await confirmButton.click()
+    await expect(page).toHaveURL('/')
+    return
+  }
+
+  for (const cancelButton of [
+    page.getByTestId('reset-dialog-cancel-button'),
+    page.getByTestId('media-setup-cancel-button'),
+  ]) {
+    if (await cancelButton.isVisible().catch(() => false)) {
+      await cancelButton.click()
+      await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCount(0)
+      break
+    }
+  }
+
   const leaveButton = page.getByTestId('leave-game-button')
   if (await leaveButton.isVisible().catch(() => false)) {
     await leaveButton.click()
-    await page.getByTestId('leave-dialog-confirm-button').click()
+    await confirmButton.click()
     await expect(page).toHaveURL('/')
   }
 }
@@ -280,6 +298,33 @@ export async function mockMediaDevices(page: Page): Promise<void> {
     ]
 
     navigator.mediaDevices.enumerateDevices = async () => mockDevices
+
+    const allowedAudioOutputDeviceIds = new Set([
+      'default',
+      '',
+      ...mockDevices
+        .filter((device) => device.kind === 'audiooutput')
+        .map((device) => device.deviceId),
+    ])
+    const elementSinkIds = new WeakMap<HTMLMediaElement, string>()
+
+    Object.defineProperty(HTMLMediaElement.prototype, 'sinkId', {
+      configurable: true,
+      get() {
+        return elementSinkIds.get(this) ?? ''
+      },
+    })
+
+    Object.defineProperty(HTMLMediaElement.prototype, 'setSinkId', {
+      configurable: true,
+      value: async function setSinkId(deviceId: string) {
+        if (!allowedAudioOutputDeviceIds.has(deviceId)) {
+          throw new DOMException('Requested device not found', 'NotFoundError')
+        }
+
+        elementSinkIds.set(this, deviceId)
+      },
+    })
   })
 }
 
