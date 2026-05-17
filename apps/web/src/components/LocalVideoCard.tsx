@@ -1,10 +1,13 @@
 import type { DetectorType } from '@/lib/detectors'
+import type { MediaTrack } from '@/types/media-session'
 import type { Participant } from '@/types/participant'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
+import { useRoomMedia } from '@/contexts/RoomMediaContext'
 import { useCardDetector } from '@/hooks/useCardDetector'
 import { attachVideoStream } from '@/lib/video-stream-utils'
 
+import { LiveKitTrackElement } from './LiveKitTrackElement'
 import { PlayerStatsOverlay } from './PlayerStatsOverlay'
 import { PlayerVideoCard } from './PlayerVideoCard'
 import {
@@ -28,6 +31,7 @@ const LOCAL_VIDEO_STYLE: React.CSSProperties = {
 
 interface LocalVideoCardProps {
   stream?: MediaStream | null
+  videoTrack?: MediaTrack | null
   enableCardDetection?: boolean
   detectorType?: DetectorType
   usePerspectiveWarp?: boolean
@@ -41,6 +45,7 @@ interface LocalVideoCardProps {
 
 export const LocalVideoCard = memo(function LocalVideoCard({
   stream,
+  videoTrack,
   enableCardDetection = true,
   detectorType,
   usePerspectiveWarp = true,
@@ -61,6 +66,7 @@ export const LocalVideoCard = memo(function LocalVideoCard({
     toggleAudio: toggleLocalAudio,
     mediaPreferences: { videoEnabled, audioEnabled },
   } = useMediaStreams()
+  const { controls } = useRoomMedia()
 
   const [isTogglingVideo, setIsTogglingVideo] = useState(false)
 
@@ -70,21 +76,22 @@ export const LocalVideoCard = memo(function LocalVideoCard({
       setIsTogglingVideo(true)
       try {
         await toggleVideo(enabled)
+        await controls.setCameraEnabled(enabled)
       } finally {
         setIsTogglingVideo(false)
       }
     },
-    [toggleVideo],
+    [toggleVideo, controls],
   )
 
   // Initialize card detector (only when stream exists)
   const { overlayRef, croppedRef, fullResRef } = useCardDetector({
     videoRef: videoRef,
-    enableCardDetection: enableCardDetection && !!stream,
+    enableCardDetection: enableCardDetection && (!!videoTrack || !!stream),
     detectorType,
     usePerspectiveWarp,
     onCrop: onCardCrop,
-    reinitializeTrigger: stream ? 1 : 0,
+    reinitializeTrigger: videoTrack ? 1 : stream ? 1 : 0,
   })
 
   // Audio muted state is derived from context's audioEnabled preference
@@ -107,6 +114,7 @@ export const LocalVideoCard = memo(function LocalVideoCard({
   // reference stopped audio tracks, which can cause browsers to black out
   // the video surface.
   useEffect(() => {
+    if (videoTrack) return
     const video = videoRef.current
     if (!video || !stream) return
 
@@ -127,29 +135,41 @@ export const LocalVideoCard = memo(function LocalVideoCard({
     }
 
     attachVideoStream(video, stream)
-  }, [stream])
+  }, [stream, videoTrack])
 
-  const handleToggleAudio = useCallback(() => {
+  const handleToggleAudio = useCallback(async () => {
     // Toggle audio - context will release/acquire mic resources
     // isAudioMuted = !audioEnabled, so passing isAudioMuted toggles to the opposite state
     toggleLocalAudio(isAudioMuted)
-  }, [toggleLocalAudio, isAudioMuted])
+    await controls.setMicrophoneEnabled(isAudioMuted)
+  }, [toggleLocalAudio, isAudioMuted, controls])
 
   // Show video only when enabled AND stream has video tracks
   const hasVideoStream =
-    videoEnabled && stream && stream.getVideoTracks().length > 0
+    videoEnabled &&
+    (!!videoTrack || (stream ? stream.getVideoTracks().length > 0 : false))
 
   return (
     <PlayerVideoCard ref={videoContainerRef}>
       {hasVideoStream ? (
         <>
-          <video
-            ref={handleVideoRef}
-            autoPlay
-            muted
-            playsInline
-            style={LOCAL_VIDEO_STYLE}
-          />
+          {videoTrack ? (
+            <LiveKitTrackElement
+              kind="video"
+              track={videoTrack}
+              muted
+              style={LOCAL_VIDEO_STYLE}
+              onVideoElement={handleVideoRef}
+            />
+          ) : (
+            <video
+              ref={handleVideoRef}
+              autoPlay
+              muted
+              playsInline
+              style={LOCAL_VIDEO_STYLE}
+            />
+          )}
           {enableCardDetection && overlayRef && (
             <CardDetectionOverlay overlayRef={overlayRef} />
           )}

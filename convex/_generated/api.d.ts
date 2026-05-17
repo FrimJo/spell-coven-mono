@@ -15,12 +15,13 @@ import type * as crons from "../crons.js";
 import type * as env from "../env.js";
 import type * as errors from "../errors.js";
 import type * as http from "../http.js";
+import type * as mediaActions from "../mediaActions.js";
+import type * as mediaAuth from "../mediaAuth.js";
 import type * as migrations from "../migrations.js";
 import type * as players from "../players.js";
 import type * as previewAuth from "../previewAuth.js";
 import type * as previewLogin from "../previewLogin.js";
 import type * as rooms from "../rooms.js";
-import type * as signals from "../signals.js";
 import type * as users from "../users.js";
 
 import type {
@@ -37,12 +38,13 @@ declare const fullApi: ApiFromModules<{
   env: typeof env;
   errors: typeof errors;
   http: typeof http;
+  mediaActions: typeof mediaActions;
+  mediaAuth: typeof mediaAuth;
   migrations: typeof migrations;
   players: typeof players;
   previewAuth: typeof previewAuth;
   previewLogin: typeof previewLogin;
   rooms: typeof rooms;
-  signals: typeof signals;
   users: typeof users;
 }>;
 

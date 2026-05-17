@@ -1,4 +1,5 @@
 import type { DetectorType } from '@/lib/detectors'
+import type { MediaTrack, RemoteMediaParticipant } from '@/types/media-session'
 import type { Participant } from '@/types/participant'
 import {
   memo,
@@ -11,9 +12,8 @@ import {
 } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { usePresence } from '@/contexts/PresenceContext'
+import { useRoomMedia } from '@/contexts/RoomMediaContext'
 import { useCardDetector } from '@/hooks/useCardDetector'
-import { useConvexWebRTC } from '@/hooks/useConvexWebRTC'
-import { useVideoStreamAttachment } from '@/hooks/useVideoStreamAttachment'
 import {
   createSilentAudioStream,
   createSyntheticVideoStream,
@@ -29,7 +29,6 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { Card } from '@repo/ui/components/card'
 import {
@@ -38,6 +37,7 @@ import {
   TooltipTrigger,
 } from '@repo/ui/components/tooltip'
 
+import { LiveKitTrackElement } from './LiveKitTrackElement'
 import { LocalVideoCard } from './LocalVideoCard'
 import { MediaPermissionGate } from './MediaPermissionGate'
 import { PlayerStatsOverlay } from './PlayerStatsOverlay'
@@ -72,12 +72,11 @@ interface RemotePlayerCardProps {
   playerId: string
   playerName: string
   participantData: Participant
-  remoteStream: MediaStream | undefined
+  remoteVideoTrack: MediaTrack | null
+  remoteAudioTrack: MediaTrack | null
   connectionState: string | undefined
   peerVideoEnabled: boolean
   peerAudioEnabled: boolean
-  remoteVideoRefs: React.MutableRefObject<Map<string, HTMLVideoElement>>
-  attachedStreamsRef: React.MutableRefObject<Map<string, MediaStream | null>>
   isMuted: boolean
   roomId: string
   localParticipant: Participant | undefined
@@ -94,12 +93,11 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
   playerId,
   playerName,
   participantData,
-  remoteStream,
+  remoteVideoTrack,
+  remoteAudioTrack,
   connectionState,
   peerVideoEnabled,
   peerAudioEnabled,
-  remoteVideoRefs,
-  attachedStreamsRef,
   isMuted,
   roomId,
   localParticipant,
@@ -117,71 +115,17 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
   const { overlayRef, croppedRef, fullResRef } = useCardDetector({
     videoRef: videoRef,
     enableCardDetection:
-      enableCardDetection && peerVideoEnabled && !!remoteStream,
+      enableCardDetection && peerVideoEnabled && !!remoteVideoTrack,
     detectorType,
     usePerspectiveWarp,
     onCrop: onCardCrop,
-    reinitializeTrigger: remoteStream ? 1 : 0,
+    reinitializeTrigger: remoteVideoTrack ? 1 : 0,
   })
 
   // Combined ref handler - updates both local ref and shared map
   const handleVideoRef = (element: HTMLVideoElement | null) => {
     // Update local ref for card detector
     videoRef.current = element
-
-    // Update shared map for stream attachment
-    if (element) {
-      remoteVideoRefs.current.set(playerId, element)
-    } else {
-      remoteVideoRefs.current.delete(playerId)
-      attachedStreamsRef.current.delete(playerId)
-    }
-  }
-
-  const handleLoadedMetadata = () => {
-    const videoElement = remoteVideoRefs.current.get(playerId)
-    if (
-      videoElement &&
-      remoteStream &&
-      videoElement.paused &&
-      peerVideoEnabled
-    ) {
-      requestAnimationFrame(() => {
-        videoElement.play().catch((error) => {
-          if (error.name !== 'AbortError') {
-            console.error(
-              `[VideoStreamGrid] Failed to play after metadata loaded for ${playerId}:`,
-              error,
-            )
-          }
-        })
-      })
-    }
-  }
-
-  const handleCanPlay = () => {
-    const videoElement = remoteVideoRefs.current.get(playerId)
-    if (
-      videoElement &&
-      remoteStream &&
-      videoElement.paused &&
-      peerVideoEnabled
-    ) {
-      requestAnimationFrame(() => {
-        videoElement.play().catch((error) => {
-          if (error.name !== 'AbortError') {
-            console.error(
-              `[VideoStreamGrid] Failed to play on canPlay for ${playerId}:`,
-              error,
-            )
-          }
-        })
-      })
-    }
-  }
-
-  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
-    console.error(`[VideoStreamGrid] Video error for ${playerId}:`, e)
   }
 
   const videoContainerRef = useRef<HTMLDivElement>(null)
@@ -196,17 +140,22 @@ const RemotePlayerCard = memo(function RemotePlayerCard({
       <div ref={videoContainerRef} className="min-h-0 bg-black relative flex-1">
         {peerVideoEnabled ? (
           <>
-            {remoteStream && (
-              <video
-                data-testid="remote-player-video"
-                ref={handleVideoRef}
-                autoPlay
-                playsInline
+            {remoteVideoTrack && (
+              <LiveKitTrackElement
+                testId="remote-player-video"
+                kind="video"
+                track={remoteVideoTrack}
                 muted={isMuted}
                 style={VIDEO_ELEMENT_STYLE}
-                onLoadedMetadata={handleLoadedMetadata}
-                onCanPlay={handleCanPlay}
-                onError={handleVideoError}
+                onVideoElement={handleVideoRef}
+              />
+            )}
+            {peerAudioEnabled && remoteAudioTrack && (
+              <LiveKitTrackElement
+                kind="audio"
+                track={remoteAudioTrack}
+                muted={isMuted}
+                testId="remote-player-audio"
               />
             )}
             {enableCardDetection && overlayRef && (
@@ -430,7 +379,8 @@ interface RemoteGridSession {
   id: string
   name: string
   participantData: Participant
-  remoteStream: MediaStream | undefined
+  remoteVideoTrack: MediaTrack | null
+  remoteAudioTrack: MediaTrack | null
   connectionState: string | undefined
   peerVideoEnabled: boolean
   peerAudioEnabled: boolean
@@ -438,18 +388,9 @@ interface RemoteGridSession {
   isOnline: boolean
 }
 
-function buildRemotePlayerIds(participants: Participant[], userId: string) {
+function buildRemotePlayers(participants: Participant[], userId: string) {
   return participants
     .filter((participant) => participant.id !== userId)
-    .map((participant) => participant.id)
-}
-
-function buildRemotePlayers(
-  participants: Participant[],
-  localPlayerName: string,
-) {
-  return participants
-    .filter((participant) => participant.username !== localPlayerName)
     .map((participant) => ({
       id: participant.id,
       name: participant.username,
@@ -483,9 +424,8 @@ function resolvePeerMediaEnabled({
 
 function buildRemoteGridSessions({
   players,
-  remoteStreams,
-  connectionStates,
-  trackStates,
+  remoteParticipants,
+  roomConnectionState,
   streamStates,
   mutedPlayers,
   now,
@@ -495,9 +435,8 @@ function buildRemoteGridSessions({
     name: string
     participantData: Participant
   }>
-  remoteStreams: Map<string, MediaStream>
-  connectionStates: Map<string, string>
-  trackStates: Map<string, { videoEnabled: boolean; audioEnabled: boolean }>
+  remoteParticipants: Map<string, RemoteMediaParticipant>
+  roomConnectionState: string
   streamStates: Record<string, StreamState>
   mutedPlayers: Set<string>
   now: number
@@ -507,22 +446,23 @@ function buildRemoteGridSessions({
       video: true,
       audio: true,
     }
-    const trackState = trackStates.get(player.id)
+    const remoteMedia = remoteParticipants.get(player.participantData.sessionId)
 
     return {
       id: player.id,
       name: player.name,
       participantData: player.participantData,
-      remoteStream: remoteStreams.get(player.id),
-      connectionState: connectionStates.get(player.id),
+      remoteVideoTrack: remoteMedia?.video.track ?? null,
+      remoteAudioTrack: remoteMedia?.audio.track ?? null,
+      connectionState: remoteMedia ? 'connected' : roomConnectionState,
       peerVideoEnabled: resolvePeerMediaEnabled({
         presenceEnabled: player.participantData.videoEnabled,
-        trackEnabled: trackState?.videoEnabled,
+        trackEnabled: remoteMedia?.video.enabled,
         fallbackEnabled: fallbackState.video,
       }),
       peerAudioEnabled: resolvePeerMediaEnabled({
         presenceEnabled: player.participantData.audioEnabled,
-        trackEnabled: trackState?.audioEnabled,
+        trackEnabled: remoteMedia?.audio.enabled,
         fallbackEnabled: fallbackState.audio,
       }),
       isMuted: mutedPlayers.has(player.id),
@@ -548,14 +488,10 @@ export function VideoStreamGrid({
   )
 
   // Get participants from context (already deduplicated)
-  const {
-    uniqueParticipants: gameRoomParticipants,
-    isLoading: isPresenceLoading,
-    roomSeatCount,
-  } = usePresence()
+  const { uniqueParticipants: gameRoomParticipants, roomSeatCount } =
+    usePresence()
 
-  // Presence is ready when not loading (channel has been set up with correct key)
-  const presenceReady = !isPresenceLoading
+  const roomMedia = useRoomMedia()
 
   // Current time state for computing online status (updates every 5 seconds)
   // This matches the logic in GameRoomSidebar to keep status synchronized
@@ -569,12 +505,6 @@ export function VideoStreamGrid({
 
     return () => clearInterval(interval)
   }, [])
-
-  // Compute remote player IDs for WebRTC
-  const remotePlayerIds = useMemo(
-    () => buildRemotePlayerIds(gameRoomParticipants, userId),
-    [gameRoomParticipants, userId],
-  )
 
   // --- Local Media Management (from context) ---
   // Note: Toggle functions are used directly in LocalVideoCard via useMediaStreams()
@@ -595,36 +525,16 @@ export function VideoStreamGrid({
   const isVideoPending = videoResult.isPending
   const isAudioPending = audioResult.isPending
 
-  // WebRTC hook for peer-to-peer video streaming
-  // Wait for presence to be ready before initializing signaling
-  // This ensures the channel is created with the correct presence key
-
-  // WebRTC hook for peer connections using Convex signaling
-  const {
-    remoteStreams,
-    connectionStates,
-    trackStates,
-    error: _webrtcError,
-    isInitialized: _isInitialized,
-  } = useConvexWebRTC({
-    localPlayerId: userId,
-    remotePlayerIds,
-    roomId: roomId,
-    localStream, // Pass the managed local stream
-    presenceReady, // Wait for presence before initializing signaling
-    onError: (error: Error) => {
-      console.error('[VideoStreamGrid] WebRTC error:', error)
-      toast.error(error.message)
-    },
-  })
-
   // Local stream error and pending state
-  const localStreamError = videoError || audioError
-  const isLocalStreamPending = isVideoPending || isAudioPending
+  const localStreamError = roomMedia.lastError ?? videoError ?? audioError
+  const isLocalStreamPending =
+    roomMedia.connectionState === 'connecting' ||
+    isVideoPending ||
+    isAudioPending
 
   const players = useMemo(
-    () => buildRemotePlayers(gameRoomParticipants, localPlayerName),
-    [gameRoomParticipants, localPlayerName],
+    () => buildRemotePlayers(gameRoomParticipants, userId),
+    [gameRoomParticipants, userId],
   )
 
   const localParticipant = useMemo(
@@ -648,18 +558,16 @@ export function VideoStreamGrid({
     () =>
       buildRemoteGridSessions({
         players,
-        remoteStreams,
-        connectionStates,
-        trackStates,
+        remoteParticipants: roomMedia.remotes,
+        roomConnectionState: roomMedia.connectionState,
         streamStates,
         mutedPlayers: effectiveMutedPlayers,
         now,
       }),
     [
       players,
-      remoteStreams,
-      connectionStates,
-      trackStates,
+      roomMedia.remotes,
+      roomMedia.connectionState,
       streamStates,
       effectiveMutedPlayers,
       now,
@@ -677,21 +585,6 @@ export function VideoStreamGrid({
   // Calculate empty slots needed (total seatCount slots: 1 local + up to seatCount-1 remote)
   const maxRemoteSlots = roomSeatCount - 1
   const emptySlots = Math.max(0, maxRemoteSlots - players.length)
-
-  // Store refs for remote video elements
-  const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map())
-
-  // Track which streams are already attached to avoid unnecessary updates
-  const attachedStreamsRef = useRef<Map<string, MediaStream | null>>(new Map())
-
-  // Use custom hook to manage video stream attachments
-  // This handles all the complex logic of attaching/detaching streams
-  useVideoStreamAttachment({
-    remoteStreams,
-    trackStates,
-    videoElementsRef: remoteVideoRefs,
-    attachedStreamsRef,
-  })
 
   return (
     <LazyMotion features={domAnimation}>
@@ -785,6 +678,7 @@ export function VideoStreamGrid({
         ) : (
           <LocalVideoCard
             stream={localStream}
+            videoTrack={roomMedia.local?.video.track ?? null}
             enableCardDetection={enableCardDetection}
             detectorType={detectorType}
             usePerspectiveWarp={usePerspectiveWarp}
@@ -804,12 +698,11 @@ export function VideoStreamGrid({
             playerId={player.id}
             playerName={player.name}
             participantData={player.participantData}
-            remoteStream={player.remoteStream}
+            remoteVideoTrack={player.remoteVideoTrack}
+            remoteAudioTrack={player.remoteAudioTrack}
             connectionState={player.connectionState}
             peerVideoEnabled={player.peerVideoEnabled}
             peerAudioEnabled={player.peerAudioEnabled}
-            remoteVideoRefs={remoteVideoRefs}
-            attachedStreamsRef={attachedStreamsRef}
             isMuted={player.isMuted}
             roomId={roomId}
             localParticipant={localParticipant}

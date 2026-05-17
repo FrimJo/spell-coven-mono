@@ -835,7 +835,6 @@ export const setRoomSeatCount = mutation({
  * (1 hour) and have no active players. Also cleans up all related data:
  * - roomPlayers records
  * - roomBans records
- * - roomSignals records
  * - userActiveRooms pointers
  */
 export const cleanupInactiveRooms = internalMutation({
@@ -890,15 +889,6 @@ export const cleanupInactiveRooms = internalMutation({
           .collect()
         for (const ban of allBans) {
           await ctx.db.delete(ban._id)
-        }
-
-        // Delete all roomSignals records for this room
-        const allSignals = await ctx.db
-          .query('roomSignals')
-          .withIndex('by_roomId', (q) => q.eq('roomId', room.roomId))
-          .collect()
-        for (const signal of allSignals) {
-          await ctx.db.delete(signal._id)
         }
 
         // Delete userActiveRooms pointers pointing to this room

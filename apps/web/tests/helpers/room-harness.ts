@@ -1,8 +1,8 @@
 /**
- * Reusable 4-player room bootstrap harness for WebRTC E2E tests.
+ * Reusable 4-player room bootstrap harness for media E2E tests.
  *
  * Extracts the deterministic launch → join → stabilize → diagnose lifecycle
- * from the baseline webrtc-room spec so that toggle-matrix, torture, and
+ * from the baseline room spec so that toggle-matrix, torture, and
  * future specs can share the same setup without duplication.
  */
 
@@ -83,61 +83,27 @@ export type RoomHarness = {
 }
 
 // ---------------------------------------------------------------------------
-// WebRTC peer connection capture & diagnostics
+// LiveKit media diagnostics
 // ---------------------------------------------------------------------------
 
 export async function injectPeerConnectionCapture(page: Page) {
   await page.addInitScript(() => {
-    const win = window as unknown as {
-      __rtcPeerConnections: RTCPeerConnection[]
-    }
-    win.__rtcPeerConnections = []
-    const OrigPC = RTCPeerConnection
     ;(
-      window as unknown as { RTCPeerConnection: typeof RTCPeerConnection }
-    ).RTCPeerConnection = class extends OrigPC {
-      constructor(config?: RTCConfiguration) {
-        super(config)
-        win.__rtcPeerConnections.push(this)
-      }
-    }
+      window as unknown as { __spellCovenMediaDiagnostics?: unknown }
+    ).__spellCovenMediaDiagnostics = null
   })
 }
 
 export async function collectWebRTCPeerDiagnostics(page: Page) {
   return page.evaluate(() => {
-    const pcs = (
-      window as unknown as { __rtcPeerConnections?: RTCPeerConnection[] }
-    ).__rtcPeerConnections
-    if (!pcs || pcs.length === 0) return { captured: false, peers: [] }
+    const diagnostics = (
+      window as unknown as { __spellCovenMediaDiagnostics?: unknown }
+    ).__spellCovenMediaDiagnostics
 
     return {
-      captured: true,
-      peers: pcs.map((pc, i) => {
-        const senders = pc.getSenders().map((s) => ({
-          kind: s.track?.kind ?? null,
-          enabled: s.track?.enabled ?? null,
-          readyState: s.track?.readyState ?? null,
-          muted: s.track?.muted ?? null,
-        }))
-        const receivers = pc.getReceivers().map((r) => ({
-          kind: r.track?.kind ?? null,
-          enabled: r.track?.enabled ?? null,
-          readyState: r.track?.readyState ?? null,
-          muted: r.track?.muted ?? null,
-        }))
-        return {
-          index: i,
-          connectionState: pc.connectionState,
-          iceConnectionState: pc.iceConnectionState,
-          iceGatheringState: pc.iceGatheringState,
-          signalingState: pc.signalingState,
-          localDescriptionType: pc.localDescription?.type ?? null,
-          remoteDescriptionType: pc.remoteDescription?.type ?? null,
-          senders,
-          receivers,
-        }
-      }),
+      captured: diagnostics !== null && diagnostics !== undefined,
+      diagnostics: diagnostics ?? null,
+      peers: [],
     }
   })
 }
@@ -401,11 +367,8 @@ export async function setupStableRoom(
       const text = msg.text()
       const type = msg.type()
       if (
-        text.includes('[WebRTC') ||
-        text.includes('[ConvexWebRTC') ||
-        text.includes('[ConvexSignaling') ||
+        text.includes('[LiveKit') ||
         text.includes('[VideoStreamGrid') ||
-        text.includes('[useVideoStreamAttachment') ||
         type === 'error' ||
         type === 'warning'
       ) {
@@ -675,22 +638,18 @@ export async function assertAllPlayersMediaHealthy(
       const playerLabel = PLAYER_LABELS[index]!
       const peerDiag = await collectWebRTCPeerDiagnostics(player.page)
       if (peerDiag.captured) {
-        const activePeers = peerDiag.peers.filter(
-          (peer) =>
-            peer.connectionState !== 'closed' &&
-            peer.signalingState !== 'closed',
-        )
-        const nonConnectedActivePeers = activePeers.filter(
-          (peer) => peer.connectionState !== 'connected',
-        )
+        const diagnostics = peerDiag.diagnostics as {
+          connectionState?: string
+          remoteSessionIds?: string[]
+        } | null
         expect(
-          activePeers.length >= EXPECTED_REMOTES,
-          `${playerLabel}: expected at least ${EXPECTED_REMOTES} active RTCPeerConnections`,
+          diagnostics?.connectionState,
+          `${playerLabel}: expected LiveKit room to be connected`,
+        ).toBe('connected')
+        expect(
+          (diagnostics?.remoteSessionIds?.length ?? 0) >= EXPECTED_REMOTES,
+          `${playerLabel}: expected at least ${EXPECTED_REMOTES} LiveKit remote participants`,
         ).toBeTruthy()
-        expect(
-          nonConnectedActivePeers.length,
-          `${playerLabel}: expected all active RTCPeerConnections connected`,
-        ).toBe(0)
       }
     }
 

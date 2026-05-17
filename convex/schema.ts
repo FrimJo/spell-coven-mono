@@ -1,7 +1,7 @@
 /**
  * Convex Schema - Database table definitions
  *
- * Defines the data model for room state, players, signaling, and bans.
+ * Defines the data model for room state, players, and bans.
  * @see SUPABASE_TO_CONVEX_PLAN.md Section 2.3 for constraints and indexes.
  */
 
@@ -88,30 +88,6 @@ export default defineSchema({
     .index('by_roomId_sessionId', ['roomId', 'sessionId'])
     .index('by_roomId_userId', ['roomId', 'userId'])
     .index('by_roomId_lastSeenAt', ['roomId', 'lastSeenAt']),
-
-  /**
-   * roomSignals - WebRTC signaling messages
-   *
-   * Short-lived records for SDP offers/answers and ICE candidates.
-   * Should be cleaned up after ~60s via scheduled cleanup.
-   */
-  roomSignals: defineTable({
-    /** Reference to room */
-    roomId: v.string(),
-    /** Sender's Discord user ID */
-    fromUserId: v.string(),
-    /** Target user ID (null = broadcast to all peers) */
-    toUserId: v.union(v.string(), v.null()),
-    /** Signal payload (SDP, ICE candidate, etc.) */
-    payload: v.any(),
-    /** When signal was created */
-    createdAt: v.number(),
-  })
-    .index('by_roomId', ['roomId'])
-    .index('by_roomId_createdAt', ['roomId', 'createdAt'])
-    .index('by_roomId_toUserId', ['roomId', 'toUserId'])
-    .index('by_roomId_toUserId_createdAt', ['roomId', 'toUserId', 'createdAt'])
-    .index('by_createdAt', ['createdAt']),
 
   /**
    * roomBans - Persistent ban records

@@ -12,6 +12,7 @@ import {
 import { CommandersPanelProvider } from '@/contexts/CommandersPanelContext'
 import { MediaStreamProvider } from '@/contexts/MediaStreamContext.js'
 import { PresenceProvider, usePresence } from '@/contexts/PresenceContext'
+import { RoomMediaProvider } from '@/contexts/RoomMediaContext'
 import {
   useGameRoomKeyboardShortcuts,
   useGameRoomShortcutDisplayParts,
@@ -474,13 +475,15 @@ function GameRoomWithPresence({
       onDuplicateSession={handleDuplicateSession}
       onSessionTransferred={handleSessionTransferred}
     >
-      <GameRoomContent
-        roomId={roomId}
-        onLeaveGame={onLeaveGame}
-        detectorType={detectorType}
-        usePerspectiveWarp={usePerspectiveWarp}
-        showTestStream={showTestStream}
-      />
+      <RoomMediaProvider roomId={roomId}>
+        <GameRoomContent
+          roomId={roomId}
+          onLeaveGame={onLeaveGame}
+          detectorType={detectorType}
+          usePerspectiveWarp={usePerspectiveWarp}
+          showTestStream={showTestStream}
+        />
+      </RoomMediaProvider>
     </PresenceProvider>
   )
 }

@@ -290,26 +290,19 @@ test.describe('WebRTC 4-player torture', () => {
         const label = PLAYER_LABELS[idx]!
         const peerDiag = await collectWebRTCPeerDiagnostics(page)
         if (peerDiag.captured) {
-          const activePeers = peerDiag.peers.filter(
-            (peer) =>
-              peer.connectionState !== 'closed' &&
-              peer.signalingState !== 'closed',
-          )
-          const failedPeers = activePeers.filter(
-            (p) => p.connectionState === 'failed',
-          )
+          const diagnostics = peerDiag.diagnostics as {
+            connectionState?: string
+            remoteSessionIds?: string[]
+          } | null
           expect(
-            failedPeers.length,
-            `${label}: found ${failedPeers.length} failed peer connections at end of torture test`,
-          ).toBe(0)
+            diagnostics?.connectionState,
+            `${label}: expected LiveKit room connected at end of torture test`,
+          ).toBe('connected')
 
-          // Verify no excessive peer connection accumulation (listener leak proxy)
-          // After soak, we should have at most ~2x EXPECTED_REMOTES connections
-          // (active + recently-closed replacements).
           expect(
-            peerDiag.peers.length,
-            `${label}: excessive RTCPeerConnection count (${peerDiag.peers.length}) suggests listener/connection leak`,
-          ).toBeLessThanOrEqual(EXPECTED_REMOTES * 4)
+            (diagnostics?.remoteSessionIds?.length ?? 0) >= EXPECTED_REMOTES,
+            `${label}: expected LiveKit remote participants at end of torture test`,
+          ).toBeTruthy()
         }
       }
 
