@@ -97,6 +97,76 @@ Spell Coven is designed for Magic: The Gathering players who want to play with t
 4. **Open the app:**
    Navigate to https://localhost:1234 to get started.
 
+## LiveKit Environment Variables
+
+The media backend uses LiveKit Cloud tokens issued from Convex. These values are
+server-only Convex environment variables, not `VITE_*` client variables:
+
+```sh
+LIVEKIT_URL=wss://your-project.livekit.cloud
+LIVEKIT_API_KEY=...
+LIVEKIT_API_SECRET=...
+```
+
+Do not commit these secrets to `.env` files. Convex functions read them via
+`process.env` in `convex/env.ts`, so they must be configured on the Convex
+deployment that the app is using.
+
+### Local Development
+
+For the normal local Convex dev deployment used by `bun run convex:dev`, set the
+variables with the Convex CLI:
+
+```sh
+bunx convex env set LIVEKIT_URL
+bunx convex env set LIVEKIT_API_KEY
+bunx convex env set LIVEKIT_API_SECRET
+```
+
+Use the interactive form above, or pipe values through stdin to keep secrets out
+of shell history:
+
+```sh
+pbpaste | bunx convex env set LIVEKIT_API_SECRET
+```
+
+### E2E Tests
+
+E2E runs use a Convex preview deployment created by
+`scripts/convex-preview.sh`. Set the LiveKit variables on that preview
+deployment before running the tests. For the local E2E preview name used by the
+root script (`CONVEX_PREVIEW_NAME=local`):
+
+```sh
+CONVEX_PREVIEW_NAME=local bunx dotenv-cli -e apps/web/.env.test.local -- bash ./scripts/convex-preview.sh build
+
+bunx convex env set --preview-name local LIVEKIT_URL
+bunx convex env set --preview-name local LIVEKIT_API_KEY
+bunx convex env set --preview-name local LIVEKIT_API_SECRET
+
+bun run convex:e2e:ui
+```
+
+If you use a different `CONVEX_PREVIEW_NAME`, replace `local` with that preview
+name. CI or Vercel preview builds should set the same variables on the matching
+Convex preview deployment.
+
+### Vercel Deployments
+
+For production Vercel deployments, set the values on the production Convex
+deployment:
+
+```sh
+bunx convex env set --prod LIVEKIT_URL
+bunx convex env set --prod LIVEKIT_API_KEY
+bunx convex env set --prod LIVEKIT_API_SECRET
+```
+
+Adding these secrets only in the Vercel dashboard is not enough because the
+token action runs in Convex, not in the Vercel function runtime. Vercel still
+needs the usual public `VITE_CONVEX_URL` for the web app to point at the correct
+Convex deployment.
+
 ## Observability
 
 Sentry is integrated across the Convex backend and web client. See
