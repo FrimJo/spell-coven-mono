@@ -52,7 +52,7 @@
     "@vercel/speed-insights": "^1.2.0",
     "@vitejs/plugin-react": "^4.3.4",
     "@xstate/react": "^6.0.0",
-    "baseline-browser-mapping": "^2.9.19",
+    "baseline-browser-mapping": "^2.10.35",
     "cross-fetch": "^4.1.0",
     "dotenv-cli": "catalog:",
     "eslint": "^9.39.2",

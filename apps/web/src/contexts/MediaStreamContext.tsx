@@ -104,63 +104,72 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
   const permissionsGranted = microphoneGranted && cameraGrantedOrUnavailable
 
   const mediaPreferences = useMediaPreferenceStore()
+  const {
+    selectedAudioOutputDeviceId,
+    setSelectedAudioOutputDeviceId: setStoredAudioOutputDeviceId,
+    restoreSnapshot: restoreMediaPreferencesSnapshot,
+  } = mediaPreferences
 
   const audioOutputState = useAudioOutput({
-    initialDeviceId: mediaPreferences.selectedAudioOutputDeviceId ?? 'default',
+    initialDeviceId: selectedAudioOutputDeviceId ?? 'default',
   })
+  const {
+    devices: audioOutputDevices,
+    currentDeviceId: currentAudioOutputDeviceId,
+    setOutputDevice,
+    testOutput,
+    isTesting,
+    isSupported,
+    error,
+    isLoading,
+    refreshDevices,
+  } = audioOutputState
 
   useEffect(() => {
-    const currentDeviceId = audioOutputState.currentDeviceId || null
-    if (
-      currentDeviceId &&
-      currentDeviceId !== mediaPreferences.selectedAudioOutputDeviceId
-    ) {
-      mediaPreferences.setSelectedAudioOutputDeviceId(currentDeviceId)
+    const currentDeviceId = currentAudioOutputDeviceId || null
+    if (currentDeviceId && currentDeviceId !== selectedAudioOutputDeviceId) {
+      setStoredAudioOutputDeviceId(currentDeviceId)
     }
   }, [
-    audioOutputState.currentDeviceId,
-    mediaPreferences.selectedAudioOutputDeviceId,
-    mediaPreferences.setSelectedAudioOutputDeviceId,
+    currentAudioOutputDeviceId,
+    selectedAudioOutputDeviceId,
+    setStoredAudioOutputDeviceId,
   ])
 
   useEffect(() => {
-    const desiredDeviceId =
-      mediaPreferences.selectedAudioOutputDeviceId ?? 'default'
+    const desiredDeviceId = selectedAudioOutputDeviceId ?? 'default'
 
     if (
-      audioOutputState.devices.length > 0 &&
-      desiredDeviceId !== audioOutputState.currentDeviceId
+      audioOutputDevices.length > 0 &&
+      desiredDeviceId !== currentAudioOutputDeviceId
     ) {
-      void audioOutputState.setOutputDevice(desiredDeviceId).catch(() => {})
+      void setOutputDevice(desiredDeviceId).catch(() => {})
     }
   }, [
-    mediaPreferences.selectedAudioOutputDeviceId,
-    audioOutputState.devices.length,
-    audioOutputState.currentDeviceId,
-    audioOutputState.setOutputDevice,
+    selectedAudioOutputDeviceId,
+    audioOutputDevices.length,
+    currentAudioOutputDeviceId,
+    setOutputDevice,
   ])
 
   const setSelectedAudioOutputDeviceId = useCallback(
     async (deviceId: string) => {
-      mediaPreferences.setSelectedAudioOutputDeviceId(deviceId)
-      await audioOutputState.setOutputDevice(deviceId)
+      setStoredAudioOutputDeviceId(deviceId)
+      await setOutputDevice(deviceId)
     },
-    [
-      mediaPreferences.setSelectedAudioOutputDeviceId,
-      audioOutputState.setOutputDevice,
-    ],
+    [setStoredAudioOutputDeviceId, setOutputDevice],
   )
 
   const restoreSnapshot = useCallback(
     (snapshot: MediaPreferencesSnapshot) => {
-      mediaPreferences.restoreSnapshot(snapshot)
+      restoreMediaPreferencesSnapshot(snapshot)
       const outputDeviceId = snapshot.selectedAudioOutputDeviceId
 
       if (outputDeviceId) {
-        void audioOutputState.setOutputDevice(outputDeviceId).catch(() => {})
+        void setOutputDevice(outputDeviceId).catch(() => {})
       }
     },
-    [mediaPreferences.restoreSnapshot, audioOutputState.setOutputDevice],
+    [restoreMediaPreferencesSnapshot, setOutputDevice],
   )
 
   const mediaPreferencesForContext = useMemo(
@@ -174,28 +183,27 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
 
   const audioOutputForContext = useMemo(
     () => ({
-      devices: audioOutputState.devices,
+      devices: audioOutputDevices,
       currentDeviceId:
-        mediaPreferences.selectedAudioOutputDeviceId ??
-        audioOutputState.currentDeviceId,
+        selectedAudioOutputDeviceId ?? currentAudioOutputDeviceId,
       setOutputDevice: setSelectedAudioOutputDeviceId,
-      testOutput: audioOutputState.testOutput,
-      isTesting: audioOutputState.isTesting,
-      isSupported: audioOutputState.isSupported,
-      error: audioOutputState.error,
-      isLoading: audioOutputState.isLoading,
-      refreshDevices: audioOutputState.refreshDevices,
+      testOutput,
+      isTesting,
+      isSupported,
+      error,
+      isLoading,
+      refreshDevices,
     }),
     [
-      audioOutputState.devices,
-      audioOutputState.currentDeviceId,
-      audioOutputState.testOutput,
-      audioOutputState.isTesting,
-      audioOutputState.isSupported,
-      audioOutputState.error,
-      audioOutputState.isLoading,
-      audioOutputState.refreshDevices,
-      mediaPreferences.selectedAudioOutputDeviceId,
+      audioOutputDevices,
+      currentAudioOutputDeviceId,
+      testOutput,
+      isTesting,
+      isSupported,
+      error,
+      isLoading,
+      refreshDevices,
+      selectedAudioOutputDeviceId,
       setSelectedAudioOutputDeviceId,
     ],
   )
