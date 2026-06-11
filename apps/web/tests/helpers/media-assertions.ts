@@ -112,49 +112,91 @@ export async function collectMediaDiagnostics(
   }, selector)
 }
 
+type VideoFrameStabilityMode = 'changing' | 'frozen'
+
+type VideoFrameStabilityOptions = {
+  waitForFrames?: boolean
+  intervalMs?: number
+}
+
+async function evaluateVideoFrameStability(
+  page: Page,
+  videoSelector: string,
+  mode: VideoFrameStabilityMode,
+  options: VideoFrameStabilityOptions = {},
+) {
+  const {
+    waitForFrames = false,
+    intervalMs = mode === 'changing' ? 250 : 400,
+  } = options
+
+  return page.evaluate(
+    async ({ selector, mode, waitForFrames, intervalMs }) => {
+      const video = document.querySelector(selector) as HTMLVideoElement | null
+      if (!video) return { ok: false, reason: 'no-video-element' }
+
+      if (waitForFrames) {
+        const start = performance.now()
+        while (performance.now() - start < 8000) {
+          if (video.readyState >= 3 && video.videoWidth > 0) break
+          await new Promise((resolve) => setTimeout(resolve, 100))
+        }
+
+        if (!(video.readyState >= 3 && video.videoWidth > 0)) {
+          return { ok: false, reason: 'no-frames' }
+        }
+      }
+
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.min(320, video.videoWidth || 320)
+      canvas.height = Math.min(180, video.videoHeight || 180)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return { ok: false, reason: 'no-canvas-context' }
+
+      const frameHash = () => {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+        let sum = 0
+        for (let i = 0; i < data.length; i += 97) {
+          sum = (sum + (data[i] ?? 0)) | 0
+        }
+        return sum
+      }
+
+      const h1 = frameHash()
+      await new Promise((resolve) => setTimeout(resolve, intervalMs))
+      const h2 = frameHash()
+      await new Promise((resolve) => setTimeout(resolve, intervalMs))
+      const h3 = frameHash()
+
+      const changing = h1 !== h2 || h2 !== h3
+      const frozen = h1 === h2 && h2 === h3
+      const ok = mode === 'changing' ? changing : frozen
+      const reason =
+        mode === 'changing'
+          ? changing
+            ? 'ok'
+            : 'frozen'
+          : frozen
+            ? 'ok'
+            : 'changing'
+
+      return { ok, reason }
+    },
+    { selector: videoSelector, mode, waitForFrames, intervalMs },
+  )
+}
+
 export async function expectVideoRendering(
   page: Page,
   videoSelector: string,
 ): Promise<void> {
-  const result = await page.evaluate(async (selector) => {
-    const video = document.querySelector(selector) as HTMLVideoElement | null
-    if (!video) return { ok: false, reason: 'no-video-element' }
-
-    const start = performance.now()
-    while (performance.now() - start < 8000) {
-      if (video.readyState >= 3 && video.videoWidth > 0) break
-      await new Promise((resolve) => setTimeout(resolve, 100))
-    }
-
-    if (!(video.readyState >= 3 && video.videoWidth > 0)) {
-      return { ok: false, reason: 'no-frames' }
-    }
-
-    const canvas = document.createElement('canvas')
-    canvas.width = Math.min(320, video.videoWidth)
-    canvas.height = Math.min(180, video.videoHeight || 180)
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return { ok: false, reason: 'no-canvas-context' }
-
-    const frameHash = () => {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
-      let sum = 0
-      for (let i = 0; i < data.length; i += 97) {
-        sum = (sum + (data[i] ?? 0)) | 0
-      }
-      return sum
-    }
-
-    const h1 = frameHash()
-    await new Promise((resolve) => setTimeout(resolve, 250))
-    const h2 = frameHash()
-    await new Promise((resolve) => setTimeout(resolve, 250))
-    const h3 = frameHash()
-
-    const changing = h1 !== h2 || h2 !== h3
-    return { ok: changing, reason: changing ? 'ok' : 'frozen' }
-  }, videoSelector)
+  const result = await evaluateVideoFrameStability(
+    page,
+    videoSelector,
+    'changing',
+    { waitForFrames: true },
+  )
 
   expect(result.ok, `video check failed: ${result.reason}`).toBeTruthy()
 }
@@ -163,46 +205,52 @@ export async function expectVideoFrozen(
   page: Page,
   videoSelector: string,
 ): Promise<void> {
-  const result = await page.evaluate(async (selector) => {
-    const video = document.querySelector(selector) as HTMLVideoElement | null
-    if (!video) return { ok: false, reason: 'no-video-element' }
-
-    const canvas = document.createElement('canvas')
-    canvas.width = Math.min(320, video.videoWidth || 320)
-    canvas.height = Math.min(180, video.videoHeight || 180)
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return { ok: false, reason: 'no-canvas-context' }
-
-    const frameHash = () => {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
-      let sum = 0
-      for (let i = 0; i < data.length; i += 97) {
-        sum = (sum + (data[i] ?? 0)) | 0
-      }
-      return sum
-    }
-
-    const h1 = frameHash()
-    await new Promise((resolve) => setTimeout(resolve, 400))
-    const h2 = frameHash()
-    await new Promise((resolve) => setTimeout(resolve, 400))
-    const h3 = frameHash()
-
-    const frozen = h1 === h2 && h2 === h3
-    return { ok: frozen, reason: frozen ? 'ok' : 'changing' }
-  }, videoSelector)
+  const result = await evaluateVideoFrameStability(
+    page,
+    videoSelector,
+    'frozen',
+  )
 
   expect(result.ok, `video freeze check failed: ${result.reason}`).toBeTruthy()
 }
 
-export async function expectAudioEnergy(
+type AudioRmsMode = 'energy' | 'silent'
+
+type AudioRmsSampleOptions = {
+  samples?: number
+  waitForReady?: boolean
+  includeDiagnostics?: boolean
+}
+
+type AudioRmsSampleResult = {
+  ok: boolean
+  reason: string
+  maxRms: number
+  details?: unknown
+}
+
+async function sampleAudioRms(
   page: Page,
   mediaSelector: string,
-  threshold = 0.003,
-): Promise<void> {
-  const result = await page.evaluate(
-    async ({ selector, threshold }) => {
+  mode: AudioRmsMode,
+  threshold: number,
+  options: AudioRmsSampleOptions = {},
+): Promise<AudioRmsSampleResult> {
+  const {
+    samples = mode === 'energy' ? 30 : 10,
+    waitForReady = mode === 'energy',
+    includeDiagnostics = mode === 'energy',
+  } = options
+
+  return page.evaluate(
+    async ({
+      selector,
+      mode,
+      threshold,
+      samples,
+      waitForReady,
+      includeDiagnostics,
+    }) => {
       const element = document.querySelector(
         selector,
       ) as HTMLMediaElement | null
@@ -211,7 +259,7 @@ export async function expectAudioEnergy(
           ok: false,
           reason: 'no-media-element',
           maxRms: 0,
-          details: { selector },
+          ...(includeDiagnostics ? { details: { selector } } : {}),
         }
       }
 
@@ -234,10 +282,12 @@ export async function expectAudioEnergy(
         }
       }
 
-      try {
-        await element.play()
-      } catch {
-        // Autoplay might be blocked; continue to probe audio anyway.
+      if (waitForReady) {
+        try {
+          await element.play()
+        } catch {
+          // Autoplay might be blocked; continue to probe audio anyway.
+        }
       }
 
       const AudioContextConstructor =
@@ -249,18 +299,22 @@ export async function expectAudioEnergy(
           ok: false,
           reason: 'no-audio-context',
           maxRms: 0,
-          details: {
-            element: {
-              readyState: element.readyState,
-              muted: element.muted,
-              paused: element.paused,
-            },
-          },
+          ...(includeDiagnostics
+            ? {
+                details: {
+                  element: {
+                    readyState: element.readyState,
+                    muted: element.muted,
+                    paused: element.paused,
+                  },
+                },
+              }
+            : {}),
         }
       }
 
       const ctx = new AudioContextConstructor()
-      if (ctx.state === 'suspended') {
+      if (waitForReady && ctx.state === 'suspended') {
         try {
           await ctx.resume()
         } catch {
@@ -268,7 +322,10 @@ export async function expectAudioEnergy(
         }
       }
 
-      if (element.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+      if (
+        waitForReady &&
+        element.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
+      ) {
         const start = performance.now()
         while (performance.now() - start < 8000) {
           if (element.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) break
@@ -277,7 +334,7 @@ export async function expectAudioEnergy(
       }
 
       const stream = element.srcObject as MediaStream | null
-      if (stream) {
+      if (waitForReady && stream) {
         const start = performance.now()
         while (performance.now() - start < 8000) {
           const hasLiveAudioTrack = stream
@@ -288,22 +345,29 @@ export async function expectAudioEnergy(
         }
       }
 
-      if (element.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+      if (
+        waitForReady &&
+        element.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
+      ) {
         return {
           ok: false,
           reason: 'media-not-ready',
           maxRms: 0,
-          details: {
-            element: {
-              readyState: element.readyState,
-              networkState: element.networkState,
-              paused: element.paused,
-              currentTime: element.currentTime,
-              muted: element.muted,
-            },
-            stream: describeStream(stream),
-            audioContextState: ctx.state,
-          },
+          ...(includeDiagnostics
+            ? {
+                details: {
+                  element: {
+                    readyState: element.readyState,
+                    networkState: element.networkState,
+                    paused: element.paused,
+                    currentTime: element.currentTime,
+                    muted: element.muted,
+                  },
+                  stream: describeStream(stream),
+                  audioContextState: ctx.state,
+                },
+              }
+            : {}),
         }
       }
 
@@ -314,14 +378,12 @@ export async function expectAudioEnergy(
       const analyser = ctx.createAnalyser()
       analyser.fftSize = 2048
       source.connect(analyser)
-      // Avoid routing the signal to speakers during tests.
       const sink = ctx.createGain()
       sink.gain.value = 0
       analyser.connect(sink)
       sink.connect(ctx.destination)
 
       const data = new Float32Array(analyser.fftSize)
-      const samples = 30
       let maxRms = 0
       const rmsSeries: number[] = []
 
@@ -334,37 +396,61 @@ export async function expectAudioEnergy(
         }
         const rms = Math.sqrt(sum / data.length)
         if (rms > maxRms) maxRms = rms
-        rmsSeries.push(rms)
+        if (includeDiagnostics) {
+          rmsSeries.push(rms)
+        }
         await new Promise((resolve) => setTimeout(resolve, 100))
       }
 
-      const ok = maxRms > threshold
+      const ok = mode === 'energy' ? maxRms > threshold : maxRms <= threshold
+      const reason =
+        mode === 'energy' ? (ok ? 'ok' : 'silent') : ok ? 'ok' : 'audible'
+
       return {
         ok,
         maxRms,
-        reason: ok ? 'ok' : 'silent',
-        details: {
-          threshold,
-          audioContextState: ctx.state,
-          probeSource: sourceStream ? 'stream' : 'media-element',
-          element: {
-            readyState: element.readyState,
-            networkState: element.networkState,
-            currentTime: element.currentTime,
-            paused: element.paused,
-            ended: element.ended,
-            muted: element.muted,
-            defaultMuted: element.defaultMuted,
-            volume: element.volume,
-            playbackRate: element.playbackRate,
-          },
-          stream: describeStream(stream),
-          rmsSeries,
-        },
+        reason,
+        ...(includeDiagnostics
+          ? {
+              details: {
+                threshold,
+                audioContextState: ctx.state,
+                probeSource: sourceStream ? 'stream' : 'media-element',
+                element: {
+                  readyState: element.readyState,
+                  networkState: element.networkState,
+                  currentTime: element.currentTime,
+                  paused: element.paused,
+                  ended: element.ended,
+                  muted: element.muted,
+                  defaultMuted: element.defaultMuted,
+                  volume: element.volume,
+                  playbackRate: element.playbackRate,
+                },
+                stream: describeStream(stream),
+                rmsSeries,
+              },
+            }
+          : {}),
       }
     },
-    { selector: mediaSelector, threshold },
+    {
+      selector: mediaSelector,
+      mode,
+      threshold,
+      samples,
+      waitForReady,
+      includeDiagnostics,
+    },
   )
+}
+
+export async function expectAudioEnergy(
+  page: Page,
+  mediaSelector: string,
+  threshold = 0.003,
+): Promise<void> {
+  const result = await sampleAudioRms(page, mediaSelector, 'energy', threshold)
 
   expect(
     result.ok,
@@ -379,49 +465,7 @@ export async function expectAudioSilent(
   mediaSelector: string,
   threshold = 0.005,
 ): Promise<void> {
-  const result = await page.evaluate(
-    async ({ selector, threshold }) => {
-      const element = document.querySelector(
-        selector,
-      ) as HTMLMediaElement | null
-      if (!element) return { ok: false, reason: 'no-media-element' }
-
-      const AudioContextConstructor =
-        window.AudioContext ||
-        (window as typeof window & { webkitAudioContext: typeof AudioContext })
-          .webkitAudioContext
-      if (!AudioContextConstructor) {
-        return { ok: false, reason: 'no-audio-context' }
-      }
-
-      const ctx = new AudioContextConstructor()
-      const source = ctx.createMediaElementSource(element)
-      const analyser = ctx.createAnalyser()
-      analyser.fftSize = 2048
-      source.connect(analyser)
-      analyser.connect(ctx.destination)
-
-      const data = new Float32Array(analyser.fftSize)
-      const samples = 10
-      let maxRms = 0
-
-      for (let i = 0; i < samples; i += 1) {
-        analyser.getFloatTimeDomainData(data)
-        let sum = 0
-        for (let j = 0; j < data.length; j += 1) {
-          const sample = data[j] ?? 0
-          sum += sample * sample
-        }
-        const rms = Math.sqrt(sum / data.length)
-        if (rms > maxRms) maxRms = rms
-        await new Promise((resolve) => setTimeout(resolve, 100))
-      }
-
-      const ok = maxRms <= threshold
-      return { ok, maxRms, reason: ok ? 'ok' : 'audible' }
-    },
-    { selector: mediaSelector, threshold },
-  )
+  const result = await sampleAudioRms(page, mediaSelector, 'silent', threshold)
 
   expect(
     result.ok,
@@ -432,16 +476,24 @@ export async function expectAudioSilent(
 export type RemoteCardState = {
   playerId: string
   hasVideo: boolean
+  hasAudio: boolean
+  /** LiveKit track publication enabled state from data-video-enabled / data-audio-enabled */
+  videoEnabled: boolean | null
+  audioEnabled: boolean | null
+  videoSubscribed: boolean | null
+  audioSubscribed: boolean | null
+  videoMuted: boolean | null
+  audioMuted: boolean | null
+  liveKitConnectionState: string | null
   hasVideoOffPlaceholder: boolean
   hasOfflineWarning: boolean
-  hasWebRtcWarning: boolean
-  /** When hasWebRtcWarning is true, the connection state from the UI (e.g. "connecting", "failed"). */
-  webrtcConnectionState?: string
   /** Player name from the card when available (for easier correlation in reports). */
   playerName?: string
 }
 
-async function collectRemoteCardStates(page: Page): Promise<RemoteCardState[]> {
+export async function collectRemoteCardStates(
+  page: Page,
+): Promise<RemoteCardState[]> {
   return await page.evaluate(() => {
     const cards = Array.from(
       document.querySelectorAll('[data-testid="remote-player-card"]'),
@@ -451,19 +503,31 @@ async function collectRemoteCardStates(page: Page): Promise<RemoteCardState[]> {
       .map((card) => {
         const playerId = card.getAttribute('data-player-id')
         if (!playerId) return null
-        const webrtcWarning = card.querySelector(
-          '[data-testid="remote-player-webrtc-warning"]',
-        )
         const playerNameEl = card.querySelector('.text-white')
-        const webrtcConnectionState = webrtcWarning?.getAttribute(
-          'data-connection-state',
-        )
         const playerName = playerNameEl?.textContent?.trim()
+        const readBooleanAttr = (name: string) => {
+          const value = card.getAttribute(name)
+          if (value === 'true') return true
+          if (value === 'false') return false
+          return null
+        }
+        const liveKitConnectionState = card.getAttribute(
+          'data-livekit-connection-state',
+        )
         return {
           playerId,
           hasVideo: card.querySelector('[data-testid="remote-player-video"]')
             ? true
             : false,
+          hasAudio: card.querySelector('[data-testid="remote-player-audio"]')
+            ? true
+            : false,
+          videoEnabled: readBooleanAttr('data-video-enabled'),
+          audioEnabled: readBooleanAttr('data-audio-enabled'),
+          videoSubscribed: readBooleanAttr('data-video-subscribed'),
+          audioSubscribed: readBooleanAttr('data-audio-subscribed'),
+          videoMuted: readBooleanAttr('data-video-muted'),
+          audioMuted: readBooleanAttr('data-audio-muted'),
           hasVideoOffPlaceholder: card.querySelector(
             '[data-testid="remote-player-video-off"]',
           )
@@ -474,10 +538,7 @@ async function collectRemoteCardStates(page: Page): Promise<RemoteCardState[]> {
           )
             ? true
             : false,
-          hasWebRtcWarning: !!webrtcWarning,
-          ...(webrtcConnectionState != null && {
-            webrtcConnectionState,
-          }),
+          liveKitConnectionState,
           ...(playerName != null && { playerName }),
         }
       })
@@ -492,28 +553,59 @@ const REMOTE_CARDS_POLL_INTERVALS_MS = [250, 500, 1_000, 2_000]
 /** Require this many consecutive stable polls (1s apart) before returning. */
 const REMOTE_CARDS_STABLE_CONSECUTIVE = 2
 
-function isCardStable(state: RemoteCardState): boolean {
+/** Exposed so tests can assert only on strict media-healthy cards. */
+export function isRemoteCardStable(state: RemoteCardState): boolean {
   return (
+    isRemoteCardConnected(state) &&
     state.hasVideo &&
-    !state.hasVideoOffPlaceholder &&
-    !state.hasOfflineWarning &&
-    !state.hasWebRtcWarning
+    state.hasAudio &&
+    !state.hasVideoOffPlaceholder
   )
 }
 
-/** Exposed so tests can assert only on stable cards when using minStable. */
-export function isRemoteCardStable(state: {
-  hasVideo: boolean
-  hasVideoOffPlaceholder: boolean
+/** Exposed for phases where tracks may be intentionally disabled. */
+export function isRemoteCardConnected(state: {
   hasOfflineWarning: boolean
-  hasWebRtcWarning: boolean
+  liveKitConnectionState: string | null
 }): boolean {
   return (
-    state.hasVideo &&
-    !state.hasVideoOffPlaceholder &&
-    !state.hasOfflineWarning &&
-    !state.hasWebRtcWarning
+    !state.hasOfflineWarning && state.liveKitConnectionState === 'connected'
   )
+}
+
+function formatRemoteCardState(state: RemoteCardState): string {
+  const parts = [
+    `playerId=${state.playerId}`,
+    `video=${state.hasVideo}`,
+    `audio=${state.hasAudio}`,
+    `videoOff=${state.hasVideoOffPlaceholder}`,
+    `offline=${state.hasOfflineWarning}`,
+    `livekit=${state.liveKitConnectionState ?? 'unknown'}`,
+  ]
+
+  if (state.videoEnabled !== null) {
+    parts.push(`videoEnabled=${state.videoEnabled}`)
+  }
+  if (state.audioEnabled !== null) {
+    parts.push(`audioEnabled=${state.audioEnabled}`)
+  }
+  if (state.videoSubscribed !== null) {
+    parts.push(`videoSubscribed=${state.videoSubscribed}`)
+  }
+  if (state.audioSubscribed !== null) {
+    parts.push(`audioSubscribed=${state.audioSubscribed}`)
+  }
+  if (state.videoMuted !== null) {
+    parts.push(`videoMuted=${state.videoMuted}`)
+  }
+  if (state.audioMuted !== null) {
+    parts.push(`audioMuted=${state.audioMuted}`)
+  }
+  if (state.playerName) {
+    parts.push(`name=${state.playerName}`)
+  }
+
+  return parts.join(' ')
 }
 
 export type WaitForRemoteCardsOptions = {
@@ -523,33 +615,42 @@ export type WaitForRemoteCardsOptions = {
   context?: string
 }
 
-export async function waitForRemoteCardsStable(
-  page: Page,
-  expectedRemoteCount: number,
-  options: WaitForRemoteCardsOptions = {},
-): Promise<RemoteCardState[]> {
-  const { minStable = expectedRemoteCount, context } = options
+type PollRemoteCardsResult = {
+  states: RemoteCardState[]
+  satisfied: boolean
+}
+
+type PollRemoteCardsOptions = {
+  page: Page
+  isSatisfied: (states: RemoteCardState[]) => boolean
+  consecutiveRequired?: number
+  consecutiveIntervalMs?: number
+}
+
+async function pollRemoteCards({
+  page,
+  isSatisfied,
+  consecutiveRequired = 1,
+  consecutiveIntervalMs = 1_000,
+}: PollRemoteCardsOptions): Promise<PollRemoteCardsResult> {
   const start = Date.now()
   let lastStates: RemoteCardState[] = []
   let intervalIndex = 0
-  let consecutiveStable = 0
+  let consecutiveSuccesses = 0
 
   while (Date.now() - start < REMOTE_CARDS_STABLE_TIMEOUT_MS) {
     lastStates = await collectRemoteCardStates(page)
-    const stableCount = lastStates.filter(isCardStable).length
-    const enoughStable =
-      lastStates.length === expectedRemoteCount && stableCount >= minStable
 
-    if (enoughStable) {
-      consecutiveStable += 1
-      if (consecutiveStable >= REMOTE_CARDS_STABLE_CONSECUTIVE) {
-        return lastStates
+    if (isSatisfied(lastStates)) {
+      consecutiveSuccesses += 1
+      if (consecutiveSuccesses >= consecutiveRequired) {
+        return { states: lastStates, satisfied: true }
       }
-      await new Promise((r) => setTimeout(r, 1_000))
+      await new Promise((r) => setTimeout(r, consecutiveIntervalMs))
       continue
     }
 
-    consecutiveStable = 0
+    consecutiveSuccesses = 0
     const interval =
       REMOTE_CARDS_POLL_INTERVALS_MS[
         Math.min(intervalIndex, REMOTE_CARDS_POLL_INTERVALS_MS.length - 1)
@@ -558,31 +659,38 @@ export async function waitForRemoteCardsStable(
     intervalIndex += 1
   }
 
-  const stableCount = lastStates.filter(isCardStable).length
-  const unstableCards = lastStates.filter((s) => !isCardStable(s))
+  return { states: lastStates, satisfied: false }
+}
 
-  const formatCard = (s: RemoteCardState) => {
-    const parts = [
-      `playerId=${s.playerId}`,
-      `video=${s.hasVideo}`,
-      `videoOff=${s.hasVideoOffPlaceholder}`,
-      `offline=${s.hasOfflineWarning}`,
-      `webrtcWarn=${s.hasWebRtcWarning}`,
-    ]
-    if (s.hasWebRtcWarning && s.webrtcConnectionState) {
-      parts.push(`connectionState=${s.webrtcConnectionState}`)
-    }
-    if (s.playerName) parts.unshift(`name=${s.playerName}`)
-    return parts.join(' ')
+export async function waitForRemoteCardsStable(
+  page: Page,
+  expectedRemoteCount: number,
+  options: WaitForRemoteCardsOptions = {},
+): Promise<RemoteCardState[]> {
+  const { minStable = expectedRemoteCount, context } = options
+  const { states: lastStates, satisfied } = await pollRemoteCards({
+    page,
+    consecutiveRequired: REMOTE_CARDS_STABLE_CONSECUTIVE,
+    isSatisfied: (states) => {
+      const stableCount = states.filter(isRemoteCardStable).length
+      return states.length === expectedRemoteCount && stableCount >= minStable
+    },
+  })
+
+  if (satisfied) {
+    return lastStates
   }
 
-  const summary = lastStates.map(formatCard).join('; ')
+  const stableCount = lastStates.filter(isRemoteCardStable).length
+  const unstableCards = lastStates.filter((s) => !isRemoteCardStable(s))
+
+  const summary = lastStates.map(formatRemoteCardState).join('; ')
   const unstableDetail =
     unstableCards.length > 0
-      ? ` Unstable (${unstableCards.length}): ${unstableCards.map(formatCard).join(' | ')}`
+      ? ` Unstable (${unstableCards.length}): ${unstableCards.map(formatRemoteCardState).join(' | ')}`
       : ''
   const hint =
-    ' Check attachments: webrtc-remote-cards-*, webrtc-media-*, webrtc-console-*, webrtc-screenshot-*, webrtc-failure-context.'
+    ' Check attachments: livekit-remote-cards-*, livekit-media-elements-*, livekit-diagnostics-*, livekit-console-*, livekit-screenshot-*, livekit-failure-context.'
   const prefix = context ? `${context}: ` : ''
 
   throw new Error(
@@ -599,15 +707,15 @@ export type RemoteCardsStabilityReport = {
   expectedCount: number
   /** Human-readable one-line summary. */
   summary: string
-  /** Unstable cards with details (playerId, connectionState when applicable). */
+  /** Unstable cards with details (playerId, LiveKit state when applicable). */
   unstableCards: Array<{
     playerId: string
     playerName?: string
     hasVideo: boolean
+    hasAudio: boolean
     hasVideoOffPlaceholder: boolean
     hasOfflineWarning: boolean
-    hasWebRtcWarning: boolean
-    webrtcConnectionState?: string
+    liveKitConnectionState: string | null
     reason: string
   }>
   /** ISO timestamp when the report was collected. */
@@ -623,31 +731,38 @@ export async function collectRemoteCardsStabilityReport(
   expectedRemoteCount: number,
 ): Promise<RemoteCardsStabilityReport> {
   const cards = await collectRemoteCardStates(page)
-  const stableCount = cards.filter(isCardStable).length
+  const stableCount = cards.filter(isRemoteCardStable).length
   const unstableCount = cards.length - stableCount
 
   const unstableCards = cards
-    .filter((s) => !isCardStable(s))
+    .filter((s) => !isRemoteCardStable(s))
     .map((s) => {
       const reasons: string[] = []
       if (!s.hasVideo) reasons.push('no-video')
+      if (!s.hasAudio) reasons.push('no-audio')
+      if (s.videoEnabled === true && s.videoSubscribed === false) {
+        reasons.push('video-not-subscribed')
+      }
+      if (s.audioEnabled === true && s.audioSubscribed === false) {
+        reasons.push('audio-not-subscribed')
+      }
       if (s.hasVideoOffPlaceholder) reasons.push('video-off-placeholder')
       if (s.hasOfflineWarning) reasons.push('offline-warning')
-      if (s.hasWebRtcWarning) {
+      if (!isRemoteCardConnected(s)) {
         reasons.push(
-          s.webrtcConnectionState
-            ? `webrtc-warning(${s.webrtcConnectionState})`
-            : 'webrtc-warning',
+          s.liveKitConnectionState
+            ? `livekit-not-connected(${s.liveKitConnectionState})`
+            : 'livekit-not-connected',
         )
       }
       return {
         playerId: s.playerId,
         playerName: s.playerName,
         hasVideo: s.hasVideo,
+        hasAudio: s.hasAudio,
         hasVideoOffPlaceholder: s.hasVideoOffPlaceholder,
         hasOfflineWarning: s.hasOfflineWarning,
-        hasWebRtcWarning: s.hasWebRtcWarning,
-        webrtcConnectionState: s.webrtcConnectionState,
+        liveKitConnectionState: s.liveKitConnectionState,
         reason: reasons.join(', '),
       }
     })
@@ -663,4 +778,28 @@ export async function collectRemoteCardsStabilityReport(
     unstableCards,
     collectedAt: new Date().toISOString(),
   }
+}
+
+export async function waitForRemoteCardsConnected(
+  page: Page,
+  expectedRemoteCount: number,
+  options: { context?: string } = {},
+): Promise<RemoteCardState[]> {
+  const { context } = options
+  const { states: lastStates, satisfied } = await pollRemoteCards({
+    page,
+    isSatisfied: (states) =>
+      states.length === expectedRemoteCount &&
+      states.every(isRemoteCardConnected),
+  })
+
+  if (satisfied) {
+    return lastStates
+  }
+
+  const disconnectedCards = lastStates.filter((s) => !isRemoteCardConnected(s))
+  const prefix = context ? `${context}: ` : ''
+  throw new Error(
+    `${prefix}Remote cards did not become connected within ${REMOTE_CARDS_STABLE_TIMEOUT_MS}ms: expected ${expectedRemoteCount} cards, got ${lastStates.length}. Disconnected: ${disconnectedCards.map(formatRemoteCardState).join(' | ')}.`,
+  )
 }

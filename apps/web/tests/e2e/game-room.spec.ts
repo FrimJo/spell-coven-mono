@@ -145,6 +145,7 @@ test.describe('Game Room', () => {
       page,
     }) => {
       await ensureAuthWarm(page)
+      await clearStorage(page)
       await page.goto(`/game/${roomId}`)
 
       await expect(page).toHaveURL(
@@ -158,6 +159,8 @@ test.describe('Game Room', () => {
     test('should return to game room after completing setup', async ({
       page,
     }) => {
+      await ensureAuthWarm(page)
+      await clearStorage(page)
       await page.goto(`/game/${roomId}`)
 
       await expect(page).toHaveURL(

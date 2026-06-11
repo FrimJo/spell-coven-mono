@@ -59,6 +59,21 @@ generate_preview_login_code() {
   openssl rand -base64 24 | tr -d '=+/' | cut -c1-32
 }
 
+set_preview_env_from_current_env() {
+  local name="$1"
+  local value="${!name:-}"
+
+  if [ -z "$value" ]; then
+    return
+  fi
+
+  if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+    echo "::add-mask::$value"
+  fi
+
+  printf '%s' "$value" | bunx convex env set --preview-name "$PREVIEW_NAME" "$name"
+}
+
 PREVIEW_NAME="$(derive_preview_name)"
 PREVIEW_LOGIN_CODE="$(generate_preview_login_code)"
 export PREVIEW_LOGIN_CODE
@@ -81,6 +96,15 @@ DEPLOY_CMD='bun run build'
 # Ensure the same preview login code is available to the local --cmd process
 # executed by `convex deploy`.
 DEPLOY_CMD="PREVIEW_LOGIN_CODE=$PREVIEW_LOGIN_CODE $DEPLOY_CMD"
+
+# Media diagnostics are baked in at build time and read by the e2e harness off
+# `window.__spellCovenMediaDiagnostics`. Enable only for e2e builds so plain
+# `build` (prod/Vercel) ships with the default-off (fail-closed) value.
+case "$MODE" in
+  e2e|e2e-ui|e2e:torture|e2e:visual-update)
+    DEPLOY_CMD="VITE_MEDIA_DIAGNOSTICS=1 $DEPLOY_CMD"
+    ;;
+esac
 # Write .convex_url.gen with the raw URL so e2e can reuse VITE_CONVEX_URL.
 DEPLOY_CMD="$DEPLOY_CMD && printf '%s\n' \"\$VITE_CONVEX_URL\" > .convex_url.gen"
 
@@ -94,6 +118,9 @@ bunx convex deploy "${deploy_args[@]}"
 
 # E2E_TEST is expected from Convex Dashboard defaults.
 bunx convex env set --preview-name "$PREVIEW_NAME" PREVIEW_LOGIN_CODE "$PREVIEW_LOGIN_CODE"
+set_preview_env_from_current_env LIVEKIT_URL
+set_preview_env_from_current_env LIVEKIT_API_KEY
+set_preview_env_from_current_env LIVEKIT_API_SECRET
 
 # Load preview URL into this shell so e2e steps can use VITE_CONVEX_URL.
 [ -f .convex_url.gen ] && export VITE_CONVEX_URL="$(cat .convex_url.gen)"

@@ -1,5 +1,5 @@
 /**
- * WebRTC 4-player torture / stress test.
+ * LiveKit 4-player media torture / stress test.
  *
  * Ensures video and audio work flawlessly even when used recklessly:
  * connecting/disconnecting, turning video on/off, muting/unmuting, and
@@ -13,7 +13,7 @@
  *                               no excessive peer connection accumulation.
  *
  * Verifies no prolonged `connecting`/`failed` states and that all remote
- * cards return to a stable state after each phase.
+ * cards return to a stable media-on state after each phase.
  */
 
 import type { Page } from '@playwright/test'
@@ -23,9 +23,9 @@ import type { RoomHarness } from '../../helpers/room-harness'
 import { hasAuthCredentials } from '../../helpers/auth-storage'
 import {
   assertAllPlayersMediaHealthy,
-  collectWebRTCPeerDiagnostics,
+  collectLiveKitDiagnostics,
   EXPECTED_REMOTES,
-  injectPeerConnectionCapture,
+  injectLiveKitDiagnosticsCapture,
   PLAYER_LABELS,
   setupStableRoom,
   waitForAllConnectionsReady,
@@ -46,8 +46,8 @@ function jitterMs(maxMs: number): number {
 }
 
 /**
- * Rapidly toggle a button N times with random jitter between clicks.
- * Returns a promise that resolves when all toggles are done.
+ * Rapidly toggle a button N times with random jitter between clicks. Each click
+ * waits for the control to be enabled so the final on/off parity stays stable.
  */
 async function rapidToggle(
   page: Page,
@@ -55,11 +55,13 @@ async function rapidToggle(
   count: number,
   maxJitterMs = 400,
 ): Promise<void> {
-  for (let i = 0; i < count; i++) {
+  let successfulClicks = 0
+  while (successfulClicks < count) {
     const btn = page.getByTestId(testId)
-    await btn.click().catch(() => {
-      // Button may momentarily be disabled during track replacement.
-    })
+    await btn.waitFor({ state: 'visible', timeout: 10_000 })
+    await expect(btn).toBeEnabled({ timeout: 10_000 })
+    await btn.click()
+    successfulClicks += 1
     await new Promise((r) => setTimeout(r, jitterMs(maxJitterMs)))
   }
 }
@@ -104,7 +106,7 @@ async function assertRoomRecovers(
 // Test
 // ---------------------------------------------------------------------------
 
-test.describe('WebRTC 4-player torture', () => {
+test.describe('LiveKit 4-player media torture', () => {
   // eslint-disable-next-line no-empty-pattern -- Playwright fixture signature
   test('survives rapid toggles, concurrent storms, and player rejoin', async ({}, testInfo) => {
     test.setTimeout(900_000)
@@ -169,10 +171,11 @@ test.describe('WebRTC 4-player torture', () => {
 
       // ================================================================
       // Phase 2: Concurrent toggle storm
-      // All 4 players toggle camera and mic simultaneously (5 rounds).
+      // All 4 players toggle camera and mic simultaneously (4 rounds).
+      // An even round count returns every player to the initial media-on state.
       // ================================================================
       console.log('[Torture] === Phase 2: Concurrent toggle storm ===')
-      const STORM_ROUNDS = 5
+      const STORM_ROUNDS = 4
       for (let round = 0; round < STORM_ROUNDS; round++) {
         console.log(`[Torture:P2] Storm round ${round + 1}/${STORM_ROUNDS}`)
 
@@ -213,7 +216,7 @@ test.describe('WebRTC 4-player torture', () => {
       const rejoinPlayer = harness.players[rejoinIdx]!
 
       console.log(`[Torture:P3] ${rejoinLabel}: reloading page...`)
-      await injectPeerConnectionCapture(rejoinPlayer.page)
+      await injectLiveKitDiagnosticsCapture(rejoinPlayer.page)
       await navigateToTestGame(rejoinPlayer.page, harness.roomId)
       await rejoinPlayer.page
         .waitForLoadState('networkidle', { timeout: 30_000 })
@@ -261,7 +264,7 @@ test.describe('WebRTC 4-player torture', () => {
         console.log(
           `[Torture:P4] ${soakRejoinLabel}: reloading in soak cycle ${cycle + 1}...`,
         )
-        await injectPeerConnectionCapture(soakRejoinPlayer.page)
+        await injectLiveKitDiagnosticsCapture(soakRejoinPlayer.page)
         await navigateToTestGame(soakRejoinPlayer.page, harness.roomId)
         await soakRejoinPlayer.page
           .waitForLoadState('networkidle', { timeout: 30_000 })
@@ -288,22 +291,21 @@ test.describe('WebRTC 4-player torture', () => {
       for (let idx = 0; idx < pages.length; idx++) {
         const page = pages[idx]!
         const label = PLAYER_LABELS[idx]!
-        const peerDiag = await collectWebRTCPeerDiagnostics(page)
-        if (peerDiag.captured) {
-          const diagnostics = peerDiag.diagnostics as {
-            connectionState?: string
-            remoteSessionIds?: string[]
-          } | null
-          expect(
-            diagnostics?.connectionState,
-            `${label}: expected LiveKit room connected at end of torture test`,
-          ).toBe('connected')
+        const liveKitDiagnostics = await collectLiveKitDiagnostics(page)
+        expect(
+          liveKitDiagnostics.captured,
+          `${label}: expected LiveKit diagnostics at end of torture test`,
+        ).toBeTruthy()
+        expect(
+          liveKitDiagnostics.diagnostics?.connectionState,
+          `${label}: expected LiveKit room connected at end of torture test`,
+        ).toBe('connected')
 
-          expect(
-            (diagnostics?.remoteSessionIds?.length ?? 0) >= EXPECTED_REMOTES,
-            `${label}: expected LiveKit remote participants at end of torture test`,
-          ).toBeTruthy()
-        }
+        expect(
+          (liveKitDiagnostics.diagnostics?.remoteSessionIds?.length ?? 0) >=
+            EXPECTED_REMOTES,
+          `${label}: expected LiveKit remote session identities at end of torture test`,
+        ).toBeTruthy()
       }
 
       // Verify max connecting duration across the full test

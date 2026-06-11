@@ -7,10 +7,23 @@ import {
 } from 'fs'
 import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 
+import type { MediaPreferenceSeed } from './media-preferences'
 import { hasAuthCredentials } from './auth-storage'
+import {
+  addCommittedMediaPreferencesInitScript,
+  createCommittedMediaPreferenceSeed,
+  MEDIA_DEVICE_STORAGE_KEY,
+} from './media-preferences'
+
+export {
+  addCommittedMediaPreferencesInitScript,
+  createCommittedMediaPreferenceSeed,
+  setCommittedMediaPreferences,
+  type MediaPreferenceSeed,
+} from './media-preferences'
 
 /**
  * Shared test utilities for e2e tests.
@@ -22,7 +35,7 @@ export const TEST_GAME_ID = 'TEST01'
 
 /** Storage keys used by the application */
 export const STORAGE_KEYS = {
-  MEDIA_DEVICES: 'mtg-selected-media-devices',
+  MEDIA_DEVICES: MEDIA_DEVICE_STORAGE_KEY,
   GAME_STATE: 'spell-coven:game-state',
   CREATOR_INVITE: 'spell-coven:creator-invite',
   SESSION_ID: 'spell-coven-session-id',
@@ -169,35 +182,43 @@ export async function navigateToTestGame(
   const ensureMediaSetup = options?.ensureMediaSetup ?? true
 
   if (ensureMediaSetup) {
-    await page.addInitScript((key) => {
-      try {
-        const existing = localStorage.getItem(key)
-        if (existing) {
-          const parsed = JSON.parse(existing)
-          if (parsed?.timestamp) return
-          localStorage.setItem(
-            key,
-            JSON.stringify({ ...parsed, timestamp: Date.now() }),
-          )
-          return
-        }
-      } catch {
-        // Ignore parse errors and fall back to a clean value.
-      }
-
-      localStorage.setItem(
-        key,
-        JSON.stringify({
-          videoinput: 'mock-camera-1',
-          audioinput: 'mock-mic-1',
-          audiooutput: 'mock-speaker-1',
-          timestamp: Date.now(),
-        }),
-      )
-    }, STORAGE_KEYS.MEDIA_DEVICES)
+    await addCommittedMediaPreferencesInitScript(
+      page,
+      {},
+      { preserveExisting: true },
+    )
   }
 
   await page.goto(`/game/${gameId}`)
+}
+
+const CLEANUP_ACTION_TIMEOUT_MS = 3000
+
+function isGameRoute(page: Page): boolean {
+  try {
+    return new URL(page.url()).pathname.startsWith('/game/')
+  } catch {
+    return false
+  }
+}
+
+async function clickIfVisible(locator: Locator): Promise<boolean> {
+  if (!(await locator.isVisible().catch(() => false))) {
+    return false
+  }
+
+  await locator.click({ timeout: CLEANUP_ACTION_TIMEOUT_MS }).catch((error) => {
+    const message = error instanceof Error ? error.message : String(error)
+    if (
+      message.includes('detached from the DOM') ||
+      message.includes('Target page, context or browser has been closed')
+    ) {
+      return
+    }
+    throw error
+  })
+
+  return true
 }
 
 /**
@@ -206,29 +227,53 @@ export async function navigateToTestGame(
  * with `leave-game-button` visible.
  */
 export async function leaveGameRoom(page: Page): Promise<void> {
-  const confirmButton = page.getByTestId('leave-dialog-confirm-button')
-  if (await confirmButton.isVisible().catch(() => false)) {
-    await confirmButton.click()
-    await expect(page).toHaveURL('/')
+  if (page.isClosed()) {
     return
+  }
+
+  const confirmButton = page.getByTestId('leave-dialog-confirm-button')
+  if (await clickIfVisible(confirmButton)) {
+    await expect(page).toHaveURL('/', { timeout: CLEANUP_ACTION_TIMEOUT_MS })
+    return
+  }
+
+  if (!isGameRoute(page)) {
+    return
+  }
+
+  const duplicateSessionTitle = page.getByText('Already Connected', {
+    exact: true,
+  })
+  if (await duplicateSessionTitle.isVisible().catch(() => false)) {
+    const transferHereButton = page.getByRole('button', {
+      name: /Transfer here/i,
+    })
+    if (await clickIfVisible(transferHereButton)) {
+      await expect(duplicateSessionTitle).toBeHidden({
+        timeout: CLEANUP_ACTION_TIMEOUT_MS,
+      })
+    }
   }
 
   for (const cancelButton of [
     page.getByTestId('reset-dialog-cancel-button'),
     page.getByTestId('media-setup-cancel-button'),
   ]) {
-    if (await cancelButton.isVisible().catch(() => false)) {
-      await cancelButton.click()
-      await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCount(0)
+    if (await clickIfVisible(cancelButton)) {
+      await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCount(
+        0,
+        {
+          timeout: CLEANUP_ACTION_TIMEOUT_MS,
+        },
+      )
       break
     }
   }
 
   const leaveButton = page.getByTestId('leave-game-button')
-  if (await leaveButton.isVisible().catch(() => false)) {
-    await leaveButton.click()
-    await confirmButton.click()
-    await expect(page).toHaveURL('/')
+  if (await clickIfVisible(leaveButton)) {
+    await confirmButton.click({ timeout: CLEANUP_ACTION_TIMEOUT_MS })
+    await expect(page).toHaveURL('/', { timeout: CLEANUP_ACTION_TIMEOUT_MS })
   }
 }
 
@@ -452,13 +497,7 @@ export async function mockGetUserMediaWithTone(
  */
 export async function setMediaPreferences(
   page: Page,
-  preferences: {
-    videoEnabled?: boolean
-    audioEnabled?: boolean
-    videoinput?: string
-    audioinput?: string
-    audiooutput?: string
-  },
+  preferences: Partial<MediaPreferenceSeed>,
 ): Promise<void> {
   await page.evaluate(
     ({ prefs, key }) => {
@@ -466,7 +505,10 @@ export async function setMediaPreferences(
       const current = existing ? JSON.parse(existing) : {}
       localStorage.setItem(key, JSON.stringify({ ...current, ...prefs }))
     },
-    { prefs: preferences, key: STORAGE_KEYS.MEDIA_DEVICES },
+    {
+      prefs: createCommittedMediaPreferenceSeed(preferences),
+      key: STORAGE_KEYS.MEDIA_DEVICES,
+    },
   )
 }
 

@@ -4,6 +4,10 @@ import { fileURLToPath } from 'url'
 import { ConvexHttpClient } from 'convex/browser'
 
 import { buildConvexAuthStorageState } from '../../src/lib/convex-auth-storage'
+import {
+  createCommittedMediaPreferenceSeed,
+  MEDIA_DEVICE_STORAGE_KEY,
+} from './media-preferences'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -197,13 +201,8 @@ export async function ensureWorkerStorageState(
     tokens,
     extraLocalStorage: [
       {
-        name: 'mtg-selected-media-devices',
-        value: JSON.stringify({
-          videoEnabled: false,
-          audioEnabled: false,
-          videoinput: 'mock-camera-1',
-          audioinput: 'mock-mic-1',
-        }),
+        name: MEDIA_DEVICE_STORAGE_KEY,
+        value: JSON.stringify(createCommittedMediaPreferenceSeed()),
       },
     ],
   })

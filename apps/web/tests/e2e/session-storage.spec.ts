@@ -1,5 +1,6 @@
 import { expect, test } from '../helpers/fixtures'
 import {
+  addCommittedMediaPreferencesInitScript,
   clearStorage,
   ensureAuthWarm,
   getGameState,
@@ -36,25 +37,17 @@ test.describe('Session Storage', () => {
   })
 
   test.afterEach(async ({ page }) => {
-    await leaveGameRoom(page)
+    if (new URL(page.url()).pathname.startsWith('/game/')) {
+      await leaveGameRoom(page)
+    }
   })
 
   test.describe('Game State Persistence', () => {
     test('should pre-populate game state and read it when entering a game', async ({
       page,
     }) => {
-      // Set up media preferences to bypass setup redirect
-      await page.addInitScript((key) => {
-        localStorage.setItem(
-          key,
-          JSON.stringify({
-            videoEnabled: false,
-            audioEnabled: false,
-            videoinput: 'mock-camera-1',
-            audioinput: 'mock-mic-1',
-          }),
-        )
-      }, STORAGE_KEYS.MEDIA_DEVICES)
+      // Committed device preferences bypass setup redirect
+      await addCommittedMediaPreferencesInitScript(page)
 
       // Pre-populate game state in sessionStorage (simulating create/join flow)
       await page.addInitScript(
@@ -83,18 +76,8 @@ test.describe('Session Storage', () => {
     })
 
     test('should clear game state when leaving a game', async ({ page }) => {
-      // Set up media preferences
-      await page.addInitScript((key) => {
-        localStorage.setItem(
-          key,
-          JSON.stringify({
-            videoEnabled: false,
-            audioEnabled: false,
-            videoinput: 'mock-camera-1',
-            audioinput: 'mock-mic-1',
-          }),
-        )
-      }, STORAGE_KEYS.MEDIA_DEVICES)
+      // Committed device preferences bypass setup redirect
+      await addCommittedMediaPreferencesInitScript(page)
 
       // Pre-populate game state
       await page.addInitScript(
@@ -140,18 +123,8 @@ test.describe('Session Storage', () => {
 
     test('should maintain game state on page refresh', async ({ page }) => {
       await ensureAuthWarm(page)
-      // Set up media preferences
-      await page.addInitScript((key) => {
-        localStorage.setItem(
-          key,
-          JSON.stringify({
-            videoEnabled: false,
-            audioEnabled: false,
-            videoinput: 'mock-camera-1',
-            audioinput: 'mock-mic-1',
-          }),
-        )
-      }, STORAGE_KEYS.MEDIA_DEVICES)
+      // Committed device preferences bypass setup redirect
+      await addCommittedMediaPreferencesInitScript(page)
 
       // Pre-populate game state
       await page.addInitScript(
@@ -213,7 +186,7 @@ test.describe('Session Storage', () => {
       // Wait for navigation after completion
       await expect(page).toHaveURL('/')
 
-      // Check localStorage - videoEnabled should be set
+      // Check localStorage - commit timestamp should be set
       const prefs = await getMediaPreferences(page)
       expect(prefs).not.toBeNull()
       // Storage should include a commit timestamp
@@ -225,10 +198,12 @@ test.describe('Session Storage', () => {
     }) => {
       await page.goto('/setup')
 
-      // Set preferences directly
+      // Seed committed device preferences (enabled flags default true in session)
       await setMediaPreferences(page, {
-        videoEnabled: true,
-        audioEnabled: true,
+        videoinput: 'mock-camera-1',
+        audioinput: 'mock-mic-1',
+        audiooutput: 'mock-speaker-1',
+        timestamp: Date.now(),
       })
 
       // Reload page
@@ -302,16 +277,8 @@ test.describe('Session Storage', () => {
     test('should use correct sessionStorage key for game state', async ({
       page,
     }) => {
-      // Set up media preferences
-      await page.addInitScript((key) => {
-        localStorage.setItem(
-          key,
-          JSON.stringify({
-            videoEnabled: false,
-            audioEnabled: false,
-          }),
-        )
-      }, STORAGE_KEYS.MEDIA_DEVICES)
+      // Committed device preferences bypass setup redirect
+      await addCommittedMediaPreferencesInitScript(page)
 
       // Pre-populate game state to test the correct key is used
       await page.addInitScript(

@@ -1,5 +1,5 @@
 /**
- * WebRTC 4-player toggle matrix test.
+ * LiveKit 4-player media toggle matrix test.
  *
  * Ensures video and audio work flawlessly when turning video on/off and
  * muting/unmuting: every receiver must observe the correct state. For each
@@ -37,7 +37,7 @@ import {
   resolvePlayerIds,
 } from '../../helpers/toggle-assertions'
 
-test.describe('WebRTC 4-player toggle matrix', () => {
+test.describe('LiveKit 4-player media toggle matrix', () => {
   // eslint-disable-next-line no-empty-pattern -- Playwright fixture signature
   test('camera and mic toggles propagate to all receivers', async ({}, testInfo) => {
     test.setTimeout(600_000)

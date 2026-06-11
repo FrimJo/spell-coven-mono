@@ -28,20 +28,18 @@ vi.mock('@/hooks/useMediaPermissions', () => ({
   }),
 }))
 
+vi.mock('@/hooks/useMediaDevice', () => ({
+  useMediaDevice: () => ({
+    devices: [],
+    selectedDeviceId: 'camera-1',
+    error: null,
+    isPending: false,
+    stream: undefined,
+  }),
+}))
+
 vi.mock('@/contexts/MediaStreamContext', () => ({
   useMediaStreams: () => ({
-    video: {
-      devices: [],
-      selectedDeviceId: 'camera-1',
-      error: null,
-      isPending: false,
-    },
-    audio: {
-      devices: [],
-      selectedDeviceId: 'mic-1',
-      error: null,
-      isPending: false,
-    },
     audioOutput: {
       currentDeviceId: 'speaker-1',
       error: null,

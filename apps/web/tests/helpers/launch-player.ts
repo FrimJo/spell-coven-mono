@@ -2,9 +2,9 @@ import type { Browser, BrowserContext, Page } from '@playwright/test'
 import { chromium } from '@playwright/test'
 
 import {
+  addCommittedMediaPreferencesInitScript,
   mockGetUserMediaWithTone,
   mockMediaDevices,
-  STORAGE_KEYS,
 } from './test-utils'
 
 export type PlayerHandle = {
@@ -38,22 +38,7 @@ export async function launchPlayer(options: {
     label: options.label,
   })
 
-  await page.addInitScript(
-    ({ key }) => {
-      localStorage.setItem(
-        key,
-        JSON.stringify({
-          videoinput: 'mock-camera-1',
-          audioinput: 'mock-mic-1',
-          audiooutput: 'mock-speaker-1',
-          videoEnabled: true,
-          audioEnabled: true,
-          timestamp: Date.now(),
-        }),
-      )
-    },
-    { key: STORAGE_KEYS.MEDIA_DEVICES },
-  )
+  await addCommittedMediaPreferencesInitScript(page)
 
   return { browser, context, page }
 }

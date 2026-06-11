@@ -2,7 +2,7 @@ import { expect, test } from '../helpers/fixtures'
 import {
   getOrCreateRoomId,
   leaveGameRoom,
-  STORAGE_KEYS,
+  setCommittedMediaPreferences,
 } from '../helpers/test-utils'
 
 /**
@@ -19,7 +19,20 @@ test.describe('Join Game Dialog', () => {
    * Assumes the page is already on `/` and the user has no active room.
    */
   async function openJoinDialog(page: import('@playwright/test').Page) {
-    await page.getByTestId('join-game-button').click()
+    const joinButton = page.getByTestId('join-game-button')
+    const joinDropdown = page.getByTestId('join-game-dropdown')
+
+    await expect(joinButton.or(joinDropdown).first()).toBeVisible({
+      timeout: 15000,
+    })
+
+    if (await joinButton.isVisible()) {
+      await joinButton.click()
+    } else {
+      await joinDropdown.click()
+      await page.getByRole('menuitem', { name: /Join with Code/i }).click()
+    }
+
     await expect(page.getByTestId('join-game-dialog')).toBeVisible({
       timeout: 5000,
     })
@@ -27,17 +40,7 @@ test.describe('Join Game Dialog', () => {
 
   /** Seed media preferences so setup redirect is bypassed after join. */
   async function seedMediaPrefs(page: import('@playwright/test').Page) {
-    await page.evaluate((key) => {
-      localStorage.setItem(
-        key,
-        JSON.stringify({
-          videoinput: 'mock-camera-1',
-          audioinput: 'mock-mic-1',
-          audiooutput: 'mock-speaker-1',
-          timestamp: Date.now(),
-        }),
-      )
-    }, STORAGE_KEYS.MEDIA_DEVICES)
+    await setCommittedMediaPreferences(page)
   }
 
   // ── Validation / UI-only tests (no room creation) ─────────────────────

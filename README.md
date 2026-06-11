@@ -133,23 +133,23 @@ pbpaste | bunx convex env set LIVEKIT_API_SECRET
 ### E2E Tests
 
 E2E runs use a Convex preview deployment created by
-`scripts/convex-preview.sh`. Set the LiveKit variables on that preview
-deployment before running the tests. For the local E2E preview name used by the
-root script (`CONVEX_PREVIEW_NAME=local`):
+`scripts/convex-preview.sh`. The preview script copies `LIVEKIT_URL`,
+`LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` from the current shell environment
+into the Convex preview deployment when they are present. For the local E2E
+preview name used by the root script (`CONVEX_PREVIEW_NAME=local`):
 
 ```sh
-CONVEX_PREVIEW_NAME=local bunx dotenv-cli -e apps/web/.env.test.local -- bash ./scripts/convex-preview.sh build
-
-bunx convex env set --preview-name local LIVEKIT_URL
-bunx convex env set --preview-name local LIVEKIT_API_KEY
-bunx convex env set --preview-name local LIVEKIT_API_SECRET
-
 bun run convex:e2e:ui
 ```
 
 If you use a different `CONVEX_PREVIEW_NAME`, replace `local` with that preview
-name. CI or Vercel preview builds should set the same variables on the matching
-Convex preview deployment.
+name. To set or override values manually, use:
+
+```sh
+bunx convex env set --preview-name local LIVEKIT_URL
+bunx convex env set --preview-name local LIVEKIT_API_KEY
+bunx convex env set --preview-name local LIVEKIT_API_SECRET
+```
 
 ### Vercel Deployments
 

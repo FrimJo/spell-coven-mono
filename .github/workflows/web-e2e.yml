@@ -120,6 +120,9 @@ jobs:
       - name: Deploy Convex (preview) and run E2E
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
           CI: '1'
           CONVEX_PREVIEW_NAME: ${{ github.head_ref || github.ref_name }}
         working-directory: .
@@ -193,6 +196,9 @@ jobs:
       - name: Deploy Convex (preview) and run torture suite
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
           CI: '1'
           CONVEX_PREVIEW_NAME: ${{ github.head_ref || github.ref_name }}
         working-directory: .
@@ -269,6 +275,9 @@ jobs:
       - name: Deploy Convex (preview) and update visual snapshots
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
           CI: '1'
           CONVEX_PREVIEW_NAME: ${{ github.head_ref || github.ref_name }}
         working-directory: .

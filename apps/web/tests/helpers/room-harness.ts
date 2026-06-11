@@ -9,14 +9,18 @@
 import type { Page, TestInfo } from '@playwright/test'
 import { expect } from '@playwright/test'
 
+import type { MediaDiagnosticsSnapshot } from '../../src/types/media-session'
 import type { PlayerHandle } from './launch-player'
+import type { RemoteCardState } from './media-assertions'
 import { ensureWorkerStorageState, hasAuthCredentials } from './auth-storage'
 import { launchPlayer } from './launch-player'
 import {
   collectMediaDiagnostics,
   collectRemoteCardsStabilityReport,
+  collectRemoteCardStates,
   expectAudioEnergy,
   expectVideoRendering,
+  isRemoteCardStable,
   waitForRemoteCardsStable,
 } from './media-assertions'
 import { createRoomViaUI, navigateToTestGame } from './test-utils'
@@ -39,8 +43,9 @@ export type RemoteCardSnapshotState = {
   playerId: string
   playerName: string
   hasVideo: boolean
+  hasAudio: boolean
   hasVideoOff: boolean
-  connState: string | null
+  liveKitConnectionState: string | null
   hasOffline: boolean
   stable: boolean
 }
@@ -86,7 +91,12 @@ export type RoomHarness = {
 // LiveKit media diagnostics
 // ---------------------------------------------------------------------------
 
-export async function injectPeerConnectionCapture(page: Page) {
+export type LiveKitDiagnosticsCapture = {
+  captured: boolean
+  diagnostics: MediaDiagnosticsSnapshot | null
+}
+
+export async function injectLiveKitDiagnosticsCapture(page: Page) {
   await page.addInitScript(() => {
     ;(
       window as unknown as { __spellCovenMediaDiagnostics?: unknown }
@@ -94,7 +104,9 @@ export async function injectPeerConnectionCapture(page: Page) {
   })
 }
 
-export async function collectWebRTCPeerDiagnostics(page: Page) {
+export async function collectLiveKitDiagnostics(
+  page: Page,
+): Promise<LiveKitDiagnosticsCapture> {
   return page.evaluate(() => {
     const diagnostics = (
       window as unknown as { __spellCovenMediaDiagnostics?: unknown }
@@ -102,8 +114,7 @@ export async function collectWebRTCPeerDiagnostics(page: Page) {
 
     return {
       captured: diagnostics !== null && diagnostics !== undefined,
-      diagnostics: diagnostics ?? null,
-      peers: [],
+      diagnostics: (diagnostics ?? null) as MediaDiagnosticsSnapshot | null,
     }
   })
 }
@@ -111,6 +122,36 @@ export async function collectWebRTCPeerDiagnostics(page: Page) {
 // ---------------------------------------------------------------------------
 // Connection readiness polling
 // ---------------------------------------------------------------------------
+
+function toRemoteCardSnapshotState(
+  state: RemoteCardState,
+): RemoteCardSnapshotState {
+  return {
+    playerId: state.playerId,
+    playerName: state.playerName ?? '?',
+    hasVideo: state.hasVideo,
+    hasAudio: state.hasAudio,
+    hasVideoOff: state.hasVideoOffPlaceholder,
+    liveKitConnectionState: state.liveKitConnectionState,
+    hasOffline: state.hasOfflineWarning,
+    stable: isRemoteCardStable(state),
+  }
+}
+
+function buildRemoteCardSnapshot(
+  cards: RemoteCardState[],
+  expectedRemotes: number,
+): RemoteCardSnapshot {
+  const states = cards.map(toRemoteCardSnapshotState)
+  const stableCount = states.filter((s) => s.stable).length
+  return {
+    cardCount: states.length,
+    stableCount,
+    allStable:
+      states.length === expectedRemotes && stableCount === expectedRemotes,
+    states,
+  }
+}
 
 export async function waitForAllConnectionsReady(
   page: Page,
@@ -132,52 +173,14 @@ export async function waitForAllConnectionsReady(
   const maxConnectingDurationsMs: Record<string, number> = {}
 
   while (Date.now() - start < timeoutMs) {
-    const snapshot = await page.evaluate((expected): RemoteCardSnapshot => {
-      const cards = Array.from(
-        document.querySelectorAll('[data-testid="remote-player-card"]'),
-      )
-      const states = cards.map((card) => {
-        const playerId = card.getAttribute('data-player-id') ?? '?'
-        const playerName =
-          card.querySelector('.text-white')?.textContent?.trim() ?? '?'
-        const hasVideo = !!card.querySelector(
-          '[data-testid="remote-player-video"]',
-        )
-        const hasVideoOff = !!card.querySelector(
-          '[data-testid="remote-player-video-off"]',
-        )
-        const webrtcWarning = card.querySelector(
-          '[data-testid="remote-player-webrtc-warning"]',
-        )
-        const connState =
-          webrtcWarning?.getAttribute('data-connection-state') ?? null
-        const hasOffline = !!card.querySelector(
-          '[data-testid="remote-player-offline-warning"]',
-        )
-        return {
-          playerId,
-          playerName,
-          hasVideo,
-          hasVideoOff,
-          connState,
-          hasOffline,
-          stable: hasVideo && !hasVideoOff && !connState && !hasOffline,
-        }
-      })
-      const stableCount = states.filter((s) => s.stable).length
-      return {
-        cardCount: cards.length,
-        stableCount,
-        allStable: states.length === expected && stableCount === expected,
-        states,
-      }
-    }, expectedRemotes)
+    const cards = await collectRemoteCardStates(page)
+    const snapshot = buildRemoteCardSnapshot(cards, expectedRemotes)
 
     lastSnapshot = snapshot
     const now = Date.now()
     const observedPeerIds = new Set(snapshot.states.map((s) => s.playerId))
     for (const state of snapshot.states) {
-      if (state.connState === 'connecting') {
+      if (state.liveKitConnectionState === 'connecting') {
         const since = connectingSinceMs.get(state.playerId) ?? now
         if (!connectingSinceMs.has(state.playerId)) {
           connectingSinceMs.set(state.playerId, since)
@@ -201,7 +204,7 @@ export async function waitForAllConnectionsReady(
       cardCount: snapshot.cardCount,
       stableCount: snapshot.stableCount,
       connectingCount: snapshot.states.filter(
-        (s) => s.connState === 'connecting',
+        (s) => s.liveKitConnectionState === 'connecting',
       ).length,
     })
     if (timeline.length > 80) timeline.shift()
@@ -243,46 +246,8 @@ export async function waitForRemoteCardCountIntegrity(
   let lastSnapshot: RemoteCardSnapshot | null = null
 
   while (Date.now() - start < timeoutMs) {
-    const snapshot = await page.evaluate((expected): RemoteCardSnapshot => {
-      const cards = Array.from(
-        document.querySelectorAll('[data-testid="remote-player-card"]'),
-      )
-      const states = cards.map((card) => {
-        const playerId = card.getAttribute('data-player-id') ?? '?'
-        const playerName =
-          card.querySelector('.text-white')?.textContent?.trim() ?? '?'
-        const hasVideo = !!card.querySelector(
-          '[data-testid="remote-player-video"]',
-        )
-        const hasVideoOff = !!card.querySelector(
-          '[data-testid="remote-player-video-off"]',
-        )
-        const webrtcWarning = card.querySelector(
-          '[data-testid="remote-player-webrtc-warning"]',
-        )
-        const connState =
-          webrtcWarning?.getAttribute('data-connection-state') ?? null
-        const hasOffline = !!card.querySelector(
-          '[data-testid="remote-player-offline-warning"]',
-        )
-        return {
-          playerId,
-          playerName,
-          hasVideo,
-          hasVideoOff,
-          connState,
-          hasOffline,
-          stable: hasVideo && !hasVideoOff && !connState && !hasOffline,
-        }
-      })
-      const stableCount = states.filter((s) => s.stable).length
-      return {
-        cardCount: cards.length,
-        stableCount,
-        allStable: states.length === expected && stableCount === expected,
-        states,
-      }
-    }, expectedRemotes)
+    const cards = await collectRemoteCardStates(page)
+    const snapshot = buildRemoteCardSnapshot(cards, expectedRemotes)
     lastSnapshot = snapshot
 
     const ids = snapshot.states.map((s) => s.playerId)
@@ -350,7 +315,7 @@ export async function setupStableRoom(
       toneHz: 440 + i * 110,
       label: PLAYER_LABELS[i]!,
     })
-    await injectPeerConnectionCapture(player.page)
+    await injectLiveKitDiagnosticsCapture(player.page)
     players.push(player)
   }
 
@@ -463,12 +428,12 @@ export async function setupStableRoom(
       .map((r) => r.label)
     console.log(`[Test] Not all players ready. Failing: ${notReady.join(', ')}`)
     for (let idx = 0; idx < players.length; idx++) {
-      const peerDiag = await collectWebRTCPeerDiagnostics(
+      const liveKitDiagnostics = await collectLiveKitDiagnostics(
         players[idx]!.page,
-      ).catch(() => ({ captured: false, peers: [] }))
+      ).catch(() => ({ captured: false, diagnostics: null }))
       console.log(
-        `[Test] ${PLAYER_LABELS[idx]} WebRTC peers:`,
-        JSON.stringify(peerDiag, null, 2),
+        `[Test] ${PLAYER_LABELS[idx]} LiveKit diagnostics:`,
+        JSON.stringify(liveKitDiagnostics, null, 2),
       )
     }
   }
@@ -516,29 +481,29 @@ export async function setupStableRoom(
         }))
         stabilityReports.push({ label: playerLabel, report: stabilityReport })
 
-        await ti.attach(`webrtc-remote-cards-${playerLabel}`, {
+        await ti.attach(`livekit-remote-cards-${playerLabel}`, {
           body: Buffer.from(JSON.stringify(stabilityReport, null, 2), 'utf-8'),
           contentType: 'application/json',
         })
 
         const mediaDiagnostics = await collectMediaDiagnostics(
           player.page,
-          'video:not([muted])',
+          'video, audio',
         ).catch((error: unknown) => ({ error: String(error) }))
-        await ti.attach(`webrtc-media-${playerLabel}`, {
+        await ti.attach(`livekit-media-elements-${playerLabel}`, {
           body: Buffer.from(JSON.stringify(mediaDiagnostics, null, 2)),
           contentType: 'application/json',
         })
 
-        const peerDiag = await collectWebRTCPeerDiagnostics(player.page).catch(
-          (error: unknown) => ({
-            captured: false,
-            peers: [],
-            error: String(error),
-          }),
-        )
-        await ti.attach(`webrtc-peers-${playerLabel}`, {
-          body: Buffer.from(JSON.stringify(peerDiag, null, 2)),
+        const liveKitDiagnostics = await collectLiveKitDiagnostics(
+          player.page,
+        ).catch((error: unknown) => ({
+          captured: false,
+          diagnostics: null,
+          error: String(error),
+        }))
+        await ti.attach(`livekit-diagnostics-${playerLabel}`, {
+          body: Buffer.from(JSON.stringify(liveKitDiagnostics, null, 2)),
           contentType: 'application/json',
         })
 
@@ -546,7 +511,7 @@ export async function setupStableRoom(
           (r) => r.label === playerLabel,
         )
         if (stabilityResult) {
-          await ti.attach(`webrtc-connection-timeline-${playerLabel}`, {
+          await ti.attach(`livekit-connection-timeline-${playerLabel}`, {
             body: Buffer.from(
               JSON.stringify(
                 {
@@ -568,7 +533,7 @@ export async function setupStableRoom(
 
         const consoleLogs = consoleLogsByPlayer[index] ?? []
         if (consoleLogs.length > 0) {
-          await ti.attach(`webrtc-console-${playerLabel}`, {
+          await ti.attach(`livekit-console-${playerLabel}`, {
             body: Buffer.from(consoleLogs.join('\n')),
             contentType: 'text/plain',
           })
@@ -578,7 +543,7 @@ export async function setupStableRoom(
           .screenshot({ fullPage: true })
           .catch(() => null)
         if (screenshotBuffer) {
-          await ti.attach(`webrtc-screenshot-${playerLabel}`, {
+          await ti.attach(`livekit-screenshot-${playerLabel}`, {
             body: screenshotBuffer,
             contentType: 'image/png',
           })
@@ -587,7 +552,7 @@ export async function setupStableRoom(
     )
 
     const contextLines: string[] = [
-      '=== WebRTC room test failure context ===',
+      '=== LiveKit room test failure context ===',
       '',
       'Per-player remote card stability (at failure time):',
       ...stabilityReports.map(
@@ -599,7 +564,7 @@ export async function setupStableRoom(
       failureMessage,
     ]
 
-    await ti.attach('webrtc-failure-context', {
+    await ti.attach('livekit-failure-context', {
       body: Buffer.from(contextLines.join('\n'), 'utf-8'),
       contentType: 'text/plain',
     })
@@ -636,21 +601,20 @@ export async function assertAllPlayersMediaHealthy(
     for (let index = 0; index < harness.players.length; index++) {
       const player = harness.players[index]!
       const playerLabel = PLAYER_LABELS[index]!
-      const peerDiag = await collectWebRTCPeerDiagnostics(player.page)
-      if (peerDiag.captured) {
-        const diagnostics = peerDiag.diagnostics as {
-          connectionState?: string
-          remoteSessionIds?: string[]
-        } | null
-        expect(
-          diagnostics?.connectionState,
-          `${playerLabel}: expected LiveKit room to be connected`,
-        ).toBe('connected')
-        expect(
-          (diagnostics?.remoteSessionIds?.length ?? 0) >= EXPECTED_REMOTES,
-          `${playerLabel}: expected at least ${EXPECTED_REMOTES} LiveKit remote participants`,
-        ).toBeTruthy()
-      }
+      const liveKitDiagnostics = await collectLiveKitDiagnostics(player.page)
+      expect(
+        liveKitDiagnostics.captured,
+        `${playerLabel}: expected LiveKit diagnostics on window.__spellCovenMediaDiagnostics`,
+      ).toBeTruthy()
+      const diagnostics = liveKitDiagnostics.diagnostics
+      expect(
+        diagnostics?.connectionState,
+        `${playerLabel}: expected LiveKit room to be connected`,
+      ).toBe('connected')
+      expect(
+        (diagnostics?.remoteSessionIds?.length ?? 0) >= EXPECTED_REMOTES,
+        `${playerLabel}: expected at least ${EXPECTED_REMOTES} LiveKit remote session identities`,
+      ).toBeTruthy()
     }
 
     for (let index = 0; index < harness.players.length; index++) {
@@ -665,6 +629,7 @@ export async function assertAllPlayersMediaHealthy(
       for (const state of remoteStates) {
         const cardSelector = `[data-testid="remote-player-card"][data-player-id="${state.playerId}"]`
         const videoSelector = `${cardSelector} [data-testid="remote-player-video"]`
+        const audioSelector = `${cardSelector} [data-testid="remote-player-audio"]`
         const card = player.page.locator(cardSelector)
 
         await expect(card).toBeVisible({ timeout: 30_000 })
@@ -674,12 +639,13 @@ export async function assertAllPlayersMediaHealthy(
         await expect(
           card.locator('[data-testid="remote-player-offline-warning"]'),
         ).toHaveCount(0)
-        await expect(
-          card.locator('[data-testid="remote-player-webrtc-warning"]'),
-        ).toHaveCount(0)
+        await expect(card).toHaveAttribute(
+          'data-livekit-connection-state',
+          'connected',
+        )
 
         await expectVideoRendering(player.page, videoSelector)
-        await expectAudioEnergy(player.page, videoSelector)
+        await expectAudioEnergy(player.page, audioSelector)
       }
     }
   } catch (error) {

@@ -7,7 +7,7 @@ import {
   setupStableRoom,
 } from '../helpers/room-harness'
 
-test.describe('WebRTC 4-player room', () => {
+test.describe('LiveKit 4-player media room', () => {
   // eslint-disable-next-line no-empty-pattern -- Playwright fixture signature requires object destructuring
   test('players join and render remote video/audio', async ({}, testInfo) => {
     test.setTimeout(360_000)
