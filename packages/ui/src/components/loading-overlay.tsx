@@ -10,21 +10,21 @@ export function LoadingOverlay({ isVisible, message }: LoadingOverlayProps) {
 
   return (
     <div
-      className="bg-background/80 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
+      className="inset-0 backdrop-blur-sm fixed z-50 flex items-center justify-center bg-background/80"
       role="dialog"
       aria-modal="true"
       aria-label="Loading"
     >
-      <div className="flex flex-col items-center gap-4">
+      <div className="gap-4 flex flex-col items-center">
         {/* Spinner */}
-        <div className="relative h-12 w-12">
-          <div className="border-muted absolute inset-0 rounded-full border-4" />
-          <div className="border-primary absolute inset-0 animate-spin rounded-full border-4 border-t-transparent" />
+        <div className="h-12 w-12 relative">
+          <div className="inset-0 absolute rounded-full border-4 border-muted" />
+          <div className="inset-0 animate-spin absolute rounded-full border-4 border-primary border-t-transparent" />
         </div>
 
         {/* Message */}
         {message && (
-          <p className="text-muted-foreground text-sm font-medium">{message}</p>
+          <p className="text-sm font-medium text-muted-foreground">{message}</p>
         )}
       </div>
     </div>

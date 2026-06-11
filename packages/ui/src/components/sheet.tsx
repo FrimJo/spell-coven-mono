@@ -45,7 +45,7 @@ function SheetOverlay({
       data-slot="sheet-overlay"
       forceMount={forceMount}
       className={cn(
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 transition-opacity data-[state=closed]:pointer-events-none data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=closed]:ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=open]:ease-[cubic-bezier(0.32,0.72,0,1)]',
+        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 inset-0 bg-black/50 fixed z-50 transition-opacity data-[state=closed]:pointer-events-none data-[state=closed]:duration-300 data-[state=closed]:ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=open]:duration-500 data-[state=open]:ease-[cubic-bezier(0.32,0.72,0,1)]',
         className,
       )}
       {...props}
@@ -71,11 +71,11 @@ function SheetContent({
         data-slot="sheet-content"
         forceMount={forceMount}
         className={cn(
-          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition-all data-[state=closed]:pointer-events-none data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=closed]:ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=open]:ease-[cubic-bezier(0.32,0.72,0,1)]',
+          'data-[state=open]:animate-in data-[state=closed]:animate-out gap-4 shadow-lg fixed z-50 flex flex-col bg-background transition-all data-[state=closed]:pointer-events-none data-[state=closed]:duration-300 data-[state=closed]:ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=open]:duration-500 data-[state=open]:ease-[cubic-bezier(0.32,0.72,0,1)]',
           side === 'right' &&
-            'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm',
+            'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 sm:max-w-sm h-full w-3/4 border-l',
           side === 'left' &&
-            'data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm',
+            'data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left inset-y-0 left-0 sm:max-w-sm h-full w-3/4 border-r',
           side === 'top' &&
             'data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto border-b',
           side === 'bottom' &&
@@ -85,7 +85,7 @@ function SheetContent({
         {...props}
       >
         {children}
-        <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary rounded-xs focus:outline-hidden absolute right-4 top-4 cursor-pointer opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none">
+        <SheetPrimitive.Close className="rounded-xs right-4 top-4 absolute cursor-pointer opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-secondary">
           <XIcon className="size-4" />
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>
@@ -98,7 +98,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn('flex flex-col gap-1.5 p-4', className)}
+      className={cn('gap-1.5 p-4 flex flex-col', className)}
       {...props}
     />
   )
@@ -108,7 +108,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sheet-footer"
-      className={cn('mt-auto flex flex-col gap-2 p-4', className)}
+      className={cn('gap-2 p-4 mt-auto flex flex-col', className)}
       {...props}
     />
   )
@@ -121,7 +121,7 @@ function SheetTitle({
   return (
     <SheetPrimitive.Title
       data-slot="sheet-title"
-      className={cn('text-foreground font-semibold', className)}
+      className={cn('font-semibold text-foreground', className)}
       {...props}
     />
   )
@@ -134,7 +134,7 @@ function SheetDescription({
   return (
     <SheetPrimitive.Description
       data-slot="sheet-description"
-      className={cn('text-muted-foreground text-sm', className)}
+      className={cn('text-sm text-muted-foreground', className)}
       {...props}
     />
   )

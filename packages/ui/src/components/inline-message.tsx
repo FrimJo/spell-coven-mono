@@ -54,7 +54,7 @@ export function InlineMessage({
       {...props}
     >
       <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-      <div className="flex-1 space-y-1">
+      <div className="space-y-1 flex-1">
         {title && <p className="font-medium">{title}</p>}
         <p className={cn(!title && 'font-medium')}>{message}</p>
       </div>
