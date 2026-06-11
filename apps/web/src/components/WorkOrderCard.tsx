@@ -22,10 +22,10 @@ export const WorkOrderCard = ({
       onClick={onClick}
       className={cn(
         'cursor-pointer rounded-lg border transition-colors',
-        isSelected && 'ring-primary ring-2',
+        isSelected && 'ring-2 ring-primary',
       )}
     >
-      <div className="bg-warning flex-1 p-4">{children}</div>
+      <div className="p-4 flex-1 bg-warning">{children}</div>
     </div>
   )
 }

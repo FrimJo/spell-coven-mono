@@ -29,17 +29,17 @@ export function DuplicateSessionDialog({
 }: DuplicateSessionDialogProps) {
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="border-warning/50 bg-surface-1 sm:max-w-[450px] [&>button]:hidden">
+      <DialogContent className="sm:max-w-[450px] border-warning/50 bg-surface-1 [&>button]:hidden">
         <DialogHeader>
           <div className="mb-2 flex justify-center">
-            <div className="bg-warning/20 flex h-12 w-12 items-center justify-center rounded-full">
-              <AlertTriangle className="text-warning-muted-foreground h-6 w-6" />
+            <div className="h-12 w-12 flex items-center justify-center rounded-full bg-warning/20">
+              <AlertTriangle className="h-6 w-6 text-warning-muted-foreground" />
             </div>
           </div>
-          <DialogTitle className="text-text-primary text-center">
+          <DialogTitle className="text-center text-text-primary">
             Already Connected
           </DialogTitle>
-          <DialogDescription className="text-text-muted text-center">
+          <DialogDescription className="text-center text-text-muted">
             You&apos;re already in this game room from another tab or window.
             Would you like to continue here instead?
           </DialogDescription>
@@ -48,17 +48,17 @@ export function DuplicateSessionDialog({
         <div className="space-y-3 py-4">
           <button
             onClick={onTransfer}
-            className="border-brand/30 bg-surface-0/30 hover:border-brand/60 hover:bg-surface-1/40 focus:ring-brand/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
+            className="group p-4 w-full cursor-pointer rounded-lg border border-brand/30 bg-surface-0/30 text-left transition-all hover:border-brand/60 hover:bg-surface-1/40 focus:ring-2 focus:ring-brand/50 focus:outline-none"
           >
-            <div className="flex items-start gap-3">
-              <div className="bg-brand/20 group-hover:bg-brand/30 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors">
-                <ArrowRightLeft className="text-brand-muted-foreground h-5 w-5" />
+            <div className="gap-3 flex items-start">
+              <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-lg bg-brand/20 transition-colors group-hover:bg-brand/30">
+                <ArrowRightLeft className="h-5 w-5 text-brand-muted-foreground" />
               </div>
               <div>
-                <p className="text-brand-muted-foreground font-medium">
+                <p className="font-medium text-brand-muted-foreground">
                   Transfer here
                 </p>
-                <p className="text-text-muted mt-0.5 text-sm">
+                <p className="mt-0.5 text-sm text-text-muted">
                   Disconnect from the other tab and continue in this one.
                 </p>
               </div>
@@ -67,17 +67,17 @@ export function DuplicateSessionDialog({
 
           <button
             onClick={onClose}
-            className="border-surface-3 bg-surface-2/50 hover:border-surface-3 hover:bg-surface-2 focus:ring-surface-3/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
+            className="group p-4 w-full cursor-pointer rounded-lg border border-surface-3 bg-surface-2/50 text-left transition-all hover:border-surface-3 hover:bg-surface-2 focus:ring-2 focus:ring-surface-3/50 focus:outline-none"
           >
-            <div className="flex items-start gap-3">
-              <div className="bg-surface-3/50 group-hover:bg-surface-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors">
-                <Home className="text-text-muted h-5 w-5" />
+            <div className="gap-3 flex items-start">
+              <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-lg bg-surface-3/50 transition-colors group-hover:bg-surface-3">
+                <Home className="h-5 w-5 text-text-muted" />
               </div>
               <div>
-                <p className="text-text-secondary font-medium">
+                <p className="font-medium text-text-secondary">
                   Return to Home
                 </p>
-                <p className="text-text-muted mt-0.5 text-sm">
+                <p className="mt-0.5 text-sm text-text-muted">
                   Keep your existing session in the other tab.
                 </p>
               </div>
