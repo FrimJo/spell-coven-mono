@@ -45,7 +45,8 @@ test.describe('Game Room Visual Tests', () => {
       // Wait for game room to load
       await expect(page.getByText(roomId)).toBeVisible({ timeout: 10000 })
       await page.waitForLoadState('networkidle')
-      await page.waitForTimeout(1000) // Allow video streams and UI to stabilize
+      await expect(page.locator('video')).toHaveCount(1, { timeout: 15000 })
+      await page.waitForTimeout(500) // Let surrounding layout settle after tile mounts
 
       await expect(page).toHaveScreenshot('game-room-initial.png', {
         animations: 'disabled',
