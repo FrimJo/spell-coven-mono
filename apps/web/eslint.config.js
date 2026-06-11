@@ -5,7 +5,14 @@ import { config as reactConfig } from '@repo/eslint-config/react-internal'
 /** @type {import('typescript-eslint').Config} */
 export default [
   ...reactConfig,
-  { ignores: ['public/**', 'public/mockServiceWorker.js'] },
+  {
+    ignores: [
+      '.output/**',
+      'dist/**',
+      'public/**',
+      'public/mockServiceWorker.js',
+    ],
+  },
   // Main source files
   {
     files: ['**/*.ts', '**/*.tsx'],
