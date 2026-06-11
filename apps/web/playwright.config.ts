@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'https://localhost:1234'
+
 export default defineConfig({
   testDir: 'tests',
   testMatch: ['e2e/**/*.spec.ts', 'visual/**/*.spec.ts', '**/*.setup.ts'],
@@ -30,7 +32,7 @@ export default defineConfig({
       ]
     : [['list']],
   use: {
-    baseURL: 'https://localhost:1234',
+    baseURL,
     trace: 'on-first-retry',
     permissions: ['camera', 'microphone'],
     video: 'retain-on-failure',
@@ -69,7 +71,7 @@ export default defineConfig({
   webServer: [
     {
       command: 'bun run with-test-env -- vite preview',
-      url: 'https://localhost:1234',
+      url: baseURL,
       timeout: process.env.CI ? 120_000 : 90_000,
       reuseExistingServer: !process.env.CI,
       stdout: 'pipe',
