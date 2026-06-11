@@ -21,13 +21,12 @@ import {
   VideoPresets,
 } from 'livekit-client'
 
-import { createMediaDiagnosticsSnapshot } from './media-diagnostics'
-
 type SessionListener = (state: RoomMediaSessionState) => void
 
 export interface LiveKitMediaAdapter {
   connect: (serverUrl: string, token: string) => Promise<void>
   disconnect: () => void
+  reportError: (error: Error) => void
   setCameraEnabled: (
     enabled: boolean,
     deviceId?: string | null,
@@ -69,30 +68,6 @@ function publicationToTrackState(
   }
 }
 
-function parseMetadata(metadata: string | undefined): {
-  userId: string | null
-  username: string | null
-} {
-  if (!metadata) {
-    return { userId: null, username: null }
-  }
-
-  try {
-    const parsed = JSON.parse(metadata) as unknown
-    if (!parsed || typeof parsed !== 'object') {
-      return { userId: null, username: null }
-    }
-
-    const record = parsed as Record<string, unknown>
-    return {
-      userId: typeof record.userId === 'string' ? record.userId : null,
-      username: typeof record.username === 'string' ? record.username : null,
-    }
-  } catch {
-    return { userId: null, username: null }
-  }
-}
-
 function getParticipantTrackState(
   participant: Participant,
   source: Track.Source,
@@ -114,27 +89,38 @@ function mapLocalParticipant(
   }
 }
 
+function toMediaConnectionState(state: ConnectionState): MediaConnectionState {
+  switch (state) {
+    case ConnectionState.Disconnected:
+      return 'disconnected'
+    case ConnectionState.Connecting:
+      return 'connecting'
+    case ConnectionState.Connected:
+      return 'connected'
+    case ConnectionState.Reconnecting:
+      return 'reconnecting'
+    case ConnectionState.SignalReconnecting:
+      return 'signalReconnecting'
+    default: {
+      const exhaustiveCheck: never = state
+      return exhaustiveCheck
+    }
+  }
+}
+
 function mapRemoteParticipant(
   participant: RemoteParticipant,
 ): RemoteMediaParticipant {
-  const metadata = parseMetadata(participant.metadata)
-
   return {
     sessionId: participant.identity,
-    userId: participant.attributes.userId || metadata.userId,
-    username: participant.name ?? metadata.username,
+    userId: participant.attributes.userId || null,
+    username: participant.name ?? participant.attributes.username ?? null,
     video: getParticipantTrackState(participant, LiveKitTrack.Source.Camera),
     audio: getParticipantTrackState(
       participant,
       LiveKitTrack.Source.Microphone,
     ),
   }
-}
-
-function normalizeConnectionState(
-  state: ConnectionState,
-): MediaConnectionState {
-  return state
 }
 
 export function createLiveKitMediaAdapter({
@@ -158,8 +144,8 @@ export function createLiveKitMediaAdapter({
       remotes.set(participant.identity, mapRemoteParticipant(participant))
     }
 
-    const snapshotBase = {
-      connectionState: normalizeConnectionState(room.state),
+    onStateChange({
+      connectionState: toMediaConnectionState(room.state),
       isReconnecting:
         room.state === ConnectionState.Reconnecting ||
         room.state === ConnectionState.SignalReconnecting,
@@ -167,15 +153,10 @@ export function createLiveKitMediaAdapter({
       remotes,
       lastError,
       lastDisconnectReason,
-    }
-
-    onStateChange({
-      ...snapshotBase,
-      diagnostics: createMediaDiagnosticsSnapshot(snapshotBase),
     })
   }
 
-  const setLastError = (error: Error) => {
+  const reportError = (error: Error) => {
     lastError = error
     emitState()
   }
@@ -202,7 +183,7 @@ export function createLiveKitMediaAdapter({
       publication.track?.detach()
       emitState()
     })
-    .on(RoomEvent.MediaDevicesError, setLastError)
+    .on(RoomEvent.MediaDevicesError, reportError)
     .on(RoomEvent.Disconnected, (reason) => {
       lastDisconnectReason = reason === undefined ? null : String(reason)
       emitState()
@@ -211,6 +192,7 @@ export function createLiveKitMediaAdapter({
   emitState()
 
   return {
+    reportError,
     async connect(serverUrl, token) {
       lastError = null
       lastDisconnectReason = null

@@ -1,7 +1,8 @@
 import type { RoomMediaContextValue } from '@/types/media-session'
 import type { ReactNode } from 'react'
-import { createContext, useContext, useEffect } from 'react'
+import { createContext, useContext } from 'react'
 import { usePresence } from '@/contexts/PresenceContext'
+import { useMediaDiagnostics } from '@/hooks/useMediaDiagnostics'
 import { useRoomMediaSession } from '@/hooks/useRoomMediaSession'
 
 const RoomMediaContext = createContext<RoomMediaContextValue | null>(null)
@@ -22,13 +23,7 @@ export function RoomMediaProvider({
     enabled: isConnected && !isLoading && !!sessionId,
   })
 
-  useEffect(() => {
-    ;(
-      window as unknown as {
-        __spellCovenMediaDiagnostics?: RoomMediaContextValue['diagnostics']
-      }
-    ).__spellCovenMediaDiagnostics = mediaSession.diagnostics
-  }, [mediaSession.diagnostics])
+  useMediaDiagnostics(mediaSession)
 
   return (
     <RoomMediaContext.Provider value={mediaSession}>

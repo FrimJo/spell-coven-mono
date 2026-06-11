@@ -1,6 +1,7 @@
 import type { PropsWithChildren } from 'react'
 import { memo, useCallback, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
+import { useDeviceList } from '@/hooks/useDeviceList'
 import { Camera, ChevronUp, Mic, MicOff, Video, VideoOff } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
@@ -10,8 +11,8 @@ import {
   PopoverTrigger,
 } from '@repo/ui/components/popover'
 
-// Extract inline styles
-const VIDEO_STYLE: React.CSSProperties = {
+// Shared full-bleed video style for local, remote, and test streams.
+export const VIDEO_STYLE: React.CSSProperties = {
   position: 'absolute',
   top: 0,
   left: 0,
@@ -129,9 +130,8 @@ export const VideoDisabledPlaceholder = memo(
 interface LocalMediaControlsProps {
   videoEnabled: boolean
   isAudioMuted: boolean
-  onToggleVideo: (enabled: boolean) => Promise<void>
+  onToggleVideo: (enabled: boolean) => void
   onToggleAudio: () => void
-  isTogglingVideo?: boolean
 }
 
 export const LocalMediaControls = memo(function LocalMediaControls({
@@ -139,13 +139,10 @@ export const LocalMediaControls = memo(function LocalMediaControls({
   isAudioMuted,
   onToggleVideo,
   onToggleAudio,
-  isTogglingVideo = false,
 }: LocalMediaControlsProps) {
   const [cameraPopoverOpen, setCameraPopoverOpen] = useState(false)
   const [micPopoverOpen, setMicPopoverOpen] = useState(false)
   const {
-    video: { devices: videoDevices },
-    audio: { devices: audioDevices },
     mediaPreferences: {
       selectedVideoDeviceId,
       selectedAudioInputDeviceId,
@@ -153,6 +150,9 @@ export const LocalMediaControls = memo(function LocalMediaControls({
       setSelectedAudioInputDeviceId,
     },
   } = useMediaStreams()
+
+  const videoDevices = useDeviceList('videoinput')
+  const audioDevices = useDeviceList('audioinput')
 
   // Handle camera selection
   const handleSelectCamera = useCallback(
@@ -190,10 +190,9 @@ export const LocalMediaControls = memo(function LocalMediaControls({
           data-testid="video-toggle-button"
           size="sm"
           variant={videoEnabled ? 'outline' : 'destructive'}
-          onClick={async () => {
-            await onToggleVideo(!videoEnabled)
+          onClick={() => {
+            onToggleVideo(!videoEnabled)
           }}
-          disabled={isTogglingVideo}
           className={`h-10 w-10 p-0 rounded-r-none border-r-0 ${
             videoEnabled
               ? 'text-white border-surface-3 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50'

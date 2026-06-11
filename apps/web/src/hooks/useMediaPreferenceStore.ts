@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 export const MEDIA_DEVICE_STORAGE_KEY = 'mtg-selected-media-devices'
 
-interface PersistedMediaDeviceState {
+export interface PersistedMediaDeviceState {
   videoinput: string | null
   audioinput: string | null
   audiooutput: string | null
@@ -58,13 +58,21 @@ function readPersistedMediaDevices(): MediaPreferenceStoreState {
   }
 }
 
-function persistMediaDevices(snapshot: MediaPreferencesSnapshot): void {
+type PersistedDeviceIds = Pick<
+  MediaPreferencesSnapshot,
+  | 'selectedVideoDeviceId'
+  | 'selectedAudioInputDeviceId'
+  | 'selectedAudioOutputDeviceId'
+>
+
+// Enabled flags are session-only; only device ids and a timestamp persist.
+function persistMediaDevices(deviceIds: PersistedDeviceIds): void {
   localStorage.setItem(
     MEDIA_DEVICE_STORAGE_KEY,
     JSON.stringify({
-      videoinput: snapshot.selectedVideoDeviceId,
-      audioinput: snapshot.selectedAudioInputDeviceId,
-      audiooutput: snapshot.selectedAudioOutputDeviceId,
+      videoinput: deviceIds.selectedVideoDeviceId,
+      audioinput: deviceIds.selectedAudioInputDeviceId,
+      audiooutput: deviceIds.selectedAudioOutputDeviceId,
       timestamp: Date.now(),
     } satisfies PersistedMediaDeviceState),
   )
@@ -97,7 +105,11 @@ export function useMediaPreferenceStore(): MediaPreferenceStore {
       return
     }
 
-    persistMediaDevices(state)
+    persistMediaDevices({
+      selectedVideoDeviceId: state.selectedVideoDeviceId,
+      selectedAudioInputDeviceId: state.selectedAudioInputDeviceId,
+      selectedAudioOutputDeviceId: state.selectedAudioOutputDeviceId,
+    })
   }, [
     state.selectedVideoDeviceId,
     state.selectedAudioInputDeviceId,
@@ -189,20 +201,38 @@ export function useMediaPreferenceStore(): MediaPreferenceStore {
     })
   }, [])
 
-  return {
-    selectedVideoDeviceId: state.selectedVideoDeviceId,
-    selectedAudioInputDeviceId: state.selectedAudioInputDeviceId,
-    selectedAudioOutputDeviceId: state.selectedAudioOutputDeviceId,
-    videoEnabled: state.videoEnabled,
-    audioEnabled: state.audioEnabled,
-    hasCommitted: state.hasCommitted,
-    setSelectedVideoDeviceId,
-    setSelectedAudioInputDeviceId,
-    setSelectedAudioOutputDeviceId,
-    setVideoEnabled,
-    setAudioEnabled,
-    captureSnapshot,
-    restoreSnapshot,
-    commitPreferences,
-  }
+  return useMemo(
+    (): MediaPreferenceStore => ({
+      selectedVideoDeviceId: state.selectedVideoDeviceId,
+      selectedAudioInputDeviceId: state.selectedAudioInputDeviceId,
+      selectedAudioOutputDeviceId: state.selectedAudioOutputDeviceId,
+      videoEnabled: state.videoEnabled,
+      audioEnabled: state.audioEnabled,
+      hasCommitted: state.hasCommitted,
+      setSelectedVideoDeviceId,
+      setSelectedAudioInputDeviceId,
+      setSelectedAudioOutputDeviceId,
+      setVideoEnabled,
+      setAudioEnabled,
+      captureSnapshot,
+      restoreSnapshot,
+      commitPreferences,
+    }),
+    [
+      state.selectedVideoDeviceId,
+      state.selectedAudioInputDeviceId,
+      state.selectedAudioOutputDeviceId,
+      state.videoEnabled,
+      state.audioEnabled,
+      state.hasCommitted,
+      setSelectedVideoDeviceId,
+      setSelectedAudioInputDeviceId,
+      setSelectedAudioOutputDeviceId,
+      setVideoEnabled,
+      setAudioEnabled,
+      captureSnapshot,
+      restoreSnapshot,
+      commitPreferences,
+    ],
+  )
 }

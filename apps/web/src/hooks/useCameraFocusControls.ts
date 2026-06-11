@@ -99,6 +99,9 @@ export function useCameraFocusControls({
     const videoTrack = stream?.getVideoTracks()[0]
     if (!videoTrack) {
       activeTrackIdRef.current = null
+      initializedTrackIdRef.current = null
+      // External MediaStreamTrack removed — reset derived focus state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync with external media track lifecycle
       setFocusCapabilities(null)
       setIsFocusSupportForced(false)
       return () => {
@@ -110,6 +113,31 @@ export function useCameraFocusControls({
     const trackId = videoTrack.id
     activeTrackIdRef.current = trackId
 
+    const applyCapabilities = (
+      capabilities: FocusCapabilities,
+      forced: boolean,
+    ) => {
+      if (cancelled || activeTrackIdRef.current !== trackId) {
+        return
+      }
+
+      setFocusCapabilities(capabilities)
+      setIsFocusSupportForced(forced)
+
+      if (
+        capabilities.supportsFocus &&
+        initializedTrackIdRef.current !== trackId
+      ) {
+        initializedTrackIdRef.current = trackId
+        if (capabilities.initialFocusMode) {
+          setFocusMode(capabilities.initialFocusMode)
+        }
+        if (capabilities.initialFocusDistance !== undefined) {
+          setFocusDistance(capabilities.initialFocusDistance)
+        }
+      }
+    }
+
     const compute = (attempt = 0) => {
       if (cancelled || activeTrackIdRef.current !== trackId) {
         return
@@ -118,27 +146,27 @@ export function useCameraFocusControls({
       const derived = deriveFocusCapabilities(videoTrack)
 
       if (derived.supportsFocus) {
-        setFocusCapabilities(derived)
-        setIsFocusSupportForced(false)
+        applyCapabilities(derived, false)
         return
       }
 
       if (shouldForceFocusControls) {
-        setFocusCapabilities({
-          supportsFocus: true,
-          focusModes: ['continuous', 'manual'],
-          focusDistance: derived.focusDistance ?? {
-            min: 0,
-            max: 1,
-            step: 0.01,
+        applyCapabilities(
+          {
+            supportsFocus: true,
+            focusModes: ['continuous', 'manual'],
+            focusDistance: derived.focusDistance ?? {
+              min: 0,
+              max: 1,
+              step: 0.01,
+            },
+            initialFocusMode: derived.initialFocusMode ?? 'continuous',
+            initialFocusDistance: derived.initialFocusDistance ?? 0.5,
           },
-          initialFocusMode: derived.initialFocusMode ?? 'continuous',
-          initialFocusDistance: derived.initialFocusDistance ?? 0.5,
-        })
-        setIsFocusSupportForced(true)
+          true,
+        )
       } else {
-        setFocusCapabilities(derived)
-        setIsFocusSupportForced(false)
+        applyCapabilities(derived, false)
       }
 
       if (!derived.supportsFocus && attempt < 3) {
@@ -153,28 +181,6 @@ export function useCameraFocusControls({
       if (retryTimer) clearTimeout(retryTimer)
     }
   }, [stream, shouldForceFocusControls])
-
-  useEffect(() => {
-    const videoTrack = stream?.getVideoTracks()[0]
-    const currentTrackId = videoTrack?.id ?? null
-
-    if (
-      !currentTrackId ||
-      currentTrackId === initializedTrackIdRef.current ||
-      !focusCapabilities?.supportsFocus
-    ) {
-      return
-    }
-
-    initializedTrackIdRef.current = currentTrackId
-
-    if (focusCapabilities.initialFocusMode) {
-      setFocusMode(focusCapabilities.initialFocusMode)
-    }
-    if (focusCapabilities.initialFocusDistance !== undefined) {
-      setFocusDistance(focusCapabilities.initialFocusDistance)
-    }
-  }, [stream, focusCapabilities])
 
   const applyFocusConstraints = useCallback(
     async (mode: string, distance?: number) => {

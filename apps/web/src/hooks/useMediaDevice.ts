@@ -15,7 +15,7 @@ import { getMediaStream } from '@/lib/media-stream-manager'
 import { shouldShowPermissionDialog } from '@/lib/permission-storage'
 import { useQuery } from '@tanstack/react-query'
 
-import { useEnumeratedMediaDevices } from './useEnumeratedMediaDevices'
+import { useDeviceList } from './useDeviceList'
 
 export interface UseMediaDeviceOptions {
   kind: MediaDeviceInfo['kind']
@@ -23,7 +23,6 @@ export interface UseMediaDeviceOptions {
   videoConstraints?: MediaTrackConstraints
   audioConstraints?: MediaTrackConstraints
   onDeviceChanged?: (deviceId: string, stream: MediaStream) => void
-  onError?: (error: Error) => void
   enabled?: boolean
 }
 
@@ -56,6 +55,9 @@ export type UseMediaDeviceReturn =
   | UseMediaDeviceError
   | UseMediaDeviceSuccess
 
+export const mediaStreamQueryKey = (kind: MediaDeviceInfo['kind']) =>
+  ['MediaStream', kind] as const
+
 export function useMediaDevice(
   options: UseMediaDeviceOptions,
 ): UseMediaDeviceReturn {
@@ -68,7 +70,6 @@ export function useMediaDevice(
     },
     audioConstraints = {},
     onDeviceChanged,
-    onError,
     enabled: externalEnabled = true,
   } = options
 
@@ -78,34 +79,10 @@ export function useMediaDevice(
     },
   )
 
-  const emitError = useEffectEvent((err: Error) => {
-    onError?.(err)
-  })
-
   const permissionType = kind === 'videoinput' ? 'camera' : 'microphone'
   const userDeclinedPermission = !shouldShowPermissionDialog(permissionType)
 
-  const {
-    data: mediaDevicesByKind,
-    isPending: isEnumerating,
-    error: enumerationError,
-  } = useEnumeratedMediaDevices()
-
-  const filteredDevices = useMemo(
-    () =>
-      (mediaDevicesByKind[kind] as readonly MediaDeviceInfo[]).map(
-        (device, index) => ({
-          deviceId: device.deviceId,
-          groupId: device.groupId,
-          kind: device.kind,
-          label:
-            device.label ||
-            `${kind === 'videoinput' ? 'Camera' : 'Microphone'} ${index + 1}`,
-          toJSON: device.toJSON,
-        }),
-      ),
-    [kind, mediaDevicesByKind],
-  )
+  const filteredDevices = useDeviceList(kind)
 
   const deviceIds = useMemo(
     () => filteredDevices.map((device) => device.deviceId),
@@ -123,7 +100,7 @@ export function useMediaDevice(
     isPending: isGettingStream,
     error: getStreamError,
   } = useQuery({
-    queryKey: ['MediaStream', kind, selectedDeviceId],
+    queryKey: [...mediaStreamQueryKey(kind), selectedDeviceId],
     queryFn: async () => {
       return getMediaStream(
         kind === 'videoinput'
@@ -150,22 +127,16 @@ export function useMediaDevice(
     if (data?.stream && selectedDeviceId) {
       emitDeviceChanged(selectedDeviceId, data.stream)
     }
-  }, [data?.stream, selectedDeviceId, emitDeviceChanged])
-
-  useEffect(() => {
-    if (enumerationError) {
-      emitError(enumerationError)
-    }
-  }, [enumerationError, emitError])
+  }, [data?.stream, selectedDeviceId])
 
   return useMemo((): UseMediaDeviceReturn => {
-    const isPending = isGettingStream || isEnumerating
+    const isPending = isGettingStream
     const permissionDeclinedError = userDeclinedPermission
       ? new Error(
           `${permissionType === 'camera' ? 'Camera' : 'Microphone'} access was declined. Please enable permissions to use this feature.`,
         )
       : null
-    const error = permissionDeclinedError || getStreamError || enumerationError
+    const error = permissionDeclinedError || getStreamError
 
     const base = {
       devices: filteredDevices,
@@ -216,10 +187,8 @@ export function useMediaDevice(
     } satisfies UseMediaDeviceSuccess
   }, [
     data,
-    enumerationError,
     filteredDevices,
     getStreamError,
-    isEnumerating,
     isGettingStream,
     permissionType,
     selectedDeviceId,

@@ -1,28 +1,23 @@
-import type {
-  RoomMediaControls,
-  RoomMediaSessionState,
-} from '@/types/media-session'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import type { RoomMediaSessionState } from '@/types/media-session'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { createLiveKitMediaAdapter } from '@/lib/media/livekit-adapter'
-import { createMediaDiagnosticsSnapshot } from '@/lib/media/media-diagnostics'
 import { api } from '@convex/_generated/api'
 import { useAction } from 'convex/react'
 
 function createEmptyRoomMediaSessionState(): RoomMediaSessionState {
-  const state = {
-    connectionState: 'disconnected' as const,
+  return {
+    connectionState: 'disconnected',
     isReconnecting: false,
     local: null,
     remotes: new Map(),
     lastError: null,
     lastDisconnectReason: null,
   }
+}
 
-  return {
-    ...state,
-    diagnostics: createMediaDiagnosticsSnapshot(state),
-  }
+function toMediaError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error))
 }
 
 interface UseRoomMediaSessionOptions {
@@ -35,9 +30,7 @@ export function useRoomMediaSession({
   roomId,
   sessionId,
   enabled,
-}: UseRoomMediaSessionOptions): RoomMediaSessionState & {
-  controls: RoomMediaControls
-} {
+}: UseRoomMediaSessionOptions): RoomMediaSessionState {
   const issueLiveKitToken = useAction(api.mediaActions.issueLiveKitToken)
   const adapterRef = useRef<ReturnType<
     typeof createLiveKitMediaAdapter
@@ -61,6 +54,19 @@ export function useRoomMediaSession({
     audioEnabled,
   })
 
+  const reportError = useCallback((error: unknown) => {
+    const mediaError = toMediaError(error)
+    if (adapterRef.current) {
+      adapterRef.current.reportError(mediaError)
+      return
+    }
+
+    setState((current) => ({
+      ...current,
+      lastError: mediaError,
+    }))
+  }, [])
+
   useEffect(() => {
     mediaPreferencesRef.current = {
       selectedVideoDeviceId,
@@ -77,10 +83,6 @@ export function useRoomMediaSession({
 
   useEffect(() => {
     if (!enabled || !roomId || !sessionId) {
-      adapterRef.current?.disconnect()
-      adapterRef.current = null
-      isConnectedRef.current = false
-      queueMicrotask(() => setState(createEmptyRoomMediaSessionState()))
       return
     }
 
@@ -115,86 +117,33 @@ export function useRoomMediaSession({
       })
       .catch((error: unknown) => {
         if (cancelled) return
-        const lastError =
-          error instanceof Error ? error : new Error(String(error))
-        setState((current) => ({
-          ...current,
-          lastError,
-          diagnostics: createMediaDiagnosticsSnapshot({
-            ...current,
-            lastError,
-          }),
-        }))
+        reportError(error)
       })
 
     return () => {
       cancelled = true
       isConnectedRef.current = false
       adapter.disconnect()
-      if (adapterRef.current === adapter) {
-        adapterRef.current = null
-      }
+      adapterRef.current = null
+      setState(createEmptyRoomMediaSessionState())
     }
-  }, [enabled, roomId, sessionId, issueLiveKitToken])
+  }, [enabled, roomId, sessionId, issueLiveKitToken, reportError])
 
   useEffect(() => {
     if (!enabled || !adapterRef.current || !isConnectedRef.current) return
 
     adapterRef.current
       .setCameraEnabled(videoEnabled, selectedVideoDeviceId)
-      .catch((error: unknown) => {
-        const lastError =
-          error instanceof Error ? error : new Error(String(error))
-        setState((current) => ({
-          ...current,
-          lastError,
-          diagnostics: createMediaDiagnosticsSnapshot({
-            ...current,
-            lastError,
-          }),
-        }))
-      })
-  }, [enabled, videoEnabled, selectedVideoDeviceId])
+      .catch(reportError)
+  }, [enabled, videoEnabled, selectedVideoDeviceId, reportError])
 
   useEffect(() => {
     if (!enabled || !adapterRef.current || !isConnectedRef.current) return
 
     adapterRef.current
       .setMicrophoneEnabled(audioEnabled, selectedAudioInputDeviceId)
-      .catch((error: unknown) => {
-        const lastError =
-          error instanceof Error ? error : new Error(String(error))
-        setState((current) => ({
-          ...current,
-          lastError,
-          diagnostics: createMediaDiagnosticsSnapshot({
-            ...current,
-            lastError,
-          }),
-        }))
-      })
-  }, [enabled, audioEnabled, selectedAudioInputDeviceId])
+      .catch(reportError)
+  }, [enabled, audioEnabled, selectedAudioInputDeviceId, reportError])
 
-  const controls = useMemo<RoomMediaControls>(
-    () => ({
-      setCameraEnabled: async (nextEnabled) => {
-        await adapterRef.current?.setCameraEnabled(
-          nextEnabled,
-          selectedVideoDeviceId,
-        )
-      },
-      setMicrophoneEnabled: async (nextEnabled) => {
-        await adapterRef.current?.setMicrophoneEnabled(
-          nextEnabled,
-          selectedAudioInputDeviceId,
-        )
-      },
-    }),
-    [selectedVideoDeviceId, selectedAudioInputDeviceId],
-  )
-
-  return {
-    ...state,
-    controls,
-  }
+  return state
 }

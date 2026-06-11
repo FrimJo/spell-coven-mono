@@ -1,7 +1,10 @@
+import type { UseMediaDeviceReturn } from '@/hooks/useMediaDevice'
 import type { DeclineType } from '@/lib/permission-storage'
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
+import { mediaStreamQueryKey, useMediaDevice } from '@/hooks/useMediaDevice'
 import { useMediaPermissions } from '@/hooks/useMediaPermissions'
+import { stopMediaStream } from '@/lib/media-stream-manager'
 import { isSuccessState } from '@/types/async-resource'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -9,6 +12,10 @@ interface UseMediaSetupControllerOptions {
   isInGameSettings: boolean
   onComplete: () => void
   onCancel: () => void
+}
+
+function getMediaDeviceStream(result: UseMediaDeviceReturn) {
+  return isSuccessState(result) ? result.stream : null
 }
 
 export function useMediaSetupController({
@@ -19,8 +26,6 @@ export function useMediaSetupController({
   const queryClient = useQueryClient()
   const { recordDecline } = useMediaPermissions()
   const {
-    video: videoResult,
-    audio: audioResult,
     audioOutput,
     permissions: {
       camera: cameraPermission,
@@ -35,8 +40,8 @@ export function useMediaSetupController({
       selectedAudioOutputDeviceId,
       videoEnabled,
       audioEnabled,
-      setSelectedVideoDeviceId,
-      setSelectedAudioInputDeviceId,
+      setSelectedVideoDeviceId: storeSetSelectedVideoDeviceId,
+      setSelectedAudioInputDeviceId: storeSetSelectedAudioInputDeviceId,
       setSelectedAudioOutputDeviceId,
       setVideoEnabled,
       setAudioEnabled,
@@ -48,8 +53,55 @@ export function useMediaSetupController({
 
   const snapshotRef = useRef(captureSnapshot())
 
+  const videoResult = useMediaDevice({
+    kind: 'videoinput',
+    selectedDeviceId: selectedVideoDeviceId,
+    enabled: hasPermissions && videoEnabled,
+  })
+
+  const audioResult = useMediaDevice({
+    kind: 'audioinput',
+    selectedDeviceId: selectedAudioInputDeviceId,
+    enabled: hasPermissions && audioEnabled,
+  })
+
+  const videoStream = getMediaDeviceStream(videoResult)
+  const audioStream = getMediaDeviceStream(audioResult)
+
+  useEffect(() => {
+    const nextDeviceId = videoResult.selectedDeviceId || null
+    if (nextDeviceId && nextDeviceId !== selectedVideoDeviceId) {
+      storeSetSelectedVideoDeviceId(nextDeviceId)
+    }
+  }, [
+    videoResult.selectedDeviceId,
+    selectedVideoDeviceId,
+    storeSetSelectedVideoDeviceId,
+  ])
+
+  useEffect(() => {
+    const nextDeviceId = audioResult.selectedDeviceId || null
+    if (nextDeviceId && nextDeviceId !== selectedAudioInputDeviceId) {
+      storeSetSelectedAudioInputDeviceId(nextDeviceId)
+    }
+  }, [
+    audioResult.selectedDeviceId,
+    selectedAudioInputDeviceId,
+    storeSetSelectedAudioInputDeviceId,
+  ])
+
+  useEffect(() => {
+    return () => {
+      if (videoStream) {
+        stopMediaStream(videoStream)
+      }
+      if (audioStream) {
+        stopMediaStream(audioStream)
+      }
+    }
+  }, [videoStream, audioStream])
+
   const videoDevices = videoResult.devices
-  const audioInputDevices = audioResult.devices
   const audioInputStream = isSuccessState(audioResult)
     ? audioResult.stream
     : undefined
@@ -115,6 +167,36 @@ export function useMediaSetupController({
     [recordDecline],
   )
 
+  const releaseDevice = useCallback(
+    (result: UseMediaDeviceReturn, kind: MediaDeviceInfo['kind']) => {
+      if (!isSuccessState(result) || !result.stream) return
+
+      stopMediaStream(result.stream)
+      queryClient.removeQueries({ queryKey: mediaStreamQueryKey(kind) })
+    },
+    [queryClient],
+  )
+
+  const handleVideoToggle = useCallback(
+    (enabled: boolean) => {
+      if (!enabled) {
+        releaseDevice(videoResult, 'videoinput')
+      }
+      setVideoEnabled(enabled)
+    },
+    [releaseDevice, setVideoEnabled, videoResult],
+  )
+
+  const handleAudioToggle = useCallback(
+    (enabled: boolean) => {
+      if (!enabled) {
+        releaseDevice(audioResult, 'audioinput')
+      }
+      setAudioEnabled(enabled)
+    },
+    [audioResult, releaseDevice, setAudioEnabled],
+  )
+
   return {
     videoResult,
     audioResult,
@@ -137,10 +219,10 @@ export function useMediaSetupController({
     handleCancel,
     handlePermissionAccept,
     handlePermissionDecline,
-    handleVideoToggle: setVideoEnabled,
-    handleAudioToggle: setAudioEnabled,
-    handleVideoDeviceChange: setSelectedVideoDeviceId,
-    handleAudioInputChange: setSelectedAudioInputDeviceId,
+    handleVideoToggle,
+    handleAudioToggle,
+    handleVideoDeviceChange: storeSetSelectedVideoDeviceId,
+    handleAudioInputChange: storeSetSelectedAudioInputDeviceId,
     handleAudioOutputChange: setSelectedAudioOutputDeviceId,
   }
 }

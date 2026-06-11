@@ -7,6 +7,59 @@ export type MediaConnectionState =
   | 'reconnecting'
   | 'signalReconnecting'
 
+/**
+ * Presence of a single remote peer's media, as opposed to our own room
+ * transport state (`MediaConnectionState`). A peer can be known via Convex
+ * presence yet not yet visible as a LiveKit remote participant.
+ *
+ * - `connected`: peer is a live LiveKit remote participant.
+ * - `pending`: our room is connected but the peer has not joined LiveKit yet.
+ * - `connecting`: our room transport is (re)connecting, so peer media is unknown.
+ * - `disconnected`: our room transport is down.
+ */
+export type PeerMediaPresence =
+  | 'connected'
+  | 'pending'
+  | 'connecting'
+  | 'disconnected'
+
+/**
+ * Subscription/mute state for a remote participant's tracks, surfaced as
+ * data-* attributes for e2e media diagnostics.
+ */
+export interface RemoteMediaStatus {
+  videoSubscribed: boolean
+  audioSubscribed: boolean
+  videoMuted: boolean
+  audioMuted: boolean
+}
+
+/**
+ * Resolve a peer's media presence from whether it is a live LiveKit remote
+ * participant and our own room transport state. Keeping these two concepts
+ * separate is what lets the "waiting for peer" warning fire while our room is
+ * otherwise healthy.
+ */
+export function resolvePeerMediaPresence(
+  remoteMedia: RemoteMediaParticipant | undefined,
+  roomConnectionState: MediaConnectionState,
+): PeerMediaPresence {
+  if (remoteMedia) {
+    return 'connected'
+  }
+
+  switch (roomConnectionState) {
+    case 'connected':
+      // Our room is up but this peer has not published to LiveKit yet.
+      return 'pending'
+    case 'disconnected':
+      return 'disconnected'
+    default:
+      // connecting / reconnecting / signalReconnecting
+      return 'connecting'
+  }
+}
+
 export type MediaTrack = Track
 
 export interface MediaTrackState {
@@ -53,14 +106,6 @@ export interface RoomMediaSessionState {
   remotes: Map<string, RemoteMediaParticipant>
   lastError: Error | null
   lastDisconnectReason: string | null
-  diagnostics: MediaDiagnosticsSnapshot
 }
 
-export interface RoomMediaControls {
-  setCameraEnabled: (enabled: boolean) => Promise<void>
-  setMicrophoneEnabled: (enabled: boolean) => Promise<void>
-}
-
-export interface RoomMediaContextValue extends RoomMediaSessionState {
-  controls: RoomMediaControls
-}
+export type RoomMediaContextValue = RoomMediaSessionState

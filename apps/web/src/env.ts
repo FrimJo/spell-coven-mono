@@ -39,6 +39,12 @@ export const env = createEnv({
     VITE_SUPPORT_URL: z.url().optional(),
     VITE_CAMERA_FOCUS_CONTROLS_ENABLED: z.coerce.boolean().default(false),
     VITE_PREVIEW_AUTH: z.coerce.boolean().default(false),
+    /**
+     * Exposes per-room media diagnostics on `window.__spellCovenMediaDiagnostics`
+     * for the e2e harness. Defaults off (fail-closed); the e2e build sets
+     * `VITE_MEDIA_DIAGNOSTICS=1` explicitly so prod never ships the hook.
+     */
+    VITE_MEDIA_DIAGNOSTICS: z.coerce.boolean().default(false),
   },
 
   /**
@@ -53,6 +59,7 @@ export const env = createEnv({
     VITE_BLOB_STORAGE_URL: import.meta.env.VITE_BLOB_STORAGE_URL,
     VITE_SUPPORT_URL: import.meta.env.VITE_SUPPORT_URL,
     VITE_PREVIEW_AUTH: import.meta.env.VITE_PREVIEW_AUTH,
+    VITE_MEDIA_DIAGNOSTICS: import.meta.env.VITE_MEDIA_DIAGNOSTICS,
   },
 
   /**
@@ -101,6 +108,7 @@ export function getClientEnv() {
     VITE_SUPPORT_URL: env.VITE_SUPPORT_URL,
     VITE_CAMERA_FOCUS_CONTROLS_ENABLED: env.VITE_CAMERA_FOCUS_CONTROLS_ENABLED,
     VITE_PREVIEW_AUTH: env.VITE_PREVIEW_AUTH,
+    VITE_MEDIA_DIAGNOSTICS: env.VITE_MEDIA_DIAGNOSTICS,
   }
 }
 
@@ -109,3 +117,8 @@ export function getClientEnv() {
  */
 export const isCameraFocusControlsEnabled =
   env.VITE_CAMERA_FOCUS_CONTROLS_ENABLED
+
+/**
+ * Whether to publish media diagnostics to `window` for the e2e harness.
+ */
+export const isMediaDiagnosticsEnabled = env.VITE_MEDIA_DIAGNOSTICS
