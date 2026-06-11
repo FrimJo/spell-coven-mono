@@ -60,10 +60,6 @@ export default defineSchema({
     username: v.string(),
     /** Player's avatar URL */
     avatar: v.optional(v.string()),
-    /** Whether this session is intentionally publishing camera video */
-    videoEnabled: v.boolean(),
-    /** Whether this session is intentionally publishing microphone audio */
-    audioEnabled: v.boolean(),
     /** Player's current life total */
     health: v.number(),
     /** Player's current poison counters */

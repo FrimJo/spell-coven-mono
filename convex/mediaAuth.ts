@@ -6,6 +6,7 @@ import {
   AuthRequiredError,
   RoomNotFoundError,
 } from './errors'
+import { PRESENCE_THRESHOLD_MS } from './players'
 
 const activeSessionReturn = v.object({
   roomId: v.string(),
@@ -48,7 +49,7 @@ export const getActiveMediaSession = internalQuery({
       throw new AuthMismatchError()
     }
 
-    if (now - player.lastSeenAt > 30_000) {
+    if (now - player.lastSeenAt > PRESENCE_THRESHOLD_MS) {
       throw new AuthRequiredError('Active room session required')
     }
 

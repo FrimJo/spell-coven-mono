@@ -27,14 +27,10 @@ import {
  * Default starting health for Commander format
  */
 /**
- * Presence timeout threshold in milliseconds (30 seconds)
+ * Presence timeout threshold in milliseconds (30 seconds).
+ * Shared so media token issuance treats session freshness identically.
  */
-const PRESENCE_THRESHOLD_MS = 30_000
-
-const mediaStateArgs = {
-  videoEnabled: v.boolean(),
-  audioEnabled: v.boolean(),
-}
+export const PRESENCE_THRESHOLD_MS = 30_000
 
 async function requireActiveRoomMember(
   ctx: MutationCtx | QueryCtx,
@@ -75,13 +71,9 @@ export const joinRoom = mutation({
     sessionId: v.string(),
     username: v.string(),
     avatar: v.optional(v.string()),
-    ...mediaStateArgs,
   },
   returns: v.object({ playerId: v.id('roomPlayers') }),
-  handler: async (
-    ctx,
-    { roomId, sessionId, username, avatar, videoEnabled, audioEnabled },
-  ) => {
+  handler: async (ctx, { roomId, sessionId, username, avatar }) => {
     const userId = await getAuthUserId(ctx)
     if (!userId) {
       throw new AuthRequiredError()
@@ -126,8 +118,6 @@ export const joinRoom = mutation({
         status: 'active',
         username,
         avatar,
-        videoEnabled,
-        audioEnabled,
         poison: existingSession.poison ?? 0,
         commanders: existingSession.commanders ?? [],
         commanderDamage: existingSession.commanderDamage ?? {},
@@ -202,8 +192,6 @@ export const joinRoom = mutation({
       sessionId,
       username,
       avatar,
-      videoEnabled,
-      audioEnabled,
       health,
       poison,
       commanders,
@@ -335,10 +323,9 @@ export const heartbeat = mutation({
   args: {
     roomId: v.string(),
     sessionId: v.string(),
-    ...mediaStateArgs,
   },
   returns: v.null(),
-  handler: async (ctx, { roomId, sessionId, videoEnabled, audioEnabled }) => {
+  handler: async (ctx, { roomId, sessionId }) => {
     const userId = await getAuthUserId(ctx)
     if (!userId) {
       throw new AuthRequiredError()
@@ -361,8 +348,6 @@ export const heartbeat = mutation({
       await ctx.db.patch(player._id, {
         lastSeenAt: now,
         status: 'active',
-        videoEnabled,
-        audioEnabled,
       })
 
       // Upsert the userActiveRooms pointer
@@ -381,43 +366,6 @@ export const heartbeat = mutation({
         })
       }
     }
-
-    return null
-  },
-})
-
-export const updateMediaState = mutation({
-  args: {
-    roomId: v.string(),
-    sessionId: v.string(),
-    ...mediaStateArgs,
-  },
-  returns: v.null(),
-  handler: async (ctx, { roomId, sessionId, videoEnabled, audioEnabled }) => {
-    const userId = await getAuthUserId(ctx)
-    if (!userId) {
-      throw new AuthRequiredError()
-    }
-
-    const player = await ctx.db
-      .query('roomPlayers')
-      .withIndex('by_roomId_sessionId', (q) =>
-        q.eq('roomId', roomId).eq('sessionId', sessionId),
-      )
-      .first()
-
-    if (!player || player.status === 'left') {
-      return null
-    }
-
-    if (player.userId !== userId) {
-      throw new AuthMismatchError()
-    }
-
-    await ctx.db.patch(player._id, {
-      videoEnabled,
-      audioEnabled,
-    })
 
     return null
   },

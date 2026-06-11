@@ -10,7 +10,8 @@ import { action } from './_generated/server'
 import { getLiveKitEnv } from './env'
 import { AuthRequiredError } from './errors'
 
-const tokenTtl = '10m'
+// Long enough for typical game sessions; LiveKit reconnects with the same JWT.
+const tokenTtl = '6h'
 
 interface ActiveMediaSession {
   roomId: string
@@ -54,16 +55,10 @@ export const issueLiveKitToken = action({
     )
 
     const { serverUrl, apiKey, apiSecret } = getLiveKitEnv()
-    const metadata = JSON.stringify({
-      userId: session.userId,
-      username: session.username,
-      avatar: session.avatar ?? null,
-    })
 
     const accessToken = new AccessToken(apiKey, apiSecret, {
       identity: session.sessionId,
       name: session.username,
-      metadata,
       attributes: {
         userId: session.userId,
         username: session.username,
