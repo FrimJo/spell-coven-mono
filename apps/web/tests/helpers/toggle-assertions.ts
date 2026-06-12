@@ -276,7 +276,41 @@ export async function clickVideoToggle(page: Page): Promise<void> {
   const btn = page.getByTestId('video-toggle-button')
   await expect(btn).toBeVisible({ timeout: 10_000 })
   await expect(btn).toBeEnabled({ timeout: 10_000 })
+  const previousState = await btn.getAttribute('data-video-enabled')
   await btn.click()
+  await expect(btn).not.toHaveAttribute(
+    'data-video-enabled',
+    previousState ?? '',
+    { timeout: 10_000 },
+  )
+  const nextState = await btn.getAttribute('data-video-enabled')
+  const expectedCameraState = nextState === 'true' ? 'unmuted' : 'muted'
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(() => {
+          const snapshot = (
+            window as unknown as {
+              __spellCovenMediaDiagnostics?: {
+                localSessionId: string
+                publications: Record<
+                  string,
+                  Array<{ source: string; muted: boolean }>
+                >
+              }
+            }
+          ).__spellCovenMediaDiagnostics
+          const publications = snapshot
+            ? (snapshot.publications[snapshot.localSessionId] ?? [])
+            : []
+          const camera = publications.find(
+            (publication) => publication.source === 'camera',
+          )
+          return camera?.muted === false ? 'unmuted' : 'muted'
+        }),
+      { timeout: 10_000 },
+    )
+    .toBe(expectedCameraState)
   // Brief settle time for LiveKit publication updates to reach receivers.
   await new Promise((r) => setTimeout(r, 2_000))
 }

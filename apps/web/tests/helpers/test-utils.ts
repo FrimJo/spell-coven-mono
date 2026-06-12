@@ -241,6 +241,14 @@ export async function leaveGameRoom(page: Page): Promise<void> {
     return
   }
 
+  const returnHomeButton = page.getByRole('button', {
+    name: /Return to Home/i,
+  })
+  if (await clickIfVisible(returnHomeButton)) {
+    await expect(page).toHaveURL('/', { timeout: CLEANUP_ACTION_TIMEOUT_MS })
+    return
+  }
+
   const duplicateSessionTitle = page.getByText('Already Connected', {
     exact: true,
   })
@@ -268,6 +276,28 @@ export async function leaveGameRoom(page: Page): Promise<void> {
       )
       break
     }
+  }
+
+  const dialogOverlay = page.locator('[data-slot="dialog-overlay"]')
+  if (
+    await dialogOverlay
+      .first()
+      .isVisible()
+      .catch(() => false)
+  ) {
+    await page.keyboard.press('Escape').catch(() => {})
+    await expect(dialogOverlay)
+      .toHaveCount(0, { timeout: CLEANUP_ACTION_TIMEOUT_MS })
+      .catch(() => {})
+  }
+
+  if (
+    await dialogOverlay
+      .first()
+      .isVisible()
+      .catch(() => false)
+  ) {
+    return
   }
 
   const leaveButton = page.getByTestId('leave-game-button')
