@@ -1,5 +1,8 @@
-import type { RoomMediaSessionState } from '@/types/media-session'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import type {
+  RoomMediaContextValue,
+  RoomMediaSessionState,
+} from '@/types/media-session'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { createLiveKitMediaAdapter } from '@/lib/media/livekit-adapter'
 import { api } from '@convex/_generated/api'
@@ -30,7 +33,7 @@ export function useRoomMediaSession({
   roomId,
   sessionId,
   enabled,
-}: UseRoomMediaSessionOptions): RoomMediaSessionState {
+}: UseRoomMediaSessionOptions): RoomMediaContextValue {
   const issueLiveKitToken = useAction(api.mediaActions.issueLiveKitToken)
   const adapterRef = useRef<ReturnType<
     typeof createLiveKitMediaAdapter
@@ -66,6 +69,56 @@ export function useRoomMediaSession({
       lastError: mediaError,
     }))
   }, [])
+
+  const setCameraEnabledNow = useCallback(
+    async (nextEnabled: boolean, deviceId?: string | null) => {
+      mediaPreferencesRef.current = {
+        ...mediaPreferencesRef.current,
+        videoEnabled: nextEnabled,
+        selectedVideoDeviceId:
+          deviceId === undefined
+            ? mediaPreferencesRef.current.selectedVideoDeviceId
+            : deviceId,
+      }
+
+      if (!enabled || !adapterRef.current || !isConnectedRef.current) return
+
+      await adapterRef.current
+        .setCameraEnabled(
+          nextEnabled,
+          deviceId === undefined
+            ? mediaPreferencesRef.current.selectedVideoDeviceId
+            : deviceId,
+        )
+        .catch(reportError)
+    },
+    [enabled, reportError],
+  )
+
+  const setMicrophoneEnabledNow = useCallback(
+    async (nextEnabled: boolean, deviceId?: string | null) => {
+      mediaPreferencesRef.current = {
+        ...mediaPreferencesRef.current,
+        audioEnabled: nextEnabled,
+        selectedAudioInputDeviceId:
+          deviceId === undefined
+            ? mediaPreferencesRef.current.selectedAudioInputDeviceId
+            : deviceId,
+      }
+
+      if (!enabled || !adapterRef.current || !isConnectedRef.current) return
+
+      await adapterRef.current
+        .setMicrophoneEnabled(
+          nextEnabled,
+          deviceId === undefined
+            ? mediaPreferencesRef.current.selectedAudioInputDeviceId
+            : deviceId,
+        )
+        .catch(reportError)
+    },
+    [enabled, reportError],
+  )
 
   useEffect(() => {
     mediaPreferencesRef.current = {
@@ -145,5 +198,12 @@ export function useRoomMediaSession({
       .catch(reportError)
   }, [enabled, audioEnabled, selectedAudioInputDeviceId, reportError])
 
-  return state
+  return useMemo(
+    () => ({
+      ...state,
+      setCameraEnabled: setCameraEnabledNow,
+      setMicrophoneEnabled: setMicrophoneEnabledNow,
+    }),
+    [state, setCameraEnabledNow, setMicrophoneEnabledNow],
+  )
 }

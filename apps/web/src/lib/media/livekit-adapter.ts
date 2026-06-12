@@ -57,12 +57,14 @@ function publicationToTrackState(
     return emptyTrackState()
   }
 
+  const track = publication.track ?? null
+
   return {
-    // UI follows publication mute state; we do not surface publication.isEnabled
-    // (adaptiveStream/subscriber-disable) as a separate concept.
-    muted: publication.isMuted,
+    // Prefer the attached track's mute state when available. Remote
+    // publications can briefly keep stale mute metadata across republishes.
+    muted: track ? track.isMuted : publication.isMuted,
     subscribed: publication.isSubscribed,
-    track: publication.track ?? null,
+    track,
   }
 }
 
@@ -129,6 +131,64 @@ export function createLiveKitMediaAdapter({
 
   let lastError: Error | null = null
   let lastDisconnectReason: string | null = null
+  const localTrackEnabled = {
+    camera: null as boolean | null,
+    microphone: null as boolean | null,
+  }
+
+  const trackConfig = {
+    camera: {
+      source: LiveKitTrack.Source.Camera,
+      kind: 'videoinput' as const,
+      setEnabled: (enabled: boolean, opts?: { deviceId?: string }) =>
+        room.localParticipant.setCameraEnabled(enabled, opts),
+    },
+    microphone: {
+      source: LiveKitTrack.Source.Microphone,
+      kind: 'audioinput' as const,
+      setEnabled: (enabled: boolean, opts?: { deviceId?: string }) =>
+        room.localParticipant.setMicrophoneEnabled(enabled, opts),
+    },
+  }
+
+  const normalizeDeviceId = (deviceId: string | null | undefined) =>
+    deviceId && deviceId.length > 0 ? deviceId : null
+
+  const setLocalTrackEnabled = async (
+    track: keyof typeof trackConfig,
+    enabled: boolean,
+    deviceId: string | null | undefined,
+  ) => {
+    const { source, kind, setEnabled } = trackConfig[track]
+    const nextDeviceId = normalizeDeviceId(deviceId)
+    const publication = room.localParticipant.getTrackPublication(source)
+    // A muted track is republished via setEnabled (which can pick the new
+    // device), so only swap the device in place when the track is actually live.
+    const isLive = Boolean(publication?.track && !publication.isMuted)
+
+    const wasEnabled = localTrackEnabled[track] === true
+    localTrackEnabled[track] = enabled
+
+    if (track === 'camera' && !enabled && publication?.track) {
+      await room.localParticipant.unpublishTrack(publication.track, true)
+      emitState()
+      return
+    }
+
+    if (
+      enabled &&
+      wasEnabled &&
+      isLive &&
+      nextDeviceId !== null &&
+      nextDeviceId !== room.getActiveDevice(kind)
+    ) {
+      await room.switchActiveDevice(kind, nextDeviceId)
+    } else {
+      await setEnabled(enabled, { deviceId: nextDeviceId ?? undefined })
+    }
+
+    emitState()
+  }
 
   const emitState = () => {
     const remotes = new Map<string, RemoteMediaParticipant>()
@@ -204,17 +264,9 @@ export function createLiveKitMediaAdapter({
       room.disconnect()
       emitState()
     },
-    async setCameraEnabled(enabled, deviceId) {
-      await room.localParticipant.setCameraEnabled(enabled, {
-        deviceId: deviceId ?? undefined,
-      })
-      emitState()
-    },
-    async setMicrophoneEnabled(enabled, deviceId) {
-      await room.localParticipant.setMicrophoneEnabled(enabled, {
-        deviceId: deviceId ?? undefined,
-      })
-      emitState()
-    },
+    setCameraEnabled: (enabled, deviceId) =>
+      setLocalTrackEnabled('camera', enabled, deviceId),
+    setMicrophoneEnabled: (enabled, deviceId) =>
+      setLocalTrackEnabled('microphone', enabled, deviceId),
   }
 }

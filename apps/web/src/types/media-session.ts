@@ -107,4 +107,13 @@ export interface RoomMediaSessionState {
   lastDisconnectReason: string | null
 }
 
-export type RoomMediaContextValue = RoomMediaSessionState
+export interface RoomMediaContextValue extends RoomMediaSessionState {
+  setCameraEnabled: (
+    enabled: boolean,
+    deviceId?: string | null,
+  ) => Promise<void>
+  setMicrophoneEnabled: (
+    enabled: boolean,
+    deviceId?: string | null,
+  ) => Promise<void>
+}
