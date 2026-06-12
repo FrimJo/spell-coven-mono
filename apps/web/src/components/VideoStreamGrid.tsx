@@ -179,8 +179,6 @@ interface RemoteGridSession {
   remoteAudioTrack: MediaTrack | null
   remoteMediaStatus: RemoteMediaStatus
   peerMediaPresenceState: PeerMediaPresence
-  peerVideoEnabled: boolean
-  peerAudioEnabled: boolean
   isMuted: boolean
   isOnline: boolean
 }
@@ -235,8 +233,6 @@ function buildRemoteGridSessions({
         remoteMedia,
         roomConnectionState,
       ),
-      peerVideoEnabled: remoteMedia?.video.enabled ?? false,
-      peerAudioEnabled: remoteMedia?.audio.enabled ?? false,
       isMuted: mutedPlayers.has(player.id),
       isOnline: isParticipantOnline(player.participantData.lastSeenAt, now),
     }
@@ -441,8 +437,6 @@ export function VideoStreamGrid({
             remoteAudioTrack={player.remoteAudioTrack}
             remoteMediaStatus={player.remoteMediaStatus}
             peerMediaPresenceState={player.peerMediaPresenceState}
-            peerVideoEnabled={player.peerVideoEnabled}
-            peerAudioEnabled={player.peerAudioEnabled}
             isMuted={player.isMuted}
             roomId={roomId}
             localParticipant={localParticipant}

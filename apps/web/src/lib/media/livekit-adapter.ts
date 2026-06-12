@@ -44,7 +44,6 @@ interface LiveKitMediaAdapterOptions {
 
 function emptyTrackState(): MediaTrackState {
   return {
-    enabled: false,
     muted: true,
     subscribed: false,
     track: null,
@@ -58,17 +57,16 @@ function publicationToTrackState(
     return emptyTrackState()
   }
 
-  const track = publication.track ?? null
-
   return {
-    enabled: publication.isEnabled && !publication.isMuted,
+    // UI follows publication mute state; we do not surface publication.isEnabled
+    // (adaptiveStream/subscriber-disable) as a separate concept.
     muted: publication.isMuted,
     subscribed: publication.isSubscribed,
-    track,
+    track: publication.track ?? null,
   }
 }
 
-function getParticipantTrackState(
+function getTrackState(
   participant: Participant,
   source: Track.Source,
 ): MediaTrackState {
@@ -81,11 +79,8 @@ function mapLocalParticipant(
 ): LocalMediaState {
   return {
     sessionId,
-    video: getParticipantTrackState(participant, LiveKitTrack.Source.Camera),
-    audio: getParticipantTrackState(
-      participant,
-      LiveKitTrack.Source.Microphone,
-    ),
+    video: getTrackState(participant, LiveKitTrack.Source.Camera),
+    audio: getTrackState(participant, LiveKitTrack.Source.Microphone),
   }
 }
 
@@ -115,11 +110,8 @@ function mapRemoteParticipant(
     sessionId: participant.identity,
     userId: participant.attributes.userId || null,
     username: participant.name ?? participant.attributes.username ?? null,
-    video: getParticipantTrackState(participant, LiveKitTrack.Source.Camera),
-    audio: getParticipantTrackState(
-      participant,
-      LiveKitTrack.Source.Microphone,
-    ),
+    video: getTrackState(participant, LiveKitTrack.Source.Camera),
+    audio: getTrackState(participant, LiveKitTrack.Source.Microphone),
   }
 }
 

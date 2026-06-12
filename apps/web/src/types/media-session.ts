@@ -63,7 +63,6 @@ export function resolvePeerMediaPresence(
 export type MediaTrack = Track
 
 export interface MediaTrackState {
-  enabled: boolean
   muted: boolean
   subscribed: boolean
   track: MediaTrack | null

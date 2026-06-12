@@ -68,8 +68,6 @@ interface RemotePlayerCardProps {
   remoteAudioTrack: MediaTrack | null
   remoteMediaStatus: RemoteMediaStatus
   peerMediaPresenceState: PeerMediaPresence
-  peerVideoEnabled: boolean
-  peerAudioEnabled: boolean
   isMuted: boolean
   roomId: string
   localParticipant: Participant | undefined
@@ -90,8 +88,6 @@ export const RemotePlayerCard = memo(function RemotePlayerCard({
   remoteAudioTrack,
   remoteMediaStatus,
   peerMediaPresenceState,
-  peerVideoEnabled,
-  peerAudioEnabled,
   isMuted,
   roomId,
   localParticipant,
@@ -102,6 +98,9 @@ export const RemotePlayerCard = memo(function RemotePlayerCard({
   usePerspectiveWarp,
   onCardCrop,
 }: RemotePlayerCardProps) {
+  const peerVideoEnabled = !remoteMediaStatus.videoMuted
+  const peerAudioEnabled = !remoteMediaStatus.audioMuted
+
   // Local video ref for card detection (separate from the shared remoteVideoRefs map)
   const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -137,8 +136,6 @@ export const RemotePlayerCard = memo(function RemotePlayerCard({
       data-player-id={playerId}
       data-player-name={playerName}
       data-livekit-connection-state={peerMediaPresenceState}
-      data-video-enabled={String(peerVideoEnabled)}
-      data-audio-enabled={String(peerAudioEnabled)}
       data-video-subscribed={String(remoteMediaStatus.videoSubscribed)}
       data-audio-subscribed={String(remoteMediaStatus.audioSubscribed)}
       data-video-muted={String(remoteMediaStatus.videoMuted)}
