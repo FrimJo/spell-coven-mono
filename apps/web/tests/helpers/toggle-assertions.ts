@@ -79,6 +79,45 @@ async function expectSenderCardConnected(
   ).toHaveAttribute('data-livekit-connection-state', 'connected')
 }
 
+type SenderCardMediaState =
+  | { found: false }
+  | {
+      found: true
+      hasVideo: boolean
+      hasVideoOff: boolean
+      videoSubscribed: boolean | null
+      videoMuted: boolean | null
+      liveKitConnectionState: string | null
+    }
+
+async function readSenderCardMediaState(
+  receiverPage: Page,
+  cardSel: string,
+): Promise<SenderCardMediaState> {
+  return receiverPage.evaluate((sel) => {
+    const card = document.querySelector(sel)
+    if (!card) return { found: false as const }
+    const readBooleanAttr = (name: string) => {
+      const value = card.getAttribute(name)
+      if (value === 'true') return true
+      if (value === 'false') return false
+      return null
+    }
+    return {
+      found: true as const,
+      hasVideo: !!card.querySelector('[data-testid="remote-player-video"]'),
+      hasVideoOff: !!card.querySelector(
+        '[data-testid="remote-player-video-off"]',
+      ),
+      videoSubscribed: readBooleanAttr('data-video-subscribed'),
+      videoMuted: readBooleanAttr('data-video-muted'),
+      liveKitConnectionState: card.getAttribute(
+        'data-livekit-connection-state',
+      ),
+    }
+  }, cardSel)
+}
+
 // ---------------------------------------------------------------------------
 // Video toggle assertions
 // ---------------------------------------------------------------------------
@@ -101,18 +140,7 @@ export async function expectSenderVideoOff(
 
   const result = await pollUntil({
     timeoutMs,
-    getState: () =>
-      receiverPage.evaluate((sel) => {
-        const card = document.querySelector(sel)
-        if (!card) return { found: false as const }
-        return {
-          found: true as const,
-          hasVideoOff: !!card.querySelector(
-            '[data-testid="remote-player-video-off"]',
-          ),
-          hasVideo: !!card.querySelector('[data-testid="remote-player-video"]'),
-        }
-      }, cardSel),
+    getState: () => readSenderCardMediaState(receiverPage, cardSel),
     isReady: (state) => state.found && state.hasVideoOff && !state.hasVideo,
   })
 
@@ -143,10 +171,9 @@ export async function expectSenderVideoOn(
 
   const result = await pollUntil({
     timeoutMs,
-    getState: () =>
-      receiverPage.evaluate((sel) => !!document.querySelector(sel), videoSel),
-    isReady: async (hasVideo) => {
-      if (!hasVideo) return false
+    getState: () => readSenderCardMediaState(receiverPage, cardSel),
+    isReady: async (state) => {
+      if (!state.found || !state.hasVideo) return false
       await expectVideoRendering(receiverPage, videoSel)
       return true
     },
@@ -157,7 +184,7 @@ export async function expectSenderVideoOn(
   }
 
   throw new Error(
-    `${context}: sender ${senderPlayerId} video element not found within ${timeoutMs}ms`,
+    `${context}: sender ${senderPlayerId} video element not found within ${timeoutMs}ms. Final state: ${JSON.stringify(result.state)}`,
   )
 }
 

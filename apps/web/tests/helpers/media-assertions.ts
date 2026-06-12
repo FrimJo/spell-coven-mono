@@ -477,9 +477,6 @@ export type RemoteCardState = {
   playerId: string
   hasVideo: boolean
   hasAudio: boolean
-  /** LiveKit track publication enabled state from data-video-enabled / data-audio-enabled */
-  videoEnabled: boolean | null
-  audioEnabled: boolean | null
   videoSubscribed: boolean | null
   audioSubscribed: boolean | null
   videoMuted: boolean | null
@@ -522,8 +519,6 @@ export async function collectRemoteCardStates(
           hasAudio: card.querySelector('[data-testid="remote-player-audio"]')
             ? true
             : false,
-          videoEnabled: readBooleanAttr('data-video-enabled'),
-          audioEnabled: readBooleanAttr('data-audio-enabled'),
           videoSubscribed: readBooleanAttr('data-video-subscribed'),
           audioSubscribed: readBooleanAttr('data-audio-subscribed'),
           videoMuted: readBooleanAttr('data-video-muted'),
@@ -583,12 +578,6 @@ function formatRemoteCardState(state: RemoteCardState): string {
     `livekit=${state.liveKitConnectionState ?? 'unknown'}`,
   ]
 
-  if (state.videoEnabled !== null) {
-    parts.push(`videoEnabled=${state.videoEnabled}`)
-  }
-  if (state.audioEnabled !== null) {
-    parts.push(`audioEnabled=${state.audioEnabled}`)
-  }
   if (state.videoSubscribed !== null) {
     parts.push(`videoSubscribed=${state.videoSubscribed}`)
   }
@@ -740,10 +729,10 @@ export async function collectRemoteCardsStabilityReport(
       const reasons: string[] = []
       if (!s.hasVideo) reasons.push('no-video')
       if (!s.hasAudio) reasons.push('no-audio')
-      if (s.videoEnabled === true && s.videoSubscribed === false) {
+      if (s.videoMuted === false && s.videoSubscribed === false) {
         reasons.push('video-not-subscribed')
       }
-      if (s.audioEnabled === true && s.audioSubscribed === false) {
+      if (s.audioMuted === false && s.audioSubscribed === false) {
         reasons.push('audio-not-subscribed')
       }
       if (s.hasVideoOffPlaceholder) reasons.push('video-off-placeholder')
