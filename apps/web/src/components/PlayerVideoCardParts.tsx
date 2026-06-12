@@ -45,7 +45,16 @@ interface LocalVideoProps {
 export const LocalVideo = memo(function LocalVideo({
   videoRef,
 }: LocalVideoProps) {
-  return <video ref={videoRef} autoPlay muted playsInline style={VIDEO_STYLE} />
+  return (
+    <video
+      ref={videoRef}
+      aria-label="Local camera preview"
+      autoPlay
+      muted
+      playsInline
+      style={VIDEO_STYLE}
+    />
+  )
 })
 
 /**
@@ -188,6 +197,9 @@ export const LocalMediaControls = memo(function LocalMediaControls({
       <div className="flex items-center">
         <Button
           data-testid="video-toggle-button"
+          data-video-enabled={String(videoEnabled)}
+          aria-pressed={videoEnabled}
+          aria-label={videoEnabled ? 'Turn camera off' : 'Turn camera on'}
           size="sm"
           variant={videoEnabled ? 'outline' : 'destructive'}
           onClick={() => {
@@ -210,6 +222,7 @@ export const LocalMediaControls = memo(function LocalMediaControls({
             <Button
               size="sm"
               variant={videoEnabled ? 'outline' : 'destructive'}
+              aria-label="Select camera"
               className={`h-10 w-6 p-0 rounded-l-none ${
                 videoEnabled
                   ? 'text-white border-surface-3 hover:bg-surface-2'
@@ -235,7 +248,8 @@ export const LocalMediaControls = memo(function LocalMediaControls({
             </div>
             <div className="max-h-64 p-2 overflow-y-auto">
               {videoDevices.map((camera) => (
-                <div
+                <button
+                  type="button"
                   key={camera.deviceId}
                   onClick={() => void handleSelectCamera(camera.deviceId)}
                   className={`gap-3 px-3 py-2.5 flex w-full cursor-pointer items-center rounded-md text-left transition-colors hover:bg-surface-2/50 ${
@@ -249,7 +263,7 @@ export const LocalMediaControls = memo(function LocalMediaControls({
                     {camera.label ||
                       `Camera ${videoDevices.indexOf(camera) + 1}`}
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           </PopoverContent>
@@ -260,6 +274,10 @@ export const LocalMediaControls = memo(function LocalMediaControls({
       <div className="flex items-center">
         <Button
           data-testid="audio-toggle-button"
+          aria-pressed={!isAudioMuted}
+          aria-label={
+            isAudioMuted ? 'Turn microphone on' : 'Turn microphone off'
+          }
           size="sm"
           variant={!isAudioMuted ? 'outline' : 'destructive'}
           onClick={onToggleAudio}
@@ -280,6 +298,7 @@ export const LocalMediaControls = memo(function LocalMediaControls({
             <Button
               size="sm"
               variant={!isAudioMuted ? 'outline' : 'destructive'}
+              aria-label="Select microphone"
               className={`h-10 w-6 p-0 rounded-l-none ${
                 !isAudioMuted
                   ? 'text-white border-surface-3 hover:bg-surface-2'
@@ -305,7 +324,8 @@ export const LocalMediaControls = memo(function LocalMediaControls({
             </div>
             <div className="max-h-64 p-2 overflow-y-auto">
               {audioDevices.map((mic) => (
-                <div
+                <button
+                  type="button"
                   key={mic.deviceId}
                   onClick={() => void handleSelectMicrophone(mic.deviceId)}
                   className={`gap-3 px-3 py-2.5 flex w-full cursor-pointer items-center rounded-md text-left transition-colors hover:bg-surface-2/50 ${
@@ -318,7 +338,7 @@ export const LocalMediaControls = memo(function LocalMediaControls({
                   <span className="text-sm">
                     {mic.label || `Microphone ${audioDevices.indexOf(mic) + 1}`}
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           </PopoverContent>
