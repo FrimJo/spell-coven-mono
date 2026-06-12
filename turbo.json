@@ -40,6 +40,14 @@
     "lint": {
       "dependsOn": ["^lint"]
     },
+    "format:fix": {
+      "dependsOn": ["^format:fix"],
+      "outputs": [".cache/.prettiercache"],
+      "outputLogs": "new-only"
+    },
+    "lint:fix": {
+      "dependsOn": ["^lint:fix"]
+    },
     "doctor": {
       "dependsOn": ["^doctor"]
     },
