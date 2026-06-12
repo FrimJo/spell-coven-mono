@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'https://localhost:1234'
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'https://localhost:4321'
+const webServerURL = new URL(baseURL)
+const webServerCommand = `bun run with-test-env -- vite dev --host ${webServerURL.hostname} --port ${webServerURL.port} --strictPort`
 
 export default defineConfig({
   testDir: 'tests',
@@ -70,7 +72,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'bun run with-test-env -- vite preview',
+      command: webServerCommand,
       url: baseURL,
       timeout: process.env.CI ? 120_000 : 90_000,
       reuseExistingServer: !process.env.CI,
