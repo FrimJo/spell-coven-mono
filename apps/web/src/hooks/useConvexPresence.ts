@@ -5,6 +5,8 @@
  * Tracks participants via the roomPlayers table with lastSeenAt heartbeat.
  */
 
+/* eslint-disable @tanstack/query/no-unstable-deps -- This rule targets TanStack Query's useMutation (unstable object). The useMutation here is Convex's, which memoizes by client + function name and is referentially stable across renders, so it is safe in dependency arrays. */
+
 import type { Participant } from '@/types/participant'
 import type { Doc } from '@convex/_generated/dataModel'
 import {
@@ -145,8 +147,9 @@ export function useConvexPresence({
   // Use roomId as-is - rooms are stored with the bare ID (e.g., "ABC123")
   const convexRoomId = roomId
 
-  // Convex mutations - store in refs to avoid lint warnings about unstable deps
-  // (Convex mutation functions are actually stable, but ESLint doesn't know that)
+  // Convex mutation functions are referentially stable: useMutation memoizes by
+  // the client + function name, so they keep the same identity across renders
+  // and can be used directly in deps / effect events without ref indirection.
   const joinRoomMutation = useMutation(api.players.joinRoom)
   const leaveRoomMutation = useMutation(api.players.leaveRoom)
   const heartbeatMutation = useMutation(api.players.heartbeat)
@@ -154,24 +157,11 @@ export function useConvexPresence({
   const banMutation = useMutation(api.bans.banPlayer)
   const setSeatCountMutation = useMutation(api.rooms.setRoomSeatCount)
 
-  // Use refs to store mutation functions for stable references
-  const joinRoomRef = useRef(joinRoomMutation)
-  const leaveRoomRef = useRef(leaveRoomMutation)
-  const heartbeatRef = useRef(heartbeatMutation)
-  const kickMutationRef = useRef(kickMutation)
-  const banMutationRef = useRef(banMutation)
-  const setSeatCountRef = useRef(setSeatCountMutation)
-
-  // Keep refs up to date
+  // Keep the joined flag in a ref so the unmount cleanup (and reconcile's eager
+  // clear) can read/update the latest value synchronously without re-running.
   useEffect(() => {
-    joinRoomRef.current = joinRoomMutation
-    leaveRoomRef.current = leaveRoomMutation
-    heartbeatRef.current = heartbeatMutation
-    kickMutationRef.current = kickMutation
-    banMutationRef.current = banMutation
-    setSeatCountRef.current = setSeatCountMutation
     hasJoinedRef.current = hasJoined
-  })
+  }, [hasJoined])
 
   // Clear suppression when the membership identity changes (new room or new
   // tab session).
@@ -195,7 +185,7 @@ export function useConvexPresence({
 
   // Fire-and-forget leave (used by reconcile, unmount, and late-join compensation)
   const leaveSilently = useEffectEvent(() => {
-    leaveRoomRef.current({ roomId: convexRoomId, sessionId }).catch((err) => {
+    leaveRoomMutation({ roomId: convexRoomId, sessionId }).catch((err) => {
       console.error('[ConvexPresence] Failed to leave room:', err)
       captureAppException(err, {
         tags: { feature: 'presence', operation: 'leave_room_silently' },
@@ -308,13 +298,12 @@ export function useConvexPresence({
   const onJoinAttempt = useEffectEvent(() => {
     debugLog('[ConvexPresence] Joining room:', convexRoomId)
     joinInFlightRef.current = true
-    joinRoomRef
-      .current({
-        roomId: convexRoomId,
-        sessionId,
-        username,
-        avatar: avatar ?? undefined,
-      })
+    joinRoomMutation({
+      roomId: convexRoomId,
+      sessionId,
+      username,
+      avatar: avatar ?? undefined,
+    })
       .then(() => {
         joinInFlightRef.current = false
         // If intent flipped while the join was in flight (explicit leave or
@@ -382,11 +371,10 @@ export function useConvexPresence({
   const startHeartbeatLoop = useEffectEvent(() => {
     const sendHeartbeat = () => {
       debugLog('[ConvexPresence] Sending heartbeat...')
-      heartbeatRef
-        .current({
-          roomId: convexRoomId,
-          sessionId,
-        })
+      heartbeatMutation({
+        roomId: convexRoomId,
+        sessionId,
+      })
         .then(() => {
           debugLog('[ConvexPresence] Heartbeat sent successfully')
         })
@@ -473,7 +461,7 @@ export function useConvexPresence({
       }
 
       try {
-        await kickMutationRef.current({
+        await kickMutation({
           roomId: convexRoomId,
           userId: playerId,
         })
@@ -484,7 +472,7 @@ export function useConvexPresence({
         throw error
       }
     },
-    [convexRoomId, userId],
+    [convexRoomId, userId, kickMutation],
   )
 
   // Ban a player (persistent - they cannot rejoin)
@@ -495,7 +483,7 @@ export function useConvexPresence({
       }
 
       try {
-        await banMutationRef.current({
+        await banMutation({
           roomId: convexRoomId,
           userId: playerId,
         })
@@ -506,7 +494,7 @@ export function useConvexPresence({
         throw error
       }
     },
-    [convexRoomId, userId],
+    [convexRoomId, userId, banMutation],
   )
 
   // Transfer session to this tab (kick other tabs with same user)
@@ -529,7 +517,7 @@ export function useConvexPresence({
     // and call onSessionTransferred on their end
     for (const otherSessionId of sessionsToClose) {
       try {
-        await leaveRoomRef.current({
+        await leaveRoomMutation({
           roomId: convexRoomId,
           sessionId: otherSessionId,
         })
@@ -540,7 +528,7 @@ export function useConvexPresence({
         throw error
       }
     }
-  }, [convexRoomId, userId, duplicateSessions])
+  }, [convexRoomId, userId, duplicateSessions, leaveRoomMutation])
 
   // Set room seat count (owner only)
   const setRoomSeatCount = useCallback(
@@ -550,7 +538,7 @@ export function useConvexPresence({
       }
 
       try {
-        return await setSeatCountRef.current({
+        return await setSeatCountMutation({
           roomId: convexRoomId,
           seatCount,
         })
@@ -561,7 +549,7 @@ export function useConvexPresence({
         throw error
       }
     },
-    [convexRoomId],
+    [convexRoomId, setSeatCountMutation],
   )
 
   // Explicitly leave the room (call before navigating away).
@@ -580,7 +568,7 @@ export function useConvexPresence({
     debugLog('[ConvexPresence] Explicitly leaving room')
     suppressRejoin.current = true
     try {
-      await leaveRoomRef.current({ roomId: convexRoomId, sessionId })
+      await leaveRoomMutation({ roomId: convexRoomId, sessionId })
       setHasJoined(false)
       debugLog('[ConvexPresence] Successfully left room')
     } catch (err) {
@@ -592,7 +580,7 @@ export function useConvexPresence({
       setHasJoined(false)
       throw err
     }
-  }, [convexRoomId, sessionId])
+  }, [convexRoomId, sessionId, leaveRoomMutation])
 
   // Determine loading state
   const isLoading = activePlayersData === undefined || roomQuery === undefined

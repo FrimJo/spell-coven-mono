@@ -1,6 +1,6 @@
 import type { UseMediaDeviceReturn } from '@/hooks/useMediaDevice'
 import type { DeclineType } from '@/lib/permission-storage'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useEffectEvent, useRef } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { mediaStreamQueryKey, useMediaDevice } from '@/hooks/useMediaDevice'
 import { useMediaPermissions } from '@/hooks/useMediaPermissions'
@@ -71,10 +71,15 @@ export function useMediaSetupController({
 
   const videoStream = getMediaDeviceStream(videoResult)
   const audioStream = getMediaDeviceStream(audioResult)
-  const videoStreamRef = useRef(videoStream)
-  const audioStreamRef = useRef(audioStream)
-  videoStreamRef.current = videoStream
-  audioStreamRef.current = audioStream
+
+  const stopActiveStreams = useEffectEvent(() => {
+    if (videoStream) {
+      stopMediaStream(videoStream)
+    }
+    if (audioStream) {
+      stopMediaStream(audioStream)
+    }
+  })
 
   useEffect(() => {
     const nextDeviceId = videoResult.selectedDeviceId || null
@@ -100,14 +105,7 @@ export function useMediaSetupController({
 
   useEffect(() => {
     return () => {
-      const videoToStop = videoStreamRef.current
-      const audioToStop = audioStreamRef.current
-      if (videoToStop) {
-        stopMediaStream(videoToStop)
-      }
-      if (audioToStop) {
-        stopMediaStream(audioToStop)
-      }
+      stopActiveStreams()
     }
   }, [])
 

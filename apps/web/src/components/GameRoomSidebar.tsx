@@ -2,7 +2,6 @@ import type { CardHistoryEntry } from '@/types/card-query'
 import type { Participant } from '@/types/participant'
 import {
   Activity,
-  startTransition,
   Suspense,
   useCallback,
   useEffect,
@@ -85,25 +84,17 @@ export function SidebarCard({
 
   return (
     <Card
-      className={`
-        gap-0 overflow-hidden border-surface-2 bg-surface-1
-        ${fillRemaining ? 'flex max-h-full min-h-0 flex-col' : ''}
-      `}
+      className={`border-surface-2 bg-surface-1 gap-0 overflow-hidden ${fillRemaining ? 'flex max-h-full min-h-0 flex-col' : ''} `}
     >
-      <div
-        className="
-          flex items-center justify-between border-b border-surface-2
-          bg-surface-0/50 px-3 py-2
-        "
-      >
+      <div className="border-surface-2 bg-surface-0/50 flex items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-2">
-          <Icon className="size-4 text-text-muted" />
-          <span className="text-sm font-medium text-text-secondary">
+          <Icon className="text-text-muted size-4" />
+          <span className="text-text-secondary text-sm font-medium">
             {title}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-text-muted" data-testid={countTestId}>
+          <span className="text-text-muted text-xs" data-testid={countTestId}>
             {count}
           </span>
           {headerAction}
@@ -148,11 +139,7 @@ function CardHistoryList({
           size="sm"
           onClick={onClear}
           disabled={!hasHistory}
-          className="
-            size-5 p-0 text-text-muted
-            hover:text-destructive
-            disabled:cursor-not-allowed disabled:text-text-muted/50
-          "
+          className="text-text-muted hover:text-destructive disabled:text-text-muted/50 size-5 p-0 disabled:cursor-not-allowed"
           title="Clear history"
         >
           <Trash2 className="size-3" />
@@ -173,24 +160,14 @@ function CardHistoryList({
                 onSelect(entry)
               }
             }}
-            className={`
-              group flex w-full items-center gap-2 border-l-2 transition-colors
-              ${
-                isSelected
-                  ? 'cursor-default border-brand bg-surface-2'
-                  : `
-                    cursor-pointer border-transparent
-                    hover:bg-surface-2
-                  `
-              }
-            `}
+            className={`group flex w-full items-center gap-2 border-l-2 transition-colors ${
+              isSelected
+                ? 'border-brand bg-surface-2 cursor-default'
+                : `hover:bg-surface-2 cursor-pointer border-transparent`
+            } `}
             aria-pressed={isSelected}
           >
-            <div
-              className="
-                flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left
-              "
-            >
+            <div className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left">
               {entry.image_url && (
                 <img
                   src={entry.image_url}
@@ -201,7 +178,7 @@ function CardHistoryList({
               <div className="min-w-0 flex-1">
                 <Tooltip delayDuration={700}>
                   <TooltipTrigger asChild>
-                    <span className="block truncate text-sm text-text-primary">
+                    <span className="text-text-primary block truncate text-sm">
                       {entry.name}
                     </span>
                   </TooltipTrigger>
@@ -209,7 +186,7 @@ function CardHistoryList({
                     <p>{entry.name}</p>
                   </TooltipContent>
                 </Tooltip>
-                <div className="text-xs text-text-muted uppercase">
+                <div className="text-text-muted text-xs uppercase">
                   {entry.set}
                 </div>
               </div>
@@ -224,11 +201,7 @@ function CardHistoryList({
                 onRemove(entry)
               }}
               onKeyDown={(e) => e.stopPropagation()}
-              className="
-                size-8 shrink-0 p-0 text-text-muted opacity-0 transition-opacity
-                group-hover:opacity-100
-                hover:text-destructive
-              "
+              className="text-text-muted hover:text-destructive size-8 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100"
               title="Remove from list"
               aria-label={`Remove ${entry.name} from list`}
               data-testid={`recent-card-remove-${entry.id}`}
@@ -357,11 +330,9 @@ function SidebarContent({
     return uniqueParticipants.find((p) => p.id === user.id) ?? null
   }, [uniqueParticipants, user])
 
-  // Handler to close panel - use startTransition for smooth slide-out animation
+  // Handler to close panel
   const handleClosePanel = useCallback(() => {
-    startTransition(() => {
-      setPanelOpen(false)
-    })
+    setPanelOpen(false)
   }, [setPanelOpen])
 
   // Handler to change seat count
@@ -439,8 +410,8 @@ function SidebarLoading() {
         <div className="space-y-3">
           {/* Header with "Players" and count */}
           <div className="mb-2 flex items-center justify-between">
-            <Skeleton className="h-4 w-16 bg-surface-3/50" />
-            <Skeleton className="h-3 w-8 bg-surface-3/50" />
+            <Skeleton className="bg-surface-3/50 h-4 w-16" />
+            <Skeleton className="bg-surface-3/50 h-3 w-8" />
           </div>
 
           {/* Player items - show generic loading state */}
@@ -448,14 +419,11 @@ function SidebarLoading() {
             {[1, 2].map((i) => (
               <div
                 key={i}
-                className="
-                  flex items-center justify-between rounded-lg border
-                  border-surface-2 bg-surface-2/50 p-2
-                "
+                className="border-surface-2 bg-surface-2/50 flex items-center justify-between rounded-lg border p-2"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <Skeleton className="size-2 rounded-full bg-surface-3/50" />
-                  <Skeleton className="h-4 w-24 bg-surface-3/50" />
+                  <Skeleton className="bg-surface-3/50 size-2 rounded-full" />
+                  <Skeleton className="bg-surface-3/50 h-4 w-24" />
                 </div>
               </div>
             ))}
