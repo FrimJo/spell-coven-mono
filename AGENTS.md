@@ -47,7 +47,7 @@ Before adding an Effect, confirm all of the following:
 
 ### Runtime versions
 
-- **Node.js ~22.20** (managed via nvm; `.nvmrc` pins `22.20`).
+- **Node.js ~24.16** (managed via nvm; `.nvmrc` pins `24.16`).
 - **Bun ^1.3.8** (primary package manager and script runner). Installed to `~/.bun/bin/bun`.
 
 ### Starting the dev server
