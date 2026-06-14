@@ -131,21 +131,20 @@ export function createLiveKitMediaAdapter({
 
   let lastError: Error | null = null
   let lastDisconnectReason: string | null = null
-  const localTrackEnabled = {
-    camera: null as boolean | null,
-    microphone: null as boolean | null,
-  }
 
   const trackConfig = {
     camera: {
       source: LiveKitTrack.Source.Camera,
       kind: 'videoinput' as const,
+      // Disabling the camera fully unpublishes so the device/indicator releases.
+      unpublishOnDisable: true,
       setEnabled: (enabled: boolean, opts?: { deviceId?: string }) =>
         room.localParticipant.setCameraEnabled(enabled, opts),
     },
     microphone: {
       source: LiveKitTrack.Source.Microphone,
       kind: 'audioinput' as const,
+      unpublishOnDisable: false,
       setEnabled: (enabled: boolean, opts?: { deviceId?: string }) =>
         room.localParticipant.setMicrophoneEnabled(enabled, opts),
     },
@@ -159,35 +158,38 @@ export function createLiveKitMediaAdapter({
     enabled: boolean,
     deviceId: string | null | undefined,
   ) => {
-    const { source, kind, setEnabled } = trackConfig[track]
+    const { source, kind, unpublishOnDisable, setEnabled } = trackConfig[track]
     const nextDeviceId = normalizeDeviceId(deviceId)
     const publication = room.localParticipant.getTrackPublication(source)
     // A muted track is republished via setEnabled (which can pick the new
     // device), so only swap the device in place when the track is actually live.
     const isLive = Boolean(publication?.track && !publication.isMuted)
 
-    const wasEnabled = localTrackEnabled[track] === true
-    localTrackEnabled[track] = enabled
+    // Track mutate/publish events (TrackMuted, LocalTrackPublished/Unpublished,
+    // etc.) drive emitState, so no manual emit is needed here.
+    if (!enabled) {
+      if (unpublishOnDisable) {
+        if (publication?.track) {
+          await room.localParticipant.unpublishTrack(publication.track, true)
+        }
+        return
+      }
 
-    if (track === 'camera' && !enabled && publication?.track) {
-      await room.localParticipant.unpublishTrack(publication.track, true)
-      emitState()
+      if (isLive) {
+        await setEnabled(false)
+      }
       return
     }
 
-    if (
-      enabled &&
-      wasEnabled &&
-      isLive &&
-      nextDeviceId !== null &&
-      nextDeviceId !== room.getActiveDevice(kind)
-    ) {
-      await room.switchActiveDevice(kind, nextDeviceId)
-    } else {
-      await setEnabled(enabled, { deviceId: nextDeviceId ?? undefined })
+    if (isLive) {
+      const activeDeviceId = room.getActiveDevice(kind)
+      if (nextDeviceId !== null && nextDeviceId !== activeDeviceId) {
+        await room.switchActiveDevice(kind, nextDeviceId)
+      }
+      return
     }
 
-    emitState()
+    await setEnabled(true, { deviceId: nextDeviceId ?? undefined })
   }
 
   const emitState = () => {
@@ -235,6 +237,7 @@ export function createLiveKitMediaAdapter({
       publication.track?.detach()
       emitState()
     })
+    .on(RoomEvent.ActiveDeviceChanged, emitState)
     .on(RoomEvent.MediaDevicesError, reportError)
     .on(RoomEvent.Disconnected, (reason) => {
       lastDisconnectReason = reason === undefined ? null : String(reason)

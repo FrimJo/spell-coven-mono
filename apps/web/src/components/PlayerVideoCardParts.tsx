@@ -274,6 +274,7 @@ export const LocalMediaControls = memo(function LocalMediaControls({
       <div className="flex items-center">
         <Button
           data-testid="audio-toggle-button"
+          data-audio-enabled={String(!isAudioMuted)}
           aria-pressed={!isAudioMuted}
           aria-label={
             isAudioMuted ? 'Turn microphone on' : 'Turn microphone off'

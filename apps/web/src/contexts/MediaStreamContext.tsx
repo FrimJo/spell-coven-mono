@@ -127,7 +127,10 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
 
   useEffect(() => {
     const currentDeviceId = currentAudioOutputDeviceId || null
-    if (currentDeviceId && currentDeviceId !== selectedAudioOutputDeviceId) {
+    // Seed persisted output only when the user has not chosen one yet. Once
+    // selectedAudioOutputDeviceId is set, later browser active-device changes
+    // must not overwrite that explicit preference.
+    if (currentDeviceId && selectedAudioOutputDeviceId === null) {
       setStoredAudioOutputDeviceId(currentDeviceId)
     }
   }, [

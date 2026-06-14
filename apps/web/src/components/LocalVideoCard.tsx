@@ -3,7 +3,6 @@ import type { MediaTrack } from '@/types/media-session'
 import type { Participant } from '@/types/participant'
 import { memo, useCallback, useRef } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
-import { useRoomMedia } from '@/contexts/RoomMediaContext'
 import { useCardDetector } from '@/hooks/useCardDetector'
 import { Wifi } from 'lucide-react'
 
@@ -49,7 +48,6 @@ export const LocalVideoCard = memo(function LocalVideoCard({
 }: LocalVideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const videoContainerRef = useRef<HTMLDivElement>(null)
-  const roomMedia = useRoomMedia()
 
   const handleVideoRef = useCallback((element: HTMLVideoElement | null) => {
     videoRef.current = element
@@ -75,19 +73,9 @@ export const LocalVideoCard = memo(function LocalVideoCard({
 
   const isAudioMuted = !audioEnabled
 
-  const handleToggleVideo = useCallback(
-    (nextEnabled: boolean) => {
-      setVideoEnabled(nextEnabled)
-      void roomMedia.setCameraEnabled(nextEnabled)
-    },
-    [roomMedia, setVideoEnabled],
-  )
-
   const handleToggleAudio = useCallback(() => {
-    const nextEnabled = !audioEnabled
-    setAudioEnabled(nextEnabled)
-    void roomMedia.setMicrophoneEnabled(nextEnabled)
-  }, [roomMedia, setAudioEnabled, audioEnabled])
+    setAudioEnabled(!audioEnabled)
+  }, [setAudioEnabled, audioEnabled])
 
   const hasVideoStream = videoEnabled && !!videoTrack
 
@@ -139,7 +127,7 @@ export const LocalVideoCard = memo(function LocalVideoCard({
       <LocalMediaControls
         videoEnabled={videoEnabled}
         isAudioMuted={isAudioMuted}
-        onToggleVideo={handleToggleVideo}
+        onToggleVideo={setVideoEnabled}
         onToggleAudio={handleToggleAudio}
       />
     </PlayerVideoCard>
