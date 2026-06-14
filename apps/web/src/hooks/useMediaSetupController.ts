@@ -71,6 +71,10 @@ export function useMediaSetupController({
 
   const videoStream = getMediaDeviceStream(videoResult)
   const audioStream = getMediaDeviceStream(audioResult)
+  const videoStreamRef = useRef(videoStream)
+  const audioStreamRef = useRef(audioStream)
+  videoStreamRef.current = videoStream
+  audioStreamRef.current = audioStream
 
   useEffect(() => {
     const nextDeviceId = videoResult.selectedDeviceId || null
@@ -96,14 +100,16 @@ export function useMediaSetupController({
 
   useEffect(() => {
     return () => {
-      if (videoStream) {
-        stopMediaStream(videoStream)
+      const videoToStop = videoStreamRef.current
+      const audioToStop = audioStreamRef.current
+      if (videoToStop) {
+        stopMediaStream(videoToStop)
       }
-      if (audioStream) {
-        stopMediaStream(audioStream)
+      if (audioToStop) {
+        stopMediaStream(audioToStop)
       }
     }
-  }, [videoStream, audioStream])
+  }, [])
 
   const videoDevices = videoResult.devices
   const audioInputStream = isSuccessState(audioResult)
