@@ -15,6 +15,12 @@ export default [
   {
     rules: {
       'react/prop-types': 'off', // Using TypeScript for prop validation
+      // `toaster` is a shadcn/Sonner marker class (see sonner.tsx), not a Tailwind
+      // utility. It enables `group-[.toaster]:*` variants on toast children.
+      'better-tailwindcss/no-unknown-classes': [
+        'warn',
+        { ignore: ['^toaster$'] },
+      ],
     },
   },
 ]

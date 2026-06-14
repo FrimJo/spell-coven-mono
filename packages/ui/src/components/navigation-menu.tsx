@@ -157,9 +157,9 @@ function NavigationMenuViewport({
         data-slot="navigation-menu-viewport"
         className={cn(
           `
-            origin-top-center relative mt-1.5
-            h-(--radix-navigation-menu-viewport-height) w-full overflow-hidden
-            rounded-md border bg-popover text-popover-foreground shadow-sm
+            relative mt-1.5 h-(--radix-navigation-menu-viewport-height) w-full
+            origin-top overflow-hidden rounded-md border bg-popover
+            text-popover-foreground shadow-sm
             data-[state=closed]:animate-out data-[state=closed]:zoom-out-95
             data-[state=open]:animate-in data-[state=open]:zoom-in-90
             md:w-(--radix-navigation-menu-viewport-width)
@@ -220,8 +220,8 @@ function NavigationMenuIndicator({
     >
       <div
         className="
-        relative top-[60%] size-2 rotate-45 rounded-tl-sm bg-border shadow-md
-      "
+          relative top-[60%] size-2 rotate-45 rounded-tl-sm bg-border shadow-md
+        "
       />
     </NavigationMenuPrimitive.Indicator>
   )
