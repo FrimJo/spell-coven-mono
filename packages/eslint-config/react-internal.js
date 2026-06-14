@@ -45,7 +45,7 @@ export const config = [
       'react/react-in-jsx-scope': 'off',
     },
   },
-  eslintPluginBetterTailwindcss.configs.recommended,
+  eslintPluginBetterTailwindcss.configs.correctness,
   {
     languageOptions: {
       parserOptions: {

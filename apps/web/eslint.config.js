@@ -13,6 +13,28 @@ export default [
         entryPoint: '../../packages/ui/src/styles/globals.css',
       },
     },
+    rules: {
+      'better-tailwindcss/no-unknown-classes': [
+        'warn',
+        {
+          // Custom classes defined outside the Tailwind entry point:
+          // component-scoped keyframe animations (LandingPage.css and inline
+          // <style> blocks), landing page button decorations, and marker
+          // classes used only as arbitrary-variant selector targets.
+          ignore: [
+            '^animate-float$',
+            '^animate-sparkle$',
+            '^animate-glow-pulse$',
+            '^animate-fade-in-up$',
+            '^create-game-btn-wrap$',
+            '^glimmer-sweep$',
+            '^is-loading$',
+            '^icon-check$',
+            '^icon-remove$',
+          ],
+        },
+      ],
+    },
   },
   {
     ignores: [
