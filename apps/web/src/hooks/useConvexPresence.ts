@@ -72,6 +72,14 @@ interface UseConvexPresenceReturn {
  */
 const HEARTBEAT_INTERVAL_MS = 10_000
 
+/** Gate verbose per-render diagnostics. Flip on locally when debugging. */
+const DEBUG = false
+
+/** Diagnostic logging gated behind DEBUG. Errors are logged unconditionally. */
+function debugLog(...args: unknown[]): void {
+  if (DEBUG) console.log(...args)
+}
+
 /**
  * Generate or retrieve a stable session ID for this browser tab.
  * Uses sessionStorage to persist across page reloads within the same tab,
@@ -86,7 +94,7 @@ function getOrCreateSessionId(): string {
   if (!sessionId) {
     sessionId = crypto.randomUUID()
     sessionStorage.setItem(storageKey, sessionId)
-    console.log('[ConvexPresence] Generated new session ID:', sessionId)
+    debugLog('[ConvexPresence] Generated new session ID:', sessionId)
   }
 
   return sessionId
@@ -108,7 +116,7 @@ export function useConvexPresence({
   onError,
 }: UseConvexPresenceProps): UseConvexPresenceReturn {
   // Debug: log when hook is called
-  console.log('[ConvexPresence] Hook called with:', {
+  debugLog('[ConvexPresence] Hook called with:', {
     roomId,
     userId,
     username,
@@ -123,6 +131,12 @@ export function useConvexPresence({
 
   // Track if we've joined the room (using state so heartbeat effect re-runs)
   const [hasJoined, setHasJoined] = useState(false)
+  const hasJoinedRef = useRef(hasJoined)
+  // Suppress auto-rejoin after an explicit leaveRoom(). Set only by leaveRoom;
+  // cleared on room/session change. Removals (kick/ban/transfer) are NOT
+  // suppressed here - the consumer disconnects (flips `enabled`) in response.
+  const suppressRejoin = useRef(false)
+  const joinInFlightRef = useRef(false)
 
   // Use roomId as-is - rooms are stored with the bare ID (e.g., "ABC123")
   const convexRoomId = roomId
@@ -152,6 +166,34 @@ export function useConvexPresence({
     kickMutationRef.current = kickMutation
     banMutationRef.current = banMutation
     setSeatCountRef.current = setSeatCountMutation
+    hasJoinedRef.current = hasJoined
+  })
+
+  // Clear suppression when the membership identity changes (new room or new
+  // tab session).
+  useEffect(() => {
+    suppressRejoin.current = false
+  }, [convexRoomId, sessionId])
+
+  // Base eligibility derived at render time. Listed (plus room/session) as a
+  // reconcile dep so the effect stays lint-checkable. The full desired check is
+  // `baseEligible && !suppressRejoin.current`; suppression is a ref, so reading
+  // it inline keeps it latest without adding a dep.
+  const baseEligible = enabled && !!userId && !!username && !!sessionId
+
+  // Effect Event for the async join compensation path. Reading the desired
+  // state inline in the join's .then would capture a stale closure (the
+  // baseEligible from when the join started); this re-reads the latest so a
+  // leave/disable that races the in-flight join is caught.
+  const isDesired = useEffectEvent(
+    () => baseEligible && !suppressRejoin.current,
+  )
+
+  // Fire-and-forget leave (used by reconcile, unmount, and late-join compensation)
+  const leaveSilently = useEffectEvent(() => {
+    leaveRoomRef.current({ roomId: convexRoomId, sessionId }).catch((err) => {
+      console.error('[ConvexPresence] Failed to leave room:', err)
+    })
   })
 
   // Convex queries - reactive subscriptions
@@ -184,7 +226,7 @@ export function useConvexPresence({
   const isBanned = isBannedQuery === true
 
   // Debug: log query results
-  console.log('[ConvexPresence] Query results:', {
+  debugLog('[ConvexPresence] Query results:', {
     roomQuery: roomQuery === undefined ? 'loading' : roomQuery,
     allSessionsCount: allSessionsData?.length ?? 'loading',
     activePlayersCount: activePlayersData?.length ?? 'loading',
@@ -214,23 +256,26 @@ export function useConvexPresence({
 
   // Effect Event: run removal handling with latest callbacks (avoids callback refs in deps)
   const onRemovalDetected = useEffectEvent(() => {
+    // Removal handling: reset joined state and notify the consumer. Suppression
+    // of auto-rejoin is the consumer's responsibility - it disconnects (flips
+    // `enabled`) in response to these callbacks, which gates the reconcile.
     setHasJoined(false)
     // Check why we were removed:
     // 1. If user has another active session → session was transferred to another tab
     // 2. If user is banned → they were banned
     // 3. Otherwise → they were kicked
     if (userHasOtherActiveSession) {
-      console.log(
+      debugLog(
         '[ConvexPresence] Session transferred - user has another active session',
       )
       onSessionTransferred?.()
     } else if (isBanned) {
-      console.log(
+      debugLog(
         '[ConvexPresence] Detected ban - session removed and user is banned',
       )
       onBanned?.()
     } else {
-      console.log(
+      debugLog(
         '[ConvexPresence] Detected kick - session removed but not banned',
       )
       onKicked?.()
@@ -251,7 +296,8 @@ export function useConvexPresence({
 
   // Effect Event: join attempt with latest onError (avoids onError in deps)
   const onJoinAttempt = useEffectEvent(() => {
-    console.log('[ConvexPresence] Joining room:', convexRoomId)
+    debugLog('[ConvexPresence] Joining room:', convexRoomId)
+    joinInFlightRef.current = true
     joinRoomRef
       .current({
         roomId: convexRoomId,
@@ -260,11 +306,20 @@ export function useConvexPresence({
         avatar: avatar ?? undefined,
       })
       .then(() => {
-        console.log('[ConvexPresence] Successfully joined room')
+        joinInFlightRef.current = false
+        // If intent flipped while the join was in flight (explicit leave or
+        // disabled), compensate. leaveRoom is idempotent server-side, so a
+        // leave that races ahead of the row insert is safely re-applied here.
+        if (!isDesired()) {
+          leaveSilently()
+          return
+        }
+        debugLog('[ConvexPresence] Successfully joined room')
         setHasJoined(true)
         setError(null)
       })
       .catch((err) => {
+        joinInFlightRef.current = false
         console.error('[ConvexPresence] Failed to join room:', err)
         const error = err instanceof Error ? err : new Error(String(err))
         setError(error)
@@ -272,52 +327,55 @@ export function useConvexPresence({
       })
   })
 
-  // Join room on mount (when enabled)
+  // Reconcile desired membership against actual (hasJoined) state.
+  // Replaces the separate join-on-mount, leave-when-disabled, and explicit-left
+  // guards with one desired-vs-actual flow.
+  //
+  // Removal handling: onRemovalDetected only resets hasJoined and notifies the
+  // consumer. The consumer disconnects (flips `enabled`) in response, which
+  // makes `desired` false here and prevents an auto-rejoin. Re-enabling allows a
+  // fresh rejoin. Explicit leaveRoom() additionally sets suppressRejoin so it
+  // stays out even while enabled remains true.
+  //
+  // avatar is intentionally NOT a dep: it is captured once in the join payload
+  // (no mid-session refresh) and never affects desired-vs-actual.
   useEffect(() => {
-    if (!enabled || !userId || !username || !sessionId || hasJoined) return
-    onJoinAttempt()
-  }, [enabled, convexRoomId, userId, username, avatar, sessionId, hasJoined])
-
-  // Effect Event: leave when disabled (defers setState to avoid sync setState in effect)
-  const onLeaveWhenDisabled = useEffectEvent(() => {
-    console.log('[ConvexPresence] Leaving room (disabled)')
-    leaveRoomRef.current({ roomId: convexRoomId, sessionId }).catch((err) => {
-      console.error('[ConvexPresence] Failed to leave room:', err)
-    })
-    queueMicrotask(() => setHasJoined(false))
-  })
-
-  // Leave room on unmount or when disabled
-  useEffect(() => {
-    if (!enabled) {
-      if (hasJoined) onLeaveWhenDisabled()
+    const desired = baseEligible && !suppressRejoin.current
+    if (desired) {
+      if (!hasJoined && !joinInFlightRef.current) onJoinAttempt()
       return
     }
+    if (hasJoined) {
+      debugLog('[ConvexPresence] Reconcile: leaving room')
+      leaveSilently()
+      // Eagerly clear the ref so the unmount cleanup below won't fire a second
+      // (redundant) leave before the state update commits.
+      hasJoinedRef.current = false
+      queueMicrotask(() => setHasJoined(false))
+    }
+  }, [baseEligible, convexRoomId, sessionId, hasJoined])
 
-    // Cleanup on unmount
+  // Leave room on unmount (only on real unmount; reads latest joined state)
+  useEffect(() => {
     return () => {
-      if (hasJoined) {
-        console.log('[ConvexPresence] Leaving room (unmount)')
-        leaveRoomRef
-          .current({ roomId: convexRoomId, sessionId })
-          .catch((err) => {
-            console.error('[ConvexPresence] Failed to leave room:', err)
-          })
+      if (hasJoinedRef.current) {
+        debugLog('[ConvexPresence] Leaving room (unmount)')
+        leaveSilently()
       }
     }
-  }, [enabled, convexRoomId, sessionId, hasJoined])
+  }, [])
 
   // Effect Event: start heartbeat loop (reads latest roomId/sessionId when invoked)
   const startHeartbeatLoop = useEffectEvent(() => {
     const sendHeartbeat = () => {
-      console.log('[ConvexPresence] Sending heartbeat...')
+      debugLog('[ConvexPresence] Sending heartbeat...')
       heartbeatRef
         .current({
           roomId: convexRoomId,
           sessionId,
         })
         .then(() => {
-          console.log('[ConvexPresence] Heartbeat sent successfully')
+          debugLog('[ConvexPresence] Heartbeat sent successfully')
         })
         .catch((err) => {
           console.error('[ConvexPresence] Heartbeat failed:', err)
@@ -378,7 +436,7 @@ export function useConvexPresence({
   // Notify about duplicate session when detected
   useEffect(() => {
     if (hasDuplicateSession && onDuplicateSession && duplicateSessions[0]) {
-      console.log(
+      debugLog(
         '[ConvexPresence] Duplicate session detected:',
         duplicateSessions[0].sessionId,
       )
@@ -430,14 +488,11 @@ export function useConvexPresence({
 
     const sessionsToClose = duplicateSessions.map((p) => p.sessionId)
     if (sessionsToClose.length === 0) {
-      console.log('[ConvexPresence] No duplicate sessions to close')
+      debugLog('[ConvexPresence] No duplicate sessions to close')
       return
     }
 
-    console.log(
-      '[ConvexPresence] Transferring session, closing:',
-      sessionsToClose,
-    )
+    debugLog('[ConvexPresence] Transferring session, closing:', sessionsToClose)
 
     // Leave each duplicate session - they will detect via reactive query
     // and call onSessionTransferred on their end
@@ -464,7 +519,11 @@ export function useConvexPresence({
     [convexRoomId],
   )
 
-  // Explicitly leave the room (call before navigating away)
+  // Explicitly leave the room (call before navigating away).
+  // Sets suppressRejoin so reconcile will NOT auto-rejoin this room/session even
+  // while enabled stays true; the flag clears only on roomId/sessionId change.
+  // Disconnect flows that want to reconnect should toggle `enabled`
+  // (setIsConnected) instead of calling this.
   const leaveRoom = useCallback(async (): Promise<void> => {
     if (!convexRoomId || !sessionId) {
       console.warn(
@@ -473,23 +532,19 @@ export function useConvexPresence({
       return
     }
 
-    if (!hasJoined) {
-      console.log('[ConvexPresence] Not joined, skipping leave')
-      return
-    }
-
-    console.log('[ConvexPresence] Explicitly leaving room')
+    debugLog('[ConvexPresence] Explicitly leaving room')
+    suppressRejoin.current = true
     try {
       await leaveRoomRef.current({ roomId: convexRoomId, sessionId })
       setHasJoined(false)
-      console.log('[ConvexPresence] Successfully left room')
+      debugLog('[ConvexPresence] Successfully left room')
     } catch (err) {
       console.error('[ConvexPresence] Failed to leave room:', err)
       // Still mark as not joined even if mutation fails
       setHasJoined(false)
       throw err
     }
-  }, [convexRoomId, sessionId, hasJoined])
+  }, [convexRoomId, sessionId])
 
   // Determine loading state
   const isLoading = activePlayersData === undefined || roomQuery === undefined
