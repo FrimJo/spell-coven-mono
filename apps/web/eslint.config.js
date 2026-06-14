@@ -6,6 +6,15 @@ import { config as reactConfig } from '@repo/eslint-config/react-internal'
 export default [
   ...reactConfig,
   {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    settings: {
+      'better-tailwindcss': {
+        cwd: import.meta.dirname,
+        entryPoint: '../../packages/ui/src/styles/globals.css',
+      },
+    },
+  },
+  {
     ignores: [
       '.output/**',
       'dist/**',

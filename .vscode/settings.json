@@ -1,10 +1,18 @@
 {
+  "eslint.useFlatConfig": true,
   "eslint.workingDirectories": [
-    {
-      "mode": "auto"
-    }
+    { "pattern": "apps/*" },
+    { "pattern": "packages/*" },
+    { "pattern": "convex" }
   ],
-  "eslint.codeActionsOnSave.rules": ["unused-imports/no-unused-imports"],
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  "tailwindCSS.experimental.configFile": "packages/ui/src/styles/globals.css",
+  "tailwindCSS.lint.suggestCanonicalClasses": "ignore",
   "files.watcherExclude": {
     "**/routeTree.gen.ts": true
   },
