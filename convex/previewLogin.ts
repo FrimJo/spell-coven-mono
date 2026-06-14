@@ -6,6 +6,7 @@ import type { DataModel } from './_generated/dataModel'
 import { api, internal } from './_generated/api'
 import { action } from './_generated/server'
 import { isE2ePreview } from './env'
+import { withConvexSentry } from './sentry'
 
 const previewTokensSchema = z.object({
   tokens: z.object({
@@ -105,47 +106,53 @@ export const previewLogin = action({
     code: v.string(),
     workerSlot: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
-    if (!isE2ePreview) {
-      throw new Error('Unauthorized')
-    }
+  handler: withConvexSentry(
+    { feature: 'auth', operation: 'preview_login' },
+    async (
+      ctx: GenericActionCtx<DataModel>,
+      args: { code: string; workerSlot?: number },
+    ) => {
+      if (!isE2ePreview) {
+        throw new Error('Unauthorized')
+      }
 
-    // Require server-side secret so we never accept arbitrary client codes.
-    const loginCode = z
-      .string()
-      .min(1, 'PREVIEW_LOGIN_CODE must be set')
-      .parse(process.env.PREVIEW_LOGIN_CODE)
+      // Require server-side secret so we never accept arbitrary client codes.
+      const loginCode = z
+        .string()
+        .min(1, 'PREVIEW_LOGIN_CODE must be set')
+        .parse(process.env.PREVIEW_LOGIN_CODE)
 
-    // Reject if the client-provided code doesn't match the server's preview secret.
-    if (!constantTimeEquals(args.code, loginCode)) {
-      throw new Error('Unauthorized')
-    }
+      // Reject if the client-provided code doesn't match the server's preview secret.
+      if (!constantTimeEquals(args.code, loginCode)) {
+        throw new Error('Unauthorized')
+      }
 
-    const previewName = pickPreviewNameForSlot(args.workerSlot)
-    const fallbackHandle = buildPreviewHandle(loginCode, previewName)
-    const fallbackEmail = buildPreviewEmail(fallbackHandle)
-    const password = loginCode
+      const previewName = pickPreviewNameForSlot(args.workerSlot)
+      const fallbackHandle = buildPreviewHandle(loginCode, previewName)
+      const fallbackEmail = buildPreviewEmail(fallbackHandle)
+      const password = loginCode
 
-    const tokens = await signInOrSignUp(ctx, fallbackEmail, password)
+      const tokens = await signInOrSignUp(ctx, fallbackEmail, password)
 
-    const user: unknown = await ctx.runQuery(
-      internal.previewAuth.getUserByEmail,
-      {
-        email: fallbackEmail,
-      },
-    )
-    const userId = z.object({ _id: z.string().min(1) }).parse(user)._id
+      const user: unknown = await ctx.runQuery(
+        internal.previewAuth.getUserByEmail,
+        {
+          email: fallbackEmail,
+        },
+      )
+      const userId = z.object({ _id: z.string().min(1) }).parse(user)._id
 
-    if (!userId) {
-      throw new Error('Unauthorized')
-    }
+      if (!userId) {
+        throw new Error('Unauthorized')
+      }
 
-    return {
-      ok: true,
-      userId,
-      token: tokens.token,
-      refreshToken: tokens.refreshToken,
-      previewName,
-    }
-  },
+      return {
+        ok: true,
+        userId,
+        token: tokens.token,
+        refreshToken: tokens.refreshToken,
+        previewName,
+      }
+    },
+  ),
 })

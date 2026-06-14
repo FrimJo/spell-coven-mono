@@ -10,7 +10,7 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 
-import type { MutationCtx } from './_generated/server'
+import type { MutationCtx, QueryCtx } from './_generated/server'
 import { internal } from './_generated/api'
 import { internalMutation, mutation, query } from './_generated/server'
 import { DEFAULT_HEALTH } from './constants'
@@ -22,6 +22,7 @@ import {
   PlayerNotFoundError,
   RoomNotFoundError,
 } from './errors'
+import { recordConvexBreadcrumb, withConvexSentry } from './sentry'
 
 /**
  * Presence timeout threshold in milliseconds (30 seconds)
@@ -142,71 +143,77 @@ export const createRoom = mutation({
   args: {
     ownerId: v.string(), // Must match authenticated user ID
   },
-  handler: async (ctx, { ownerId }) => {
-    const userId = await getAuthUserId(ctx)
-    if (!userId) {
-      throw new AuthRequiredError()
-    }
+  handler: withConvexSentry(
+    { feature: 'room', operation: 'create_room' },
+    async (ctx: MutationCtx, { ownerId }: { ownerId: string }) => {
+      const userId = await getAuthUserId(ctx)
+      if (!userId) {
+        throw new AuthRequiredError()
+      }
 
-    if (ownerId !== userId) {
-      throw new AuthMismatchError()
-    }
+      if (ownerId !== userId) {
+        throw new AuthMismatchError()
+      }
 
-    const now = Date.now()
+      const now = Date.now()
 
-    if (!isE2ePreview) {
-      // Check throttle: find user's most recent room creation
-      const lastRoom = await ctx.db
-        .query('rooms')
-        .withIndex('by_ownerId_createdAt', (q) => q.eq('ownerId', userId))
-        .order('desc')
-        .first()
+      if (!isE2ePreview) {
+        // Check throttle: find user's most recent room creation
+        const lastRoom = await ctx.db
+          .query('rooms')
+          .withIndex('by_ownerId_createdAt', (q) => q.eq('ownerId', userId))
+          .order('desc')
+          .first()
 
-      if (lastRoom) {
-        const timeSinceLastCreation = now - lastRoom.createdAt
-        if (timeSinceLastCreation < ROOM_CREATION_COOLDOWN_MS) {
-          const waitMs = ROOM_CREATION_COOLDOWN_MS - timeSinceLastCreation
-          return { roomId: null, waitMs }
+        if (lastRoom) {
+          const timeSinceLastCreation = now - lastRoom.createdAt
+          if (timeSinceLastCreation < ROOM_CREATION_COOLDOWN_MS) {
+            const waitMs = ROOM_CREATION_COOLDOWN_MS - timeSinceLastCreation
+            recordConvexBreadcrumb('room', 'Room creation throttled', {
+              waitMs,
+            })
+            return { roomId: null, waitMs }
+          }
         }
       }
-    }
 
-    // Get or create counter for rooms
-    let counter = await ctx.db
-      .query('counters')
-      .withIndex('by_name', (q) => q.eq('name', 'rooms'))
-      .first()
-
-    if (!counter) {
-      await ctx.db.insert('counters', { name: 'rooms', count: 0 })
-      // Query again to get the full document with _creationTime
-      counter = await ctx.db
+      // Get or create counter for rooms
+      let counter = await ctx.db
         .query('counters')
         .withIndex('by_name', (q) => q.eq('name', 'rooms'))
         .first()
+
       if (!counter) {
-        throw new Error('Failed to create counter')
+        await ctx.db.insert('counters', { name: 'rooms', count: 0 })
+        // Query again to get the full document with _creationTime
+        counter = await ctx.db
+          .query('counters')
+          .withIndex('by_name', (q) => q.eq('name', 'rooms'))
+          .first()
+        if (!counter) {
+          throw new Error('Failed to create counter')
+        }
       }
-    }
 
-    // Increment counter atomically
-    const newCount = counter.count + 1
-    await ctx.db.patch(counter._id, { count: newCount })
+      // Increment counter atomically
+      const newCount = counter.count + 1
+      await ctx.db.patch(counter._id, { count: newCount })
 
-    // Generate sequential room code (newCount - 1 because we want 0-indexed)
-    const roomId = toBase32Code(newCount - 1)
+      // Generate sequential room code (newCount - 1 because we want 0-indexed)
+      const roomId = toBase32Code(newCount - 1)
 
-    // Create room with default seat count
-    await ctx.db.insert('rooms', {
-      roomId,
-      ownerId: userId,
-      createdAt: now,
-      seatCount: 4,
-      lastActivityAt: now,
-    })
+      // Create room with default seat count
+      await ctx.db.insert('rooms', {
+        roomId,
+        ownerId: userId,
+        createdAt: now,
+        seatCount: 4,
+        lastActivityAt: now,
+      })
 
-    return { roomId, waitMs: null }
-  },
+      return { roomId, waitMs: null }
+    },
+  ),
 })
 
 /**
@@ -247,87 +254,96 @@ export const checkRoomAccess = query({
   args: {
     roomId: v.string(),
   },
-  handler: async (ctx, { roomId }) => {
-    // Check if room exists
-    const room = await ctx.db
-      .query('rooms')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .first()
-
-    if (!room) {
-      return { status: 'not_found' as const }
-    }
-
-    // Get current user ID from auth context
-    const userId = await getAuthUserId(ctx)
-
-    // If user is authenticated, check if they're banned
-    if (userId) {
-      const ban = await ctx.db
-        .query('roomBans')
-        .withIndex('by_roomId_userId', (q) =>
-          q.eq('roomId', roomId).eq('userId', userId),
-        )
-        .first()
-
-      if (ban) {
-        return { status: 'banned' as const }
-      }
-
-      // Check if user is already an active player in the room
-      const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
-      const existingPlayer = await ctx.db
-        .query('roomPlayers')
-        .withIndex('by_roomId_userId', (q) =>
-          q.eq('roomId', roomId).eq('userId', userId),
-        )
-        .filter((q) =>
-          q.and(
-            q.neq(q.field('status'), 'left'),
-            q.gt(q.field('lastSeenAt'), presenceThreshold),
-          ),
-        )
-        .first()
-
-      // If user is already in the room, allow access
-      if (existingPlayer) {
-        return { status: 'ok' as const }
-      }
-
-      // Check room capacity for new players
-      const activePlayers = await ctx.db
-        .query('roomPlayers')
+  handler: withConvexSentry(
+    { feature: 'room', operation: 'check_room_access' },
+    async (ctx: QueryCtx, { roomId }: { roomId: string }) => {
+      // Check if room exists
+      const room = await ctx.db
+        .query('rooms')
         .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-        .filter((q) =>
-          q.and(
-            q.neq(q.field('status'), 'left'),
-            q.gt(q.field('lastSeenAt'), presenceThreshold),
-          ),
-        )
-        .collect()
+        .first()
 
-      // Deduplicate by userId to count unique players
-      const uniqueUserIds = new Set<string>()
-      for (const player of activePlayers) {
-        uniqueUserIds.add(player.userId)
+      if (!room) {
+        recordConvexBreadcrumb('room', 'Room access check: not found')
+        return { status: 'not_found' as const }
       }
-      const currentPlayerCount = uniqueUserIds.size
 
-      // Get seat count from room (defaults to 4 if not set)
-      const seatCount = room.seatCount ?? 4
+      // Get current user ID from auth context
+      const userId = await getAuthUserId(ctx)
 
-      // Check if room is full
-      if (currentPlayerCount >= seatCount) {
-        return {
-          status: 'full' as const,
-          currentCount: currentPlayerCount,
-          maxCount: seatCount,
+      // If user is authenticated, check if they're banned
+      if (userId) {
+        const ban = await ctx.db
+          .query('roomBans')
+          .withIndex('by_roomId_userId', (q) =>
+            q.eq('roomId', roomId).eq('userId', userId),
+          )
+          .first()
+
+        if (ban) {
+          recordConvexBreadcrumb('room', 'Room access check: banned')
+          return { status: 'banned' as const }
+        }
+
+        // Check if user is already an active player in the room
+        const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
+        const existingPlayer = await ctx.db
+          .query('roomPlayers')
+          .withIndex('by_roomId_userId', (q) =>
+            q.eq('roomId', roomId).eq('userId', userId),
+          )
+          .filter((q) =>
+            q.and(
+              q.neq(q.field('status'), 'left'),
+              q.gt(q.field('lastSeenAt'), presenceThreshold),
+            ),
+          )
+          .first()
+
+        // If user is already in the room, allow access
+        if (existingPlayer) {
+          return { status: 'ok' as const }
+        }
+
+        // Check room capacity for new players
+        const activePlayers = await ctx.db
+          .query('roomPlayers')
+          .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+          .filter((q) =>
+            q.and(
+              q.neq(q.field('status'), 'left'),
+              q.gt(q.field('lastSeenAt'), presenceThreshold),
+            ),
+          )
+          .collect()
+
+        // Deduplicate by userId to count unique players
+        const uniqueUserIds = new Set<string>()
+        for (const player of activePlayers) {
+          uniqueUserIds.add(player.userId)
+        }
+        const currentPlayerCount = uniqueUserIds.size
+
+        // Get seat count from room (defaults to 4 if not set)
+        const seatCount = room.seatCount ?? 4
+
+        // Check if room is full
+        if (currentPlayerCount >= seatCount) {
+          recordConvexBreadcrumb('room', 'Room access check: full', {
+            currentCount: currentPlayerCount,
+            maxCount: seatCount,
+          })
+          return {
+            status: 'full' as const,
+            currentCount: currentPlayerCount,
+            maxCount: seatCount,
+          }
         }
       }
-    }
 
-    return { status: 'ok' as const }
-  },
+      return { status: 'ok' as const }
+    },
+  ),
 })
 
 /**
@@ -340,39 +356,42 @@ export const resetRoomGameState = mutation({
   args: {
     roomId: v.string(),
   },
-  handler: async (ctx, { roomId }) => {
-    const callerId = await getAuthUserId(ctx)
-    if (!callerId) {
-      throw new AuthRequiredError()
-    }
+  handler: withConvexSentry(
+    { feature: 'room', operation: 'reset_room_game_state' },
+    async (ctx: MutationCtx, { roomId }: { roomId: string }) => {
+      const callerId = await getAuthUserId(ctx)
+      if (!callerId) {
+        throw new AuthRequiredError()
+      }
 
-    await requireActiveRoomMember(ctx, roomId, callerId)
+      await requireActiveRoomMember(ctx, roomId, callerId)
 
-    const room = await ctx.db
-      .query('rooms')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .first()
+      const room = await ctx.db
+        .query('rooms')
+        .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+        .first()
 
-    if (!room) {
-      throw new RoomNotFoundError()
-    }
+      if (!room) {
+        throw new RoomNotFoundError()
+      }
 
-    const allPlayers = await ctx.db
-      .query('roomPlayers')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .collect()
+      const allPlayers = await ctx.db
+        .query('roomPlayers')
+        .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+        .collect()
 
-    for (const player of allPlayers) {
-      await ctx.db.patch(player._id, {
-        health: DEFAULT_HEALTH,
-        poison: 0,
-        commanders: [],
-        commanderDamage: {},
-      })
-    }
+      for (const player of allPlayers) {
+        await ctx.db.patch(player._id, {
+          health: DEFAULT_HEALTH,
+          poison: 0,
+          commanders: [],
+          commanderDamage: {},
+        })
+      }
 
-    await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
-  },
+      await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
+    },
+  ),
 })
 
 /**
@@ -419,49 +438,52 @@ export const getLiveStats = query({
  */
 export const checkAllRoomOwners = internalMutation({
   args: {},
-  handler: async (ctx) => {
-    const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
+  handler: withConvexSentry(
+    { feature: 'room', operation: 'check_all_room_owners' },
+    async (ctx: MutationCtx) => {
+      const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
 
-    // Get all rooms that have at least one active player
-    const activePlayers = await ctx.db
-      .query('roomPlayers')
-      .filter((q) =>
-        q.and(
-          q.neq(q.field('status'), 'left'),
-          q.gt(q.field('lastSeenAt'), presenceThreshold),
-        ),
-      )
-      .collect()
+      // Get all rooms that have at least one active player
+      const activePlayers = await ctx.db
+        .query('roomPlayers')
+        .filter((q) =>
+          q.and(
+            q.neq(q.field('status'), 'left'),
+            q.gt(q.field('lastSeenAt'), presenceThreshold),
+          ),
+        )
+        .collect()
 
-    // Get unique room IDs
-    const activeRoomIds = new Set<string>()
-    for (const player of activePlayers) {
-      activeRoomIds.add(player.roomId)
-    }
-
-    // Check each active room for owner transfer
-    const results: Array<{
-      roomId: string
-      transferred: boolean
-      newOwnerId?: string
-    }> = []
-
-    for (const roomId of activeRoomIds) {
-      const result = await ctx.runMutation(
-        internal.rooms.transferOwnerIfNeeded,
-        { roomId },
-      )
-      if (result.transferred) {
-        results.push({
-          roomId,
-          transferred: true,
-          newOwnerId: result.newOwnerId,
-        })
+      // Get unique room IDs
+      const activeRoomIds = new Set<string>()
+      for (const player of activePlayers) {
+        activeRoomIds.add(player.roomId)
       }
-    }
 
-    return { checkedRooms: activeRoomIds.size, transfers: results }
-  },
+      // Check each active room for owner transfer
+      const results: Array<{
+        roomId: string
+        transferred: boolean
+        newOwnerId?: string
+      }> = []
+
+      for (const roomId of activeRoomIds) {
+        const result = await ctx.runMutation(
+          internal.rooms.transferOwnerIfNeeded,
+          { roomId },
+        )
+        if (result.transferred) {
+          results.push({
+            roomId,
+            transferred: true,
+            newOwnerId: result.newOwnerId,
+          })
+        }
+      }
+
+      return { checkedRooms: activeRoomIds.size, transfers: results }
+    },
+  ),
 })
 
 /**
@@ -482,68 +504,74 @@ export const transferOwnerIfNeeded = internalMutation({
   args: {
     roomId: v.string(),
   },
-  handler: async (ctx, { roomId }) => {
-    const room = await ctx.db
-      .query('rooms')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .first()
+  handler: withConvexSentry(
+    { feature: 'room', operation: 'transfer_owner_if_needed' },
+    async (ctx: MutationCtx, { roomId }: { roomId: string }) => {
+      const room = await ctx.db
+        .query('rooms')
+        .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+        .first()
 
-    if (!room) {
-      return { transferred: false, reason: 'room_not_found' }
-    }
-
-    const now = Date.now()
-    const presenceThreshold = now - PRESENCE_THRESHOLD_MS
-
-    // Get all active players (not 'left' and within presence threshold)
-    const activePlayers = await ctx.db
-      .query('roomPlayers')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .filter((q) =>
-        q.and(
-          q.neq(q.field('status'), 'left'),
-          q.gt(q.field('lastSeenAt'), presenceThreshold),
-        ),
-      )
-      .collect()
-
-    // Sort by joinedAt ascending (join order)
-    activePlayers.sort((a, b) => a.joinedAt - b.joinedAt)
-
-    // Deduplicate by userId (keep oldest session per user)
-    const uniqueActiveUsers = new Map<string, (typeof activePlayers)[number]>()
-    for (const player of activePlayers) {
-      if (!uniqueActiveUsers.has(player.userId)) {
-        uniqueActiveUsers.set(player.userId, player)
+      if (!room) {
+        return { transferred: false, reason: 'room_not_found' }
       }
-    }
 
-    // Check if current owner is still active
-    const ownerIsActive = uniqueActiveUsers.has(room.ownerId)
+      const now = Date.now()
+      const presenceThreshold = now - PRESENCE_THRESHOLD_MS
 
-    if (ownerIsActive) {
-      return { transferred: false, reason: 'owner_still_active' }
-    }
+      // Get all active players (not 'left' and within presence threshold)
+      const activePlayers = await ctx.db
+        .query('roomPlayers')
+        .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+        .filter((q) =>
+          q.and(
+            q.neq(q.field('status'), 'left'),
+            q.gt(q.field('lastSeenAt'), presenceThreshold),
+          ),
+        )
+        .collect()
 
-    // No active players remaining
-    if (uniqueActiveUsers.size === 0) {
-      return { transferred: false, reason: 'no_active_players' }
-    }
+      // Sort by joinedAt ascending (join order)
+      activePlayers.sort((a, b) => a.joinedAt - b.joinedAt)
 
-    // Pick the first active player (by join order) as new owner
-    const sortedActiveUsers = Array.from(uniqueActiveUsers.values()).sort(
-      (a, b) => a.joinedAt - b.joinedAt,
-    )
-    const newOwner = sortedActiveUsers[0]!
+      // Deduplicate by userId (keep oldest session per user)
+      const uniqueActiveUsers = new Map<
+        string,
+        (typeof activePlayers)[number]
+      >()
+      for (const player of activePlayers) {
+        if (!uniqueActiveUsers.has(player.userId)) {
+          uniqueActiveUsers.set(player.userId, player)
+        }
+      }
 
-    // Update room ownership and activity
-    await ctx.db.patch(room._id, {
-      ownerId: newOwner.userId,
-      lastActivityAt: Date.now(),
-    })
+      // Check if current owner is still active
+      const ownerIsActive = uniqueActiveUsers.has(room.ownerId)
 
-    return { transferred: true, newOwnerId: newOwner.userId }
-  },
+      if (ownerIsActive) {
+        return { transferred: false, reason: 'owner_still_active' }
+      }
+
+      // No active players remaining
+      if (uniqueActiveUsers.size === 0) {
+        return { transferred: false, reason: 'no_active_players' }
+      }
+
+      // Pick the first active player (by join order) as new owner
+      const sortedActiveUsers = Array.from(uniqueActiveUsers.values()).sort(
+        (a, b) => a.joinedAt - b.joinedAt,
+      )
+      const newOwner = sortedActiveUsers[0]!
+
+      // Update room ownership and activity
+      await ctx.db.patch(room._id, {
+        ownerId: newOwner.userId,
+        lastActivityAt: Date.now(),
+      })
+
+      return { transferred: true, newOwnerId: newOwner.userId }
+    },
+  ),
 })
 
 /**

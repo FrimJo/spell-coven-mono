@@ -21,6 +21,9 @@ import type * as players from "../players.js";
 import type * as previewAuth from "../previewAuth.js";
 import type * as previewLogin from "../previewLogin.js";
 import type * as rooms from "../rooms.js";
+import type * as sentry from "../sentry.js";
+import type * as sentryData from "../sentryData.js";
+import type * as sentryDebug from "../sentryDebug.js";
 import type * as users from "../users.js";
 
 import type {
@@ -43,6 +46,9 @@ declare const fullApi: ApiFromModules<{
   previewAuth: typeof previewAuth;
   previewLogin: typeof previewLogin;
   rooms: typeof rooms;
+  sentry: typeof sentry;
+  sentryData: typeof sentryData;
+  sentryDebug: typeof sentryDebug;
   users: typeof users;
 }>;
 

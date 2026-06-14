@@ -8,6 +8,7 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 
+import type { MutationCtx } from './_generated/server'
 import { mutation, query } from './_generated/server'
 import {
   AuthRequiredError,
@@ -15,6 +16,7 @@ import {
   NotRoomOwnerError,
   RoomNotFoundError,
 } from './errors'
+import { withConvexSentry } from './sentry'
 
 /**
  * Ban a player from a room
@@ -29,82 +31,92 @@ export const banPlayer = mutation({
     userId: v.string(),
     reason: v.optional(v.string()),
   },
-  handler: async (ctx, { roomId, userId, reason }) => {
-    // Get authenticated user ID from session
-    const callerId = await getAuthUserId(ctx)
-    if (!callerId) {
-      throw new AuthRequiredError()
-    }
-
-    // Check room exists and caller is owner
-    const room = await ctx.db
-      .query('rooms')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .first()
-
-    if (!room) {
-      throw new RoomNotFoundError()
-    }
-
-    if (room.ownerId !== callerId) {
-      throw new NotRoomOwnerError('ban players')
-    }
-
-    if (userId === callerId) {
-      throw new CannotTargetSelfError('ban')
-    }
-
-    // Check if already banned
-    const existingBan = await ctx.db
-      .query('roomBans')
-      .withIndex('by_roomId_userId', (q) =>
-        q.eq('roomId', roomId).eq('userId', userId),
-      )
-      .first()
-
-    if (existingBan) {
-      // Already banned, just update
-      await ctx.db.patch(existingBan._id, {
-        reason: reason ?? 'Banned by room owner',
-        bannedBy: callerId,
-        createdAt: Date.now(),
-      })
-    } else {
-      // Create ban record
-      await ctx.db.insert('roomBans', {
+  handler: withConvexSentry(
+    { feature: 'moderation', operation: 'ban_player' },
+    async (
+      ctx: MutationCtx,
+      {
         roomId,
         userId,
-        bannedBy: callerId,
-        reason: reason ?? 'Banned by room owner',
-        createdAt: Date.now(),
-      })
-    }
+        reason,
+      }: { roomId: string; userId: string; reason?: string },
+    ) => {
+      // Get authenticated user ID from session
+      const callerId = await getAuthUserId(ctx)
+      if (!callerId) {
+        throw new AuthRequiredError()
+      }
 
-    // Mark all player sessions as 'left'
-    const playerSessions = await ctx.db
-      .query('roomPlayers')
-      .withIndex('by_roomId_userId', (q) =>
-        q.eq('roomId', roomId).eq('userId', userId),
-      )
-      .collect()
+      // Check room exists and caller is owner
+      const room = await ctx.db
+        .query('rooms')
+        .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+        .first()
 
-    for (const session of playerSessions) {
-      await ctx.db.patch(session._id, { status: 'left' })
-    }
+      if (!room) {
+        throw new RoomNotFoundError()
+      }
 
-    // Clear the userActiveRooms pointer if it points to this room
-    const pointer = await ctx.db
-      .query('userActiveRooms')
-      .withIndex('by_userId', (q) => q.eq('userId', userId))
-      .first()
+      if (room.ownerId !== callerId) {
+        throw new NotRoomOwnerError('ban players')
+      }
 
-    if (pointer && pointer.roomId === roomId) {
-      await ctx.db.delete(pointer._id)
-    }
+      if (userId === callerId) {
+        throw new CannotTargetSelfError('ban')
+      }
 
-    // Update room activity
-    await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
-  },
+      // Check if already banned
+      const existingBan = await ctx.db
+        .query('roomBans')
+        .withIndex('by_roomId_userId', (q) =>
+          q.eq('roomId', roomId).eq('userId', userId),
+        )
+        .first()
+
+      if (existingBan) {
+        // Already banned, just update
+        await ctx.db.patch(existingBan._id, {
+          reason: reason ?? 'Banned by room owner',
+          bannedBy: callerId,
+          createdAt: Date.now(),
+        })
+      } else {
+        // Create ban record
+        await ctx.db.insert('roomBans', {
+          roomId,
+          userId,
+          bannedBy: callerId,
+          reason: reason ?? 'Banned by room owner',
+          createdAt: Date.now(),
+        })
+      }
+
+      // Mark all player sessions as 'left'
+      const playerSessions = await ctx.db
+        .query('roomPlayers')
+        .withIndex('by_roomId_userId', (q) =>
+          q.eq('roomId', roomId).eq('userId', userId),
+        )
+        .collect()
+
+      for (const session of playerSessions) {
+        await ctx.db.patch(session._id, { status: 'left' })
+      }
+
+      // Clear the userActiveRooms pointer if it points to this room
+      const pointer = await ctx.db
+        .query('userActiveRooms')
+        .withIndex('by_userId', (q) => q.eq('userId', userId))
+        .first()
+
+      if (pointer && pointer.roomId === roomId) {
+        await ctx.db.delete(pointer._id)
+      }
+
+      // Update room activity
+      await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
+    },
+  ),
 })
 
 /**
@@ -119,46 +131,52 @@ export const kickPlayer = mutation({
     roomId: v.string(),
     userId: v.string(),
   },
-  handler: async (ctx, { roomId, userId }) => {
-    // Get authenticated user ID from session
-    const callerId = await getAuthUserId(ctx)
-    if (!callerId) {
-      throw new AuthRequiredError()
-    }
+  handler: withConvexSentry(
+    { feature: 'moderation', operation: 'kick_player' },
+    async (
+      ctx: MutationCtx,
+      { roomId, userId }: { roomId: string; userId: string },
+    ) => {
+      // Get authenticated user ID from session
+      const callerId = await getAuthUserId(ctx)
+      if (!callerId) {
+        throw new AuthRequiredError()
+      }
 
-    // Check room exists and caller is owner
-    const room = await ctx.db
-      .query('rooms')
-      .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
-      .first()
+      // Check room exists and caller is owner
+      const room = await ctx.db
+        .query('rooms')
+        .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
+        .first()
 
-    if (!room) {
-      throw new RoomNotFoundError()
-    }
+      if (!room) {
+        throw new RoomNotFoundError()
+      }
 
-    if (room.ownerId !== callerId) {
-      throw new NotRoomOwnerError('kick players')
-    }
+      if (room.ownerId !== callerId) {
+        throw new NotRoomOwnerError('kick players')
+      }
 
-    if (userId === callerId) {
-      throw new CannotTargetSelfError('kick')
-    }
+      if (userId === callerId) {
+        throw new CannotTargetSelfError('kick')
+      }
 
-    // Mark all player sessions as 'left'
-    const playerSessions = await ctx.db
-      .query('roomPlayers')
-      .withIndex('by_roomId_userId', (q) =>
-        q.eq('roomId', roomId).eq('userId', userId),
-      )
-      .collect()
+      // Mark all player sessions as 'left'
+      const playerSessions = await ctx.db
+        .query('roomPlayers')
+        .withIndex('by_roomId_userId', (q) =>
+          q.eq('roomId', roomId).eq('userId', userId),
+        )
+        .collect()
 
-    for (const session of playerSessions) {
-      await ctx.db.patch(session._id, { status: 'left' })
-    }
+      for (const session of playerSessions) {
+        await ctx.db.patch(session._id, { status: 'left' })
+      }
 
-    // Update room activity
-    await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
-  },
+      // Update room activity
+      await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
+    },
+  ),
 })
 
 /**
