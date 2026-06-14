@@ -23,17 +23,17 @@ export function CardResult({
   return (
     <div
       className={cn(
-        'space-y-3 rounded-lg border bg-card p-4 text-card-foreground',
+        'bg-card text-card-foreground space-y-3 rounded-lg border p-4',
         className,
       )}
       {...props}
     >
       {/* Card Info */}
       <div className="space-y-1">
-        <h3 className="leading-none font-semibold tracking-tight">
+        <h3 className="font-semibold leading-none tracking-tight">
           {result.name}
         </h3>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="text-muted-foreground flex items-center gap-2 text-sm">
           <span className="font-medium">[{result.set}]</span>
           <span>•</span>
           <span>Score: {result.score.toFixed(3)}</span>
@@ -42,12 +42,7 @@ export function CardResult({
 
       {/* Low Confidence Warning */}
       {showLowConfidenceWarning && (
-        <div
-          className="
-            rounded-md bg-warning/10 px-3 py-2 text-sm text-warning-foreground
-            dark:text-warning-muted-foreground
-          "
-        >
+        <div className="bg-warning/10 text-warning-foreground dark:text-warning-muted-foreground rounded-md px-3 py-2 text-sm">
           Low confidence match. Try a clearer view of the card.
         </div>
       )}
@@ -71,10 +66,7 @@ export function CardResult({
           href={result.scryfall_uri}
           target="_blank"
           rel="noopener noreferrer"
-          className="
-            inline-flex items-center gap-1 text-sm font-medium text-primary
-            hover:underline
-          "
+          className="text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline"
         >
           View on Scryfall
           <ExternalLink className="size-3" aria-hidden="true" />

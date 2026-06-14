@@ -18,11 +18,7 @@ function ScrollArea({
     >
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
-        className="
-          size-full rounded-[inherit] transition-[color,box-shadow] outline-none
-          focus-visible:ring-[3px] focus-visible:ring-ring/50
-          focus-visible:outline-1
-        "
+        className="focus-visible:ring-ring/50 size-full rounded-[inherit] outline-none transition-[color,box-shadow] focus-visible:outline-1 focus-visible:ring-[3px]"
       >
         {children}
       </ScrollAreaPrimitive.Viewport>
@@ -42,7 +38,7 @@ function ScrollBar({
       data-slot="scroll-area-scrollbar"
       orientation={orientation}
       className={cn(
-        'flex touch-none p-px transition-colors select-none',
+        'flex touch-none select-none p-px transition-colors',
         orientation === 'vertical' &&
           'h-full w-2.5 border-l border-l-transparent',
         orientation === 'horizontal' &&
@@ -53,7 +49,7 @@ function ScrollBar({
     >
       <ScrollAreaPrimitive.ScrollAreaThumb
         data-slot="scroll-area-thumb"
-        className="relative flex-1 rounded-full bg-border"
+        className="bg-border relative flex-1 rounded-full"
       />
     </ScrollAreaPrimitive.ScrollAreaScrollbar>
   )
