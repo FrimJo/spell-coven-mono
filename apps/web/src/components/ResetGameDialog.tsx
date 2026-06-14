@@ -31,17 +31,17 @@ export function ResetGameDialog({
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
       <DialogContent
         className="
-        border-surface-2 bg-surface-1
-        sm:max-w-[400px]
-      "
+          border-surface-2 bg-surface-1
+          sm:max-w-[400px]
+        "
       >
         <DialogHeader>
           <div className="mb-2 flex justify-center">
             <div
               className="
-              flex size-12 items-center justify-center rounded-full
-              bg-warning/20
-            "
+                flex size-12 items-center justify-center rounded-full
+                bg-warning/20
+              "
             >
               <RotateCcw className="size-6 text-warning-muted-foreground" />
             </div>

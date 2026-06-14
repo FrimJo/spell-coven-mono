@@ -55,46 +55,46 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
       {/* Background with gradient overlay */}
       <div
         className="
-        absolute inset-0 bg-linear-to-br from-red-900/20 via-slate-950
-        to-purple-900/20
-      "
+          absolute inset-0 bg-linear-to-br from-red-900/20 via-slate-950
+          to-purple-900/20
+        "
       />
 
       {/* Animated background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div
           className="
-          absolute top-20 left-20 size-64 animate-pulse rounded-full
-          bg-destructive/10 blur-3xl
-        "
+            absolute top-20 left-20 size-64 animate-pulse rounded-full
+            bg-destructive/10 blur-3xl
+          "
         />
         <div
           className="
-          absolute right-20 bottom-20 size-96 animate-pulse rounded-full
-          bg-brand/10 blur-3xl delay-1000
-        "
+            absolute right-20 bottom-20 size-96 animate-pulse rounded-full
+            bg-brand/10 blur-3xl delay-1000
+          "
         />
       </div>
 
       <div
         className="
-        relative z-10 flex min-h-screen flex-col items-center justify-center
-        px-4 text-center
-      "
+          relative z-10 flex min-h-screen flex-col items-center justify-center
+          px-4 text-center
+        "
       >
         {/* Logo/Icon Area */}
         <div className="animate-float relative mb-8">
           <div
             className="
-            absolute inset-0 animate-pulse rounded-full bg-destructive/20
-            blur-3xl
-          "
+              absolute inset-0 animate-pulse rounded-full bg-destructive/20
+              blur-3xl
+            "
           />
           <div
             className="
-            relative z-10 flex size-32 items-center justify-center rounded-3xl
-            border border-surface-2 bg-surface-0/50 backdrop-blur-sm
-          "
+              relative z-10 flex size-32 items-center justify-center rounded-3xl
+              border border-surface-2 bg-surface-0/50 backdrop-blur-sm
+            "
           >
             <AlertTriangle className="size-16 text-destructive" />
           </div>
@@ -102,15 +102,15 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
           {/* Decorative sparkles */}
           <Sparkles
             className="
-            animate-sparkle absolute top-0 -left-6 size-6 text-warning
-            drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]
-          "
+              animate-sparkle absolute top-0 -left-6 size-6 text-warning
+              drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]
+            "
           />
           <Sparkles
             className="
-            animate-sparkle absolute -right-4 bottom-4 size-5 text-destructive
-            drop-shadow-[0_0_8px_rgba(248,113,113,0.8)] delay-700
-          "
+              animate-sparkle absolute -right-4 bottom-4 size-5 text-destructive
+              drop-shadow-[0_0_8px_rgba(248,113,113,0.8)] delay-700
+            "
           />
         </div>
 
@@ -118,25 +118,25 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
         <div className="space-y-6">
           <h1
             className="
-            text-8xl font-bold tracking-tighter text-white/10
-            md:text-9xl
-          "
+              text-8xl font-bold tracking-tighter text-white/10
+              md:text-9xl
+            "
           >
             500
           </h1>
           <div className="space-y-2">
             <h2
               className="
-              text-3xl font-bold text-white
-              md:text-4xl
-            "
+                text-3xl font-bold text-white
+                md:text-4xl
+              "
             >
               Spell{' '}
               <span
                 className="
-                bg-linear-to-r from-red-400 to-orange-400 bg-clip-text
-                text-transparent
-              "
+                  bg-linear-to-r from-red-400 to-orange-400 bg-clip-text
+                  text-transparent
+                "
               >
                 Fizzled
               </span>
@@ -150,9 +150,9 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
           {/* Actions */}
           <div
             className="
-            flex flex-col items-center justify-center gap-4
-            sm:flex-row
-          "
+              flex flex-col items-center justify-center gap-4
+              sm:flex-row
+            "
           >
             {reset && (
               <Button

@@ -77,8 +77,8 @@ export function MediaSetupErrorAlert({ message }: { message: string }) {
   return (
     <Alert
       className="
-      border-destructive/30 bg-destructive/50 text-destructive-foreground
-    "
+        border-destructive/30 bg-destructive/50 text-destructive-foreground
+      "
     >
       <AlertCircle className="size-4 text-destructive" />
       <AlertDescription className="text-destructive-foreground/90">
@@ -163,8 +163,8 @@ export function VideoSetupSection({
               >
                 <SelectTrigger
                   className="
-                  border-border-default bg-surface-2 text-text-secondary
-                "
+                    border-border-default bg-surface-2 text-text-secondary
+                  "
                 >
                   <SelectValue
                     placeholder={
@@ -194,10 +194,10 @@ export function VideoSetupSection({
 
               <div
                 className="
-                relative aspect-video max-h-[40vh] min-h-[180px] w-full
-                overflow-hidden rounded-lg border border-border-default
-                bg-surface-0
-              "
+                  relative aspect-video max-h-[40vh] min-h-[180px] w-full
+                  overflow-hidden rounded-lg border border-border-default
+                  bg-surface-0
+                "
               >
                 <video
                   ref={previewRef}
@@ -208,16 +208,16 @@ export function VideoSetupSection({
                 {noVideoDevicesAvailable ? (
                   <div
                     className="
-                    absolute inset-0 flex items-center justify-center
-                    bg-surface-1/95
-                  "
+                      absolute inset-0 flex items-center justify-center
+                      bg-surface-1/95
+                    "
                   >
                     <div className="mx-auto max-w-sm space-y-4 p-4">
                       <div
                         className="
-                        mx-auto flex size-12 items-center justify-center
-                        rounded-full bg-warning/20
-                      "
+                          mx-auto flex size-12 items-center justify-center
+                          rounded-full bg-warning/20
+                        "
                       >
                         <AlertCircle className="size-6 text-warning" />
                       </div>
@@ -233,14 +233,14 @@ export function VideoSetupSection({
 
                       <div
                         className="
-                        rounded-lg border border-border-default bg-surface-2/50
-                        p-3
-                      "
+                          rounded-lg border border-border-default
+                          bg-surface-2/50 p-3
+                        "
                       >
                         <h4
                           className="
-                          mb-2 text-xs font-medium text-text-secondary
-                        "
+                            mb-2 text-xs font-medium text-text-secondary
+                          "
                         >
                           To enable camera access:
                         </h4>
@@ -248,10 +248,10 @@ export function VideoSetupSection({
                           <li className="flex items-start gap-2">
                             <span
                               className="
-                              flex size-4 shrink-0 items-center justify-center
-                              rounded-full bg-surface-3 text-[10px]
-                              text-text-secondary
-                            "
+                                flex size-4 shrink-0 items-center justify-center
+                                rounded-full bg-surface-3 text-[10px]
+                                text-text-secondary
+                              "
                             >
                               1
                             </span>
@@ -262,10 +262,10 @@ export function VideoSetupSection({
                           <li className="flex items-start gap-2">
                             <span
                               className="
-                              flex size-4 shrink-0 items-center justify-center
-                              rounded-full bg-surface-3 text-[10px]
-                              text-text-secondary
-                            "
+                                flex size-4 shrink-0 items-center justify-center
+                                rounded-full bg-surface-3 text-[10px]
+                                text-text-secondary
+                              "
                             >
                               2
                             </span>
@@ -274,10 +274,10 @@ export function VideoSetupSection({
                           <li className="flex items-start gap-2">
                             <span
                               className="
-                              flex size-4 shrink-0 items-center justify-center
-                              rounded-full bg-surface-3 text-[10px]
-                              text-text-secondary
-                            "
+                                flex size-4 shrink-0 items-center justify-center
+                                rounded-full bg-surface-3 text-[10px]
+                                text-text-secondary
+                              "
                             >
                               3
                             </span>
@@ -290,15 +290,15 @@ export function VideoSetupSection({
                 ) : isVideoPending ? (
                   <div
                     className="
-                    absolute inset-0 flex items-center justify-center
-                    bg-surface-2/50
-                  "
+                      absolute inset-0 flex items-center justify-center
+                      bg-surface-2/50
+                    "
                   >
                     <div className="flex flex-col items-center space-y-3">
                       <Loader2
                         className="
-                        size-8 animate-spin text-brand-muted-foreground
-                      "
+                          size-8 animate-spin text-brand-muted-foreground
+                        "
                       />
                       <p className="text-sm text-text-secondary">
                         Initializing Camera
@@ -311,20 +311,20 @@ export function VideoSetupSection({
           ) : (
             <div
               className="
-              relative aspect-video overflow-hidden rounded-lg border
-              border-border-default bg-surface-1
-            "
+                relative aspect-video overflow-hidden rounded-lg border
+                border-border-default bg-surface-1
+              "
             >
               <div
                 className="
-                absolute inset-0 flex flex-col items-center justify-center
-              "
+                  absolute inset-0 flex flex-col items-center justify-center
+                "
               >
                 <div
                   className="
-                  flex size-16 items-center justify-center rounded-full
-                  bg-surface-2
-                "
+                    flex size-16 items-center justify-center rounded-full
+                    bg-surface-2
+                  "
                 >
                   <CameraOff className="size-8 text-text-placeholder" />
                 </div>
@@ -341,17 +341,13 @@ export function VideoSetupSection({
       ) : (
         <div
           className="
-          aspect-video overflow-hidden rounded-lg border border-border-default
-          bg-surface-0
-        "
+            aspect-video overflow-hidden rounded-lg border border-border-default
+            bg-surface-0
+          "
         >
           {isCheckingPermissions ? (
             <div className="flex h-full items-center justify-center">
-              <Loader2
-                className="
-                size-8 animate-spin text-brand-muted-foreground
-              "
-              />
+              <Loader2 className="size-8 animate-spin text-brand-muted-foreground" />
             </div>
           ) : (
             <MediaPermissionInline
@@ -406,9 +402,9 @@ export function CameraFocusSection({
             <TooltipTrigger asChild>
               <span
                 className="
-                cursor-help rounded-sm bg-surface-3 px-1.5 py-0.5 text-xs
-                text-text-muted
-              "
+                  cursor-help rounded-sm bg-surface-3 px-1.5 py-0.5 text-xs
+                  text-text-muted
+                "
               >
                 Not supported
               </span>
@@ -620,8 +616,8 @@ export function AudioInputSection({
             >
               <SelectTrigger
                 className="
-                border-border-default bg-surface-2 text-text-secondary
-              "
+                  border-border-default bg-surface-2 text-text-secondary
+                "
               >
                 <SelectValue placeholder="Select microphone" />
               </SelectTrigger>
@@ -644,11 +640,7 @@ export function AudioInputSection({
             </Select>
             {isAudioInputPending && (
               <div className="absolute top-1/2 right-10 -translate-y-1/2">
-                <Loader2
-                  className="
-                  size-4 animate-spin text-brand-muted-foreground
-                "
-                />
+                <Loader2 className="size-4 animate-spin text-brand-muted-foreground" />
               </div>
             )}
           </div>
@@ -656,16 +648,13 @@ export function AudioInputSection({
           <AudioLevelIndicator audioStream={audioInputStream} />
         </>
       ) : (
-        <div
-          className="
-          rounded-lg border border-border-default bg-surface-1 p-4
-        "
-        >
+        <div className="rounded-lg border border-border-default bg-surface-1 p-4">
           <div className="flex items-center gap-3">
             <div
               className="
-              flex size-10 items-center justify-center rounded-full bg-surface-2
-            "
+                flex size-10 items-center justify-center rounded-full
+                bg-surface-2
+              "
             >
               <MicOff className="size-5 text-text-placeholder" />
             </div>
@@ -716,8 +705,8 @@ export function AudioOutputSection({
         >
           <SelectTrigger
             className="
-            flex-1 border-border-default bg-surface-2 text-text-secondary
-          "
+              flex-1 border-border-default bg-surface-2 text-text-secondary
+            "
           >
             <SelectValue
               placeholder={

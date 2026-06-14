@@ -125,8 +125,8 @@ export const VideoDisabledPlaceholder = memo(
     return (
       <div
         className="
-        absolute inset-0 flex items-center justify-center bg-surface-0
-      "
+          absolute inset-0 flex items-center justify-center bg-surface-0
+        "
       >
         <div className="space-y-2 text-center">
           <VideoOff className="mx-auto size-12 text-text-muted" />
@@ -198,10 +198,10 @@ export const LocalMediaControls = memo(function LocalMediaControls({
   return (
     <div
       className="
-      absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2
-      rounded-lg border border-surface-2 bg-surface-0/95 px-3 py-2 shadow-lg
-      backdrop-blur-sm
-    "
+        absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2
+        rounded-lg border border-surface-2 bg-surface-0/95 px-3 py-2 shadow-lg
+        backdrop-blur-sm
+      "
     >
       {/* Video toggle with camera selector - Discord style compound button */}
       <div className="flex items-center">
@@ -220,15 +220,15 @@ export const LocalMediaControls = memo(function LocalMediaControls({
             ${
               videoEnabled
                 ? `
-                border-surface-3 text-white
-                hover:bg-surface-2
-                disabled:cursor-not-allowed disabled:opacity-50
-              `
+                  border-surface-3 text-white
+                  hover:bg-surface-2
+                  disabled:cursor-not-allowed disabled:opacity-50
+                `
                 : `
-                border-destructive bg-destructive text-white
-                hover:bg-destructive
-                disabled:cursor-not-allowed disabled:opacity-50
-              `
+                  border-destructive bg-destructive text-white
+                  hover:bg-destructive
+                  disabled:cursor-not-allowed disabled:opacity-50
+                `
             }
           `}
         >
@@ -249,13 +249,13 @@ export const LocalMediaControls = memo(function LocalMediaControls({
                 ${
                   videoEnabled
                     ? `
-                    border-surface-3 text-white
-                    hover:bg-surface-2
-                  `
+                      border-surface-3 text-white
+                      hover:bg-surface-2
+                    `
                     : `
-                    border-destructive bg-destructive text-white
-                    hover:bg-destructive
-                  `
+                      border-destructive bg-destructive text-white
+                      hover:bg-destructive
+                    `
                 }
               `}
             >
@@ -324,13 +324,13 @@ export const LocalMediaControls = memo(function LocalMediaControls({
             ${
               !isAudioMuted
                 ? `
-                border-surface-3 bg-surface-0/90 text-white
-                hover:bg-surface-2
-              `
+                  border-surface-3 bg-surface-0/90 text-white
+                  hover:bg-surface-2
+                `
                 : `
-                border-destructive bg-destructive text-white
-                hover:bg-destructive
-              `
+                  border-destructive bg-destructive text-white
+                  hover:bg-destructive
+                `
             }
           `}
         >
@@ -351,13 +351,13 @@ export const LocalMediaControls = memo(function LocalMediaControls({
                 ${
                   !isAudioMuted
                     ? `
-                    border-surface-3 text-white
-                    hover:bg-surface-2
-                  `
+                      border-surface-3 text-white
+                      hover:bg-surface-2
+                    `
                     : `
-                    border-destructive bg-destructive text-white
-                    hover:bg-destructive
-                  `
+                      border-destructive bg-destructive text-white
+                      hover:bg-destructive
+                    `
                 }
               `}
             >

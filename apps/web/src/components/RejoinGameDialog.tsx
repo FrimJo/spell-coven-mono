@@ -85,10 +85,10 @@ export function RejoinGameDialog({
     <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent
         className="
-        border-surface-2 bg-surface-1
-        sm:max-w-[450px]
-        [&>button]:hidden
-      "
+          border-surface-2 bg-surface-1
+          sm:max-w-[450px]
+          [&>button]:hidden
+        "
       >
         <DialogHeader>
           <div className="mb-2 flex justify-center">
@@ -123,10 +123,10 @@ export function RejoinGameDialog({
               <div className="flex items-start gap-3">
                 <div
                   className="
-                  flex size-10 shrink-0 items-center justify-center rounded-lg
-                  bg-brand/20 transition-colors
-                  group-hover:bg-brand/30
-                "
+                    flex size-10 shrink-0 items-center justify-center rounded-lg
+                    bg-brand/20 transition-colors
+                    group-hover:bg-brand/30
+                  "
                 >
                   <RotateCcw className="size-5 text-brand-muted-foreground" />
                 </div>
@@ -154,10 +154,10 @@ export function RejoinGameDialog({
             <div className="flex items-start gap-3">
               <div
                 className="
-                flex size-10 shrink-0 items-center justify-center rounded-lg
-                bg-surface-3/50 transition-colors
-                group-hover:bg-surface-3
-              "
+                  flex size-10 shrink-0 items-center justify-center rounded-lg
+                  bg-surface-3/50 transition-colors
+                  group-hover:bg-surface-3
+                "
               >
                 <DoorOpen className="size-5 text-text-muted" />
               </div>

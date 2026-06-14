@@ -55,72 +55,72 @@ export function ErrorFallback({
       {/* Background with gradient overlay */}
       <div
         className="
-        absolute inset-0 bg-linear-to-br from-purple-900/20 via-slate-950
-        to-blue-900/20
-      "
+          absolute inset-0 bg-linear-to-br from-purple-900/20 via-slate-950
+          to-blue-900/20
+        "
       />
 
       {/* Animated background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div
           className="
-          absolute top-20 left-20 size-64 animate-pulse rounded-full bg-brand/10
-          blur-3xl
-        "
+            absolute top-20 left-20 size-64 animate-pulse rounded-full
+            bg-brand/10 blur-3xl
+          "
         />
         <div
           className="
-          animate-glow-pulse absolute right-20 bottom-20 size-96 rounded-full
-          bg-destructive/10 blur-3xl delay-1000
-        "
+            animate-glow-pulse absolute right-20 bottom-20 size-96 rounded-full
+            bg-destructive/10 blur-3xl delay-1000
+          "
         />
         <div
           className="
-          absolute top-1/3 right-1/3 size-48 animate-pulse rounded-full
-          bg-info/10 blur-3xl delay-700
-        "
+            absolute top-1/3 right-1/3 size-48 animate-pulse rounded-full
+            bg-info/10 blur-3xl delay-700
+          "
         />
       </div>
 
       <div
         className="
-        relative z-10 flex min-h-screen flex-col items-center justify-center
-        px-4 text-center
-      "
+          relative z-10 flex min-h-screen flex-col items-center justify-center
+          px-4 text-center
+        "
       >
         {/* Icon / Card area */}
         <div className="animate-float relative mb-8">
           <div
             className="
-            animate-glow-pulse absolute inset-0 rounded-full bg-destructive/10
-            blur-3xl
-          "
+              animate-glow-pulse absolute inset-0 rounded-full bg-destructive/10
+              blur-3xl
+            "
           />
           <div
             className="
-            relative z-10 flex size-32 items-center justify-center rounded-3xl
-            border border-surface-2 bg-surface-0/80 shadow-xl backdrop-blur-sm
-          "
+              relative z-10 flex size-32 items-center justify-center rounded-3xl
+              border border-surface-2 bg-surface-0/80 shadow-xl backdrop-blur-sm
+            "
           >
             <AlertTriangle
               className="
-              size-16 text-destructive
-              drop-shadow-[0_0_12px_rgba(239,68,68,0.4)]
-            "
+                size-16 text-destructive
+                drop-shadow-[0_0_12px_rgba(239,68,68,0.4)]
+              "
             />
           </div>
           <Sparkles
             className="
-            animate-sparkle absolute top-0 -left-6 size-6 text-warning
-            drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]
-          "
+              animate-sparkle absolute top-0 -left-6 size-6 text-warning
+              drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]
+            "
           />
           <Sparkles
             className="
-            animate-sparkle absolute -right-4 bottom-4 size-5
-            text-destructive/80 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]
-            delay-700
-          "
+              animate-sparkle absolute -right-4 bottom-4 size-5
+              text-destructive/80 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]
+              delay-700
+            "
           />
         </div>
 
@@ -129,16 +129,16 @@ export function ErrorFallback({
           <div className="space-y-2">
             <h1
               className="
-              text-3xl font-bold text-white
-              md:text-4xl
-            "
+                text-3xl font-bold text-white
+                md:text-4xl
+              "
             >
               Your spell{' '}
               <span
                 className="
-                bg-linear-to-r from-amber-400 via-red-400 to-rose-400
-                bg-clip-text text-transparent
-              "
+                  bg-linear-to-r from-amber-400 via-red-400 to-rose-400
+                  bg-clip-text text-transparent
+                "
               >
                 fizzled
               </span>
@@ -153,9 +153,9 @@ export function ErrorFallback({
           {error && (
             <div
               className="
-              mx-auto max-w-lg rounded-xl border border-border-muted
-              bg-surface-1/80 px-4 py-3 text-left backdrop-blur-sm
-            "
+                mx-auto max-w-lg rounded-xl border border-border-muted
+                bg-surface-1/80 px-4 py-3 text-left backdrop-blur-sm
+              "
             >
               <p className="font-mono text-sm wrap-break-word text-text-muted">
                 {error.message}
@@ -166,9 +166,9 @@ export function ErrorFallback({
           {/* Actions */}
           <div
             className="
-            flex flex-col items-center justify-center gap-4
-            sm:flex-row
-          "
+              flex flex-col items-center justify-center gap-4
+              sm:flex-row
+            "
           >
             {resetErrorBoundary && (
               <Button

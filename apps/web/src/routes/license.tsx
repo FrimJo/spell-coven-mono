@@ -11,11 +11,7 @@ export const Route = createFileRoute('/license')({
 function LicenseRoute() {
   return (
     <main className="min-h-screen bg-surface-0 text-text-primary">
-      <div
-        className="
-        container mx-auto flex max-w-3xl flex-col gap-4 px-4 py-16
-      "
-      >
+      <div className="container mx-auto flex max-w-3xl flex-col gap-4 px-4 py-16">
         <h1 className="text-2xl font-semibold">License</h1>
         <p className="text-sm text-text-muted">
           Licensed{' '}

@@ -102,19 +102,15 @@ export function CardPreview({ onClose }: CardPreviewProps) {
           <div className="p-3">
             <div
               className="
-              group relative flex min-h-[300px] cursor-pointer items-center
-              justify-center overflow-hidden rounded-lg bg-surface-0
-              transition-transform duration-200 ease-out
-              hover:scale-[1.02]
-            "
+                group relative flex min-h-[300px] cursor-pointer items-center
+                justify-center overflow-hidden rounded-lg bg-surface-0
+                transition-transform duration-200 ease-out
+                hover:scale-[1.02]
+              "
             >
               {cardState === 'querying' && (
                 <div className="flex flex-col items-center gap-3 py-12">
-                  <Loader2
-                    className="
-                    size-10 animate-spin text-brand-muted-foreground
-                  "
-                  />
+                  <Loader2 className="size-10 animate-spin text-brand-muted-foreground" />
                   <p className="text-sm text-text-muted">Recognizing card...</p>
                 </div>
               )}
@@ -122,14 +118,14 @@ export function CardPreview({ onClose }: CardPreviewProps) {
               {cardState === 'error' && (
                 <div
                   className="
-                  flex flex-col items-center gap-3 px-6 py-12 text-center
-                "
+                    flex flex-col items-center gap-3 px-6 py-12 text-center
+                  "
                 >
                   <div
                     className="
-                    flex size-12 items-center justify-center rounded-full
-                    bg-destructive/20
-                  "
+                      flex size-12 items-center justify-center rounded-full
+                      bg-destructive/20
+                    "
                   >
                     <AlertCircle className="size-6 text-destructive" />
                   </div>
@@ -186,18 +182,18 @@ export function CardPreview({ onClose }: CardPreviewProps) {
                   >
                     <div
                       className="
-                      flex size-12 items-center justify-center rounded-full
-                      bg-surface-1/90 shadow-lg ring-1 ring-white/20
-                      backdrop-blur-sm
-                    "
+                        flex size-12 items-center justify-center rounded-full
+                        bg-surface-1/90 shadow-lg ring-1 ring-white/20
+                        backdrop-blur-sm
+                      "
                     >
                       <ZoomIn className="size-6 text-white" />
                     </div>
                     <span
                       className="
-                      text-xs font-medium text-white
-                      drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]
-                    "
+                        text-xs font-medium text-white
+                        drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]
+                      "
                     >
                       View larger
                     </span>
@@ -250,11 +246,11 @@ export function CardPreview({ onClose }: CardPreviewProps) {
       <Dialog open={cardModalOpen} onOpenChange={setCardModalOpen}>
         <DialogContent
           className="
-          border-surface-2 bg-transparent p-0 shadow-none
-          sm:max-w-[480px]
-          [&>button]:top-2 [&>button]:right-2 [&>button]:rounded-full
-          [&>button]:bg-surface-1 [&>button]:text-white
-        "
+            border-surface-2 bg-transparent p-0 shadow-none
+            sm:max-w-[480px]
+            [&>button]:top-2 [&>button]:right-2 [&>button]:rounded-full
+            [&>button]:bg-surface-1 [&>button]:text-white
+          "
         >
           <DialogTitle className="sr-only">{displayResult.name}</DialogTitle>
           {cardState === 'success' && cardImage && (

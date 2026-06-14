@@ -92,9 +92,9 @@ export function SidebarCard({
     >
       <div
         className="
-        flex items-center justify-between border-b border-surface-2
-        bg-surface-0/50 px-3 py-2
-      "
+          flex items-center justify-between border-b border-surface-2
+          bg-surface-0/50 px-3 py-2
+        "
       >
         <div className="flex items-center gap-2">
           <Icon className="size-4 text-text-muted" />
@@ -179,17 +179,17 @@ function CardHistoryList({
                 isSelected
                   ? 'cursor-default border-brand bg-surface-2'
                   : `
-                  cursor-pointer border-transparent
-                  hover:bg-surface-2
-                `
+                    cursor-pointer border-transparent
+                    hover:bg-surface-2
+                  `
               }
             `}
             aria-pressed={isSelected}
           >
             <div
               className="
-              flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left
-            "
+                flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left
+              "
             >
               {entry.image_url && (
                 <img

@@ -20,16 +20,16 @@ export function VideoPanel({ playerName, isLocal }: VideoPanelProps) {
         {videoEnabled ? (
           <div
             className="
-            absolute inset-0 flex items-center justify-center bg-linear-to-br
-            from-slate-800 to-slate-900
-          "
+              absolute inset-0 flex items-center justify-center bg-linear-to-br
+              from-slate-800 to-slate-900
+            "
           >
             <div className="space-y-2 text-center">
               <div
                 className="
-                mx-auto flex size-16 items-center justify-center rounded-full
-                bg-brand/20
-              "
+                  mx-auto flex size-16 items-center justify-center rounded-full
+                  bg-brand/20
+                "
               >
                 <Camera className="size-8 text-brand-muted-foreground" />
               </div>
@@ -41,8 +41,8 @@ export function VideoPanel({ playerName, isLocal }: VideoPanelProps) {
         ) : (
           <div
             className="
-            absolute inset-0 flex items-center justify-center bg-surface-0
-          "
+              absolute inset-0 flex items-center justify-center bg-surface-0
+            "
           >
             <div className="space-y-2 text-center">
               <VideoOff className="mx-auto size-8 text-text-muted" />
@@ -54,17 +54,17 @@ export function VideoPanel({ playerName, isLocal }: VideoPanelProps) {
         {/* Player Name Badge */}
         <div
           className="
-          absolute top-2 left-2 flex items-center gap-2 rounded-sm
-          bg-surface-0/80 px-2 py-1 text-sm text-white backdrop-blur-sm
-        "
+            absolute top-2 left-2 flex items-center gap-2 rounded-sm
+            bg-surface-0/80 px-2 py-1 text-sm text-white backdrop-blur-sm
+          "
         >
           {playerName}
           {isLocal && (
             <span
               className="
-              rounded-sm bg-brand/30 px-1.5 py-0.5 text-xs
-              text-brand-muted-foreground
-            "
+                rounded-sm bg-brand/30 px-1.5 py-0.5 text-xs
+                text-brand-muted-foreground
+              "
             >
               You
             </span>
@@ -76,9 +76,9 @@ export function VideoPanel({ playerName, isLocal }: VideoPanelProps) {
           <div className="absolute top-2 right-2">
             <div
               className="
-              flex size-8 items-center justify-center rounded-full
-              bg-destructive/20 backdrop-blur-sm
-            "
+                flex size-8 items-center justify-center rounded-full
+                bg-destructive/20 backdrop-blur-sm
+              "
             >
               <MicOff className="size-4 text-destructive" />
             </div>
@@ -89,8 +89,9 @@ export function VideoPanel({ playerName, isLocal }: VideoPanelProps) {
         {isLocal && (
           <div
             className="
-            absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-2
-          "
+              absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center
+              gap-2
+            "
           >
             <Button
               size="sm"

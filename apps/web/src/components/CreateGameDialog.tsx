@@ -61,9 +61,9 @@ export function CreateGameDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           className="
-          overflow-hidden border-surface-2 bg-surface-1
-          sm:max-w-md
-        "
+            overflow-hidden border-surface-2 bg-surface-1
+            sm:max-w-md
+          "
         >
           {isReady && (
             <Confetti
@@ -196,9 +196,9 @@ export function CreateGameDialog({
                     ${
                       isReady
                         ? `
-                        cursor-pointer border-surface-3 bg-surface-0
-                        hover:border-brand/50
-                      `
+                          cursor-pointer border-surface-3 bg-surface-0
+                          hover:border-brand/50
+                        `
                         : 'cursor-default border-surface-2 bg-surface-0/50'
                     }
                   `}
@@ -209,8 +209,9 @@ export function CreateGameDialog({
                     {isReady ? (
                       <p
                         className="
-                        font-mono text-sm break-all text-brand-muted-foreground
-                      "
+                          font-mono text-sm break-all
+                          text-brand-muted-foreground
+                        "
                       >
                         {shareLink}
                       </p>
@@ -218,8 +219,8 @@ export function CreateGameDialog({
                       <div className="flex items-center gap-2">
                         <div
                           className="
-                          size-4 animate-pulse rounded-sm bg-surface-3
-                        "
+                            size-4 animate-pulse rounded-sm bg-surface-3
+                          "
                         />
                         <p className="font-mono text-sm text-text-muted">
                           Generating link...
@@ -235,9 +236,9 @@ export function CreateGameDialog({
                       ${
                         isReady
                           ? `
-                          text-text-muted
-                          group-hover:text-white
-                        `
+                            text-text-muted
+                            group-hover:text-white
+                          `
                           : 'cursor-default text-text-muted'
                       }
                     `}
@@ -268,9 +269,9 @@ export function CreateGameDialog({
                     ${
                       isReady
                         ? `
-                        bg-brand text-white
-                        hover:scale-[1.02] hover:bg-brand
-                      `
+                          bg-brand text-white
+                          hover:scale-[1.02] hover:bg-brand
+                        `
                         : 'cursor-not-allowed bg-surface-3 text-text-muted'
                     }
                   `}

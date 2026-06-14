@@ -200,9 +200,9 @@ export const RemotePlayerCard = memo(function RemotePlayerCard({
           {!peerAudioEnabled && (
             <div
               className="
-              flex size-9 items-center justify-center rounded-lg border
-              border-destructive/30 bg-destructive/20 backdrop-blur-sm
-            "
+                flex size-9 items-center justify-center rounded-lg border
+                border-destructive/30 bg-destructive/20 backdrop-blur-sm
+              "
             >
               <MicOff className="size-4 text-destructive" />
             </div>

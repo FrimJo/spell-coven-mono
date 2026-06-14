@@ -252,9 +252,9 @@ export function CommanderSearchInput({
           {loading && !hideLoadingIndicator && (
             <Loader2
               className="
-              absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin
-              text-text-muted
-            "
+                absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin
+                text-text-muted
+              "
             />
           )}
         </div>
@@ -316,9 +316,9 @@ export function CommanderSearchInput({
                             highlightedIndex === i
                               ? 'bg-surface-2 text-text-secondary'
                               : `
-                              text-brand-muted-foreground
-                              hover:bg-surface-2
-                            `
+                                text-brand-muted-foreground
+                                hover:bg-surface-2
+                              `
                           }
                         `}
                       >
@@ -350,9 +350,9 @@ export function CommanderSearchInput({
                               highlightedIndex === index
                                 ? 'bg-surface-2 text-text-secondary'
                                 : `
-                                text-text-secondary
-                                hover:bg-surface-2
-                              `
+                                  text-text-secondary
+                                  hover:bg-surface-2
+                                `
                             }
                           `}
                         >

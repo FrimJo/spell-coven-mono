@@ -219,8 +219,8 @@ export function JoinGameDialog({
                       {phase === 'checking' ? (
                         <Loader2
                           className="
-                          size-8 animate-spin text-brand-muted-foreground
-                        "
+                            size-8 animate-spin text-brand-muted-foreground
+                          "
                         />
                       ) : (
                         <m.div
@@ -308,9 +308,9 @@ export function JoinGameDialog({
                     ${
                       validationError
                         ? `
-                        border-destructive/60
-                        focus-visible:ring-destructive/40
-                      `
+                          border-destructive/60
+                          focus-visible:ring-destructive/40
+                        `
                         : ''
                     }
                   `}
@@ -369,9 +369,9 @@ export function JoinGameDialog({
                         isSubmitDisabled
                           ? 'cursor-not-allowed bg-surface-3 text-text-muted'
                           : `
-                          bg-brand text-white
-                          hover:bg-brand
-                        `
+                            bg-brand text-white
+                            hover:bg-brand
+                          `
                       }
                     `}
                     size="lg"

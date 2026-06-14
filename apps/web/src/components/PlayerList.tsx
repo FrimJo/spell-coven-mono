@@ -284,9 +284,9 @@ export function PlayerList({
                           </m.div>
                           <span
                             className="
-                            min-w-0 flex-1 truncate text-sm font-medium
-                            text-teal-500
-                          "
+                              min-w-0 flex-1 truncate text-sm font-medium
+                              text-teal-500
+                            "
                           >
                             Copied!
                           </span>
@@ -305,16 +305,16 @@ export function PlayerList({
                           {/* Default: Gamepad2 + Open seat (matches VideoStreamGrid empty slot) */}
                           <div
                             className="
-                            flex min-w-0 flex-1 items-center gap-2
-                            transition-opacity duration-200
-                            group-hover:opacity-0
-                          "
+                              flex min-w-0 flex-1 items-center gap-2
+                              transition-opacity duration-200
+                              group-hover:opacity-0
+                            "
                           >
                             <m.div
                               className="
-                              relative flex size-8 shrink-0 items-center
-                              justify-center rounded-full bg-brand/10
-                            "
+                                relative flex size-8 shrink-0 items-center
+                                justify-center rounded-full bg-brand/10
+                              "
                             >
                               <m.div
                                 className="
@@ -338,18 +338,14 @@ export function PlayerList({
                                   ease: 'easeInOut',
                                 }}
                               >
-                                <Gamepad2
-                                  className="
-                                  size-4 text-brand-muted-foreground
-                                "
-                                />
+                                <Gamepad2 className="size-4 text-brand-muted-foreground" />
                               </m.div>
                             </m.div>
                             <div className="min-w-0 flex-1 space-y-0.5">
                               <p
                                 className="
-                                truncate text-sm font-medium text-text-muted
-                              "
+                                  truncate text-sm font-medium text-text-muted
+                                "
                               >
                                 Open seat
                               </p>
@@ -361,17 +357,17 @@ export function PlayerList({
                           {/* Hover: Link2 + Copy shareable link */}
                           <div
                             className="
-                            pointer-events-none absolute inset-0 flex
-                            items-center gap-2 opacity-0 transition-opacity
-                            duration-200
-                            group-hover:opacity-100
-                          "
+                              pointer-events-none absolute inset-0 flex
+                              items-center gap-2 opacity-0 transition-opacity
+                              duration-200
+                              group-hover:opacity-100
+                            "
                           >
                             <m.div
                               className="
-                              relative flex size-8 shrink-0 items-center
-                              justify-center rounded-full bg-brand/10
-                            "
+                                relative flex size-8 shrink-0 items-center
+                                justify-center rounded-full bg-brand/10
+                              "
                             >
                               <m.div
                                 className="
@@ -395,11 +391,7 @@ export function PlayerList({
                                   ease: 'easeInOut',
                                 }}
                               >
-                                <Link2
-                                  className="
-                                  size-4 text-brand-muted-foreground
-                                "
-                                />
+                                <Link2 className="size-4 text-brand-muted-foreground" />
                               </m.div>
                             </m.div>
                             <span className="truncate text-sm text-text-muted">
@@ -455,9 +447,9 @@ export function PlayerList({
                       <TooltipTrigger asChild>
                         <span
                           className="
-                          flex shrink-0 items-center gap-1 rounded-sm
-                          bg-warning/20 px-1.5 py-0.5 text-xs text-warning
-                        "
+                            flex shrink-0 items-center gap-1 rounded-sm
+                            bg-warning/20 px-1.5 py-0.5 text-xs text-warning
+                          "
                         >
                           <Unplug className="size-3" />
                         </span>
@@ -611,11 +603,7 @@ export function PlayerList({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel
-                className="
-                border-surface-3 bg-surface-2 text-text-secondary
-              "
-              >
+              <AlertDialogCancel className="border-surface-3 bg-surface-2 text-text-secondary">
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction

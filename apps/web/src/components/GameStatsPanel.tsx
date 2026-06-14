@@ -457,8 +457,8 @@ export function GameStatsPanel({
         <ScrollArea className="h-[calc(100vh-140px)] pr-4">
           <div
             className="
-            flex h-full min-h-0 flex-col gap-4 overflow-hidden px-4 pb-8
-          "
+              flex h-full min-h-0 flex-col gap-4 overflow-hidden px-4 pb-8
+            "
           >
             {/* Joined players - flex so cards share space and shrink when all have two commanders */}
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
@@ -784,9 +784,9 @@ function CommanderSlotView({
   return (
     <div
       className="
-      group relative flex min-h-[76px] min-w-0 flex-1 rounded-md border
-      border-border-default bg-surface-0/50
-    "
+        group relative flex min-h-[76px] min-w-0 flex-1 rounded-md border
+        border-border-default bg-surface-0/50
+      "
     >
       {imageUrl && (
         <div className="absolute inset-0 z-0 overflow-hidden rounded-md">
@@ -801,17 +801,17 @@ function CommanderSlotView({
           />
           <div
             className="
-            absolute inset-0 bg-linear-to-r from-slate-950/80 via-slate-950/40
-            to-transparent
-          "
+              absolute inset-0 bg-linear-to-r from-slate-950/80 via-slate-950/40
+              to-transparent
+            "
           />
         </div>
       )}
       <div className="relative z-10 flex min-h-[76px] flex-1 items-center px-3">
         <span
           className="
-          text-sm font-medium text-text-secondary shadow-black text-shadow-sm
-        "
+            text-sm font-medium text-text-secondary shadow-black text-shadow-sm
+          "
         >
           {commander.name}
         </span>
@@ -877,18 +877,14 @@ function CommanderSlotEdit({
           />
           <div
             className="
-            pointer-events-none absolute top-1/2 right-3 flex -translate-y-1/2
-            items-center
-          "
+              pointer-events-none absolute top-1/2 right-3 flex -translate-y-1/2
+              items-center
+            "
           >
             {isSearching ? (
               <Loader2 className="size-4 animate-spin text-text-muted" />
             ) : status === 'saving' ? (
-              <Loader2
-                className="
-                size-4 animate-spin text-brand-muted-foreground
-              "
-              />
+              <Loader2 className="size-4 animate-spin text-brand-muted-foreground" />
             ) : status === 'saved' ? (
               <button
                 type="button"

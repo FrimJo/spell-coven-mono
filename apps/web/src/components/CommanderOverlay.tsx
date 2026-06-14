@@ -145,9 +145,9 @@ export const CommanderOverlay = memo(function CommanderOverlay({
   return (
     <div
       className={`
-      absolute z-10 flex flex-col gap-2
-      ${positionClasses}
-    `}
+        absolute z-10 flex flex-col gap-2
+        ${positionClasses}
+      `}
     >
       {participant.commanders.map((commander, index) => {
         if (!commander?.name) return null
@@ -225,10 +225,11 @@ const CommanderTile = memo(function CommanderTile({
       {/* Commander Image/Card - Square */}
       <div
         className="
-        relative size-12 overflow-hidden rounded-lg border-2 border-border-muted
-        shadow-lg ring-1 ring-black/20 transition-transform
-        group-hover:scale-105 group-hover:border-brand/50
-      "
+          relative size-12 overflow-hidden rounded-lg border-2
+          border-border-muted shadow-lg ring-1 ring-black/20
+          transition-transform
+          group-hover:scale-105 group-hover:border-brand/50
+        "
       >
         {imageUrl ? (
           <img
@@ -239,9 +240,9 @@ const CommanderTile = memo(function CommanderTile({
         ) : (
           <div
             className="
-            flex size-full items-center justify-center bg-surface-2 text-xs
-            font-bold text-text-muted
-          "
+              flex size-full items-center justify-center bg-surface-2 text-xs
+              font-bold text-text-muted
+            "
           >
             {commander.name.substring(0, 2)}
           </div>
@@ -251,9 +252,9 @@ const CommanderTile = memo(function CommanderTile({
         <div className="absolute inset-0 flex items-center justify-center">
           <span
             className="
-            font-mono text-sm font-bold text-white
-            drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]
-          "
+              font-mono text-sm font-bold text-white
+              drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]
+            "
           >
             {damage}
           </span>

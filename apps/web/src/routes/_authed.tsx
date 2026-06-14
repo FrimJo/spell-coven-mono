@@ -39,20 +39,13 @@ function AuthedLayout() {
           <div className="relative">
             <div
               className="
-              flex size-16 items-center justify-center rounded-full bg-brand/20
-            "
-            >
-              <Loader2
-                className="
-                size-8 animate-spin text-brand-muted-foreground
+                flex size-16 items-center justify-center rounded-full
+                bg-brand/20
               "
-              />
+            >
+              <Loader2 className="size-8 animate-spin text-brand-muted-foreground" />
             </div>
-            <div
-              className="
-              absolute inset-0 animate-ping rounded-full bg-brand/10
-            "
-            />
+            <div className="absolute inset-0 animate-ping rounded-full bg-brand/10" />
           </div>
           <div className="space-y-1 text-center">
             <h2 className="text-lg font-medium text-text-secondary">

@@ -125,9 +125,9 @@ function Logo({ size = 'default' }: { size?: 'default' | 'small' }) {
       />
       <span
         className={`
-        ${textClasses}
-        font-bold text-text-primary
-      `}
+          ${textClasses}
+          font-bold text-text-primary
+        `}
       >
         Spell Coven
       </span>
@@ -160,9 +160,9 @@ function UserMenu() {
           </Avatar>
           <span
             className="
-            hidden max-w-32 truncate
-            lg:inline
-          "
+              hidden max-w-32 truncate
+              lg:inline
+            "
           >
             {user.username}
           </span>
@@ -224,8 +224,8 @@ function SettingsDropdown({ onOpenSettings }: { onOpenSettings?: () => void }) {
         )}
         <DropdownMenuLabel
           className="
-          flex items-center gap-1 text-xs font-normal text-text-muted
-        "
+            flex items-center gap-1 text-xs font-normal text-text-muted
+          "
         >
           <Palette className="size-3" />
           Theme
@@ -266,9 +266,9 @@ function SettingsDropdown({ onOpenSettings }: { onOpenSettings?: () => void }) {
                 {key !== 'none' && (
                   <span
                     className="
-                    ml-2 hidden text-xs text-text-muted
-                    sm:inline
-                  "
+                      ml-2 hidden text-xs text-text-muted
+                      sm:inline
+                    "
                   >
                     {theme.description.split(',')[0]}
                   </span>
@@ -302,32 +302,28 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
   }
 
   return (
-    <header
-      className="
-      border-b border-border-muted bg-surface-0/80 backdrop-blur-md
-    "
-    >
+    <header className="border-b border-border-muted bg-surface-0/80 backdrop-blur-md">
       {/* Subtle gradient border effect */}
       <div
         className="
-        absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent
-        via-brand/30 to-transparent
-      "
+          absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent
+          via-brand/30 to-transparent
+        "
       />
 
       <div
         className="
-        relative container mx-auto flex items-center justify-between p-4
-      "
+          relative container mx-auto flex items-center justify-between p-4
+        "
       >
         <Logo />
 
         {/* Desktop Navigation */}
         <nav
           className="
-          hidden items-center gap-6
-          md:flex
-        "
+            hidden items-center gap-6
+            md:flex
+          "
         >
           {navItems.map((item) => (
             <a
@@ -445,8 +441,8 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                 {/* Theme toggle in mobile menu */}
                 <div
                   className="
-                  flex items-center justify-between rounded-lg px-4 py-3
-                "
+                    flex items-center justify-between rounded-lg px-4 py-3
+                  "
                 >
                   <span className="text-lg font-medium text-text-secondary">
                     Theme
@@ -459,16 +455,16 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                 {isAuthLoading ? (
                   <div
                     className="
-                    h-12 w-full animate-pulse rounded-lg bg-surface-2
-                  "
+                      h-12 w-full animate-pulse rounded-lg bg-surface-2
+                    "
                   />
                 ) : isAuthenticated && user ? (
                   <div className="flex flex-col gap-4">
                     <div
                       className="
-                      flex items-center gap-3 rounded-xl border
-                      border-border-muted bg-surface-1/50 p-3
-                    "
+                        flex items-center gap-3 rounded-xl border
+                        border-border-muted bg-surface-1/50 p-3
+                      "
                     >
                       <Avatar className="size-10 border border-surface-3">
                         <AvatarImage src={user.avatar || undefined} />
@@ -513,9 +509,10 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                   >
                     <div
                       className="
-                      absolute inset-0 bg-white/20 opacity-0 transition-opacity
-                      group-hover:opacity-100
-                    "
+                        absolute inset-0 bg-white/20 opacity-0
+                        transition-opacity
+                        group-hover:opacity-100
+                      "
                     />
                     <svg
                       className="
@@ -558,15 +555,15 @@ function GameHeader({
   return (
     <header
       className="
-      shrink-0 border-b border-surface-2 bg-surface-1/80 backdrop-blur-md
-    "
+        shrink-0 border-b border-surface-2 bg-surface-1/80 backdrop-blur-md
+      "
     >
       {/* Subtle gradient border effect */}
       <div
         className="
-        absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent
-        via-brand/20 to-transparent
-      "
+          absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent
+          via-brand/20 to-transparent
+        "
       />
 
       <div className="relative flex items-center justify-between px-4 py-3">
@@ -591,9 +588,9 @@ function GameHeader({
 
           <div
             className="
-            hidden min-w-0 flex-1 items-center gap-2
-            sm:flex
-          "
+              hidden min-w-0 flex-1 items-center gap-2
+              sm:flex
+            "
           >
             <span className="shrink-0 text-sm text-text-muted">
               Share Link:
@@ -664,9 +661,9 @@ function GameHeader({
                   commandersPanelOpen
                     ? 'bg-surface-3 text-text-primary'
                     : `
-                    bg-surface-2 text-text-muted
-                    hover:bg-surface-3 hover:text-text-primary
-                  `
+                      bg-surface-2 text-text-muted
+                      hover:bg-surface-3 hover:text-text-primary
+                    `
                 }
               `}
               title={
@@ -679,20 +676,20 @@ function GameHeader({
               <Swords className="size-4" />
               <span
                 className="
-                hidden
-                sm:inline
-              "
+                  hidden
+                  sm:inline
+                "
               >
                 Commanders
               </span>
               {commanderShortcutParts && commanderShortcutParts.length > 0 && (
                 <kbd
                   className="
-                  pointer-events-none hidden h-5 items-center gap-1 rounded-sm
-                  border bg-surface-3 px-1.5 font-mono text-[10px] font-medium
-                  text-text-muted opacity-75 select-none
-                  sm:inline-flex
-                "
+                    pointer-events-none hidden h-5 items-center gap-1 rounded-sm
+                    border bg-surface-3 px-1.5 font-mono text-[10px] font-medium
+                    text-text-muted opacity-75 select-none
+                    sm:inline-flex
+                  "
                 >
                   {commanderShortcutParts.map((part, i) => (
                     <span key={i} className="text-xs">
@@ -719,19 +716,19 @@ function GameHeader({
             <Search className="size-4" />
             <span
               className="
-              hidden
-              sm:inline
-            "
+                hidden
+                sm:inline
+              "
             >
               Search cards
             </span>
             <kbd
               className="
-              pointer-events-none hidden h-5 items-center gap-1 rounded-sm
-              border bg-surface-3 px-1.5 font-mono text-[10px] font-medium
-              text-text-muted opacity-75 select-none
-              sm:inline-flex
-            "
+                pointer-events-none hidden h-5 items-center gap-1 rounded-sm
+                border bg-surface-3 px-1.5 font-mono text-[10px] font-medium
+                text-text-muted opacity-75 select-none
+                sm:inline-flex
+              "
             >
               <span className="text-xs">{shortcut.modifier}</span>
               {shortcut.key}

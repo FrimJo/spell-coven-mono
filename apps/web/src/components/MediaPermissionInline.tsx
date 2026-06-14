@@ -81,9 +81,9 @@ export function MediaPermissionInline({
         <div className="mx-auto max-w-sm space-y-4">
           <div
             className="
-            mx-auto flex size-12 items-center justify-center rounded-full
-            bg-warning/20
-          "
+              mx-auto flex size-12 items-center justify-center rounded-full
+              bg-warning/20
+            "
           >
             <AlertTriangle className="size-6 text-warning-muted-foreground" />
           </div>
@@ -104,8 +104,8 @@ export function MediaPermissionInline({
           {!compact && (
             <div
               className="
-              rounded-lg border border-border-default bg-surface-2/50 p-3
-            "
+                rounded-lg border border-border-default bg-surface-2/50 p-3
+              "
             >
               <h4 className="mb-2 text-xs font-medium text-text-secondary">
                 To enable access:
@@ -114,9 +114,9 @@ export function MediaPermissionInline({
                 <li className="flex items-start gap-2">
                   <span
                     className="
-                    flex size-4 shrink-0 items-center justify-center
-                    rounded-full bg-surface-3 text-[10px] text-text-secondary
-                  "
+                      flex size-4 shrink-0 items-center justify-center
+                      rounded-full bg-surface-3 text-[10px] text-text-secondary
+                    "
                   >
                     1
                   </span>
@@ -125,9 +125,9 @@ export function MediaPermissionInline({
                 <li className="flex items-start gap-2">
                   <span
                     className="
-                    flex size-4 shrink-0 items-center justify-center
-                    rounded-full bg-surface-3 text-[10px] text-text-secondary
-                  "
+                      flex size-4 shrink-0 items-center justify-center
+                      rounded-full bg-surface-3 text-[10px] text-text-secondary
+                    "
                   >
                     2
                   </span>
@@ -138,9 +138,9 @@ export function MediaPermissionInline({
                 <li className="flex items-start gap-2">
                   <span
                     className="
-                    flex size-4 shrink-0 items-center justify-center
-                    rounded-full bg-surface-3 text-[10px] text-text-secondary
-                  "
+                      flex size-4 shrink-0 items-center justify-center
+                      rounded-full bg-surface-3 text-[10px] text-text-secondary
+                    "
                   >
                     3
                   </span>
@@ -177,9 +177,9 @@ export function MediaPermissionInline({
           {permissions.camera && (
             <div
               className="
-              flex size-10 items-center justify-center rounded-full bg-brand/20
-              ring-2 ring-brand/30
-            "
+                flex size-10 items-center justify-center rounded-full
+                bg-brand/20 ring-2 ring-brand/30
+              "
             >
               <Camera className="size-5 text-brand-muted-foreground" />
             </div>
@@ -187,9 +187,9 @@ export function MediaPermissionInline({
           {permissions.microphone && (
             <div
               className="
-              flex size-10 items-center justify-center rounded-full bg-info/20
-              ring-2 ring-info/30
-            "
+                flex size-10 items-center justify-center rounded-full bg-info/20
+                ring-2 ring-info/30
+              "
             >
               <Mic className="size-5 text-info-muted-foreground" />
             </div>
@@ -209,15 +209,15 @@ export function MediaPermissionInline({
           <div className="space-y-2">
             <div
               className="
-              flex items-start gap-2 rounded-lg border border-border-default/50
-              bg-surface-2/30 p-2
-            "
+                flex items-start gap-2 rounded-lg border
+                border-border-default/50 bg-surface-2/30 p-2
+              "
             >
               <div
                 className="
-                flex size-6 shrink-0 items-center justify-center rounded-sm
-                bg-brand/20
-              "
+                  flex size-6 shrink-0 items-center justify-center rounded-sm
+                  bg-brand/20
+                "
               >
                 <Video className="size-3 text-brand-muted-foreground" />
               </div>
@@ -233,15 +233,15 @@ export function MediaPermissionInline({
 
             <div
               className="
-              flex items-start gap-2 rounded-lg border border-border-default/50
-              bg-surface-2/30 p-2
-            "
+                flex items-start gap-2 rounded-lg border
+                border-border-default/50 bg-surface-2/30 p-2
+              "
             >
               <div
                 className="
-                flex size-6 shrink-0 items-center justify-center rounded-sm
-                bg-success/20
-              "
+                  flex size-6 shrink-0 items-center justify-center rounded-sm
+                  bg-success/20
+                "
               >
                 <Shield className="size-3 text-success-muted-foreground" />
               </div>
@@ -315,9 +315,9 @@ export function MediaPermissionInline({
               <>
                 <span
                   className="
-                  mr-1 size-3 animate-spin rounded-full border-2 border-white/30
-                  border-t-white
-                "
+                    mr-1 size-3 animate-spin rounded-full border-2
+                    border-white/30 border-t-white
+                  "
                 />
                 Requesting...
               </>

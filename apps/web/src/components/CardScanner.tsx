@@ -32,9 +32,9 @@ export function CardScanner({ onClose }: CardScannerProps) {
         {/* Header */}
         <div
           className="
-          absolute inset-x-0 top-0 z-10 bg-linear-to-b from-slate-950/80
-          to-transparent p-4 backdrop-blur-sm
-        "
+            absolute inset-x-0 top-0 z-10 bg-linear-to-b from-slate-950/80
+            to-transparent p-4 backdrop-blur-sm
+          "
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -63,18 +63,18 @@ export function CardScanner({ onClose }: CardScannerProps) {
                 <div className="relative">
                   <div
                     className="
-                    size-32 animate-pulse rounded-lg border-4 border-brand/30
-                  "
+                      size-32 animate-pulse rounded-lg border-4 border-brand/30
+                    "
                   />
                   <div
                     className="
-                    absolute inset-0 flex items-center justify-center
-                  "
+                      absolute inset-0 flex items-center justify-center
+                    "
                   >
                     <Scan
                       className="
-                      size-16 animate-pulse text-brand-muted-foreground
-                    "
+                        size-16 animate-pulse text-brand-muted-foreground
+                      "
                     />
                   </div>
                 </div>
@@ -84,9 +84,9 @@ export function CardScanner({ onClose }: CardScannerProps) {
               <div className="space-y-4 text-center">
                 <div
                   className="
-                  mx-auto flex size-16 items-center justify-center rounded-full
-                  bg-success/20
-                "
+                    mx-auto flex size-16 items-center justify-center
+                    rounded-full bg-success/20
+                  "
                 >
                   <CheckCircle2 className="size-8 text-success" />
                 </div>
@@ -119,9 +119,9 @@ export function CardScanner({ onClose }: CardScannerProps) {
               <div className="space-y-4 text-center">
                 <div
                   className="
-                  flex size-32 items-center justify-center rounded-lg border-4
-                  border-dashed border-surface-3
-                "
+                    flex size-32 items-center justify-center rounded-lg border-4
+                    border-dashed border-surface-3
+                  "
                 >
                   <Camera className="size-16 text-text-muted" />
                 </div>
@@ -147,34 +147,34 @@ export function CardScanner({ onClose }: CardScannerProps) {
             <div className="pointer-events-none absolute inset-0">
               <div
                 className="
-                absolute top-1/2 left-1/2 h-96 w-64 -translate-x-1/2
-                -translate-y-1/2 rounded-lg border-2 border-brand/30
-              "
+                  absolute top-1/2 left-1/2 h-96 w-64 -translate-x-1/2
+                  -translate-y-1/2 rounded-lg border-2 border-brand/30
+                "
               >
                 {/* Corner indicators */}
                 <div
                   className="
-                  absolute top-0 left-0 size-8 rounded-tl-lg border-t-4
-                  border-l-4 border-brand
-                "
+                    absolute top-0 left-0 size-8 rounded-tl-lg border-t-4
+                    border-l-4 border-brand
+                  "
                 />
                 <div
                   className="
-                  absolute top-0 right-0 size-8 rounded-tr-lg border-t-4
-                  border-r-4 border-brand
-                "
+                    absolute top-0 right-0 size-8 rounded-tr-lg border-t-4
+                    border-r-4 border-brand
+                  "
                 />
                 <div
                   className="
-                  absolute bottom-0 left-0 size-8 rounded-bl-lg border-b-4
-                  border-l-4 border-brand
-                "
+                    absolute bottom-0 left-0 size-8 rounded-bl-lg border-b-4
+                    border-l-4 border-brand
+                  "
                 />
                 <div
                   className="
-                  absolute right-0 bottom-0 size-8 rounded-br-lg border-r-4
-                  border-b-4 border-brand
-                "
+                    absolute right-0 bottom-0 size-8 rounded-br-lg border-r-4
+                    border-b-4 border-brand
+                  "
                 />
               </div>
             </div>

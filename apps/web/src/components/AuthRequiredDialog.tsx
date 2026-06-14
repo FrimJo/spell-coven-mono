@@ -55,18 +55,18 @@ export function AuthRequiredDialog({
     <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent
         className="
-        border-warning/50 bg-surface-1
-        sm:max-w-[450px]
-        [&>button]:hidden
-      "
+          border-warning/50 bg-surface-1
+          sm:max-w-[450px]
+          [&>button]:hidden
+        "
       >
         <DialogHeader>
           <div className="mb-2 flex justify-center">
             <div
               className="
-              flex size-12 items-center justify-center rounded-full
-              bg-warning/20
-            "
+                flex size-12 items-center justify-center rounded-full
+                bg-warning/20
+              "
             >
               <ShieldAlert className="size-6 text-warning" />
             </div>
@@ -92,10 +92,10 @@ export function AuthRequiredDialog({
             <div className="flex items-start gap-3">
               <div
                 className="
-                flex size-10 shrink-0 items-center justify-center rounded-lg
-                bg-brand/20 transition-colors
-                group-hover:bg-brand/30
-              "
+                  flex size-10 shrink-0 items-center justify-center rounded-lg
+                  bg-brand/20 transition-colors
+                  group-hover:bg-brand/30
+                "
               >
                 <LogIn className="size-5 text-brand-muted-foreground" />
               </div>
@@ -122,10 +122,10 @@ export function AuthRequiredDialog({
             <div className="flex items-start gap-3">
               <div
                 className="
-                flex size-10 shrink-0 items-center justify-center rounded-lg
-                bg-surface-3/50 transition-colors
-                group-hover:bg-surface-3
-              "
+                  flex size-10 shrink-0 items-center justify-center rounded-lg
+                  bg-surface-3/50 transition-colors
+                  group-hover:bg-surface-3
+                "
               >
                 <Home className="size-5 text-text-muted" />
               </div>

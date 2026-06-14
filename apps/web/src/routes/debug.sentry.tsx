@@ -24,9 +24,9 @@ function SentryDebugPage() {
   return (
     <main
       className="
-      flex min-h-screen items-center justify-center bg-surface-0 p-6
-      text-text-primary
-    "
+        flex min-h-screen items-center justify-center bg-surface-0 p-6
+        text-text-primary
+      "
     >
       <div className="w-full max-w-md space-y-4">
         <h1 className="text-2xl font-semibold">Sentry Debug</h1>

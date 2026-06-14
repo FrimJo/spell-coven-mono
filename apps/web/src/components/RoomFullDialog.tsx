@@ -33,9 +33,9 @@ export function RoomFullDialog({
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent
           className="
-          border-surface-2 bg-surface-1
-          sm:max-w-[450px]
-        "
+            border-surface-2 bg-surface-1
+            sm:max-w-[450px]
+          "
         >
           <DialogHeader>
             <div className="mb-4 flex justify-center">
@@ -61,9 +61,9 @@ export function RoomFullDialog({
                 {/* Icon container */}
                 <div
                   className="
-                  relative flex size-16 items-center justify-center rounded-full
-                  bg-warning/20
-                "
+                    relative flex size-16 items-center justify-center
+                    rounded-full bg-warning/20
+                  "
                 >
                   <m.div
                     animate={{ scale: [1, 1.1, 1] }}
@@ -130,10 +130,10 @@ export function RoomFullDialog({
               <div className="flex items-center gap-3">
                 <div
                   className="
-                  flex size-10 shrink-0 items-center justify-center rounded-lg
-                  bg-brand/20 transition-colors
-                  group-hover:bg-brand/30
-                "
+                    flex size-10 shrink-0 items-center justify-center rounded-lg
+                    bg-brand/20 transition-colors
+                    group-hover:bg-brand/30
+                  "
                 >
                   <Home className="size-5 text-brand-muted-foreground" />
                 </div>

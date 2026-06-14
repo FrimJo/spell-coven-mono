@@ -50,9 +50,9 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
           <Palette className="size-4 transition-all duration-300" />
           <span
             className="
-            hidden text-sm font-bold
-            sm:inline
-          "
+              hidden text-sm font-bold
+              sm:inline
+            "
           >
             Theme
           </span>
@@ -65,8 +65,8 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       >
         <DropdownMenuLabel
           className="
-          flex items-center gap-1 text-xs font-normal text-text-muted
-        "
+            flex items-center gap-1 text-xs font-normal text-text-muted
+          "
         >
           <Palette className="size-3" />
           Theme
@@ -107,9 +107,9 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
                 {key !== 'none' && (
                   <span
                     className="
-                    ml-2 hidden text-xs text-text-muted
-                    sm:inline
-                  "
+                      ml-2 hidden text-xs text-text-muted
+                      sm:inline
+                    "
                   >
                     {theme.description.split(',')[0]}
                   </span>

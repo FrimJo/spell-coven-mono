@@ -72,15 +72,15 @@ function CommanderDamageTooltipRow({
   return (
     <div
       className="
-      flex min-w-0 items-center gap-2 rounded-sm px-2 py-1.5
-      hover:bg-surface-2/50
-    "
+        flex min-w-0 items-center gap-2 rounded-sm px-2 py-1.5
+        hover:bg-surface-2/50
+      "
     >
       <div
         className="
-        relative size-8 shrink-0 overflow-hidden rounded-sm border
-        border-border-muted
-      "
+          relative size-8 shrink-0 overflow-hidden rounded-sm border
+          border-border-muted
+        "
       >
         {imageUrl ? (
           <img
@@ -91,9 +91,9 @@ function CommanderDamageTooltipRow({
         ) : (
           <div
             className="
-            flex size-full items-center justify-center bg-surface-2 text-[10px]
-            font-bold text-text-muted
-          "
+              flex size-full items-center justify-center bg-surface-2
+              text-[10px] font-bold text-text-muted
+            "
           >
             {entry.commanderName.substring(0, 2)}
           </div>
@@ -102,11 +102,7 @@ function CommanderDamageTooltipRow({
       <div className="flex w-0 min-w-0 flex-1 flex-col overflow-hidden">
         <Tooltip delayDuration={700}>
           <TooltipTrigger asChild>
-            <span
-              className="
-              block truncate text-xs font-medium text-text-secondary
-            "
-            >
+            <span className="block truncate text-xs font-medium text-text-secondary">
               {entry.commanderName}
             </span>
           </TooltipTrigger>
@@ -145,8 +141,8 @@ function CommanderDamageTooltipRow({
         </Button>
         <span
           className="
-          min-w-[2ch] text-center font-mono text-sm font-bold text-white
-        "
+            min-w-[2ch] text-center font-mono text-sm font-bold text-white
+          "
         >
           {entry.damage}
         </span>
@@ -461,20 +457,16 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-10 items-center gap-1.5 text-destructive">
             <Heart className="size-4 shrink-0" />
-            <span
-              className="
-              min-w-[2ch] text-center font-mono font-bold text-white
-            "
-            >
+            <span className="min-w-[2ch] text-center font-mono font-bold text-white">
               {displayHealth}
             </span>
           </div>
 
           <div
             className="
-            relative flex items-center gap-0.5 opacity-0 transition-opacity
-            group-hover:opacity-100
-          "
+              relative flex items-center gap-0.5 opacity-0 transition-opacity
+              group-hover:opacity-100
+            "
           >
             <Button
               size="icon"
@@ -521,20 +513,16 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-10 items-center gap-1.5 text-success">
             <Skull className="size-4 shrink-0" />
-            <span
-              className="
-              min-w-[2ch] text-center font-mono font-bold text-white
-            "
-            >
+            <span className="min-w-[2ch] text-center font-mono font-bold text-white">
               {displayPoison}
             </span>
           </div>
 
           <div
             className="
-            relative flex items-center gap-0.5 opacity-0 transition-opacity
-            group-hover:opacity-100
-          "
+              relative flex items-center gap-0.5 opacity-0 transition-opacity
+              group-hover:opacity-100
+            "
           >
             <Button
               size="icon"
@@ -590,23 +578,23 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
           >
             <div
               className="
-              flex min-w-10 items-center gap-1.5 text-brand-muted-foreground
-            "
+                flex min-w-10 items-center gap-1.5 text-brand-muted-foreground
+              "
             >
               <Swords className="size-4 shrink-0" />
               <span
                 className="
-                min-w-[2ch] text-center font-mono font-bold text-white
-              "
+                  min-w-[2ch] text-center font-mono font-bold text-white
+                "
               >
                 {displayedCommanderDamage}
               </span>
             </div>
             <div
               className="
-              relative flex items-center gap-0.5 opacity-0 transition-opacity
-              group-hover:opacity-100
-            "
+                relative flex items-center gap-0.5 opacity-0 transition-opacity
+                group-hover:opacity-100
+              "
             >
               <DialogTrigger asChild>
                 <Button
@@ -635,15 +623,15 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                 {/* Header */}
                 <div
                   className="
-                  flex items-center gap-2 border-b border-surface-2/80 px-3
-                  py-2.5
-                "
+                    flex items-center gap-2 border-b border-surface-2/80 px-3
+                    py-2.5
+                  "
                 >
                   <div
                     className="
-                    flex size-7 shrink-0 items-center justify-center rounded-md
-                    bg-brand/15 text-brand
-                  "
+                      flex size-7 shrink-0 items-center justify-center
+                      rounded-md bg-brand/15 text-brand
+                    "
                   >
                     <Swords className="size-3.5" />
                   </div>
@@ -661,9 +649,9 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                 {hasOwnCommandersInGame && (
                   <div
                     className="
-                    flex items-center gap-2 border-b border-surface-2/80 px-3
-                    py-2
-                  "
+                      flex items-center gap-2 border-b border-surface-2/80 px-3
+                      py-2
+                    "
                   >
                     <Checkbox
                       id="commander-damage-show-own"
@@ -689,9 +677,9 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                   {visibleCommandersList.length > 0 ? (
                     <div
                       className="
-                      flex max-h-[240px] min-w-0 flex-col gap-0.5
-                      overflow-x-hidden overflow-y-auto p-2 px-3
-                    "
+                        flex max-h-[240px] min-w-0 flex-col gap-0.5
+                        overflow-x-hidden overflow-y-auto p-2 px-3
+                      "
                     >
                       {visibleCommandersList.map((entry) => (
                         <CommanderDamageTooltipRow
@@ -704,15 +692,15 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
                   ) : (
                     <div
                       className="
-                      flex min-h-[52px] flex-col items-center justify-center
-                      gap-3 p-4 text-center text-text-muted
-                    "
+                        flex min-h-[52px] flex-col items-center justify-center
+                        gap-3 p-4 text-center text-text-muted
+                      "
                     >
                       <div
                         className="
-                        flex size-9 shrink-0 items-center justify-center
-                        rounded-full bg-surface-2/50
-                      "
+                          flex size-9 shrink-0 items-center justify-center
+                          rounded-full bg-surface-2/50
+                        "
                       >
                         <Users className="size-4 opacity-60" />
                       </div>

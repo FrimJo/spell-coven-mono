@@ -49,23 +49,24 @@ export function MediaSetupPage({ onComplete, onCancel }: MediaSetupPageProps) {
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div
           className="
-          absolute -top-1/4 -left-1/4 size-1/2 rounded-full bg-brand/10 blur-3xl
-        "
+            absolute -top-1/4 -left-1/4 size-1/2 rounded-full bg-brand/10
+            blur-3xl
+          "
         />
         <div
           className="
-          absolute -right-1/4 -bottom-1/4 size-1/2 rounded-full bg-info/10
-          blur-3xl
-        "
+            absolute -right-1/4 -bottom-1/4 size-1/2 rounded-full bg-info/10
+            blur-3xl
+          "
         />
       </div>
 
       {/* Media Setup Panel - centered card */}
       <div
         className="
-        relative z-10 w-full max-w-[700px] rounded-lg border border-surface-2
-        bg-surface-1 p-6 shadow-xl
-      "
+          relative z-10 w-full max-w-[700px] rounded-lg border border-surface-2
+          bg-surface-1 p-6 shadow-xl
+        "
       >
         <MediaSetupPanel
           onComplete={onComplete}
@@ -82,9 +83,9 @@ export function MediaSetupPage({ onComplete, onCancel }: MediaSetupPageProps) {
           <AlertDialogHeader>
             <div
               className="
-              mx-auto mb-2 flex size-12 items-center justify-center rounded-full
-              bg-warning/20
-            "
+                mx-auto mb-2 flex size-12 items-center justify-center
+                rounded-full bg-warning/20
+              "
             >
               <AlertTriangle className="size-6 text-warning" />
             </div>
@@ -99,9 +100,9 @@ export function MediaSetupPage({ onComplete, onCancel }: MediaSetupPageProps) {
           </AlertDialogHeader>
           <AlertDialogFooter
             className="
-            flex-row justify-center gap-3
-            sm:justify-center
-          "
+              flex-row justify-center gap-3
+              sm:justify-center
+            "
           >
             <AlertDialogCancel
               onClick={handleDismissWarning}
