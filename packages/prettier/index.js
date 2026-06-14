@@ -5,7 +5,12 @@
 const config = {
   singleQuote: true,
   semi: false,
-  plugins: ['@ianvs/prettier-plugin-sort-imports'],
+  // tailwindcss must be last — it sorts class strings after import sorting runs.
+  plugins: [
+    '@ianvs/prettier-plugin-sort-imports',
+    'prettier-plugin-tailwindcss',
+  ],
+  tailwindStylesheet: 'packages/ui/src/styles/globals.css',
   importOrder: [
     '<TYPES>',
     '^(react/(.*)$)|^(react$)|^(react-native(.*)$)',
