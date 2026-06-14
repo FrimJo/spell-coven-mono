@@ -69,7 +69,7 @@ export const AudioLevelIndicator = ({
 
   return (
     <div className="space-y-1">
-      <div className="text-xs flex items-center justify-between text-text-muted">
+      <div className="flex items-center justify-between text-xs text-text-muted">
         <span>Input Level</span>
         <span>{Math.round(audioLevel)}%</span>
       </div>

@@ -27,14 +27,24 @@ export function LeaveGameDialog({
 }: LeaveGameDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
-      <DialogContent className="sm:max-w-[400px] border-surface-2 bg-surface-1">
+      <DialogContent
+        className="
+        border-surface-2 bg-surface-1
+        sm:max-w-[400px]
+      "
+      >
         <DialogHeader>
           <div className="mb-2 flex justify-center">
-            <div className="h-12 w-12 flex items-center justify-center rounded-full bg-warning/20">
-              <DoorOpen className="h-6 w-6 text-warning-muted-foreground" />
+            <div
+              className="
+              flex size-12 items-center justify-center rounded-full
+              bg-warning/20
+            "
+            >
+              <DoorOpen className="size-6 text-warning-muted-foreground" />
             </div>
           </div>
-          <DialogTitle className="text-white text-center">
+          <DialogTitle className="text-center text-white">
             Leave Game?
           </DialogTitle>
           <DialogDescription className="text-center text-text-muted">
@@ -43,25 +53,37 @@ export function LeaveGameDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="gap-3 pt-4 flex">
+        <div className="flex gap-3 pt-4">
           <button
             onClick={onCancel}
-            className="px-4 py-2.5 text-sm font-medium flex-1 cursor-pointer rounded-lg border border-surface-3 bg-surface-2/50 text-text-secondary transition-all hover:border-surface-3 hover:bg-surface-2 focus:ring-2 focus:ring-surface-3/50 focus:outline-none"
+            className="
+              flex-1 cursor-pointer rounded-lg border border-surface-3
+              bg-surface-2/50 px-4 py-2.5 text-sm font-medium
+              text-text-secondary transition-all
+              hover:border-surface-3 hover:bg-surface-2
+              focus:ring-2 focus:ring-surface-3/50 focus:outline-none
+            "
             data-testid="leave-dialog-cancel-button"
           >
-            <div className="gap-2 flex items-center justify-center">
-              <X className="h-4 w-4" />
+            <div className="flex items-center justify-center gap-2">
+              <X className="size-4" />
               Cancel
             </div>
           </button>
 
           <button
             onClick={onConfirm}
-            className="px-4 py-2.5 text-sm font-medium flex-1 cursor-pointer rounded-lg border border-destructive/30 bg-destructive/30 text-destructive-foreground transition-all hover:border-destructive/60 hover:bg-destructive/40 focus:ring-2 focus:ring-destructive/50 focus:outline-none"
+            className="
+              flex-1 cursor-pointer rounded-lg border border-destructive/30
+              bg-destructive/30 px-4 py-2.5 text-sm font-medium
+              text-destructive-foreground transition-all
+              hover:border-destructive/60 hover:bg-destructive/40
+              focus:ring-2 focus:ring-destructive/50 focus:outline-none
+            "
             data-testid="leave-dialog-confirm-button"
           >
-            <div className="gap-2 flex items-center justify-center">
-              <DoorOpen className="h-4 w-4" />
+            <div className="flex items-center justify-center gap-2">
+              <DoorOpen className="size-4" />
               Leave Game
             </div>
           </button>

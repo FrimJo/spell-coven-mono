@@ -11,12 +11,19 @@ export const Route = createFileRoute('/license')({
 function LicenseRoute() {
   return (
     <main className="min-h-screen bg-surface-0 text-text-primary">
-      <div className="max-w-3xl gap-4 px-4 py-16 container mx-auto flex flex-col">
+      <div
+        className="
+        container mx-auto flex max-w-3xl flex-col gap-4 px-4 py-16
+      "
+      >
         <h1 className="text-2xl font-semibold">License</h1>
         <p className="text-sm text-text-muted">
           Licensed{' '}
           <a
-            className="text-brand-muted-foreground hover:text-brand"
+            className="
+              text-brand-muted-foreground
+              hover:text-brand
+            "
             href="https://polyformproject.org/licenses/noncommercial/1.0.0/"
             rel="noreferrer"
             target="_blank"
@@ -26,7 +33,10 @@ function LicenseRoute() {
           — non-commercial use only.
         </p>
         <a
-          className="text-sm text-brand-muted-foreground hover:text-brand"
+          className="
+            text-sm text-brand-muted-foreground
+            hover:text-brand
+          "
           href={githubLicenseUrl}
           rel="noreferrer"
           target="_blank"

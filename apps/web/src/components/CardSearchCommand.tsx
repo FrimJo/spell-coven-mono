@@ -144,8 +144,8 @@ export function CardSearchCommand({
       />
       <CommandList className="max-h-[400px]">
         {loading && (
-          <div className="gap-2 py-6 flex items-center justify-center">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <div className="flex items-center justify-center gap-2 py-6">
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
             <span className="text-sm text-muted-foreground">Searching...</span>
           </div>
         )}
@@ -155,8 +155,8 @@ export function CardSearchCommand({
         )}
 
         {!loading && query.length < MIN_QUERY_LENGTH && (
-          <div className="py-6 text-sm text-center text-muted-foreground">
-            <Search className="mb-2 h-8 w-8 mx-auto opacity-50" />
+          <div className="py-6 text-center text-sm text-muted-foreground">
+            <Search className="mx-auto mb-2 size-8 opacity-50" />
             <p>Type at least 2 characters to search</p>
             <p className="mt-1 text-xs opacity-75">
               Supports{' '}
@@ -164,10 +164,13 @@ export function CardSearchCommand({
                 href="https://scryfall.com/docs/syntax"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="gap-1 inline-flex items-center underline hover:text-foreground"
+                className="
+                  inline-flex items-center gap-1 underline
+                  hover:text-foreground
+                "
               >
                 Scryfall search syntax
-                <ExternalLink className="h-3 w-3" />
+                <ExternalLink className="size-3" />
               </a>
             </p>
           </div>
@@ -180,20 +183,20 @@ export function CardSearchCommand({
                 key={card.id}
                 value={`${card.name}-${card.id}`}
                 onSelect={() => handleSelect(card)}
-                className="gap-3 py-2 flex items-center"
+                className="flex items-center gap-3 py-2"
               >
                 {card.image_uris?.small && (
                   <img
                     src={card.image_uris.small}
                     alt=""
-                    className="h-12 w-9 rounded flex-shrink-0 object-cover"
+                    className="h-12 w-9 shrink-0 rounded-sm object-cover"
                   />
                 )}
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium truncate">
+                  <div className="truncate text-sm font-medium">
                     {card.name}
                   </div>
-                  <div className="text-xs truncate text-muted-foreground">
+                  <div className="truncate text-xs text-muted-foreground">
                     {card.set_name} ({card.set.toUpperCase()})
                   </div>
                 </div>

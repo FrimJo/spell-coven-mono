@@ -36,69 +36,136 @@ export function NotFoundPage() {
       `}</style>
 
       {/* Background with gradient overlay */}
-      <div className="inset-0 from-purple-900/20 via-slate-950 to-blue-900/20 absolute bg-linear-to-br" />
+      <div
+        className="
+        absolute inset-0 bg-linear-to-br from-purple-900/20 via-slate-950
+        to-blue-900/20
+      "
+      />
 
       {/* Animated background elements */}
-      <div className="inset-0 pointer-events-none absolute overflow-hidden">
-        <div className="left-20 top-20 h-64 w-64 animate-pulse blur-3xl absolute rounded-full bg-brand/10" />
-        <div className="bottom-20 right-20 h-96 w-96 animate-pulse blur-3xl absolute rounded-full bg-info/10 delay-1000" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div
+          className="
+          absolute top-20 left-20 size-64 animate-pulse rounded-full bg-brand/10
+          blur-3xl
+        "
+        />
+        <div
+          className="
+          absolute right-20 bottom-20 size-96 animate-pulse rounded-full
+          bg-info/10 blur-3xl delay-1000
+        "
+        />
       </div>
 
-      <div className="px-4 relative z-10 flex min-h-screen flex-col items-center justify-center text-center">
+      <div
+        className="
+        relative z-10 flex min-h-screen flex-col items-center justify-center
+        px-4 text-center
+      "
+      >
         {/* Logo/Icon Area */}
-        <div className="animate-float mb-8 relative">
-          <div className="inset-0 animate-pulse blur-3xl absolute rounded-full bg-brand/20" />
-          <div className="h-32 w-32 rounded-3xl backdrop-blur-sm relative z-10 flex items-center justify-center border border-surface-2 bg-surface-0/50">
-            <Ghost className="h-16 w-16 text-brand-muted-foreground" />
+        <div className="animate-float relative mb-8">
+          <div
+            className="
+            absolute inset-0 animate-pulse rounded-full bg-brand/20 blur-3xl
+          "
+          />
+          <div
+            className="
+            relative z-10 flex size-32 items-center justify-center rounded-3xl
+            border border-surface-2 bg-surface-0/50 backdrop-blur-sm
+          "
+          >
+            <Ghost className="size-16 text-brand-muted-foreground" />
           </div>
 
           {/* Decorative sparkles */}
-          <Sparkles className="animate-sparkle -left-6 top-0 h-6 w-6 absolute text-warning drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
-          <Sparkles className="animate-sparkle -right-4 bottom-4 h-5 w-5 absolute text-info drop-shadow-[0_0_8px_rgba(147,197,253,0.8)] delay-700" />
+          <Sparkles
+            className="
+            animate-sparkle absolute top-0 -left-6 size-6 text-warning
+            drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]
+          "
+          />
+          <Sparkles
+            className="
+            animate-sparkle absolute -right-4 bottom-4 size-5 text-info
+            drop-shadow-[0_0_8px_rgba(147,197,253,0.8)] delay-700
+          "
+          />
         </div>
 
         {/* Text Content */}
         <div className="space-y-6">
-          <h1 className="text-8xl font-bold tracking-tighter text-white/10 md:text-9xl">
+          <h1
+            className="
+            text-8xl font-bold tracking-tighter text-white/10
+            md:text-9xl
+          "
+          >
             404
           </h1>
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold text-white md:text-4xl">
+            <h2
+              className="
+              text-3xl font-bold text-white
+              md:text-4xl
+            "
+            >
               Lost in the{' '}
-              <span className="from-purple-400 to-blue-400 bg-gradient-to-r bg-clip-text text-transparent">
+              <span
+                className="
+                bg-linear-to-r from-purple-400 to-blue-400 bg-clip-text
+                text-transparent
+              "
+              >
                 Blind Eternities
               </span>
             </h2>
-            <p className="max-w-md text-lg mx-auto text-text-muted">
+            <p className="mx-auto max-w-md text-lg text-text-muted">
               The page you are looking for has been exiled or never existed.
               Let&apos;s planeswalk you back to safety.
             </p>
           </div>
 
           {/* Actions */}
-          <div className="gap-4 sm:flex-row flex flex-col items-center justify-center">
+          <div
+            className="
+            flex flex-col items-center justify-center gap-4
+            sm:flex-row
+          "
+          >
             <Button
               size="lg"
-              className="h-12 gap-2 font-medium text-white shadow-lg min-w-[160px] bg-brand shadow-brand/25 hover:bg-brand"
+              className="
+                h-12 min-w-[160px] gap-2 bg-brand font-medium text-white
+                shadow-lg shadow-brand/25
+                hover:bg-brand
+              "
               onClick={handleReturnHome}
             >
-              <Home className="h-4 w-4" />
+              <Home className="size-4" />
               Return Home
             </Button>
             <Button
               variant="outline"
               size="lg"
-              className="h-12 gap-2 font-medium hover:text-white min-w-[160px] border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2"
+              className="
+                h-12 min-w-[160px] gap-2 border-surface-3 bg-surface-1/50
+                font-medium text-text-secondary
+                hover:bg-surface-2 hover:text-white
+              "
               onClick={() => window.history.back()}
             >
-              <MoveLeft className="h-4 w-4" />
+              <MoveLeft className="size-4" />
               Go Back
             </Button>
           </div>
         </div>
 
         {/* Footer Text */}
-        <div className="bottom-8 text-sm absolute text-text-muted">
+        <div className="absolute bottom-8 text-sm text-text-muted">
           Spell Coven
         </div>
       </div>

@@ -123,9 +123,13 @@ export const FullResCanvas = memo(function FullResCanvas({
 export const VideoDisabledPlaceholder = memo(
   function VideoDisabledPlaceholder() {
     return (
-      <div className="inset-0 absolute flex items-center justify-center bg-surface-0">
+      <div
+        className="
+        absolute inset-0 flex items-center justify-center bg-surface-0
+      "
+      >
         <div className="space-y-2 text-center">
-          <VideoOff className="h-12 w-12 mx-auto text-text-muted" />
+          <VideoOff className="mx-auto size-12 text-text-muted" />
           <p className="text-text-muted">Camera Off</p>
         </div>
       </div>
@@ -192,7 +196,13 @@ export const LocalMediaControls = memo(function LocalMediaControls({
     [setSelectedAudioInputDeviceId],
   )
   return (
-    <div className="bottom-4 gap-2 px-3 py-2 shadow-lg backdrop-blur-sm absolute left-1/2 z-20 flex -translate-x-1/2 items-center rounded-lg border border-surface-2 bg-surface-0/95">
+    <div
+      className="
+      absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2
+      rounded-lg border border-surface-2 bg-surface-0/95 px-3 py-2 shadow-lg
+      backdrop-blur-sm
+    "
+    >
       {/* Video toggle with camera selector - Discord style compound button */}
       <div className="flex items-center">
         <Button
@@ -205,16 +215,27 @@ export const LocalMediaControls = memo(function LocalMediaControls({
           onClick={() => {
             onToggleVideo(!videoEnabled)
           }}
-          className={`h-10 w-10 p-0 rounded-r-none border-r-0 ${
-            videoEnabled
-              ? 'text-white border-surface-3 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50'
-              : 'text-white border-destructive bg-destructive hover:bg-destructive disabled:cursor-not-allowed disabled:opacity-50'
-          }`}
+          className={`
+            size-10 rounded-r-none border-r-0 p-0
+            ${
+              videoEnabled
+                ? `
+                border-surface-3 text-white
+                hover:bg-surface-2
+                disabled:cursor-not-allowed disabled:opacity-50
+              `
+                : `
+                border-destructive bg-destructive text-white
+                hover:bg-destructive
+                disabled:cursor-not-allowed disabled:opacity-50
+              `
+            }
+          `}
         >
           {videoEnabled ? (
-            <Video className="h-5 w-5" />
+            <Video className="size-5" />
           ) : (
-            <VideoOff className="h-5 w-5" />
+            <VideoOff className="size-5" />
           )}
         </Button>
         <Popover open={cameraPopoverOpen} onOpenChange={setCameraPopoverOpen}>
@@ -223,21 +244,32 @@ export const LocalMediaControls = memo(function LocalMediaControls({
               size="sm"
               variant={videoEnabled ? 'outline' : 'destructive'}
               aria-label="Select camera"
-              className={`h-10 w-6 p-0 rounded-l-none ${
-                videoEnabled
-                  ? 'text-white border-surface-3 hover:bg-surface-2'
-                  : 'text-white border-destructive bg-destructive hover:bg-destructive'
-              }`}
+              className={`
+                h-10 w-6 rounded-l-none p-0
+                ${
+                  videoEnabled
+                    ? `
+                    border-surface-3 text-white
+                    hover:bg-surface-2
+                  `
+                    : `
+                    border-destructive bg-destructive text-white
+                    hover:bg-destructive
+                  `
+                }
+              `}
             >
-              <ChevronUp className="h-3 w-3" />
+              <ChevronUp className="size-3" />
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-80 p-0 backdrop-blur-sm border-surface-2 bg-surface-0/95"
+            className="
+              w-80 border-surface-2 bg-surface-0/95 p-0 backdrop-blur-sm
+            "
             align="center"
             sideOffset={8}
           >
-            <div className="px-4 py-3 border-b border-surface-2">
+            <div className="border-b border-surface-2 px-4 py-3">
               <h3 className="text-sm font-semibold text-white">
                 Select Camera
               </h3>
@@ -246,19 +278,24 @@ export const LocalMediaControls = memo(function LocalMediaControls({
                 {videoDevices.length !== 1 ? 's' : ''} available
               </p>
             </div>
-            <div className="max-h-64 p-2 overflow-y-auto">
+            <div className="max-h-64 overflow-y-auto p-2">
               {videoDevices.map((camera) => (
                 <button
                   type="button"
                   key={camera.deviceId}
                   onClick={() => void handleSelectCamera(camera.deviceId)}
-                  className={`gap-3 px-3 py-2.5 flex w-full cursor-pointer items-center rounded-md text-left transition-colors hover:bg-surface-2/50 ${
-                    selectedVideoDeviceId === camera.deviceId
-                      ? 'text-white bg-brand/20'
-                      : 'text-text-secondary'
-                  }`}
+                  className={`
+                    flex w-full cursor-pointer items-center gap-3 rounded-md
+                    px-3 py-2.5 text-left transition-colors
+                    hover:bg-surface-2/50
+                    ${
+                      selectedVideoDeviceId === camera.deviceId
+                        ? 'bg-brand/20 text-white'
+                        : 'text-text-secondary'
+                    }
+                  `}
                 >
-                  <Camera className="h-4 w-4" />
+                  <Camera className="size-4" />
                   <span className="text-sm">
                     {camera.label ||
                       `Camera ${videoDevices.indexOf(camera) + 1}`}
@@ -282,16 +319,25 @@ export const LocalMediaControls = memo(function LocalMediaControls({
           size="sm"
           variant={!isAudioMuted ? 'outline' : 'destructive'}
           onClick={onToggleAudio}
-          className={`h-10 w-10 p-0 rounded-r-none border-r-0 ${
-            !isAudioMuted
-              ? 'text-white border-surface-3 bg-surface-0/90 hover:bg-surface-2'
-              : 'text-white border-destructive bg-destructive hover:bg-destructive'
-          }`}
+          className={`
+            size-10 rounded-r-none border-r-0 p-0
+            ${
+              !isAudioMuted
+                ? `
+                border-surface-3 bg-surface-0/90 text-white
+                hover:bg-surface-2
+              `
+                : `
+                border-destructive bg-destructive text-white
+                hover:bg-destructive
+              `
+            }
+          `}
         >
           {!isAudioMuted ? (
-            <Mic className="h-5 w-5" />
+            <Mic className="size-5" />
           ) : (
-            <MicOff className="h-5 w-5" />
+            <MicOff className="size-5" />
           )}
         </Button>
         <Popover open={micPopoverOpen} onOpenChange={setMicPopoverOpen}>
@@ -300,21 +346,32 @@ export const LocalMediaControls = memo(function LocalMediaControls({
               size="sm"
               variant={!isAudioMuted ? 'outline' : 'destructive'}
               aria-label="Select microphone"
-              className={`h-10 w-6 p-0 rounded-l-none ${
-                !isAudioMuted
-                  ? 'text-white border-surface-3 hover:bg-surface-2'
-                  : 'text-white border-destructive bg-destructive hover:bg-destructive'
-              }`}
+              className={`
+                h-10 w-6 rounded-l-none p-0
+                ${
+                  !isAudioMuted
+                    ? `
+                    border-surface-3 text-white
+                    hover:bg-surface-2
+                  `
+                    : `
+                    border-destructive bg-destructive text-white
+                    hover:bg-destructive
+                  `
+                }
+              `}
             >
-              <ChevronUp className="h-3 w-3" />
+              <ChevronUp className="size-3" />
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-80 p-0 backdrop-blur-sm border-surface-2 bg-surface-0/95"
+            className="
+              w-80 border-surface-2 bg-surface-0/95 p-0 backdrop-blur-sm
+            "
             align="center"
             sideOffset={8}
           >
-            <div className="px-4 py-3 border-b border-surface-2">
+            <div className="border-b border-surface-2 px-4 py-3">
               <h3 className="text-sm font-semibold text-white">
                 Select Microphone
               </h3>
@@ -323,19 +380,24 @@ export const LocalMediaControls = memo(function LocalMediaControls({
                 {audioDevices.length !== 1 ? 's' : ''} available
               </p>
             </div>
-            <div className="max-h-64 p-2 overflow-y-auto">
+            <div className="max-h-64 overflow-y-auto p-2">
               {audioDevices.map((mic) => (
                 <button
                   type="button"
                   key={mic.deviceId}
                   onClick={() => void handleSelectMicrophone(mic.deviceId)}
-                  className={`gap-3 px-3 py-2.5 flex w-full cursor-pointer items-center rounded-md text-left transition-colors hover:bg-surface-2/50 ${
-                    selectedAudioInputDeviceId === mic.deviceId
-                      ? 'text-white bg-brand/20'
-                      : 'text-text-secondary'
-                  }`}
+                  className={`
+                    flex w-full cursor-pointer items-center gap-3 rounded-md
+                    px-3 py-2.5 text-left transition-colors
+                    hover:bg-surface-2/50
+                    ${
+                      selectedAudioInputDeviceId === mic.deviceId
+                        ? 'bg-brand/20 text-white'
+                        : 'text-text-secondary'
+                    }
+                  `}
                 >
-                  <Mic className="h-4 w-4" />
+                  <Mic className="size-4" />
                   <span className="text-sm">
                     {mic.label || `Microphone ${audioDevices.indexOf(mic) + 1}`}
                   </span>
@@ -364,9 +426,13 @@ export const PlayerNameBadge = memo(function PlayerNameBadge({
 
   return (
     <div
-      className={`absolute border-surface-2 bg-surface-0/90 ${positionClasses} px-3 py-2 backdrop-blur-sm z-10 rounded-lg border`}
+      className={`
+        absolute border-surface-2 bg-surface-0/90
+        ${positionClasses}
+        z-10 rounded-lg border px-3 py-2 backdrop-blur-sm
+      `}
     >
-      <div className="gap-2 flex items-center">{children}</div>
+      <div className="flex items-center gap-2">{children}</div>
     </div>
   )
 })

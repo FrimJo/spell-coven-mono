@@ -113,13 +113,22 @@ function Logo({ size = 'default' }: { size?: 'default' | 'small' }) {
               : logo
 
   return (
-    <div className="gap-2 flex items-center">
+    <div className="flex items-center gap-2">
       <img
         src={logoSrc}
         alt="Spell Coven Logo"
-        className={`${sizeClasses} ${roundedClasses} object-contain`}
+        className={`
+          ${sizeClasses}
+          ${roundedClasses}
+          object-contain
+        `}
       />
-      <span className={`${textClasses} font-bold text-text-primary`}>
+      <span
+        className={`
+        ${textClasses}
+        font-bold text-text-primary
+      `}
+      >
         Spell Coven
       </span>
     </div>
@@ -136,17 +145,25 @@ function UserMenu() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="gap-2 flex items-center text-text-secondary hover:text-text-primary"
+          className="
+            flex items-center gap-2 text-text-secondary
+            hover:text-text-primary
+          "
           title={user.username}
           data-testid="header-user-menu"
         >
-          <Avatar className="h-8 w-8 shrink-0">
+          <Avatar className="size-8 shrink-0">
             <AvatarImage src={user.avatar || undefined} />
-            <AvatarFallback className="text-white bg-brand">
+            <AvatarFallback className="bg-brand text-white">
               {user.username.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span className="lg:inline hidden max-w-[8rem] truncate">
+          <span
+            className="
+            hidden max-w-32 truncate
+            lg:inline
+          "
+          >
             {user.username}
           </span>
         </Button>
@@ -157,9 +174,12 @@ function UserMenu() {
       >
         <DropdownMenuItem
           onClick={signOut}
-          className="cursor-pointer text-text-secondary focus:bg-surface-2 focus:text-text-primary"
+          className="
+            cursor-pointer text-text-secondary
+            focus:bg-surface-2 focus:text-text-primary
+          "
         >
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className="mr-2 size-4" />
           Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -176,11 +196,14 @@ function SettingsDropdown({ onOpenSettings }: { onOpenSettings?: () => void }) {
         <Button
           variant="ghost"
           size="sm"
-          className="text-text-muted hover:text-text-primary"
+          className="
+            text-text-muted
+            hover:text-text-primary
+          "
           title="Audio & video settings"
           data-testid="settings-button"
         >
-          <Settings className="h-4 w-4" />
+          <Settings className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -190,14 +213,21 @@ function SettingsDropdown({ onOpenSettings }: { onOpenSettings?: () => void }) {
         {onOpenSettings && (
           <DropdownMenuItem
             onClick={onOpenSettings}
-            className="cursor-pointer text-text-secondary focus:bg-surface-2 focus:text-text-primary"
+            className="
+              cursor-pointer text-text-secondary
+              focus:bg-surface-2 focus:text-text-primary
+            "
           >
-            <Settings className="mr-2 h-4 w-4" />
+            <Settings className="mr-2 size-4" />
             Setup Audio & Video
           </DropdownMenuItem>
         )}
-        <DropdownMenuLabel className="gap-1 text-xs font-normal flex items-center text-text-muted">
-          <Palette className="h-3 w-3" />
+        <DropdownMenuLabel
+          className="
+          flex items-center gap-1 text-xs font-normal text-text-muted
+        "
+        >
+          <Palette className="size-3" />
           Theme
         </DropdownMenuLabel>
         <DropdownMenuRadioGroup
@@ -212,23 +242,34 @@ function SettingsDropdown({ onOpenSettings }: { onOpenSettings?: () => void }) {
               <DropdownMenuRadioItem
                 key={key}
                 value={key}
-                className="cursor-pointer text-text-secondary focus:bg-surface-2 focus:text-foreground"
+                className="
+                  cursor-pointer text-text-secondary
+                  focus:bg-surface-2 focus:text-foreground
+                "
               >
-                <span className="mr-2 w-4 flex items-center justify-center">
+                <span className="mr-2 flex w-4 items-center justify-center">
                   {iconSvg && iconColor ? (
                     <span
-                      className="h-4 w-4 shrink-0 overflow-hidden [&_svg]:block [&_svg]:size-full"
+                      className="
+                        size-4 shrink-0 overflow-hidden
+                        [&_svg]:block [&_svg]:size-full
+                      "
                       style={{ color: iconColor }}
                       title={`${theme.label} mana`}
                       dangerouslySetInnerHTML={{ __html: iconSvg }}
                     />
                   ) : (
-                    <Settings className="h-4 w-4" aria-label="Default theme" />
+                    <Settings className="size-4" aria-label="Default theme" />
                   )}
                 </span>
                 <span className="flex-1">{theme.label}</span>
                 {key !== 'none' && (
-                  <span className="ml-2 text-xs sm:inline hidden text-text-muted">
+                  <span
+                    className="
+                    ml-2 hidden text-xs text-text-muted
+                    sm:inline
+                  "
+                  >
                     {theme.description.split(',')[0]}
                   </span>
                 )}
@@ -261,21 +302,42 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
   }
 
   return (
-    <header className="backdrop-blur-md border-b border-border-muted bg-surface-0/80">
+    <header
+      className="
+      border-b border-border-muted bg-surface-0/80 backdrop-blur-md
+    "
+    >
       {/* Subtle gradient border effect */}
-      <div className="inset-x-0 bottom-0 absolute h-px bg-gradient-to-r from-transparent via-brand/30 to-transparent" />
+      <div
+        className="
+        absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent
+        via-brand/30 to-transparent
+      "
+      />
 
-      <div className="px-4 py-4 relative container mx-auto flex items-center justify-between">
+      <div
+        className="
+        relative container mx-auto flex items-center justify-between p-4
+      "
+      >
         <Logo />
 
         {/* Desktop Navigation */}
-        <nav className="gap-6 md:flex hidden items-center">
+        <nav
+          className="
+          hidden items-center gap-6
+          md:flex
+        "
+        >
           {navItems.map((item) => (
             <a
               key={item.targetId}
               href={`#${item.targetId}`}
               onClick={(e) => handleNavClick(e, item.targetId)}
-              className="text-text-secondary transition-colors hover:text-text-primary"
+              className="
+                text-text-secondary transition-colors
+                hover:text-text-primary
+              "
             >
               {item.label}
             </a>
@@ -285,10 +347,13 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
             href="https://github.com/FrimJo/spell-coven-mono"
             target="_blank"
             rel="noopener noreferrer"
-            className="gap-1.5 flex items-center text-text-secondary transition-colors hover:text-text-primary"
+            className="
+              flex items-center gap-1.5 text-text-secondary transition-colors
+              hover:text-text-primary
+            "
             title="View on GitHub"
           >
-            <Github className="h-5 w-5" />
+            <Github className="size-5" />
             <span className="sr-only">GitHub</span>
           </a>
 
@@ -304,9 +369,12 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
               variant="outline"
               size="sm"
               onClick={onSignIn}
-              className="gap-2 border-brand/50 text-brand-muted-foreground hover:bg-brand/20 hover:text-brand-muted-foreground"
+              className="
+                gap-2 border-brand/50 text-brand-muted-foreground
+                hover:bg-brand/20 hover:text-brand-muted-foreground
+              "
             >
-              <LogIn className="h-4 w-4" />
+              <LogIn className="size-4" />
               <span>Sign in with Discord</span>
             </Button>
           )}
@@ -320,29 +388,40 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                 variant="ghost"
                 size="icon"
                 aria-label="Open navigation menu"
-                className="text-text-secondary hover:bg-surface-2 hover:text-text-primary"
+                className="
+                  text-text-secondary
+                  hover:bg-surface-2 hover:text-text-primary
+                "
               >
-                <Menu className="h-6 w-6" />
+                <Menu className="size-6" />
               </Button>
             </SheetTrigger>
             <SheetContent
               side="right"
-              className="p-0 backdrop-blur-xl sm:max-w-sm flex w-full flex-col border-l border-border-muted bg-surface-0/95"
+              className="
+                flex w-full flex-col border-l border-border-muted
+                bg-surface-0/95 p-0 backdrop-blur-xl
+                sm:max-w-sm
+              "
             >
-              <SheetHeader className="px-6 py-4 border-b border-border-muted">
-                <div className="gap-2 flex items-center">
+              <SheetHeader className="border-b border-border-muted px-6 py-4">
+                <div className="flex items-center gap-2">
                   <Logo size="small" />
                 </div>
                 <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               </SheetHeader>
 
-              <div className="gap-1 px-4 py-6 flex flex-1 flex-col">
+              <div className="flex flex-1 flex-col gap-1 px-4 py-6">
                 {navItems.map((item) => (
                   <a
                     key={item.targetId}
                     href={`#${item.targetId}`}
                     onClick={(e) => handleNavClick(e, item.targetId)}
-                    className="px-4 py-3 text-lg font-medium flex items-center rounded-lg text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary"
+                    className="
+                      flex items-center rounded-lg px-4 py-3 text-lg font-medium
+                      text-text-secondary transition-colors
+                      hover:bg-surface-2 hover:text-text-primary
+                    "
                   >
                     {item.label}
                   </a>
@@ -353,14 +432,22 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                   href="https://github.com/FrimJo/spell-coven-mono"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="gap-3 px-4 py-3 text-lg font-medium flex items-center rounded-lg text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary"
+                  className="
+                    flex items-center gap-3 rounded-lg px-4 py-3 text-lg
+                    font-medium text-text-secondary transition-colors
+                    hover:bg-surface-2 hover:text-text-primary
+                  "
                 >
-                  <Github className="h-5 w-5" />
+                  <Github className="size-5" />
                   GitHub
                 </a>
 
                 {/* Theme toggle in mobile menu */}
-                <div className="px-4 py-3 flex items-center justify-between rounded-lg">
+                <div
+                  className="
+                  flex items-center justify-between rounded-lg px-4 py-3
+                "
+                >
                   <span className="text-lg font-medium text-text-secondary">
                     Theme
                   </span>
@@ -368,15 +455,24 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                 </div>
               </div>
 
-              <div className="p-6 border-t border-border-muted">
+              <div className="border-t border-border-muted p-6">
                 {isAuthLoading ? (
-                  <div className="h-12 animate-pulse w-full rounded-lg bg-surface-2" />
+                  <div
+                    className="
+                    h-12 w-full animate-pulse rounded-lg bg-surface-2
+                  "
+                  />
                 ) : isAuthenticated && user ? (
-                  <div className="gap-4 flex flex-col">
-                    <div className="gap-3 p-3 flex items-center rounded-xl border border-border-muted bg-surface-1/50">
-                      <Avatar className="h-10 w-10 border border-surface-3">
+                  <div className="flex flex-col gap-4">
+                    <div
+                      className="
+                      flex items-center gap-3 rounded-xl border
+                      border-border-muted bg-surface-1/50 p-3
+                    "
+                    >
+                      <Avatar className="size-10 border border-surface-3">
                         <AvatarImage src={user.avatar || undefined} />
-                        <AvatarFallback className="text-white bg-brand">
+                        <AvatarFallback className="bg-brand text-white">
                           {user.username.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -392,9 +488,13 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                     <Button
                       variant="outline"
                       onClick={signOut}
-                      className="h-12 gap-2 w-full justify-center border-surface-3 text-text-secondary hover:bg-surface-2 hover:text-text-primary"
+                      className="
+                        h-12 w-full justify-center gap-2 border-surface-3
+                        text-text-secondary
+                        hover:bg-surface-2 hover:text-text-primary
+                      "
                     >
-                      <LogOut className="h-4 w-4" />
+                      <LogOut className="size-4" />
                       Sign Out
                     </Button>
                   </div>
@@ -402,11 +502,26 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                   <Button
                     size="lg"
                     onClick={onSignIn}
-                    className="group h-14 gap-3 border-white/10 to-purple-600 text-lg font-semibold text-white hover:to-purple-700 relative w-full overflow-hidden border bg-gradient-to-r from-[#5865F2] shadow-[0_0_30px_rgba(88,101,242,0.4)] transition-all hover:scale-105 hover:from-[#4752C4] hover:shadow-[0_0_50px_rgba(88,101,242,0.6)]"
+                    className="
+                      group relative h-14 w-full gap-3 overflow-hidden border
+                      border-white/10 bg-linear-to-r from-[#5865F2]
+                      to-purple-600 text-lg font-semibold text-white
+                      shadow-[0_0_30px_rgba(88,101,242,0.4)] transition-all
+                      hover:scale-105 hover:from-[#4752C4] hover:to-purple-700
+                      hover:shadow-[0_0_50px_rgba(88,101,242,0.6)]
+                    "
                   >
-                    <div className="inset-0 bg-white/20 absolute opacity-0 transition-opacity group-hover:opacity-100" />
+                    <div
+                      className="
+                      absolute inset-0 bg-white/20 opacity-0 transition-opacity
+                      group-hover:opacity-100
+                    "
+                    />
                     <svg
-                      className="h-6 w-6 transition-transform group-hover:scale-110"
+                      className="
+                        size-6 transition-transform
+                        group-hover:scale-110
+                      "
                       viewBox="0 0 24 24"
                       fill="currentColor"
                     >
@@ -441,33 +556,54 @@ function GameHeader({
 }: AppHeaderProps) {
   const shortcut = useSearchShortcutParts()
   return (
-    <header className="backdrop-blur-md shrink-0 border-b border-surface-2 bg-surface-1/80">
+    <header
+      className="
+      shrink-0 border-b border-surface-2 bg-surface-1/80 backdrop-blur-md
+    "
+    >
       {/* Subtle gradient border effect */}
-      <div className="inset-x-0 bottom-0 absolute h-px bg-gradient-to-r from-transparent via-brand/20 to-transparent" />
+      <div
+        className="
+        absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent
+        via-brand/20 to-transparent
+      "
+      />
 
-      <div className="px-4 py-3 relative flex items-center justify-between">
+      <div className="relative flex items-center justify-between px-4 py-3">
         {/* Left side */}
-        <div className="gap-4 flex items-center">
+        <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="sm"
             onClick={onLeave}
-            className="text-text-muted hover:text-text-primary"
+            className="
+              text-text-muted
+              hover:text-text-primary
+            "
             title="Leave game room"
             data-testid="leave-game-button"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="mr-2 size-4" />
             Leave
           </Button>
 
           <div className="h-6 w-px bg-surface-3" />
 
-          <div className="min-w-0 gap-2 sm:flex hidden flex-1 items-center">
-            <span className="text-sm shrink-0 text-text-muted">
+          <div
+            className="
+            hidden min-w-0 flex-1 items-center gap-2
+            sm:flex
+          "
+          >
+            <span className="shrink-0 text-sm text-text-muted">
               Share Link:
             </span>
             <code
-              className="min-w-0 rounded px-2 py-1 text-sm flex-1 cursor-pointer truncate bg-surface-2 text-brand-muted-foreground transition-colors hover:bg-surface-3"
+              className="
+                min-w-0 flex-1 cursor-pointer truncate rounded-sm bg-surface-2
+                px-2 py-1 text-sm text-brand-muted-foreground transition-colors
+                hover:bg-surface-3
+              "
               data-testid="game-id-display"
               onClick={onCopyLink}
               title="Click to copy shareable link"
@@ -478,14 +614,17 @@ function GameHeader({
               variant="ghost"
               size="sm"
               onClick={onCopyLink}
-              className="shrink-0 text-text-muted hover:text-text-primary"
+              className="
+                shrink-0 text-text-muted
+                hover:text-text-primary
+              "
               title="Copy shareable link"
               data-testid="copy-share-link-button"
             >
               {copied ? (
-                <Check className="h-4 w-4" />
+                <Check className="size-4" />
               ) : (
-                <Copy className="h-4 w-4" />
+                <Copy className="size-4" />
               )}
             </Button>
           </div>
@@ -495,31 +634,41 @@ function GameHeader({
             variant="ghost"
             size="sm"
             onClick={onCopyLink}
-            className="sm:hidden text-text-muted hover:text-text-primary"
+            className="
+              text-text-muted
+              hover:text-text-primary
+              sm:hidden
+            "
             title="Copy shareable link"
           >
             {copied ? (
-              <Check className="h-4 w-4" />
+              <Check className="size-4" />
             ) : (
-              <Copy className="h-4 w-4" />
+              <Copy className="size-4" />
             )}
             <span className="ml-2">Copy Link</span>
           </Button>
         </div>
 
         {/* Right side */}
-        <div className="gap-3 flex items-center">
+        <div className="flex items-center gap-3">
           {/* Commanders – global list, same style as Search */}
           {onCommandersPanelToggle && (
             <Button
               variant="outline"
               size="sm"
               onClick={onCommandersPanelToggle}
-              className={`gap-2 border-surface-3 ${
-                commandersPanelOpen
-                  ? 'bg-surface-3 text-text-primary'
-                  : 'bg-surface-2 text-text-muted hover:bg-surface-3 hover:text-text-primary'
-              }`}
+              className={`
+                gap-2 border-surface-3
+                ${
+                  commandersPanelOpen
+                    ? 'bg-surface-3 text-text-primary'
+                    : `
+                    bg-surface-2 text-text-muted
+                    hover:bg-surface-3 hover:text-text-primary
+                  `
+                }
+              `}
               title={
                 commanderShortcutParts
                   ? `View and edit commanders list (${commanderShortcutParts.join('')})`
@@ -527,10 +676,24 @@ function GameHeader({
               }
               data-testid="commanders-panel-button"
             >
-              <Swords className="h-4 w-4" />
-              <span className="sm:inline hidden">Commanders</span>
+              <Swords className="size-4" />
+              <span
+                className="
+                hidden
+                sm:inline
+              "
+              >
+                Commanders
+              </span>
               {commanderShortcutParts && commanderShortcutParts.length > 0 && (
-                <kbd className="h-5 gap-1 rounded px-1.5 font-mono font-medium sm:inline-flex pointer-events-none hidden items-center border bg-surface-3 text-[10px] text-text-muted opacity-75 select-none">
+                <kbd
+                  className="
+                  pointer-events-none hidden h-5 items-center gap-1 rounded-sm
+                  border bg-surface-3 px-1.5 font-mono text-[10px] font-medium
+                  text-text-muted opacity-75 select-none
+                  sm:inline-flex
+                "
+                >
                   {commanderShortcutParts.map((part, i) => (
                     <span key={i} className="text-xs">
                       {part}
@@ -546,13 +709,30 @@ function GameHeader({
             variant="outline"
             size="sm"
             onClick={onSearchClick}
-            className="gap-2 border-surface-3 bg-surface-2 text-text-muted hover:bg-surface-3 hover:text-text-primary"
+            className="
+              gap-2 border-surface-3 bg-surface-2 text-text-muted
+              hover:bg-surface-3 hover:text-text-primary
+            "
             title={`Search cards (${shortcut.modifier}${shortcut.modifier.length === 1 ? '' : '+'}${shortcut.key})`}
             data-testid="search-button"
           >
-            <Search className="h-4 w-4" />
-            <span className="sm:inline hidden">Search cards</span>
-            <kbd className="h-5 gap-1 rounded px-1.5 font-mono font-medium sm:inline-flex pointer-events-none hidden items-center border bg-surface-3 text-[10px] text-text-muted opacity-75 select-none">
+            <Search className="size-4" />
+            <span
+              className="
+              hidden
+              sm:inline
+            "
+            >
+              Search cards
+            </span>
+            <kbd
+              className="
+              pointer-events-none hidden h-5 items-center gap-1 rounded-sm
+              border bg-surface-3 px-1.5 font-mono text-[10px] font-medium
+              text-text-muted opacity-75 select-none
+              sm:inline-flex
+            "
+            >
               <span className="text-xs">{shortcut.modifier}</span>
               {shortcut.key}
             </kbd>

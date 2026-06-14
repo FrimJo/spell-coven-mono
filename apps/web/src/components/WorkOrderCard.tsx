@@ -25,7 +25,7 @@ export const WorkOrderCard = ({
         isSelected && 'ring-2 ring-primary',
       )}
     >
-      <div className="p-4 flex-1 bg-warning">{children}</div>
+      <div className="flex-1 bg-warning p-4">{children}</div>
     </div>
   )
 }

@@ -30,40 +30,65 @@ export function CardScanner({ onClose }: CardScannerProps) {
     <Card className="overflow-hidden border-surface-2 bg-surface-1">
       <div className="relative">
         {/* Header */}
-        <div className="left-0 right-0 top-0 from-slate-950/80 p-4 backdrop-blur-sm absolute z-10 bg-gradient-to-b to-transparent">
+        <div
+          className="
+          absolute inset-x-0 top-0 z-10 bg-linear-to-b from-slate-950/80
+          to-transparent p-4 backdrop-blur-sm
+        "
+        >
           <div className="flex items-center justify-between">
-            <div className="gap-2 flex items-center">
-              <Camera className="h-5 w-5 text-brand-muted-foreground" />
+            <div className="flex items-center gap-2">
+              <Camera className="size-5 text-brand-muted-foreground" />
               <span className="text-white">Card Scanner</span>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="hover:text-white text-text-muted"
+              className="
+                text-text-muted
+                hover:text-white
+              "
             >
-              <X className="h-5 w-5" />
+              <X className="size-5" />
             </Button>
           </div>
         </div>
 
         {/* Scanner View */}
-        <div className="aspect-video relative bg-surface-0">
-          <div className="inset-0 absolute flex items-center justify-center">
+        <div className="relative aspect-video bg-surface-0">
+          <div className="absolute inset-0 flex items-center justify-center">
             {scanning ? (
               <div className="space-y-4 text-center">
                 <div className="relative">
-                  <div className="h-32 w-32 animate-pulse rounded-lg border-4 border-brand/30" />
-                  <div className="inset-0 absolute flex items-center justify-center">
-                    <Scan className="h-16 w-16 animate-pulse text-brand-muted-foreground" />
+                  <div
+                    className="
+                    size-32 animate-pulse rounded-lg border-4 border-brand/30
+                  "
+                  />
+                  <div
+                    className="
+                    absolute inset-0 flex items-center justify-center
+                  "
+                  >
+                    <Scan
+                      className="
+                      size-16 animate-pulse text-brand-muted-foreground
+                    "
+                    />
                   </div>
                 </div>
                 <p className="text-text-muted">Scanning card...</p>
               </div>
             ) : recognizedCard ? (
               <div className="space-y-4 text-center">
-                <div className="h-16 w-16 mx-auto flex items-center justify-center rounded-full bg-success/20">
-                  <CheckCircle2 className="h-8 w-8 text-success" />
+                <div
+                  className="
+                  mx-auto flex size-16 items-center justify-center rounded-full
+                  bg-success/20
+                "
+                >
+                  <CheckCircle2 className="size-8 text-success" />
                 </div>
                 <div>
                   <p className="mb-2 text-sm text-text-muted">
@@ -71,10 +96,13 @@ export function CardScanner({ onClose }: CardScannerProps) {
                   </p>
                   <p className="text-xl text-white">{recognizedCard}</p>
                 </div>
-                <div className="gap-2 flex justify-center">
+                <div className="flex justify-center gap-2">
                   <Button
                     onClick={handleAddToBattlefield}
-                    className="text-white bg-brand hover:bg-brand"
+                    className="
+                      bg-brand text-white
+                      hover:bg-brand
+                    "
                   >
                     Add to Battlefield
                   </Button>
@@ -89,16 +117,24 @@ export function CardScanner({ onClose }: CardScannerProps) {
               </div>
             ) : (
               <div className="space-y-4 text-center">
-                <div className="h-32 w-32 flex items-center justify-center rounded-lg border-4 border-dashed border-surface-3">
-                  <Camera className="h-16 w-16 text-text-muted" />
+                <div
+                  className="
+                  flex size-32 items-center justify-center rounded-lg border-4
+                  border-dashed border-surface-3
+                "
+                >
+                  <Camera className="size-16 text-text-muted" />
                 </div>
                 <div>
                   <p className="mb-2 text-text-muted">Position card in frame</p>
                   <Button
                     onClick={handleScan}
-                    className="text-white bg-brand hover:bg-brand"
+                    className="
+                      bg-brand text-white
+                      hover:bg-brand
+                    "
                   >
-                    <Scan className="mr-2 h-4 w-4" />
+                    <Scan className="mr-2 size-4" />
                     Scan Card
                   </Button>
                 </div>
@@ -108,22 +144,47 @@ export function CardScanner({ onClose }: CardScannerProps) {
 
           {/* Scanning Frame Overlay */}
           {!recognizedCard && (
-            <div className="inset-0 pointer-events-none absolute">
-              <div className="h-96 w-64 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg border-2 border-brand/30">
+            <div className="pointer-events-none absolute inset-0">
+              <div
+                className="
+                absolute top-1/2 left-1/2 h-96 w-64 -translate-x-1/2
+                -translate-y-1/2 rounded-lg border-2 border-brand/30
+              "
+              >
                 {/* Corner indicators */}
-                <div className="left-0 top-0 h-8 w-8 absolute rounded-tl-lg border-t-4 border-l-4 border-brand" />
-                <div className="right-0 top-0 h-8 w-8 absolute rounded-tr-lg border-t-4 border-r-4 border-brand" />
-                <div className="bottom-0 left-0 h-8 w-8 absolute rounded-bl-lg border-b-4 border-l-4 border-brand" />
-                <div className="bottom-0 right-0 h-8 w-8 absolute rounded-br-lg border-r-4 border-b-4 border-brand" />
+                <div
+                  className="
+                  absolute top-0 left-0 size-8 rounded-tl-lg border-t-4
+                  border-l-4 border-brand
+                "
+                />
+                <div
+                  className="
+                  absolute top-0 right-0 size-8 rounded-tr-lg border-t-4
+                  border-r-4 border-brand
+                "
+                />
+                <div
+                  className="
+                  absolute bottom-0 left-0 size-8 rounded-bl-lg border-b-4
+                  border-l-4 border-brand
+                "
+                />
+                <div
+                  className="
+                  absolute right-0 bottom-0 size-8 rounded-br-lg border-r-4
+                  border-b-4 border-brand
+                "
+                />
               </div>
             </div>
           )}
         </div>
 
         {/* Footer Tips */}
-        <div className="p-4 border-t border-surface-2 bg-surface-0/50">
-          <div className="gap-2 flex items-start">
-            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-info" />
+        <div className="border-t border-surface-2 bg-surface-0/50 p-4">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="mt-0.5 size-4 shrink-0 text-info" />
             <p className="text-xs text-text-muted">
               For best results, ensure good lighting and hold the card flat in
               the frame. The card name should be clearly visible.

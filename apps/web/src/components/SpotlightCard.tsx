@@ -53,10 +53,17 @@ const SpotlightCard: React.FC<SpotlightCardProps> = ({
       onBlur={handleBlur}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className={`rounded-3xl p-8 relative overflow-hidden border border-surface-3 bg-surface-1 ${className}`}
+      className={`
+        relative overflow-hidden rounded-3xl border border-surface-3
+        bg-surface-1 p-8
+        ${className}
+      `}
     >
       <div
-        className="inset-0 ease-in-out pointer-events-none absolute opacity-0 transition-opacity duration-500"
+        className="
+          pointer-events-none absolute inset-0 opacity-0 transition-opacity
+          duration-500 ease-in-out
+        "
         style={{
           opacity,
           background: `radial-gradient(circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 80%)`,

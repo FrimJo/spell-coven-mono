@@ -22,10 +22,15 @@ function SentryDebugPage() {
   }
 
   return (
-    <main className="p-6 flex min-h-screen items-center justify-center bg-surface-0 text-text-primary">
-      <div className="max-w-md space-y-4 w-full">
+    <main
+      className="
+      flex min-h-screen items-center justify-center bg-surface-0 p-6
+      text-text-primary
+    "
+    >
+      <div className="w-full max-w-md space-y-4">
         <h1 className="text-2xl font-semibold">Sentry Debug</h1>
-        <div className="gap-3 grid">
+        <div className="grid gap-3">
           <Button
             onClick={() =>
               Sentry.captureMessage('Sentry debug route captured message')

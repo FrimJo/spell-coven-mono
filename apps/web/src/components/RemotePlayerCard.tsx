@@ -131,7 +131,9 @@ export const RemotePlayerCard = memo(function RemotePlayerCard({
 
   return (
     <Card
-      className="flex h-full flex-col overflow-hidden border-surface-2 bg-surface-1"
+      className="
+        flex h-full flex-col overflow-hidden border-surface-2 bg-surface-1
+      "
       data-testid="remote-player-card"
       data-player-id={playerId}
       data-player-name={playerName}
@@ -141,7 +143,7 @@ export const RemotePlayerCard = memo(function RemotePlayerCard({
       data-video-muted={String(remoteMediaStatus.videoMuted)}
       data-audio-muted={String(remoteMediaStatus.audioMuted)}
     >
-      <div ref={videoContainerRef} className="min-h-0 bg-black relative flex-1">
+      <div ref={videoContainerRef} className="relative min-h-0 flex-1 bg-black">
         {peerVideoEnabled ? (
           <>
             {remoteVideoTrack && (
@@ -194,20 +196,28 @@ export const RemotePlayerCard = memo(function RemotePlayerCard({
           </>
         )}
 
-        <div className="right-3 top-3 gap-2 absolute z-10 flex">
+        <div className="absolute top-3 right-3 z-10 flex gap-2">
           {!peerAudioEnabled && (
-            <div className="h-9 w-9 backdrop-blur-sm flex items-center justify-center rounded-lg border border-destructive/30 bg-destructive/20">
-              <MicOff className="h-4 w-4 text-destructive" />
+            <div
+              className="
+              flex size-9 items-center justify-center rounded-lg border
+              border-destructive/30 bg-destructive/20 backdrop-blur-sm
+            "
+            >
+              <MicOff className="size-4 text-destructive" />
             </div>
           )}
           {!isOnline && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
-                  className="h-9 w-9 backdrop-blur-sm flex items-center justify-center rounded-lg border border-warning/30 bg-warning/20"
+                  className="
+                    flex size-9 items-center justify-center rounded-lg border
+                    border-warning/30 bg-warning/20 backdrop-blur-sm
+                  "
                   data-testid="remote-player-offline-warning"
                 >
-                  <Unplug className="h-4 w-4 text-warning" />
+                  <Unplug className="size-4 text-warning" />
                 </div>
               </TooltipTrigger>
               <TooltipContent>
@@ -221,11 +231,19 @@ export const RemotePlayerCard = memo(function RemotePlayerCard({
                 <div
                   data-testid="remote-player-livekit-warning"
                   data-connection-state={peerMediaPresenceWarning.state}
-                  className={`h-9 w-9 backdrop-blur-sm flex items-center justify-center rounded-lg border ${peerMediaPresenceWarning.borderClass} ${peerMediaPresenceWarning.bgClass}`}
+                  className={`
+                    flex size-9 items-center justify-center rounded-lg border
+                    backdrop-blur-sm
+                    ${peerMediaPresenceWarning.borderClass}
+                    ${peerMediaPresenceWarning.bgClass}
+                  `}
                   title={`Video connection: ${peerMediaPresenceWarning.state}`}
                 >
                   <PeerMediaPresenceWarningIcon
-                    className={`h-4 w-4 ${peerMediaPresenceWarning.iconClass}`}
+                    className={`
+                      size-4
+                      ${peerMediaPresenceWarning.iconClass}
+                    `}
                   />
                 </div>
               </TooltipTrigger>

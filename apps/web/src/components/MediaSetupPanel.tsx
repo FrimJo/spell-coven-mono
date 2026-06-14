@@ -77,7 +77,7 @@ export function MediaSetupPanel({
         />
       )}
 
-      <div className="space-y-6 pr-1 flex-1 overflow-y-auto">
+      <div className="flex-1 space-y-6 overflow-y-auto pr-1">
         {controller.hasPermissions && (
           <MediaSetupErrorAlert message={controller.permissionError} />
         )}

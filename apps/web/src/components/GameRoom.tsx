@@ -431,7 +431,7 @@ function GameRoomMainLayout({
   useGameRoomKeyboardShortcuts(shortcutHandlers)
 
   return (
-    <div className="gap-4 p-4 flex h-full">
+    <div className="flex h-full gap-4 p-4">
       {/* Left Sidebar - Player List */}
       <GameRoomSidebar
         roomId={roomId}

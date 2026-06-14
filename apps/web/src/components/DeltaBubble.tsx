@@ -40,8 +40,12 @@ export const DeltaBubble = memo(function DeltaBubble({
   return (
     <span
       className={cn(
-        'rounded bg-black/70 px-1 py-0.5 font-mono text-xs font-bold text-white pointer-events-none absolute z-20 transition-opacity duration-200 select-none',
-        side === 'left' ? 'mr-1 right-full' : 'ml-1 left-full',
+        `
+          pointer-events-none absolute z-20 rounded-sm bg-black/70 px-1 py-0.5
+          font-mono text-xs font-bold text-white transition-opacity duration-200
+          select-none
+        `,
+        side === 'left' ? 'right-full mr-1' : 'left-full ml-1',
         className,
       )}
     >

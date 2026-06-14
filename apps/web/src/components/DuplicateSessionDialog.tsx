@@ -29,11 +29,22 @@ export function DuplicateSessionDialog({
 }: DuplicateSessionDialogProps) {
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[450px] border-warning/50 bg-surface-1 [&>button]:hidden">
+      <DialogContent
+        className="
+        border-warning/50 bg-surface-1
+        sm:max-w-[450px]
+        [&>button]:hidden
+      "
+      >
         <DialogHeader>
           <div className="mb-2 flex justify-center">
-            <div className="h-12 w-12 flex items-center justify-center rounded-full bg-warning/20">
-              <AlertTriangle className="h-6 w-6 text-warning-muted-foreground" />
+            <div
+              className="
+              flex size-12 items-center justify-center rounded-full
+              bg-warning/20
+            "
+            >
+              <AlertTriangle className="size-6 text-warning-muted-foreground" />
             </div>
           </div>
           <DialogTitle className="text-center text-text-primary">
@@ -48,11 +59,22 @@ export function DuplicateSessionDialog({
         <div className="space-y-3 py-4">
           <button
             onClick={onTransfer}
-            className="group p-4 w-full cursor-pointer rounded-lg border border-brand/30 bg-surface-0/30 text-left transition-all hover:border-brand/60 hover:bg-surface-1/40 focus:ring-2 focus:ring-brand/50 focus:outline-none"
+            className="
+              group w-full cursor-pointer rounded-lg border border-brand/30
+              bg-surface-0/30 p-4 text-left transition-all
+              hover:border-brand/60 hover:bg-surface-1/40
+              focus:ring-2 focus:ring-brand/50 focus:outline-none
+            "
           >
-            <div className="gap-3 flex items-start">
-              <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-lg bg-brand/20 transition-colors group-hover:bg-brand/30">
-                <ArrowRightLeft className="h-5 w-5 text-brand-muted-foreground" />
+            <div className="flex items-start gap-3">
+              <div
+                className="
+                flex size-10 shrink-0 items-center justify-center rounded-lg
+                bg-brand/20 transition-colors
+                group-hover:bg-brand/30
+              "
+              >
+                <ArrowRightLeft className="size-5 text-brand-muted-foreground" />
               </div>
               <div>
                 <p className="font-medium text-brand-muted-foreground">
@@ -67,11 +89,22 @@ export function DuplicateSessionDialog({
 
           <button
             onClick={onClose}
-            className="group p-4 w-full cursor-pointer rounded-lg border border-surface-3 bg-surface-2/50 text-left transition-all hover:border-surface-3 hover:bg-surface-2 focus:ring-2 focus:ring-surface-3/50 focus:outline-none"
+            className="
+              group w-full cursor-pointer rounded-lg border border-surface-3
+              bg-surface-2/50 p-4 text-left transition-all
+              hover:border-surface-3 hover:bg-surface-2
+              focus:ring-2 focus:ring-surface-3/50 focus:outline-none
+            "
           >
-            <div className="gap-3 flex items-start">
-              <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-lg bg-surface-3/50 transition-colors group-hover:bg-surface-3">
-                <Home className="h-5 w-5 text-text-muted" />
+            <div className="flex items-start gap-3">
+              <div
+                className="
+                flex size-10 shrink-0 items-center justify-center rounded-lg
+                bg-surface-3/50 transition-colors
+                group-hover:bg-surface-3
+              "
+              >
+                <Home className="size-5 text-text-muted" />
               </div>
               <div>
                 <p className="font-medium text-text-secondary">

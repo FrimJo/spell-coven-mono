@@ -250,12 +250,19 @@ export function CommanderSearchInput({
             }
           />
           {loading && !hideLoadingIndicator && (
-            <Loader2 className="right-3 h-4 w-4 animate-spin absolute top-1/2 -translate-y-1/2 text-text-muted" />
+            <Loader2
+              className="
+              absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin
+              text-text-muted
+            "
+            />
           )}
         </div>
       </PopoverAnchor>
       <PopoverContent
-        className="p-0 w-[var(--radix-popover-trigger-width)] border-surface-3 bg-surface-1"
+        className="
+          w-(--radix-popover-trigger-width) border-surface-3 bg-surface-1 p-0
+        "
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
         asChild
@@ -269,12 +276,15 @@ export function CommanderSearchInput({
             mousedownInContentRef.current = false
           }}
         >
-          <Command className="min-h-0 flex bg-transparent" shouldFilter={false}>
+          <Command className="flex min-h-0 bg-transparent" shouldFilter={false}>
             <div
               ref={listRef}
               id={`${id}-list`}
               role="listbox"
-              className="min-h-0 max-h-[min(300px,50vh)] overflow-x-hidden overflow-y-auto"
+              className="
+                max-h-[min(300px,50vh)] min-h-0 overflow-x-hidden
+                overflow-y-auto
+              "
               onWheel={(e) => {
                 // Focus stays on input, so wheel often goes to input; handle wheel over list so list scrolls
                 const el = listRef.current
@@ -300,11 +310,17 @@ export function CommanderSearchInput({
                         tabIndex={-1}
                         aria-selected={highlightedIndex === i}
                         onSelect={() => handleSuggestionSelect(name)}
-                        className={`cursor-pointer ${
-                          highlightedIndex === i
-                            ? 'bg-surface-2 text-text-secondary'
-                            : 'text-brand-muted-foreground hover:bg-surface-2'
-                        }`}
+                        className={`
+                          cursor-pointer
+                          ${
+                            highlightedIndex === i
+                              ? 'bg-surface-2 text-text-secondary'
+                              : `
+                              text-brand-muted-foreground
+                              hover:bg-surface-2
+                            `
+                          }
+                        `}
                       >
                         {name}
                       </CommandItem>
@@ -328,11 +344,17 @@ export function CommanderSearchInput({
                           tabIndex={-1}
                           aria-selected={highlightedIndex === index}
                           onSelect={() => handleSelect(name)}
-                          className={`cursor-pointer ${
-                            highlightedIndex === index
-                              ? 'bg-surface-2 text-text-secondary'
-                              : 'text-text-secondary hover:bg-surface-2'
-                          }`}
+                          className={`
+                            cursor-pointer
+                            ${
+                              highlightedIndex === index
+                                ? 'bg-surface-2 text-text-secondary'
+                                : `
+                                text-text-secondary
+                                hover:bg-surface-2
+                              `
+                            }
+                          `}
                         >
                           {name}
                         </CommandItem>

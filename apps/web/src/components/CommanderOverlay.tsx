@@ -143,7 +143,12 @@ export const CommanderOverlay = memo(function CommanderOverlay({
   }
 
   return (
-    <div className={`gap-2 absolute z-10 flex flex-col ${positionClasses}`}>
+    <div
+      className={`
+      absolute z-10 flex flex-col gap-2
+      ${positionClasses}
+    `}
+    >
       {participant.commanders.map((commander, index) => {
         if (!commander?.name) return null
         return (
@@ -207,7 +212,7 @@ const CommanderTile = memo(function CommanderTile({
   })
 
   return (
-    <div className="group h-12 w-12 relative">
+    <div className="group relative size-12">
       {/* Delta bubble left of minus */}
       {damageDelta.delta < 0 && (
         <DeltaBubble
@@ -218,22 +223,38 @@ const CommanderTile = memo(function CommanderTile({
         />
       )}
       {/* Commander Image/Card - Square */}
-      <div className="h-12 w-12 shadow-lg ring-black/20 relative overflow-hidden rounded-lg border-2 border-border-muted ring-1 transition-transform group-hover:scale-105 group-hover:border-brand/50">
+      <div
+        className="
+        relative size-12 overflow-hidden rounded-lg border-2 border-border-muted
+        shadow-lg ring-1 ring-black/20 transition-transform
+        group-hover:scale-105 group-hover:border-brand/50
+      "
+      >
         {imageUrl ? (
           <img
             src={imageUrl}
             alt={commander.name}
-            className="h-full w-full object-cover"
+            className="size-full object-cover"
           />
         ) : (
-          <div className="text-xs font-bold flex h-full w-full items-center justify-center bg-surface-2 text-text-muted">
+          <div
+            className="
+            flex size-full items-center justify-center bg-surface-2 text-xs
+            font-bold text-text-muted
+          "
+          >
             {commander.name.substring(0, 2)}
           </div>
         )}
 
         {/* Damage Number - Centered */}
-        <div className="inset-0 absolute flex items-center justify-center">
-          <span className="font-mono text-sm font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span
+            className="
+            font-mono text-sm font-bold text-white
+            drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]
+          "
+          >
             {damage}
           </span>
         </div>
@@ -242,7 +263,11 @@ const CommanderTile = memo(function CommanderTile({
         <Button
           size="icon"
           variant="ghost"
-          className="left-0 top-0 text-white absolute flex h-full w-1/2 items-center justify-center rounded-r-none opacity-0 transition-opacity group-hover:opacity-100"
+          className="
+            absolute top-0 left-0 flex h-full w-1/2 items-center justify-center
+            rounded-r-none text-white opacity-0 transition-opacity
+            group-hover:opacity-100
+          "
           onMouseDown={damageMinus.handleStart}
           onMouseUp={damageMinus.handleStop}
           onMouseLeave={damageMinus.handleStop}
@@ -250,21 +275,25 @@ const CommanderTile = memo(function CommanderTile({
           onTouchEnd={damageMinus.handleStop}
           disabled={damage <= 0}
         >
-          <Minus className="h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" />
+          <Minus className="size-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" />
         </Button>
 
         {/* Plus Button - Right Half */}
         <Button
           size="icon"
           variant="ghost"
-          className="right-0 top-0 text-white absolute flex h-full w-1/2 items-center justify-center rounded-l-none opacity-0 transition-opacity group-hover:opacity-100"
+          className="
+            absolute top-0 right-0 flex h-full w-1/2 items-center justify-center
+            rounded-l-none text-white opacity-0 transition-opacity
+            group-hover:opacity-100
+          "
           onMouseDown={damagePlus.handleStart}
           onMouseUp={damagePlus.handleStop}
           onMouseLeave={damagePlus.handleStop}
           onTouchStart={damagePlus.handleStart}
           onTouchEnd={damagePlus.handleStop}
         >
-          <Plus className="h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" />
+          <Plus className="size-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" />
         </Button>
       </div>
       {/* Delta bubble right of plus */}

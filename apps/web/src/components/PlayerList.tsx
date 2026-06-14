@@ -132,26 +132,34 @@ export function PlayerList({
   // Header action: seat count controls (owner only) and reset game (icon + tooltip)
   const headerAction =
     isLobbyOwner && onChangeSeatCount ? (
-      <div className="gap-1 flex items-center">
+      <div className="flex items-center gap-1">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => onChangeSeatCount(-1)}
           disabled={!canDecrease}
-          className="h-5 w-5 p-0 text-text-muted hover:text-text-secondary disabled:text-text-muted/30"
+          className="
+            size-5 p-0 text-text-muted
+            hover:text-text-secondary
+            disabled:text-text-muted/30
+          "
           title="Remove seat"
         >
-          <Minus className="h-3 w-3" />
+          <Minus className="size-3" />
         </Button>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => onChangeSeatCount(1)}
           disabled={!canIncrease}
-          className="h-5 w-5 p-0 text-text-muted hover:text-text-secondary disabled:text-text-muted/30"
+          className="
+            size-5 p-0 text-text-muted
+            hover:text-text-secondary
+            disabled:text-text-muted/30
+          "
           title="Add seat"
         >
-          <Plus className="h-3 w-3" />
+          <Plus className="size-3" />
         </Button>
         {onResetGame && (
           <Tooltip>
@@ -160,10 +168,13 @@ export function PlayerList({
                 variant="ghost"
                 size="sm"
                 onClick={onResetGame}
-                className="h-5 w-5 p-0 text-text-muted hover:text-text-secondary"
+                className="
+                  size-5 p-0 text-text-muted
+                  hover:text-text-secondary
+                "
                 data-testid="reset-game-button"
               >
-                <RotateCcw className="h-3 w-3" />
+                <RotateCcw className="size-3" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Reset game state</TooltipContent>
@@ -177,10 +188,13 @@ export function PlayerList({
             variant="ghost"
             size="sm"
             onClick={onResetGame}
-            className="h-5 w-5 p-0 text-text-muted hover:text-text-secondary"
+            className="
+              size-5 p-0 text-text-muted
+              hover:text-text-secondary
+            "
             data-testid="reset-game-button"
           >
-            <RotateCcw className="h-3 w-3" />
+            <RotateCcw className="size-3" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>Reset game state</TooltipContent>
@@ -209,7 +223,15 @@ export function PlayerList({
                   type="button"
                   onClick={() => handleCopyLink(index)}
                   disabled={!onCopyShareLink}
-                  className="border-default group gap-2 p-2 flex min-h-[56px] w-full cursor-pointer items-center justify-between rounded-lg border border-dashed bg-surface-1/50 text-left transition-colors hover:border-surface-3/80 hover:bg-surface-2/40 active:scale-[0.98] disabled:cursor-default disabled:opacity-60"
+                  className="
+                    border-default group flex min-h-[56px] w-full cursor-pointer
+                    items-center justify-between gap-2 rounded-lg border
+                    border-dashed bg-surface-1/50 p-2 text-left
+                    transition-colors
+                    hover:border-surface-3/80 hover:bg-surface-2/40
+                    active:scale-[0.98]
+                    disabled:cursor-default disabled:opacity-60
+                  "
                   whileHover={
                     onCopyShareLink && !isCopied
                       ? { scale: 1.01, transition: { duration: 0.2 } }
@@ -228,7 +250,7 @@ export function PlayerList({
                         : undefined
                   }
                 >
-                  <div className="min-w-0 gap-2 flex flex-1 items-center">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
                     <AnimatePresence mode="wait">
                       {isCopied ? (
                         <m.div
@@ -240,7 +262,7 @@ export function PlayerList({
                             duration: 0.22,
                             ease: [0.25, 0.46, 0.45, 0.94],
                           }}
-                          className="min-w-0 gap-2 flex flex-1 items-center"
+                          className="flex min-w-0 flex-1 items-center gap-2"
                         >
                           <m.div
                             initial={{ scale: 0 }}
@@ -250,14 +272,22 @@ export function PlayerList({
                               stiffness: 380,
                               damping: 22,
                             }}
-                            className="h-8 w-8 bg-teal-600 flex flex-shrink-0 items-center justify-center rounded-full"
+                            className="
+                              flex size-8 shrink-0 items-center justify-center
+                              rounded-full bg-teal-600
+                            "
                           >
                             <Check
-                              className="h-4 w-4 text-white"
+                              className="size-4 text-white"
                               strokeWidth={2.5}
                             />
                           </m.div>
-                          <span className="min-w-0 text-sm font-medium text-teal-500 flex-1 truncate">
+                          <span
+                            className="
+                            min-w-0 flex-1 truncate text-sm font-medium
+                            text-teal-500
+                          "
+                          >
                             Copied!
                           </span>
                         </m.div>
@@ -268,13 +298,28 @@ export function PlayerList({
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.15 }}
-                          className="min-w-0 gap-2 relative flex flex-1 items-center"
+                          className="
+                            relative flex min-w-0 flex-1 items-center gap-2
+                          "
                         >
                           {/* Default: Gamepad2 + Open seat (matches VideoStreamGrid empty slot) */}
-                          <div className="min-w-0 gap-2 flex flex-1 items-center transition-opacity duration-200 group-hover:opacity-0">
-                            <m.div className="h-8 w-8 relative flex flex-shrink-0 items-center justify-center rounded-full bg-brand/10">
+                          <div
+                            className="
+                            flex min-w-0 flex-1 items-center gap-2
+                            transition-opacity duration-200
+                            group-hover:opacity-0
+                          "
+                          >
+                            <m.div
+                              className="
+                              relative flex size-8 shrink-0 items-center
+                              justify-center rounded-full bg-brand/10
+                            "
+                            >
                               <m.div
-                                className="inset-0 absolute rounded-full bg-brand/20"
+                                className="
+                                  absolute inset-0 rounded-full bg-brand/20
+                                "
                                 animate={{
                                   scale: [1, 1.4, 1],
                                   opacity: [0.5, 0, 0.5],
@@ -293,23 +338,45 @@ export function PlayerList({
                                   ease: 'easeInOut',
                                 }}
                               >
-                                <Gamepad2 className="h-4 w-4 text-brand-muted-foreground" />
+                                <Gamepad2
+                                  className="
+                                  size-4 text-brand-muted-foreground
+                                "
+                                />
                               </m.div>
                             </m.div>
-                            <div className="min-w-0 space-y-0.5 flex-1">
-                              <p className="text-sm font-medium truncate text-text-muted">
+                            <div className="min-w-0 flex-1 space-y-0.5">
+                              <p
+                                className="
+                                truncate text-sm font-medium text-text-muted
+                              "
+                              >
                                 Open seat
                               </p>
-                              <p className="text-xs truncate text-text-muted/60">
+                              <p className="truncate text-xs text-text-muted/60">
                                 Waiting for player...
                               </p>
                             </div>
                           </div>
                           {/* Hover: Link2 + Copy shareable link */}
-                          <div className="inset-0 gap-2 pointer-events-none absolute flex items-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                            <m.div className="h-8 w-8 relative flex flex-shrink-0 items-center justify-center rounded-full bg-brand/10">
+                          <div
+                            className="
+                            pointer-events-none absolute inset-0 flex
+                            items-center gap-2 opacity-0 transition-opacity
+                            duration-200
+                            group-hover:opacity-100
+                          "
+                          >
+                            <m.div
+                              className="
+                              relative flex size-8 shrink-0 items-center
+                              justify-center rounded-full bg-brand/10
+                            "
+                            >
                               <m.div
-                                className="inset-0 absolute rounded-full bg-brand/20"
+                                className="
+                                  absolute inset-0 rounded-full bg-brand/20
+                                "
                                 animate={{
                                   scale: [1, 1.4, 1],
                                   opacity: [0.5, 0, 0.5],
@@ -328,10 +395,14 @@ export function PlayerList({
                                   ease: 'easeInOut',
                                 }}
                               >
-                                <Link2 className="h-4 w-4 text-brand-muted-foreground" />
+                                <Link2
+                                  className="
+                                  size-4 text-brand-muted-foreground
+                                "
+                                />
                               </m.div>
                             </m.div>
-                            <span className="text-sm truncate text-text-muted">
+                            <span className="truncate text-sm text-text-muted">
                               Copy shareable link
                             </span>
                           </div>
@@ -351,33 +422,44 @@ export function PlayerList({
             return (
               <div
                 key={player.id}
-                className="p-2 flex items-center justify-between rounded-lg border border-surface-2 bg-surface-2/50 transition-colors"
+                className="
+                  flex items-center justify-between rounded-lg border
+                  border-surface-2 bg-surface-2/50 p-2 transition-colors
+                "
               >
-                <div className="min-w-0 gap-2 flex flex-1 items-center">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
                   <div
-                    className={`h-2 w-2 flex-shrink-0 rounded-full ${
-                      player.isOnline !== false
-                        ? 'animate-pulse bg-online'
-                        : 'bg-warning'
-                    }`}
+                    className={`
+                      size-2 shrink-0 rounded-full
+                      ${
+                        player.isOnline !== false
+                          ? 'animate-pulse bg-online'
+                          : 'bg-warning'
+                      }
+                    `}
                     title={
                       player.isOnline !== false ? 'Online' : 'Disconnected'
                     }
                   />
                   <span
-                    className="text-sm text-white truncate"
+                    className="truncate text-sm text-white"
                     data-testid="player-name"
                   >
                     {player.name}
                   </span>
                   {isOwner && (
-                    <Crown className="h-3 w-3 flex-shrink-0 text-warning" />
+                    <Crown className="size-3 shrink-0 text-warning" />
                   )}
                   {player.isOnline === false && (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="gap-1 rounded px-1.5 py-0.5 text-xs flex flex-shrink-0 items-center bg-warning/20 text-warning">
-                          <Unplug className="h-3 w-3" />
+                        <span
+                          className="
+                          flex shrink-0 items-center gap-1 rounded-sm
+                          bg-warning/20 px-1.5 py-0.5 text-xs text-warning
+                        "
+                        >
+                          <Unplug className="size-3" />
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -387,25 +469,31 @@ export function PlayerList({
                   )}
                   {!isLocal && isMuted && (
                     <span
-                      className="rounded px-1.5 py-1 flex flex-shrink-0 items-center justify-center bg-destructive/20 text-destructive"
+                      className="
+                        flex shrink-0 items-center justify-center rounded-sm
+                        bg-destructive/20 px-1.5 py-1 text-destructive
+                      "
                       title="Muted"
                     >
-                      <VolumeX className="h-3 w-3" />
+                      <VolumeX className="size-3" />
                     </span>
                   )}
                 </div>
 
-                <div className="gap-2 flex items-center">
+                <div className="flex items-center gap-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 text-text-muted hover:bg-surface-3 hover:text-text-secondary"
+                        className="
+                          size-6 p-0 text-text-muted
+                          hover:bg-surface-3 hover:text-text-secondary
+                        "
                         aria-label="Player actions"
                         data-testid="player-actions-button"
                       >
-                        <MoreVertical className="h-3 w-3" />
+                        <MoreVertical className="size-3" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -415,30 +503,36 @@ export function PlayerList({
                       {onOpenCommanderDamage && (
                         <DropdownMenuItem
                           onClick={() => onOpenCommanderDamage(player.id)}
-                          className="gap-2 focus:text-white flex items-center text-text-secondary focus:bg-surface-3"
+                          className="
+                            flex items-center gap-2 text-text-secondary
+                            focus:bg-surface-3 focus:text-white
+                          "
                           title="Edit commander damage"
                           data-testid="player-commander-damage-menu-item"
                         >
-                          <Swords className="mr-2 h-4 w-4" />
+                          <Swords className="mr-2 size-4" />
                           <span>Commander damage</span>
                         </DropdownMenuItem>
                       )}
                       {!isLocal && (
                         <DropdownMenuItem
                           onClick={() => onToggleMutePlayer(player.id)}
-                          className="focus:text-white text-text-secondary focus:bg-surface-3"
+                          className="
+                            text-text-secondary
+                            focus:bg-surface-3 focus:text-white
+                          "
                           title={
                             isMuted ? 'Unmute this player' : 'Mute this player'
                           }
                         >
                           {isMuted ? (
                             <>
-                              <Volume2 className="mr-2 h-4 w-4" />
+                              <Volume2 className="mr-2 size-4" />
                               Unmute
                             </>
                           ) : (
                             <>
-                              <VolumeX className="mr-2 h-4 w-4" />
+                              <VolumeX className="mr-2 size-4" />
                               Mute
                             </>
                           )}
@@ -448,18 +542,24 @@ export function PlayerList({
                         <>
                           <DropdownMenuItem
                             onClick={() => openConfirmDialog(player, 'kick')}
-                            className="text-warning focus:bg-warning/10 focus:text-warning"
+                            className="
+                              text-warning
+                              focus:bg-warning/10 focus:text-warning
+                            "
                             title="Can rejoin"
                           >
-                            <UserX className="mr-2 h-4 w-4" />
+                            <UserX className="mr-2 size-4" />
                             Kick
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => openConfirmDialog(player, 'ban')}
-                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                            className="
+                              text-destructive
+                              focus:bg-destructive/10 focus:text-destructive
+                            "
                             title="Permanent"
                           >
-                            <Ban className="mr-2 h-4 w-4" />
+                            <Ban className="mr-2 size-4" />
                             Ban
                           </DropdownMenuItem>
                         </>
@@ -511,15 +611,25 @@ export function PlayerList({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="border-surface-3 bg-surface-2 text-text-secondary">
+              <AlertDialogCancel
+                className="
+                border-surface-3 bg-surface-2 text-text-secondary
+              "
+              >
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirm}
                 className={
                   confirmDialog.action === 'kick'
-                    ? 'text-white bg-warning hover:bg-warning'
-                    : 'text-white bg-destructive hover:bg-destructive'
+                    ? `
+                      bg-warning text-white
+                      hover:bg-warning
+                    `
+                    : `
+                      bg-destructive text-white
+                      hover:bg-destructive
+                    `
                 }
               >
                 {confirmDialog.action === 'kick' ? 'Kick' : 'Ban'}

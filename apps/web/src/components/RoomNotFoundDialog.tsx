@@ -26,14 +26,24 @@ interface RoomNotFoundDialogProps {
 export function RoomNotFoundDialog({ open, onClose }: RoomNotFoundDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[450px] border-surface-2 bg-surface-1">
+      <DialogContent
+        className="
+        border-surface-2 bg-surface-1
+        sm:max-w-[450px]
+      "
+      >
         <DialogHeader>
           <div className="mb-2 flex justify-center">
-            <div className="h-12 w-12 flex items-center justify-center rounded-full bg-warning/20">
-              <AlertCircle className="h-6 w-6 text-warning-muted-foreground" />
+            <div
+              className="
+              flex size-12 items-center justify-center rounded-full
+              bg-warning/20
+            "
+            >
+              <AlertCircle className="size-6 text-warning-muted-foreground" />
             </div>
           </div>
-          <DialogTitle className="text-white text-center">
+          <DialogTitle className="text-center text-white">
             Room Not Found
           </DialogTitle>
           <DialogDescription className="text-center text-text-muted">
@@ -43,12 +53,15 @@ export function RoomNotFoundDialog({ open, onClose }: RoomNotFoundDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="pt-4 flex justify-center">
+        <div className="flex justify-center pt-4">
           <Button
             onClick={onClose}
-            className="gap-2 text-white bg-brand hover:bg-brand"
+            className="
+              gap-2 bg-brand text-white
+              hover:bg-brand
+            "
           >
-            <Home className="h-4 w-4" />
+            <Home className="size-4" />
             Return to Home
           </Button>
         </div>

@@ -111,8 +111,12 @@ const TestStreamSlot = memo(function TestStreamSlot({
   })
 
   return (
-    <Card className="flex h-full flex-col overflow-hidden border-surface-2 bg-surface-1">
-      <div className="min-h-0 bg-black relative flex-1">
+    <Card
+      className="
+      flex h-full flex-col overflow-hidden border-surface-2 bg-surface-1
+    "
+    >
+      <div className="relative min-h-0 flex-1 bg-black">
         {testStream ? (
           <>
             <video
@@ -134,7 +138,7 @@ const TestStreamSlot = memo(function TestStreamSlot({
           </>
         ) : (
           <div className="flex h-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
+            <Loader2 className="size-8 animate-spin text-brand-muted-foreground" />
           </div>
         )}
 
@@ -143,8 +147,13 @@ const TestStreamSlot = memo(function TestStreamSlot({
         </PlayerNameBadge>
 
         {/* Indicator that this is a test stream */}
-        <div className="left-3 top-3 absolute z-10">
-          <div className="gap-1.5 px-2 py-1 text-xs backdrop-blur-sm flex items-center rounded-lg border border-brand/30 bg-brand/20">
+        <div className="absolute top-3 left-3 z-10">
+          <div
+            className="
+            flex items-center gap-1.5 rounded-lg border border-brand/30
+            bg-brand/20 px-2 py-1 text-xs backdrop-blur-sm
+          "
+          >
             <span className="text-brand-foreground">🧪 Test</span>
           </div>
         </div>
@@ -323,14 +332,34 @@ export function VideoStreamGrid({
 
   return (
     <LazyMotion features={domAnimation}>
-      <div className={`grid ${GRID_CLASS} gap-4 h-full items-stretch`}>
+      <div
+        className={`
+        grid
+        ${GRID_CLASS}
+        h-full items-stretch gap-4
+      `}
+      >
         {/* Render local player with permission gate, loading state, or video */}
         {isCheckingPermissions ? (
-          <div className="border-default flex h-full items-center justify-center rounded-lg border bg-surface-2/50">
-            <div className="space-y-3 flex flex-col items-center">
+          <div
+            className="
+            border-default flex h-full items-center justify-center rounded-lg
+            border bg-surface-2/50
+          "
+          >
+            <div className="flex flex-col items-center space-y-3">
               <div className="relative">
-                <div className="h-16 w-16 flex items-center justify-center rounded-full bg-brand/20">
-                  <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
+                <div
+                  className="
+                  flex size-16 items-center justify-center rounded-full
+                  bg-brand/20
+                "
+                >
+                  <Loader2
+                    className="
+                    size-8 animate-spin text-brand-muted-foreground
+                  "
+                  />
                 </div>
               </div>
               <div className="space-y-1 text-center">
@@ -342,12 +371,20 @@ export function VideoStreamGrid({
             </div>
           </div>
         ) : needsPermissionDialog || permissionsBlocked ? (
-          <div className="border-default h-full rounded-lg border bg-surface-2/50">
+          <div
+            className="
+            border-default h-full rounded-lg border bg-surface-2/50
+          "
+          >
             <MediaPermissionGate
               permissions={{ camera: true, microphone: true }}
               loadingFallback={
-                <div className="space-y-3 flex flex-col items-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
+                <div className="flex flex-col items-center space-y-3">
+                  <Loader2
+                    className="
+                    size-8 animate-spin text-brand-muted-foreground
+                  "
+                  />
                   <p className="text-sm text-text-muted">
                     Requesting access...
                   </p>
@@ -359,13 +396,31 @@ export function VideoStreamGrid({
             </MediaPermissionGate>
           </div>
         ) : isLocalStreamPending ? (
-          <div className="border-default flex h-full items-center justify-center rounded-lg border bg-surface-2/50">
-            <div className="space-y-3 flex flex-col items-center">
+          <div
+            className="
+            border-default flex h-full items-center justify-center rounded-lg
+            border bg-surface-2/50
+          "
+          >
+            <div className="flex flex-col items-center space-y-3">
               <div className="relative">
-                <div className="h-16 w-16 flex items-center justify-center rounded-full bg-brand/20">
-                  <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
+                <div
+                  className="
+                  flex size-16 items-center justify-center rounded-full
+                  bg-brand/20
+                "
+                >
+                  <Loader2
+                    className="
+                    size-8 animate-spin text-brand-muted-foreground
+                  "
+                  />
                 </div>
-                <div className="inset-0 animate-ping absolute rounded-full bg-brand/10" />
+                <div
+                  className="
+                  absolute inset-0 animate-ping rounded-full bg-brand/10
+                "
+                />
               </div>
               <div className="space-y-1 text-center">
                 <p className="text-sm font-medium text-text-secondary">
@@ -378,11 +433,21 @@ export function VideoStreamGrid({
             </div>
           </div>
         ) : localStreamError ? (
-          <div className="flex h-full items-center justify-center rounded-lg border border-destructive/50 bg-surface-2/50">
-            <div className="space-y-4 px-6 py-8 flex flex-col items-center">
+          <div
+            className="
+            flex h-full items-center justify-center rounded-lg border
+            border-destructive/50 bg-surface-2/50
+          "
+          >
+            <div className="flex flex-col items-center space-y-4 px-6 py-8">
               <div className="relative">
-                <div className="h-16 w-16 flex items-center justify-center rounded-full bg-destructive/20 ring-4 ring-destructive/10">
-                  <AlertCircle className="h-8 w-8 text-destructive" />
+                <div
+                  className="
+                  flex size-16 items-center justify-center rounded-full
+                  bg-destructive/20 ring-4 ring-destructive/10
+                "
+                >
+                  <AlertCircle className="size-8 text-destructive" />
                 </div>
               </div>
               <div className="space-y-2 text-center">
@@ -394,17 +459,29 @@ export function VideoStreamGrid({
                     'Unable to start your media session. Please check your permissions and try again.'}
                 </p>
               </div>
-              <div className="gap-2 text-xs flex flex-col text-text-muted">
-                <p className="gap-1.5 flex items-center">
-                  <span className="h-1 w-1 inline-block rounded-full bg-surface-3" />
+              <div className="flex flex-col gap-2 text-xs text-text-muted">
+                <p className="flex items-center gap-1.5">
+                  <span
+                    className="
+                    inline-block size-1 rounded-full bg-surface-3
+                  "
+                  />
                   Check browser permissions
                 </p>
-                <p className="gap-1.5 flex items-center">
-                  <span className="h-1 w-1 inline-block rounded-full bg-surface-3" />
+                <p className="flex items-center gap-1.5">
+                  <span
+                    className="
+                    inline-block size-1 rounded-full bg-surface-3
+                  "
+                  />
                   Ensure camera is not in use by another app
                 </p>
-                <p className="gap-1.5 flex items-center">
-                  <span className="h-1 w-1 inline-block rounded-full bg-surface-3" />
+                <p className="flex items-center gap-1.5">
+                  <span
+                    className="
+                    inline-block size-1 rounded-full bg-surface-3
+                  "
+                  />
                   Try refreshing the page
                 </p>
               </div>
@@ -466,13 +543,26 @@ export function VideoStreamGrid({
         }).map((_, index) => (
           <Card
             key={`empty-slot-${index}`}
-            className="border-default flex h-full flex-col overflow-hidden border-dashed bg-surface-1/50"
+            className="
+              border-default flex h-full flex-col overflow-hidden border-dashed
+              bg-surface-1/50
+            "
           >
-            <div className="min-h-0 relative flex flex-1 items-center justify-center bg-surface-0/50">
+            <div
+              className="
+              relative flex min-h-0 flex-1 items-center justify-center
+              bg-surface-0/50
+            "
+            >
               <div className="space-y-4 text-center">
-                <m.div className="h-16 w-16 relative mx-auto flex items-center justify-center rounded-full bg-brand/10">
+                <m.div
+                  className="
+                  relative mx-auto flex size-16 items-center justify-center
+                  rounded-full bg-brand/10
+                "
+                >
                   <m.div
-                    className="inset-0 absolute rounded-full bg-brand/20"
+                    className="absolute inset-0 rounded-full bg-brand/20"
                     animate={{
                       scale: [1, 1.4, 1],
                       opacity: [0.5, 0, 0.5],
@@ -491,7 +581,7 @@ export function VideoStreamGrid({
                       ease: 'easeInOut',
                     }}
                   >
-                    <Gamepad2 className="h-8 w-8 text-brand-muted-foreground" />
+                    <Gamepad2 className="size-8 text-brand-muted-foreground" />
                   </m.div>
                 </m.div>
                 <div className="space-y-1">
@@ -513,13 +603,26 @@ export function VideoStreamGrid({
 
 function VideoStreamGridLoading() {
   return (
-    <div className="border-default flex h-full items-center justify-center rounded-lg border bg-surface-2/50">
-      <div className="space-y-3 flex flex-col items-center">
+    <div
+      className="
+      border-default flex h-full items-center justify-center rounded-lg border
+      bg-surface-2/50
+    "
+    >
+      <div className="flex flex-col items-center space-y-3">
         <div className="relative">
-          <div className="h-16 w-16 flex items-center justify-center rounded-full bg-brand/20">
-            <Loader2 className="h-8 w-8 animate-spin text-brand-muted-foreground" />
+          <div
+            className="
+            flex size-16 items-center justify-center rounded-full bg-brand/20
+          "
+          >
+            <Loader2 className="size-8 animate-spin text-brand-muted-foreground" />
           </div>
-          <div className="inset-0 animate-ping absolute rounded-full bg-brand/10" />
+          <div
+            className="
+            absolute inset-0 animate-ping rounded-full bg-brand/10
+          "
+          />
         </div>
         <div className="space-y-1 text-center">
           <p className="text-sm font-medium text-text-secondary">
