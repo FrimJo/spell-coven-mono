@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { mediaStreamQueryKey, useMediaDevice } from '@/hooks/useMediaDevice'
 import { useMediaPermissions } from '@/hooks/useMediaPermissions'
+import {
+  addAppBreadcrumb,
+  captureAppException,
+} from '@/integrations/sentry/reporting'
 import { stopMediaStream } from '@/lib/media-stream-manager'
 import { isSuccessState } from '@/types/async-resource'
 import { useQueryClient } from '@tanstack/react-query'
@@ -138,7 +142,11 @@ export function useMediaSetupController({
       })
       audioStream.getTracks().forEach((track) => track.stop())
       gotAnyPermission = true
-    } catch {
+    } catch (error) {
+      addAppBreadcrumb('media', 'Microphone permission request failed')
+      captureAppException(error, {
+        tags: { feature: 'media', operation: 'request_microphone_permission' },
+      })
       // Ignore and continue to camera permission attempt.
     }
 
@@ -148,7 +156,11 @@ export function useMediaSetupController({
       })
       videoStream.getTracks().forEach((track) => track.stop())
       gotAnyPermission = true
-    } catch {
+    } catch (error) {
+      addAppBreadcrumb('media', 'Camera permission request failed')
+      captureAppException(error, {
+        tags: { feature: 'media', operation: 'request_camera_permission' },
+      })
       // Ignore and let permission state explain the outcome.
     }
 
@@ -161,6 +173,9 @@ export function useMediaSetupController({
 
   const handlePermissionDecline = useCallback(
     (type: DeclineType) => {
+      addAppBreadcrumb('media', 'Media permission declined', {
+        declineType: type,
+      })
       recordDecline('camera', type)
       recordDecline('microphone', type)
     },

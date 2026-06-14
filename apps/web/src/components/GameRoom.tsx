@@ -1,5 +1,5 @@
 import type { DetectorType } from '@/lib/detectors'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   CardQueryProvider,
@@ -18,6 +18,7 @@ import {
   useGameRoomShortcutDisplayParts,
 } from '@/hooks/useGameRoomKeybindings'
 import { api } from '@convex/_generated/api'
+import * as Sentry from '@sentry/react'
 import { useMutation as useConvexMutation } from 'convex/react'
 import { toast } from 'sonner'
 
@@ -113,6 +114,26 @@ function GameRoomContent({
 
   // Map disconnect reason to RejoinReason type
   const rejoinReason: RejoinReason = disconnectReason ?? 'left'
+
+  useEffect(() => {
+    Sentry.setContext('game_room', {
+      isOwner,
+      isConnected,
+      disconnectReason,
+      detectorType: detectorType ?? 'none',
+      usePerspectiveWarp,
+      showTestStream,
+    })
+    Sentry.setTag('detector', detectorType ?? 'none')
+    Sentry.setTag('room_connected', String(isConnected))
+  }, [
+    detectorType,
+    disconnectReason,
+    isConnected,
+    isOwner,
+    showTestStream,
+    usePerspectiveWarp,
+  ])
 
   // Compute shareable link (only on client)
   const shareLink = useMemo(() => {

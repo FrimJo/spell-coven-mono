@@ -8,6 +8,7 @@
 
 import { useCallback } from 'react'
 import { env } from '@/env'
+import { captureAppException } from '@/integrations/sentry/reporting'
 import {
   clearConvexAuthPreviewName,
   getConvexAuthPreviewName,
@@ -102,6 +103,9 @@ export function useConvexAuthHook(): UseConvexAuthReturn {
       // redirectTo is handled by Convex Auth based on SITE_URL config
     } catch (error) {
       console.error('[ConvexAuth] Sign in failed:', error)
+      captureAppException(error, {
+        tags: { feature: 'auth', operation: 'discord_sign_in' },
+      })
       throw error
     }
   }, [convexSignIn])
@@ -113,20 +117,30 @@ export function useConvexAuthHook(): UseConvexAuthReturn {
       await convexSignOut()
     } catch (error) {
       console.error('[ConvexAuth] Sign out failed:', error)
+      captureAppException(error, {
+        tags: { feature: 'auth', operation: 'sign_out' },
+      })
       throw error
     }
   }, [convexSignOut])
 
   const signInWithPreviewCode = useCallback(async (code: string) => {
-    const result = await exchangePreviewLoginCode({
-      code,
-    })
-    writeConvexAuthTokensToStorage(env.VITE_CONVEX_URL, {
-      token: result.token,
-      refreshToken: result.refreshToken,
-      previewName: result.previewName,
-    })
-    window.location.reload()
+    try {
+      const result = await exchangePreviewLoginCode({
+        code,
+      })
+      writeConvexAuthTokensToStorage(env.VITE_CONVEX_URL, {
+        token: result.token,
+        refreshToken: result.refreshToken,
+        previewName: result.previewName,
+      })
+      window.location.reload()
+    } catch (error) {
+      captureAppException(error, {
+        tags: { feature: 'auth', operation: 'preview_sign_in' },
+      })
+      throw error
+    }
   }, [])
 
   return {

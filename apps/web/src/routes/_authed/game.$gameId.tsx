@@ -8,6 +8,11 @@ import { useAuth } from '@/contexts/AuthContext'
 import { env } from '@/env'
 import { MEDIA_DEVICE_STORAGE_KEY } from '@/hooks/useMediaPreferenceStore'
 import { checkRoomAccessServer } from '@/integrations/convex/server-client'
+import {
+  addAppBreadcrumb,
+  captureAppException,
+  startAppSpan,
+} from '@/integrations/sentry/reporting'
 import { loadEmbeddingsAndMetaFromPackage } from '@/lib/clip-search'
 import { GAME_ID_PATTERN } from '@/lib/game-id'
 import { sessionStorage } from '@/lib/session-storage'
@@ -108,23 +113,39 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
       return { roomNotFound: true }
     }
 
-    const access = await checkRoomAccessServer(
-      env.VITE_CONVEX_URL,
-      params.gameId,
+    const access = await startAppSpan(
+      { name: 'Route check room access', op: 'convex.query' },
+      () => checkRoomAccessServer(env.VITE_CONVEX_URL, params.gameId),
     )
     if (access.status === 'not_found') {
+      addAppBreadcrumb('room', 'Game route room not found')
       return { roomNotFound: true }
     }
 
     if (deps.detector) {
+      Sentry.setTag('detector', deps.detector)
       console.log(
         '[game.$gameId loader] Detector enabled, preloading embeddings database...',
       )
       try {
-        await loadEmbeddingsAndMetaFromPackage()
+        await startAppSpan(
+          {
+            name: 'Preload embeddings database',
+            op: 'ml.embeddings.load',
+            attributes: { detector: deps.detector },
+          },
+          () => loadEmbeddingsAndMetaFromPackage(),
+        )
         console.log('[game.$gameId loader] Embeddings database loaded')
       } catch (err) {
         console.error('[game.$gameId loader] Failed to load embeddings:', err)
+        captureAppException(err, {
+          tags: {
+            feature: 'scanner',
+            operation: 'route_preload_embeddings',
+            detector: deps.detector,
+          },
+        })
       }
     }
 

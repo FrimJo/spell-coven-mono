@@ -5,8 +5,9 @@
  */
 
 import type { ReactNode } from 'react'
-import { createContext, useContext, useEffect } from 'react'
+import { createContext, useContext, useEffect, useMemo } from 'react'
 import { useConvexAuthHook } from '@/hooks/useConvexAuth'
+import * as Sentry from '@sentry/react'
 
 // ============================================================================
 // Types
@@ -63,14 +64,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [isAuthenticated, isLoading])
 
   // Map Convex user to AuthUser type
-  const mappedUser: AuthUser | null = user
-    ? {
-        id: user.id,
-        username: user.username,
-        avatar: user.avatar,
-        email: user.email,
-      }
-    : null
+  const mappedUser: AuthUser | null = useMemo(
+    () =>
+      user
+        ? {
+            id: user.id,
+            username: user.username,
+            avatar: user.avatar,
+            email: user.email,
+          }
+        : null,
+    [user],
+  )
+
+  useEffect(() => {
+    Sentry.setUser(mappedUser ? { id: mappedUser.id } : null)
+  }, [mappedUser])
 
   const value: AuthContextValue = {
     user: mappedUser,

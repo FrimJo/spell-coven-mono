@@ -14,6 +14,11 @@ import type {
   TrackPublication,
 } from 'livekit-client'
 import {
+  addAppBreadcrumb,
+  captureAppException,
+  startAppSpan,
+} from '@/integrations/sentry/reporting'
+import {
   ConnectionState,
   Room as LiveKitRoom,
   Track as LiveKitTrack,
@@ -167,29 +172,48 @@ export function createLiveKitMediaAdapter({
 
     // Track mutate/publish events (TrackMuted, LocalTrackPublished/Unpublished,
     // etc.) drive emitState, so no manual emit is needed here.
-    if (!enabled) {
-      if (unpublishOnDisable) {
-        if (publication?.track) {
-          await room.localParticipant.unpublishTrack(publication.track, true)
+    await startAppSpan(
+      {
+        name: `${track} ${enabled ? 'enable' : 'disable'}`,
+        op: 'media.track',
+        attributes: { track, enabled },
+      },
+      async () => {
+        if (!enabled) {
+          if (unpublishOnDisable) {
+            if (publication?.track) {
+              await room.localParticipant.unpublishTrack(
+                publication.track,
+                true,
+              )
+            }
+            return
+          }
+
+          if (isLive) {
+            await setEnabled(false)
+          }
+          return
         }
-        return
-      }
 
-      if (isLive) {
-        await setEnabled(false)
-      }
-      return
-    }
+        if (isLive) {
+          const activeDeviceId = room.getActiveDevice(kind)
+          if (nextDeviceId !== null && nextDeviceId !== activeDeviceId) {
+            await startAppSpan(
+              {
+                name: `Switch ${track} device`,
+                op: 'media.device.switch',
+                attributes: { kind },
+              },
+              () => room.switchActiveDevice(kind, nextDeviceId),
+            )
+          }
+          return
+        }
 
-    if (isLive) {
-      const activeDeviceId = room.getActiveDevice(kind)
-      if (nextDeviceId !== null && nextDeviceId !== activeDeviceId) {
-        await room.switchActiveDevice(kind, nextDeviceId)
-      }
-      return
-    }
-
-    await setEnabled(true, { deviceId: nextDeviceId ?? undefined })
+        await setEnabled(true, { deviceId: nextDeviceId ?? undefined })
+      },
+    )
   }
 
   const emitState = () => {
@@ -212,17 +236,43 @@ export function createLiveKitMediaAdapter({
 
   const reportError = (error: Error) => {
     lastError = error
+    captureAppException(error, {
+      tags: { feature: 'media', operation: 'livekit_error' },
+    })
     emitState()
   }
 
   room
-    .on(RoomEvent.ConnectionStateChanged, emitState)
-    .on(RoomEvent.Connected, emitState)
-    .on(RoomEvent.Reconnecting, emitState)
-    .on(RoomEvent.SignalReconnecting, emitState)
-    .on(RoomEvent.Reconnected, emitState)
-    .on(RoomEvent.ParticipantConnected, emitState)
-    .on(RoomEvent.ParticipantDisconnected, emitState)
+    .on(RoomEvent.ConnectionStateChanged, (state) => {
+      addAppBreadcrumb('livekit', 'Connection state changed', {
+        state: String(state),
+      })
+      emitState()
+    })
+    .on(RoomEvent.Connected, () => {
+      addAppBreadcrumb('livekit', 'Connected')
+      emitState()
+    })
+    .on(RoomEvent.Reconnecting, () => {
+      addAppBreadcrumb('livekit', 'Reconnecting')
+      emitState()
+    })
+    .on(RoomEvent.SignalReconnecting, () => {
+      addAppBreadcrumb('livekit', 'Signal reconnecting')
+      emitState()
+    })
+    .on(RoomEvent.Reconnected, () => {
+      addAppBreadcrumb('livekit', 'Reconnected')
+      emitState()
+    })
+    .on(RoomEvent.ParticipantConnected, () => {
+      addAppBreadcrumb('livekit', 'Participant connected')
+      emitState()
+    })
+    .on(RoomEvent.ParticipantDisconnected, () => {
+      addAppBreadcrumb('livekit', 'Participant disconnected')
+      emitState()
+    })
     .on(RoomEvent.TrackPublished, emitState)
     .on(RoomEvent.TrackSubscribed, emitState)
     .on(RoomEvent.TrackUnsubscribed, (track: Track) => {
@@ -238,9 +288,15 @@ export function createLiveKitMediaAdapter({
       emitState()
     })
     .on(RoomEvent.ActiveDeviceChanged, emitState)
-    .on(RoomEvent.MediaDevicesError, reportError)
+    .on(RoomEvent.MediaDevicesError, (error) => {
+      addAppBreadcrumb('media', 'LiveKit media devices error')
+      reportError(error)
+    })
     .on(RoomEvent.Disconnected, (reason) => {
       lastDisconnectReason = reason === undefined ? null : String(reason)
+      addAppBreadcrumb('livekit', 'Disconnected', {
+        reason: lastDisconnectReason,
+      })
       emitState()
     })
 
@@ -252,7 +308,10 @@ export function createLiveKitMediaAdapter({
       lastError = null
       lastDisconnectReason = null
       emitState()
-      await room.connect(serverUrl, token)
+      await startAppSpan(
+        { name: 'LiveKit connect', op: 'livekit.connect' },
+        () => room.connect(serverUrl, token),
+      )
       emitState()
     },
     disconnect() {

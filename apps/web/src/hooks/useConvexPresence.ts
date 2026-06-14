@@ -15,6 +15,10 @@ import {
   useRef,
   useState,
 } from 'react'
+import {
+  addAppBreadcrumb,
+  captureAppException,
+} from '@/integrations/sentry/reporting'
 import { api } from '@convex/_generated/api'
 import { useMutation, useQuery } from 'convex/react'
 
@@ -193,6 +197,9 @@ export function useConvexPresence({
   const leaveSilently = useEffectEvent(() => {
     leaveRoomRef.current({ roomId: convexRoomId, sessionId }).catch((err) => {
       console.error('[ConvexPresence] Failed to leave room:', err)
+      captureAppException(err, {
+        tags: { feature: 'presence', operation: 'leave_room_silently' },
+      })
     })
   })
 
@@ -265,16 +272,19 @@ export function useConvexPresence({
     // 2. If user is banned → they were banned
     // 3. Otherwise → they were kicked
     if (userHasOtherActiveSession) {
+      addAppBreadcrumb('presence', 'Session transferred to another tab')
       debugLog(
         '[ConvexPresence] Session transferred - user has another active session',
       )
       onSessionTransferred?.()
     } else if (isBanned) {
+      addAppBreadcrumb('presence', 'Session removed: banned')
       debugLog(
         '[ConvexPresence] Detected ban - session removed and user is banned',
       )
       onBanned?.()
     } else {
+      addAppBreadcrumb('presence', 'Session removed: kicked')
       debugLog(
         '[ConvexPresence] Detected kick - session removed but not banned',
       )
@@ -321,6 +331,9 @@ export function useConvexPresence({
       .catch((err) => {
         joinInFlightRef.current = false
         console.error('[ConvexPresence] Failed to join room:', err)
+        captureAppException(err, {
+          tags: { feature: 'presence', operation: 'join_room' },
+        })
         const error = err instanceof Error ? err : new Error(String(err))
         setError(error)
         onError?.(error)
@@ -379,6 +392,9 @@ export function useConvexPresence({
         })
         .catch((err) => {
           console.error('[ConvexPresence] Heartbeat failed:', err)
+          captureAppException(err, {
+            tags: { feature: 'presence', operation: 'heartbeat' },
+          })
         })
     }
     sendHeartbeat()
@@ -436,6 +452,7 @@ export function useConvexPresence({
   // Notify about duplicate session when detected
   useEffect(() => {
     if (hasDuplicateSession && onDuplicateSession && duplicateSessions[0]) {
+      addAppBreadcrumb('presence', 'Duplicate session detected')
       debugLog(
         '[ConvexPresence] Duplicate session detected:',
         duplicateSessions[0].sessionId,
@@ -455,10 +472,17 @@ export function useConvexPresence({
         throw new Error('Cannot kick player: not connected to room')
       }
 
-      await kickMutationRef.current({
-        roomId: convexRoomId,
-        userId: playerId,
-      })
+      try {
+        await kickMutationRef.current({
+          roomId: convexRoomId,
+          userId: playerId,
+        })
+      } catch (error) {
+        captureAppException(error, {
+          tags: { feature: 'presence', operation: 'kick_player' },
+        })
+        throw error
+      }
     },
     [convexRoomId, userId],
   )
@@ -470,10 +494,17 @@ export function useConvexPresence({
         throw new Error('Cannot ban player: not connected to room')
       }
 
-      await banMutationRef.current({
-        roomId: convexRoomId,
-        userId: playerId,
-      })
+      try {
+        await banMutationRef.current({
+          roomId: convexRoomId,
+          userId: playerId,
+        })
+      } catch (error) {
+        captureAppException(error, {
+          tags: { feature: 'presence', operation: 'ban_player' },
+        })
+        throw error
+      }
     },
     [convexRoomId, userId],
   )
@@ -497,10 +528,17 @@ export function useConvexPresence({
     // Leave each duplicate session - they will detect via reactive query
     // and call onSessionTransferred on their end
     for (const otherSessionId of sessionsToClose) {
-      await leaveRoomRef.current({
-        roomId: convexRoomId,
-        sessionId: otherSessionId,
-      })
+      try {
+        await leaveRoomRef.current({
+          roomId: convexRoomId,
+          sessionId: otherSessionId,
+        })
+      } catch (error) {
+        captureAppException(error, {
+          tags: { feature: 'presence', operation: 'transfer_session_leave' },
+        })
+        throw error
+      }
     }
   }, [convexRoomId, userId, duplicateSessions])
 
@@ -511,10 +549,17 @@ export function useConvexPresence({
         throw new Error('Cannot set seat count: not connected to room')
       }
 
-      return await setSeatCountRef.current({
-        roomId: convexRoomId,
-        seatCount,
-      })
+      try {
+        return await setSeatCountRef.current({
+          roomId: convexRoomId,
+          seatCount,
+        })
+      } catch (error) {
+        captureAppException(error, {
+          tags: { feature: 'presence', operation: 'set_room_seat_count' },
+        })
+        throw error
+      }
     },
     [convexRoomId],
   )
@@ -540,6 +585,9 @@ export function useConvexPresence({
       debugLog('[ConvexPresence] Successfully left room')
     } catch (err) {
       console.error('[ConvexPresence] Failed to leave room:', err)
+      captureAppException(err, {
+        tags: { feature: 'presence', operation: 'leave_room' },
+      })
       // Still mark as not joined even if mutation fails
       setHasJoined(false)
       throw err

@@ -2,6 +2,7 @@ import type { AuthUser } from '@/contexts/AuthContext'
 import type { FallbackProps } from 'react-error-boundary'
 import { useMemo, useState } from 'react'
 import { env } from '@/env'
+import { addAppBreadcrumb, startAppSpan } from '@/integrations/sentry/reporting'
 import { sessionStorage } from '@/lib/session-storage'
 import { api } from '@convex/_generated/api'
 import { useNavigate } from '@tanstack/react-router'
@@ -119,6 +120,7 @@ export function LandingPage({
 
   const handleCreateGame = async () => {
     if (!user) {
+      addAppBreadcrumb('room', 'Create room blocked: auth required')
       setError('Please sign in to create a game')
       return
     }
@@ -133,15 +135,22 @@ export function LandingPage({
 
       // Create room in Convex - server generates the room ID
       // If throttled, wait and retry automatically
-      let result = await createRoom({ ownerId: user.id })
+      let result = await startAppSpan(
+        { name: 'Create room', op: 'convex.mutation' },
+        () => createRoom({ ownerId: user.id }),
+      )
 
       while (result.roomId == null && result.waitMs != null) {
         const awaitMs = result.waitMs
+        addAppBreadcrumb('room', 'Create room throttled', { waitMs: awaitMs })
         console.log(
           `[LandingPage] Throttled, waiting ${awaitMs}ms before retry...`,
         )
         await new Promise((resolve) => setTimeout(resolve, awaitMs))
-        result = await createRoom({ ownerId: user.id })
+        result = await startAppSpan(
+          { name: 'Create room retry', op: 'convex.mutation' },
+          () => createRoom({ ownerId: user.id }),
+        )
       }
 
       const gameId = result.roomId
@@ -241,6 +250,7 @@ export function LandingPage({
     try {
       await onPreviewSignIn(previewCode.trim())
     } catch {
+      addAppBreadcrumb('auth', 'Preview sign-in failed')
       setError('Unauthorized')
     } finally {
       setIsPreviewSigningIn(false)

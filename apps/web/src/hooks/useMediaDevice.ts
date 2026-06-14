@@ -10,7 +10,12 @@ import type {
   AsyncResourcePending,
   AsyncResourceSuccess,
 } from '@/types/async-resource'
-import { useEffect, useEffectEvent, useMemo } from 'react'
+import { useEffect, useEffectEvent, useMemo, useRef } from 'react'
+import {
+  addAppBreadcrumb,
+  captureAppException,
+  startAppSpan,
+} from '@/integrations/sentry/reporting'
 import { getMediaStream } from '@/lib/media-stream-manager'
 import { shouldShowPermissionDialog } from '@/lib/permission-storage'
 import { useQuery } from '@tanstack/react-query'
@@ -81,6 +86,7 @@ export function useMediaDevice(
 
   const permissionType = kind === 'videoinput' ? 'camera' : 'microphone'
   const userDeclinedPermission = !shouldShowPermissionDialog(permissionType)
+  const reportedDeclineRef = useRef(false)
 
   const filteredDevices = useDeviceList(kind)
 
@@ -102,26 +108,55 @@ export function useMediaDevice(
   } = useQuery({
     queryKey: [...mediaStreamQueryKey(kind), selectedDeviceId],
     queryFn: async () => {
-      return getMediaStream(
-        kind === 'videoinput'
-          ? {
-              videoDeviceId: selectedDeviceId,
-              video: true,
-              audio: false,
-              videoConstraints,
-              resolution: '1080p',
-              enableFallback: true,
-            }
-          : {
-              audioDeviceId: selectedDeviceId,
-              video: false,
-              audio: true,
-              audioConstraints,
-            },
+      return await startAppSpan(
+        {
+          name: 'Get media stream',
+          op: 'media.getUserMedia',
+          attributes: { kind },
+        },
+        () =>
+          getMediaStream(
+            kind === 'videoinput'
+              ? {
+                  videoDeviceId: selectedDeviceId,
+                  video: true,
+                  audio: false,
+                  videoConstraints,
+                  resolution: '1080p',
+                  enableFallback: true,
+                }
+              : {
+                  audioDeviceId: selectedDeviceId,
+                  video: false,
+                  audio: true,
+                  audioConstraints,
+                },
+          ),
       )
     },
     enabled: externalEnabled && !!selectedDeviceId && !userDeclinedPermission,
   })
+
+  useEffect(() => {
+    if (userDeclinedPermission && !reportedDeclineRef.current) {
+      reportedDeclineRef.current = true
+      addAppBreadcrumb('media', 'Media permission previously declined', {
+        kind,
+        permissionType,
+      })
+    }
+  }, [kind, permissionType, userDeclinedPermission])
+
+  useEffect(() => {
+    if (!getStreamError) return
+    captureAppException(getStreamError, {
+      tags: {
+        feature: 'media',
+        operation: 'get_media_stream',
+        kind,
+      },
+    })
+  }, [getStreamError, kind])
 
   useEffect(() => {
     if (data?.stream && selectedDeviceId) {

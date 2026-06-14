@@ -2,6 +2,10 @@ import type { LiveKitMediaAdapter } from '@/lib/media/livekit-adapter'
 import type { RoomMediaSessionState } from '@/types/media-session'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
+import {
+  captureAppException,
+  startAppSpan,
+} from '@/integrations/sentry/reporting'
 import { createLiveKitMediaAdapter } from '@/lib/media/livekit-adapter'
 import { api } from '@convex/_generated/api'
 import { useAction } from 'convex/react'
@@ -66,13 +70,18 @@ export function useRoomMediaSession({
     })
     adapterRef.current = adapter
 
-    issueLiveKitToken({ roomId, sessionId })
+    startAppSpan({ name: 'Issue LiveKit token', op: 'convex.action' }, () =>
+      issueLiveKitToken({ roomId, sessionId }),
+    )
       .then(async ({ serverUrl, token }) => {
         if (cancelled) return
         await adapter.connect(serverUrl, token)
       })
       .catch((error: unknown) => {
         if (cancelled) return
+        captureAppException(error, {
+          tags: { feature: 'media', operation: 'start_livekit_session' },
+        })
         reportError(error)
       })
 

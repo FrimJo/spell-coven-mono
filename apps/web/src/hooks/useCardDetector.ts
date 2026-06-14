@@ -1,5 +1,9 @@
 import type { DetectorType } from '@/lib/detectors'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  captureAppException,
+  startAppSpan,
+} from '@/integrations/sentry/reporting'
 import { setupCardDetector } from '@/lib/setupCardDetector'
 
 interface UseWebcamOptions {
@@ -103,26 +107,41 @@ export function useCardDetector(options: UseWebcamOptions): UseWebcamReturn {
       ) {
         return
       }
+      const video = videoRef.current
+      const overlay = overlayRef.current
+      const cropped = croppedRef.current
+      const fullRes = fullResRef.current
 
       // Initialize or reinitialize card detector
       try {
         // Reset initialization flag to allow reinitialization when video stream changes
         isInitialized.current = false
 
-        cardDetectorController.current = await setupCardDetector({
-          video: videoRef.current,
-          overlay: overlayRef.current,
-          cropped: croppedRef.current,
-          fullRes: fullResRef.current,
-          detectorType,
-          usePerspectiveWarp,
-          onCrop: (canvas: HTMLCanvasElement) => {
-            setHasCroppedImage(true)
-            if (onCrop) {
-              onCrop(canvas)
-            }
+        cardDetectorController.current = await startAppSpan(
+          {
+            name: 'Setup card detector',
+            op: 'scanner.detector.setup',
+            attributes: {
+              detectorType: detectorType ?? 'default',
+              usePerspectiveWarp,
+            },
           },
-        })
+          () =>
+            setupCardDetector({
+              video,
+              overlay,
+              cropped,
+              fullRes,
+              detectorType,
+              usePerspectiveWarp,
+              onCrop: (canvas: HTMLCanvasElement) => {
+                setHasCroppedImage(true)
+                if (onCrop) {
+                  onCrop(canvas)
+                }
+              },
+            }),
+        )
 
         // Update component state only if still mounted
         if (mounted) {
@@ -131,6 +150,13 @@ export function useCardDetector(options: UseWebcamOptions): UseWebcamReturn {
         }
       } catch (err) {
         console.error('[useWebcam] Card detector initialization error:', err)
+        captureAppException(err, {
+          tags: {
+            feature: 'scanner',
+            operation: 'detector_initialization',
+            detectorType: detectorType ?? 'default',
+          },
+        })
         isInitialized.current = false
       }
     }

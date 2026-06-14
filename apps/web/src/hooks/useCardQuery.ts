@@ -7,6 +7,12 @@ import type {
 } from '@/types/card-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  addAppBreadcrumb,
+  captureAppException,
+  startAppSpan,
+  startAppSpanSync,
+} from '@/integrations/sentry/reporting'
+import {
   embedFromCanvas,
   isModelReady,
   loadEmbeddingsAndMetaFromPackage,
@@ -236,6 +242,11 @@ export function useCardQuery(roomId: string): UseCardQueryReturn {
       console.log('[useCardQuery] Canvas validation:', validation)
 
       if (!validation.isValid) {
+        addAppBreadcrumb('scanner', 'Canvas validation failed', {
+          error: validation.error,
+          width: canvas.width,
+          height: canvas.height,
+        })
         console.error(
           '[useCardQuery] Canvas validation failed:',
           validation.error,
@@ -271,7 +282,16 @@ export function useCardQuery(roomId: string): UseCardQueryReturn {
           console.log('[useCardQuery] Model/database not ready, loading now...')
           try {
             // Load embeddings and model in parallel for faster initialization
-            await Promise.all([loadEmbeddingsAndMetaFromPackage(), loadModel()])
+            await Promise.all([
+              startAppSpan(
+                { name: 'Load embeddings database', op: 'ml.embeddings.load' },
+                () => loadEmbeddingsAndMetaFromPackage(),
+              ),
+              startAppSpan(
+                { name: 'Load CLIP model', op: 'ml.model.load' },
+                () => loadModel(),
+              ),
+            ])
             console.log('[useCardQuery] Model and database loaded successfully')
           } catch (loadErr) {
             const errorMessage =
@@ -282,6 +302,9 @@ export function useCardQuery(roomId: string): UseCardQueryReturn {
               '[useCardQuery] Failed to load model/database:',
               loadErr,
             )
+            captureAppException(loadErr, {
+              tags: { feature: 'scanner', operation: 'load_model_or_database' },
+            })
             setState({
               status: 'error',
               result: null,
@@ -299,7 +322,13 @@ export function useCardQuery(roomId: string): UseCardQueryReturn {
 
         // Generate all orientation candidates and search for the best match
         console.log('[useCardQuery] Generating orientation candidates...')
-        const orientationCandidates = generateOrientationCandidates(canvas)
+        const orientationCandidates = startAppSpanSync(
+          {
+            name: 'Generate orientation candidates',
+            op: 'scanner.orientation',
+          },
+          () => generateOrientationCandidates(canvas),
+        )
         if (!orientationCandidates.length) {
           throw new Error(
             'useCardQuery: Failed to generate orientation candidates',
@@ -361,7 +390,14 @@ export function useCardQuery(roomId: string): UseCardQueryReturn {
           let embedding: Float32Array
           let embeddingMetrics: EmbeddingMetrics
           try {
-            const embeddingResult = await embedFromCanvas(candidate)
+            const embeddingResult = await startAppSpan(
+              {
+                name: 'Embed card candidate',
+                op: 'ml.embedding',
+                attributes: { orientation: i },
+              },
+              () => embedFromCanvas(candidate),
+            )
             embedding = embeddingResult.embedding
             embeddingMetrics = embeddingResult.metrics
           } catch (err) {
@@ -369,6 +405,13 @@ export function useCardQuery(roomId: string): UseCardQueryReturn {
               `[useCardQuery] Failed to embed canvas for orientation ${i}:`,
               err,
             )
+            captureAppException(err, {
+              tags: {
+                feature: 'scanner',
+                operation: 'embed_canvas',
+                orientation: i,
+              },
+            })
             throw new Error(
               `Failed to embed canvas: ${err instanceof Error ? err.message : String(err)}`,
             )
@@ -382,10 +425,24 @@ export function useCardQuery(roomId: string): UseCardQueryReturn {
           const searchStart = performance.now()
           let result
           try {
-            result = top1(embedding)
+            result = startAppSpanSync(
+              {
+                name: 'Search card index',
+                op: 'ml.vector_search',
+                attributes: { orientation: i },
+              },
+              () => top1(embedding),
+            )
             console.log('[useCardQuery] top1() returned result:', result)
           } catch (err) {
             console.error('[useCardQuery] top1() threw error:', err)
+            captureAppException(err, {
+              tags: {
+                feature: 'scanner',
+                operation: 'search_card_index',
+                orientation: i,
+              },
+            })
             throw err
           }
           const searchMs = performance.now() - searchStart
@@ -433,7 +490,10 @@ export function useCardQuery(roomId: string): UseCardQueryReturn {
         }
 
         if (bestEmbedding) {
-          const topKResults = topK(bestEmbedding, TOP_K)
+          const topKResults = startAppSpanSync(
+            { name: 'Search top card matches', op: 'ml.vector_search.top_k' },
+            () => topK(bestEmbedding, TOP_K),
+          )
           console.groupCollapsed(
             `[useCardQuery] Top-${TOP_K} results (orientation ${bestOrientation})`,
           )
@@ -460,6 +520,14 @@ export function useCardQuery(roomId: string): UseCardQueryReturn {
             Embedding: `${totalEmbeddingMs.toFixed(0)}ms`,
             Search: `${totalSearchMs.toFixed(0)}ms`,
             Total: `${totalMs.toFixed(0)}ms`,
+          })
+          addAppBreadcrumb('scanner', 'Card query pipeline timing', {
+            detectionMs: Math.round(metrics.detection),
+            cropWarpMs: Math.round(metrics.crop),
+            embeddingMs: Math.round(totalEmbeddingMs),
+            searchMs: Math.round(totalSearchMs),
+            totalMs: Math.round(totalMs),
+            bestOrientation,
           })
           console.log('[useCardQuery] Best orientation index:', bestOrientation)
 
@@ -511,6 +579,9 @@ export function useCardQuery(roomId: string): UseCardQueryReturn {
             result: null,
             error: errorMessage,
             queryImageUrl,
+          })
+          captureAppException(err, {
+            tags: { feature: 'scanner', operation: 'identify_card' },
           })
         }
       } finally {
