@@ -12,6 +12,7 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 // SPA-style client rendering elsewhere.
 export default defineConfig(({ mode: mode }) => {
   const release =
+    process.env.VITE_SENTRY_RELEASE ??
     process.env.VITE_VERCEL_GIT_COMMIT_SHA ??
     process.env.VITE_GITHUB_SHA ??
     process.env.VITE_BUILD_NUMBER

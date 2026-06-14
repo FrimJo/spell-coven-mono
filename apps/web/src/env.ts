@@ -39,6 +39,12 @@ export const env = createEnv({
     VITE_SUPPORT_URL: z.url().optional(),
     VITE_CAMERA_FOCUS_CONTROLS_ENABLED: z.coerce.boolean().default(false),
     VITE_PREVIEW_AUTH: z.coerce.boolean().default(false),
+    VITE_SENTRY_DSN: z.url().optional(),
+    VITE_SENTRY_ENVIRONMENT: z.string().optional(),
+    VITE_SENTRY_RELEASE: z.string().optional(),
+    VITE_SENTRY_TRACES_SAMPLE_RATE: z.string().optional(),
+    VITE_SENTRY_REPLAY_SESSION_SAMPLE_RATE: z.string().optional(),
+    VITE_SENTRY_REPLAY_ERROR_SAMPLE_RATE: z.string().optional(),
     /**
      * Exposes per-room media diagnostics on `window.__spellCovenMediaDiagnostics`
      * for the e2e harness. Defaults off (fail-closed); the e2e build sets
@@ -59,6 +65,19 @@ export const env = createEnv({
     VITE_BLOB_STORAGE_URL: import.meta.env.VITE_BLOB_STORAGE_URL,
     VITE_SUPPORT_URL: import.meta.env.VITE_SUPPORT_URL,
     VITE_PREVIEW_AUTH: import.meta.env.VITE_PREVIEW_AUTH,
+    VITE_SENTRY_DSN: import.meta.env.VITE_SENTRY_DSN,
+    VITE_SENTRY_ENVIRONMENT: import.meta.env.VITE_SENTRY_ENVIRONMENT,
+    VITE_SENTRY_RELEASE:
+      import.meta.env.VITE_SENTRY_RELEASE ??
+      import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA ??
+      import.meta.env.VITE_GITHUB_SHA ??
+      import.meta.env.VITE_BUILD_NUMBER,
+    VITE_SENTRY_TRACES_SAMPLE_RATE: import.meta.env
+      .VITE_SENTRY_TRACES_SAMPLE_RATE,
+    VITE_SENTRY_REPLAY_SESSION_SAMPLE_RATE: import.meta.env
+      .VITE_SENTRY_REPLAY_SESSION_SAMPLE_RATE,
+    VITE_SENTRY_REPLAY_ERROR_SAMPLE_RATE: import.meta.env
+      .VITE_SENTRY_REPLAY_ERROR_SAMPLE_RATE,
     VITE_MEDIA_DIAGNOSTICS: import.meta.env.VITE_MEDIA_DIAGNOSTICS,
   },
 
@@ -108,6 +127,14 @@ export function getClientEnv() {
     VITE_SUPPORT_URL: env.VITE_SUPPORT_URL,
     VITE_CAMERA_FOCUS_CONTROLS_ENABLED: env.VITE_CAMERA_FOCUS_CONTROLS_ENABLED,
     VITE_PREVIEW_AUTH: env.VITE_PREVIEW_AUTH,
+    VITE_SENTRY_DSN: env.VITE_SENTRY_DSN,
+    VITE_SENTRY_ENVIRONMENT: env.VITE_SENTRY_ENVIRONMENT,
+    VITE_SENTRY_RELEASE: env.VITE_SENTRY_RELEASE,
+    VITE_SENTRY_TRACES_SAMPLE_RATE: env.VITE_SENTRY_TRACES_SAMPLE_RATE,
+    VITE_SENTRY_REPLAY_SESSION_SAMPLE_RATE:
+      env.VITE_SENTRY_REPLAY_SESSION_SAMPLE_RATE,
+    VITE_SENTRY_REPLAY_ERROR_SAMPLE_RATE:
+      env.VITE_SENTRY_REPLAY_ERROR_SAMPLE_RATE,
     VITE_MEDIA_DIAGNOSTICS: env.VITE_MEDIA_DIAGNOSTICS,
   }
 }

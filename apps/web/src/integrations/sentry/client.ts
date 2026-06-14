@@ -1,24 +1,10 @@
 import { env } from '@/env'
+import { isSensitiveSentryKey } from '@convex/sentryData'
 import * as Sentry from '@sentry/react'
 
 const globalForSentry = globalThis as typeof globalThis & {
   __spellCovenSentryInitialized?: boolean
 }
-
-const SENSITIVE_QUERY_KEYS = new Set([
-  'token',
-  'password',
-  'authorization',
-  'auth',
-  'cookie',
-  'secret',
-  'key',
-  'session',
-  'code',
-  'jwt',
-  'refresh',
-  'access',
-])
 
 const DEFAULT_TRACES_SAMPLE_RATE = 0.2
 const DEVELOPMENT_TRACES_SAMPLE_RATE = 1
@@ -36,7 +22,7 @@ function sanitizeUrl(url: string | undefined): string | undefined {
   try {
     const target = new URL(url, window.location.origin)
     for (const [key] of target.searchParams) {
-      if (SENSITIVE_QUERY_KEYS.has(key.toLowerCase())) {
+      if (isSensitiveSentryKey(key)) {
         target.searchParams.set(key, '[Filtered]')
       }
     }
@@ -78,7 +64,7 @@ function sanitizeEvent(
   if (event.request?.headers) {
     const headers = { ...event.request.headers }
     for (const key of Object.keys(headers)) {
-      if (SENSITIVE_QUERY_KEYS.has(key.toLowerCase())) {
+      if (isSensitiveSentryKey(key)) {
         delete headers[key]
       }
     }
@@ -97,14 +83,10 @@ function sanitizeEvent(
 export function initializeSentry() {
   if (globalForSentry.__spellCovenSentryInitialized) return
 
-  const environment =
-    import.meta.env.SENTRY_ENVIRONMENT ?? import.meta.env.MODE ?? 'development'
-  const release =
-    import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA ??
-    import.meta.env.VITE_GITHUB_SHA ??
-    import.meta.env.VITE_BUILD_NUMBER
+  const environment = env.VITE_SENTRY_ENVIRONMENT ?? import.meta.env.MODE
+  const release = env.VITE_SENTRY_RELEASE
   const isProduction = import.meta.env.PROD
-  const dsn = import.meta.env.SENTRY_DSN
+  const dsn = env.VITE_SENTRY_DSN
 
   const tracePropagationTargets = [
     new URL(env.VITE_CONVEX_URL).origin,
@@ -134,19 +116,19 @@ export function initializeSentry() {
     tracePropagationTargets,
     integrations,
     tracesSampleRate: parseSampleRate(
-      import.meta.env.SENTRY_TRACES_SAMPLE_RATE,
+      env.VITE_SENTRY_TRACES_SAMPLE_RATE,
       isProduction
         ? DEFAULT_TRACES_SAMPLE_RATE
         : DEVELOPMENT_TRACES_SAMPLE_RATE,
     ),
     replaysSessionSampleRate: isProduction
       ? parseSampleRate(
-          import.meta.env.SENTRY_REPLAY_SESSION_SAMPLE_RATE,
+          env.VITE_SENTRY_REPLAY_SESSION_SAMPLE_RATE,
           DEFAULT_REPLAY_SAMPLE_RATE,
         )
       : 0,
     replaysOnErrorSampleRate: isProduction
-      ? parseSampleRate(import.meta.env.SENTRY_REPLAY_ERROR_SAMPLE_RATE, 1)
+      ? parseSampleRate(env.VITE_SENTRY_REPLAY_ERROR_SAMPLE_RATE, 1)
       : 0,
     maxBreadcrumbs: 50,
     beforeSend: sanitizeEvent,
