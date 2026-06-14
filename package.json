@@ -20,7 +20,7 @@
     "format:fix": "bunx turbo run format -- --write",
     "typecheck": "bunx turbo run typecheck",
     "doctor": "bunx -y react-doctor@latest . --no-ami --yes --score --project web",
-    "preflight": "bunx turbo run typecheck && bunx turbo run lint && bunx turbo run format && bunx turbo run doctor -- --score --yes"
+    "preflight": "bunx turbo run typecheck && bunx turbo run lint:fix && bunx turbo run format:fix && bunx turbo run doctor -- --score --yes"
   },
   "devDependencies": {
     "@auth/core": "^0.37.0",
