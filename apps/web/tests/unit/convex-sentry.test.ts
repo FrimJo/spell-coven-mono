@@ -1,5 +1,5 @@
 import { AuthRequiredError } from '@convex/errors'
-import { withConvexSentry } from '@convex/sentry'
+import { runWithConvexSentry } from '@convex/sentry'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const sentryDsn = 'https://public@example.test/123'
@@ -38,20 +38,20 @@ describe('Convex Sentry reporting helper', () => {
     vi.clearAllMocks()
   })
 
-  it('records expected domain errors as breadcrumbs without sending events', async () => {
+  it('logs expected domain errors without sending events', async () => {
     const error = new AuthRequiredError()
-    const handler = withConvexSentry(
-      { feature: 'room', operation: 'join_room' },
-      async () => {
-        throw error
-      },
-    )
+    const run = () =>
+      runWithConvexSentry(
+        { feature: 'room', operation: 'join_room' },
+        async () => {
+          throw error
+        },
+      )
 
-    await expectRejectsWith(() => handler(), error)
+    await expectRejectsWith(run, error)
 
     expect(console.info).toHaveBeenCalledWith(
-      '[Sentry breadcrumb]',
-      'convex.expected_error',
+      '[Sentry expected error]',
       '[AUTH_REQUIRED] Authentication required',
       { feature: 'room', operation: 'join_room' },
     )
@@ -60,18 +60,18 @@ describe('Convex Sentry reporting helper', () => {
 
   it('keeps Unauthorized as an expected compatibility error', async () => {
     const error = new Error('Unauthorized')
-    const handler = withConvexSentry(
-      { feature: 'auth', operation: 'preview_login' },
-      async () => {
-        throw error
-      },
-    )
+    const run = () =>
+      runWithConvexSentry(
+        { feature: 'auth', operation: 'preview_login' },
+        async () => {
+          throw error
+        },
+      )
 
-    await expectRejectsWith(() => handler(), error)
+    await expectRejectsWith(run, error)
 
     expect(console.info).toHaveBeenCalledWith(
-      '[Sentry breadcrumb]',
-      'convex.expected_error',
+      '[Sentry expected error]',
       'Unauthorized',
       { feature: 'auth', operation: 'preview_login' },
     )
@@ -80,14 +80,15 @@ describe('Convex Sentry reporting helper', () => {
 
   it('sends unexpected errors to Sentry and rethrows them', async () => {
     const error = new Error('boom')
-    const handler = withConvexSentry(
-      { feature: 'media', operation: 'issue_livekit_token' },
-      async () => {
-        throw error
-      },
-    )
+    const run = () =>
+      runWithConvexSentry(
+        { feature: 'media', operation: 'issue_livekit_token' },
+        async () => {
+          throw error
+        },
+      )
 
-    await expectRejectsWith(() => handler(), error)
+    await expectRejectsWith(run, error)
 
     expect(fetchMock).toHaveBeenCalledWith(
       'https://example.test/api/123/envelope/',
@@ -100,5 +101,43 @@ describe('Convex Sentry reporting helper', () => {
     expect(String(init?.body)).toContain('"feature":"media"')
     expect(String(init?.body)).toContain('"operation":"issue_livekit_token"')
     expect(String(init?.body)).toContain('"value":"boom"')
+  })
+
+  it('attaches sanitized scoped breadcrumbs to unexpected errors', async () => {
+    const error = new Error('boom')
+    const run = () =>
+      runWithConvexSentry(
+        { feature: 'room', operation: 'create_room' },
+        async (sentry) => {
+          sentry.breadcrumb('room', 'Room creation throttled', {
+            roomId: 'ABC123',
+            waitMs: 500,
+          })
+          sentry.breadcrumb('auth', 'Preview login attempted', {
+            code: 'secret',
+            safe: 'kept',
+          })
+          throw error
+        },
+      )
+
+    await expectRejectsWith(run, error)
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const [, , payload] = String(init?.body).split('\n')
+    const event = JSON.parse(payload ?? '{}')
+
+    expect(event.breadcrumbs).toEqual([
+      expect.objectContaining({
+        category: 'room',
+        message: 'Room creation throttled',
+        data: { roomId: '[Filtered]', waitMs: 500 },
+      }),
+      expect.objectContaining({
+        category: 'auth',
+        message: 'Preview login attempted',
+        data: { code: '[Filtered]', safe: 'kept' },
+      }),
+    ])
   })
 })

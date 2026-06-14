@@ -1,6 +1,7 @@
 import { env } from '@/env'
-import { isSensitiveSentryKey } from '@convex/sentryData'
 import * as Sentry from '@sentry/react'
+
+import { isSensitiveSentryKey } from '@repo/observability'
 
 const globalForSentry = globalThis as typeof globalThis & {
   __spellCovenSentryInitialized?: boolean

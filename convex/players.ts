@@ -22,7 +22,7 @@ import {
   RoomFullError,
   RoomNotFoundError,
 } from './errors'
-import { withConvexSentry } from './sentry'
+import { sentryMutation } from './sentry'
 
 /**
  * Default starting health for Commander format
@@ -66,30 +66,17 @@ async function requireActiveRoomMember(
  * NOTE: userId is passed as parameter for Phase 3. In Phase 5, we'll use
  * getAuthUserId from Convex Auth instead.
  */
-export const joinRoom = mutation({
-  args: {
-    roomId: v.string(),
-    sessionId: v.string(),
-    username: v.string(),
-    avatar: v.optional(v.string()),
-  },
-  returns: v.object({ playerId: v.id('roomPlayers') }),
-  handler: withConvexSentry(
-    { feature: 'presence', operation: 'join_room' },
-    async (
-      ctx: MutationCtx,
-      {
-        roomId,
-        sessionId,
-        username,
-        avatar,
-      }: {
-        roomId: string
-        sessionId: string
-        username: string
-        avatar?: string
-      },
-    ) => {
+export const joinRoom = sentryMutation(
+  { feature: 'presence', operation: 'join_room' },
+  {
+    args: {
+      roomId: v.string(),
+      sessionId: v.string(),
+      username: v.string(),
+      avatar: v.optional(v.string()),
+    },
+    returns: v.object({ playerId: v.id('roomPlayers') }),
+    handler: async (ctx, { roomId, sessionId, username, avatar }) => {
       const userId = await getAuthUserId(ctx)
       if (!userId) {
         throw new AuthRequiredError()
@@ -240,8 +227,8 @@ export const joinRoom = mutation({
 
       return { playerId }
     },
-  ),
-})
+  },
+)
 
 /**
  * Leave a room
@@ -250,17 +237,14 @@ export const joinRoom = mutation({
  * If the leaving player is the room owner, transfers ownership to the next
  * active player in join order.
  */
-export const leaveRoom = mutation({
-  args: {
-    roomId: v.string(),
-    sessionId: v.string(),
-  },
-  handler: withConvexSentry(
-    { feature: 'presence', operation: 'leave_room' },
-    async (
-      ctx: MutationCtx,
-      { roomId, sessionId }: { roomId: string; sessionId: string },
-    ) => {
+export const leaveRoom = sentryMutation(
+  { feature: 'presence', operation: 'leave_room' },
+  {
+    args: {
+      roomId: v.string(),
+      sessionId: v.string(),
+    },
+    handler: async (ctx, { roomId, sessionId }) => {
       const userId = await getAuthUserId(ctx)
       if (!userId) {
         throw new AuthRequiredError()
@@ -333,8 +317,8 @@ export const leaveRoom = mutation({
         }
       }
     },
-  ),
-})
+  },
+)
 
 /**
  * Heartbeat - Update presence for a player session
@@ -342,18 +326,15 @@ export const leaveRoom = mutation({
  * Call this periodically (e.g., every 10s) to maintain presence.
  * Does NOT resurrect 'left' sessions (kicked/banned players stay gone).
  */
-export const heartbeat = mutation({
-  args: {
-    roomId: v.string(),
-    sessionId: v.string(),
-  },
-  returns: v.null(),
-  handler: withConvexSentry(
-    { feature: 'presence', operation: 'heartbeat' },
-    async (
-      ctx: MutationCtx,
-      { roomId, sessionId }: { roomId: string; sessionId: string },
-    ) => {
+export const heartbeat = sentryMutation(
+  { feature: 'presence', operation: 'heartbeat' },
+  {
+    args: {
+      roomId: v.string(),
+      sessionId: v.string(),
+    },
+    returns: v.null(),
+    handler: async (ctx, { roomId, sessionId }) => {
       const userId = await getAuthUserId(ctx)
       if (!userId) {
         throw new AuthRequiredError()
@@ -397,8 +378,8 @@ export const heartbeat = mutation({
 
       return null
     },
-  ),
-})
+  },
+)
 
 /**
  * Get all active players in a room

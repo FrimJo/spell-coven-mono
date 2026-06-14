@@ -10,7 +10,7 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 
-import type { MutationCtx, QueryCtx } from './_generated/server'
+import type { MutationCtx } from './_generated/server'
 import { internal } from './_generated/api'
 import { internalMutation, mutation, query } from './_generated/server'
 import { DEFAULT_HEALTH } from './constants'
@@ -22,7 +22,7 @@ import {
   PlayerNotFoundError,
   RoomNotFoundError,
 } from './errors'
-import { recordConvexBreadcrumb, withConvexSentry } from './sentry'
+import { sentryInternalMutation, sentryMutation, sentryQuery } from './sentry'
 
 /**
  * Presence timeout threshold in milliseconds (30 seconds)
@@ -139,13 +139,13 @@ function toBase32Code(num: number, minLength = 6): string {
  * @param ownerId - The user ID of the room creator (must match authenticated user)
  * @returns { roomId, waitMs } - roomId is null if throttled, waitMs indicates retry delay
  */
-export const createRoom = mutation({
-  args: {
-    ownerId: v.string(), // Must match authenticated user ID
-  },
-  handler: withConvexSentry(
-    { feature: 'room', operation: 'create_room' },
-    async (ctx: MutationCtx, { ownerId }: { ownerId: string }) => {
+export const createRoom = sentryMutation(
+  { feature: 'room', operation: 'create_room' },
+  {
+    args: {
+      ownerId: v.string(), // Must match authenticated user ID
+    },
+    handler: async (ctx, { ownerId }, sentry) => {
       const userId = await getAuthUserId(ctx)
       if (!userId) {
         throw new AuthRequiredError()
@@ -169,7 +169,7 @@ export const createRoom = mutation({
           const timeSinceLastCreation = now - lastRoom.createdAt
           if (timeSinceLastCreation < ROOM_CREATION_COOLDOWN_MS) {
             const waitMs = ROOM_CREATION_COOLDOWN_MS - timeSinceLastCreation
-            recordConvexBreadcrumb('room', 'Room creation throttled', {
+            sentry.breadcrumb('room', 'Room creation throttled', {
               waitMs,
             })
             return { roomId: null, waitMs }
@@ -213,8 +213,8 @@ export const createRoom = mutation({
 
       return { roomId, waitMs: null }
     },
-  ),
-})
+  },
+)
 
 /**
  * Get a room by its short code
@@ -250,13 +250,13 @@ export const getRoom = query({
  *
  * Uses the authenticated user's ID from the Convex auth context to check for bans and capacity.
  */
-export const checkRoomAccess = query({
-  args: {
-    roomId: v.string(),
-  },
-  handler: withConvexSentry(
-    { feature: 'room', operation: 'check_room_access' },
-    async (ctx: QueryCtx, { roomId }: { roomId: string }) => {
+export const checkRoomAccess = sentryQuery(
+  { feature: 'room', operation: 'check_room_access' },
+  {
+    args: {
+      roomId: v.string(),
+    },
+    handler: async (ctx, { roomId }, sentry) => {
       // Check if room exists
       const room = await ctx.db
         .query('rooms')
@@ -264,7 +264,7 @@ export const checkRoomAccess = query({
         .first()
 
       if (!room) {
-        recordConvexBreadcrumb('room', 'Room access check: not found')
+        sentry.breadcrumb('room', 'Room access check: not found')
         return { status: 'not_found' as const }
       }
 
@@ -281,7 +281,7 @@ export const checkRoomAccess = query({
           .first()
 
         if (ban) {
-          recordConvexBreadcrumb('room', 'Room access check: banned')
+          sentry.breadcrumb('room', 'Room access check: banned')
           return { status: 'banned' as const }
         }
 
@@ -329,7 +329,7 @@ export const checkRoomAccess = query({
 
         // Check if room is full
         if (currentPlayerCount >= seatCount) {
-          recordConvexBreadcrumb('room', 'Room access check: full', {
+          sentry.breadcrumb('room', 'Room access check: full', {
             currentCount: currentPlayerCount,
             maxCount: seatCount,
           })
@@ -343,8 +343,8 @@ export const checkRoomAccess = query({
 
       return { status: 'ok' as const }
     },
-  ),
-})
+  },
+)
 
 /**
  * Reset game state for all players in the room.
@@ -352,13 +352,13 @@ export const checkRoomAccess = query({
  * Any active room member can call this. Resets life, poison, commanders, and
  * commander damage to defaults. Players stay in the room.
  */
-export const resetRoomGameState = mutation({
-  args: {
-    roomId: v.string(),
-  },
-  handler: withConvexSentry(
-    { feature: 'room', operation: 'reset_room_game_state' },
-    async (ctx: MutationCtx, { roomId }: { roomId: string }) => {
+export const resetRoomGameState = sentryMutation(
+  { feature: 'room', operation: 'reset_room_game_state' },
+  {
+    args: {
+      roomId: v.string(),
+    },
+    handler: async (ctx, { roomId }) => {
       const callerId = await getAuthUserId(ctx)
       if (!callerId) {
         throw new AuthRequiredError()
@@ -391,8 +391,8 @@ export const resetRoomGameState = mutation({
 
       await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
     },
-  ),
-})
+  },
+)
 
 /**
  * Get live activity stats for the landing page
@@ -436,11 +436,11 @@ export const getLiveStats = query({
  * This is called by a cron job to handle cases where the owner disconnects
  * (stops sending heartbeats) without explicitly leaving.
  */
-export const checkAllRoomOwners = internalMutation({
-  args: {},
-  handler: withConvexSentry(
-    { feature: 'room', operation: 'check_all_room_owners' },
-    async (ctx: MutationCtx) => {
+export const checkAllRoomOwners = sentryInternalMutation(
+  { feature: 'room', operation: 'check_all_room_owners' },
+  {
+    args: {},
+    handler: async (ctx) => {
       const presenceThreshold = Date.now() - PRESENCE_THRESHOLD_MS
 
       // Get all rooms that have at least one active player
@@ -483,8 +483,8 @@ export const checkAllRoomOwners = internalMutation({
 
       return { checkedRooms: activeRoomIds.size, transfers: results }
     },
-  ),
-})
+  },
+)
 
 /**
  * Transfer room ownership to the next active player if the current owner is inactive.
@@ -500,13 +500,13 @@ export const checkAllRoomOwners = internalMutation({
  * @param roomId - The room ID to check/transfer ownership for
  * @returns Object with `transferred` boolean and optional `newOwnerId`
  */
-export const transferOwnerIfNeeded = internalMutation({
-  args: {
-    roomId: v.string(),
-  },
-  handler: withConvexSentry(
-    { feature: 'room', operation: 'transfer_owner_if_needed' },
-    async (ctx: MutationCtx, { roomId }: { roomId: string }) => {
+export const transferOwnerIfNeeded = sentryInternalMutation(
+  { feature: 'room', operation: 'transfer_owner_if_needed' },
+  {
+    args: {
+      roomId: v.string(),
+    },
+    handler: async (ctx, { roomId }) => {
       const room = await ctx.db
         .query('rooms')
         .withIndex('by_roomId', (q) => q.eq('roomId', roomId))
@@ -571,8 +571,8 @@ export const transferOwnerIfNeeded = internalMutation({
 
       return { transferred: true, newOwnerId: newOwner.userId }
     },
-  ),
-})
+  },
+)
 
 /**
  * Update a player's health

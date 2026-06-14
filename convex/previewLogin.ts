@@ -4,9 +4,8 @@ import z from 'zod'
 
 import type { DataModel } from './_generated/dataModel'
 import { api, internal } from './_generated/api'
-import { action } from './_generated/server'
 import { isE2ePreview } from './env'
-import { withConvexSentry } from './sentry'
+import { sentryAction } from './sentry'
 
 const previewTokensSchema = z.object({
   tokens: z.object({
@@ -101,17 +100,14 @@ async function signInOrSignUp(
   }
 }
 
-export const previewLogin = action({
-  args: {
-    code: v.string(),
-    workerSlot: v.optional(v.number()),
-  },
-  handler: withConvexSentry(
-    { feature: 'auth', operation: 'preview_login' },
-    async (
-      ctx: GenericActionCtx<DataModel>,
-      args: { code: string; workerSlot?: number },
-    ) => {
+export const previewLogin = sentryAction(
+  { feature: 'auth', operation: 'preview_login' },
+  {
+    args: {
+      code: v.string(),
+      workerSlot: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
       if (!isE2ePreview) {
         throw new Error('Unauthorized')
       }
@@ -154,5 +150,5 @@ export const previewLogin = action({
         previewName,
       }
     },
-  ),
-})
+  },
+)

@@ -1,10 +1,11 @@
 import {
   addAppBreadcrumb,
   captureAppException,
-  sanitizeSentryData,
 } from '@/integrations/sentry/reporting'
 import * as Sentry from '@sentry/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { sanitizeSentryData } from '@repo/observability'
 
 vi.mock('@sentry/react', () => ({
   addBreadcrumb: vi.fn(),

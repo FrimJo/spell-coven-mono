@@ -5,12 +5,10 @@ import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 import { AccessToken } from 'livekit-server-sdk'
 
-import type { ActionCtx } from './_generated/server'
 import { internal } from './_generated/api'
-import { action } from './_generated/server'
 import { getLiveKitEnv } from './env'
 import { AuthRequiredError } from './errors'
-import { withConvexSentry } from './sentry'
+import { sentryAction } from './sentry'
 
 // Long enough for typical game sessions; LiveKit reconnects with the same JWT.
 const tokenTtl = '6h'
@@ -28,20 +26,20 @@ interface LiveKitTokenResponse {
   token: string
 }
 
-export const issueLiveKitToken = action({
-  args: {
-    roomId: v.string(),
-    sessionId: v.string(),
-  },
-  returns: v.object({
-    serverUrl: v.string(),
-    token: v.string(),
-  }),
-  handler: withConvexSentry(
-    { feature: 'media', operation: 'issue_livekit_token' },
-    async (
-      ctx: ActionCtx,
-      { roomId, sessionId }: { roomId: string; sessionId: string },
+export const issueLiveKitToken = sentryAction(
+  { feature: 'media', operation: 'issue_livekit_token' },
+  {
+    args: {
+      roomId: v.string(),
+      sessionId: v.string(),
+    },
+    returns: v.object({
+      serverUrl: v.string(),
+      token: v.string(),
+    }),
+    handler: async (
+      ctx,
+      { roomId, sessionId },
     ): Promise<LiveKitTokenResponse> => {
       const userId = await getAuthUserId(ctx)
       if (!userId) {
@@ -85,5 +83,5 @@ export const issueLiveKitToken = action({
         token: await accessToken.toJwt(),
       }
     },
-  ),
-})
+  },
+)

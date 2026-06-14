@@ -1,6 +1,7 @@
-import type { SentryData } from '@convex/sentryData'
-import { sanitizeSentryData } from '@convex/sentryData'
 import * as Sentry from '@sentry/react'
+
+import type { SentryData } from '@repo/observability'
+import { sanitizeSentryData } from '@repo/observability'
 
 export { sanitizeSentryData }
 

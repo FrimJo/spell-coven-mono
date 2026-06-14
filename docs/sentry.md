@@ -4,6 +4,10 @@ This repo ships with production-grade Sentry instrumentation for the Convex back
 client. The integration includes error tracking, performance tracing, release tracking, environment
 separation, session replay, source maps upload, and data scrubbing.
 
+Shared data-scrubbing policy lives in `@repo/observability`. Both the web app and Convex backend
+import the same `sanitizeSentryData` and sensitive-key rules from that package; web code should not
+import observability helpers from `convex/`.
+
 ## Environment variables
 
 ### Required (all environments)
@@ -91,9 +95,13 @@ Use the `sentryDebug.triggerSentryError` mutation (development only). It support
 - `{ mode: "message" }` to capture a backend message.
 - `{ mode: "exception" }` or no args to capture and throw a backend exception.
 
-Convex functions should use the shared Sentry wrapper instead of local `try`/`catch` reporting.
-Browser hooks and adapters own operational exception reporting; UI components should keep user-facing
-state, toasts, and dialogs out of Sentry capture policy.
+Convex functions should use `sentryQuery`, `sentryMutation`, `sentryInternalMutation`, or
+`sentryAction` instead of local `try`/`catch` reporting. Handlers receive a scoped `sentry`
+argument for breadcrumbs; those breadcrumbs are attached to unexpected Sentry events from the same
+invocation. Expected domain errors remain non-error states and are not sent to Sentry.
+
+Browser hooks, adapters, and operation helpers own operational exception reporting; UI components
+should keep user-facing state, toasts, and dialogs out of Sentry capture policy.
 
 ## Alerting recommendations
 

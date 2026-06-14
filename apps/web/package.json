@@ -27,6 +27,7 @@
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "@playwright/test": "catalog:",
     "@repo/eslint-config": "workspace:*",
+    "@repo/observability": "workspace:*",
     "@repo/prettier-config": "workspace:*",
     "@repo/tailwind-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",

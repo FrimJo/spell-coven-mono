@@ -8,7 +8,6 @@
 import { getAuthUserId } from '@convex-dev/auth/server'
 import { v } from 'convex/values'
 
-import type { MutationCtx } from './_generated/server'
 import { mutation, query } from './_generated/server'
 import {
   AuthRequiredError,
@@ -16,7 +15,7 @@ import {
   NotRoomOwnerError,
   RoomNotFoundError,
 } from './errors'
-import { withConvexSentry } from './sentry'
+import { sentryMutation } from './sentry'
 
 /**
  * Ban a player from a room
@@ -25,22 +24,15 @@ import { withConvexSentry } from './sentry'
  * Creates a persistent ban record and marks all player sessions as 'left'.
  * Requires authentication - caller identity is verified server-side.
  */
-export const banPlayer = mutation({
-  args: {
-    roomId: v.string(),
-    userId: v.string(),
-    reason: v.optional(v.string()),
-  },
-  handler: withConvexSentry(
-    { feature: 'moderation', operation: 'ban_player' },
-    async (
-      ctx: MutationCtx,
-      {
-        roomId,
-        userId,
-        reason,
-      }: { roomId: string; userId: string; reason?: string },
-    ) => {
+export const banPlayer = sentryMutation(
+  { feature: 'moderation', operation: 'ban_player' },
+  {
+    args: {
+      roomId: v.string(),
+      userId: v.string(),
+      reason: v.optional(v.string()),
+    },
+    handler: async (ctx, { roomId, userId, reason }) => {
       // Get authenticated user ID from session
       const callerId = await getAuthUserId(ctx)
       if (!callerId) {
@@ -116,8 +108,8 @@ export const banPlayer = mutation({
       // Update room activity
       await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
     },
-  ),
-})
+  },
+)
 
 /**
  * Kick a player from a room (temporary, they can rejoin)
@@ -126,17 +118,14 @@ export const banPlayer = mutation({
  * Marks all player sessions as 'left' but does not create a ban record.
  * Requires authentication - caller identity is verified server-side.
  */
-export const kickPlayer = mutation({
-  args: {
-    roomId: v.string(),
-    userId: v.string(),
-  },
-  handler: withConvexSentry(
-    { feature: 'moderation', operation: 'kick_player' },
-    async (
-      ctx: MutationCtx,
-      { roomId, userId }: { roomId: string; userId: string },
-    ) => {
+export const kickPlayer = sentryMutation(
+  { feature: 'moderation', operation: 'kick_player' },
+  {
+    args: {
+      roomId: v.string(),
+      userId: v.string(),
+    },
+    handler: async (ctx, { roomId, userId }) => {
       // Get authenticated user ID from session
       const callerId = await getAuthUserId(ctx)
       if (!callerId) {
@@ -176,8 +165,8 @@ export const kickPlayer = mutation({
       // Update room activity
       await ctx.db.patch(room._id, { lastActivityAt: Date.now() })
     },
-  ),
-})
+  },
+)
 
 /**
  * Unban a player
