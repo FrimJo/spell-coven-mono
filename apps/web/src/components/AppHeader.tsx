@@ -47,7 +47,7 @@ import logoWarmGold from '../assets/logo_1024_warmgold.png'
 import logo from '../assets/logo_1024x1024.png'
 import { MTG_THEMES, useTheme } from '../contexts/ThemeContext.js'
 import { useSearchShortcutParts } from '../hooks/useSearchShortcut.js'
-import { ThemeToggle } from './ThemeToggle.js'
+import { ThemePickerInline, ThemeToggle } from './ThemeToggle.js'
 
 // ============================================================================
 // Types
@@ -117,18 +117,9 @@ function Logo({ size = 'default' }: { size?: 'default' | 'small' }) {
       <img
         src={logoSrc}
         alt="Spell Coven Logo"
-        className={`
-          ${sizeClasses}
-          ${roundedClasses}
-          object-contain
-        `}
+        className={` ${sizeClasses} ${roundedClasses} object-contain`}
       />
-      <span
-        className={`
-          ${textClasses}
-          font-bold text-text-primary
-        `}
-      >
+      <span className={` ${textClasses} text-text-primary font-bold`}>
         Spell Coven
       </span>
     </div>
@@ -145,10 +136,7 @@ function UserMenu() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="
-            flex items-center gap-2 text-text-secondary
-            hover:text-text-primary
-          "
+          className="text-text-secondary hover:text-text-primary flex items-center gap-2"
           title={user.username}
           data-testid="header-user-menu"
         >
@@ -158,12 +146,7 @@ function UserMenu() {
               {user.username.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span
-            className="
-              hidden max-w-32 truncate
-              lg:inline
-            "
-          >
+          <span className="hidden max-w-32 truncate lg:inline">
             {user.username}
           </span>
         </Button>
@@ -174,10 +157,7 @@ function UserMenu() {
       >
         <DropdownMenuItem
           onClick={signOut}
-          className="
-            cursor-pointer text-text-secondary
-            focus:bg-surface-2 focus:text-text-primary
-          "
+          className="text-text-secondary focus:bg-surface-2 focus:text-text-primary cursor-pointer"
         >
           <LogOut className="mr-2 size-4" />
           Sign Out
@@ -196,10 +176,7 @@ function SettingsDropdown({ onOpenSettings }: { onOpenSettings?: () => void }) {
         <Button
           variant="ghost"
           size="sm"
-          className="
-            text-text-muted
-            hover:text-text-primary
-          "
+          className="text-text-muted hover:text-text-primary"
           title="Audio & video settings"
           data-testid="settings-button"
         >
@@ -208,25 +185,18 @@ function SettingsDropdown({ onOpenSettings }: { onOpenSettings?: () => void }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-56 border-surface-3 bg-surface-1"
+        className="border-surface-3 bg-surface-1 w-56"
       >
         {onOpenSettings && (
           <DropdownMenuItem
             onClick={onOpenSettings}
-            className="
-              cursor-pointer text-text-secondary
-              focus:bg-surface-2 focus:text-text-primary
-            "
+            className="text-text-secondary focus:bg-surface-2 focus:text-text-primary cursor-pointer"
           >
             <Settings className="mr-2 size-4" />
             Setup Audio & Video
           </DropdownMenuItem>
         )}
-        <DropdownMenuLabel
-          className="
-            flex items-center gap-1 text-xs font-normal text-text-muted
-          "
-        >
+        <DropdownMenuLabel className="text-text-muted flex items-center gap-1 text-xs font-normal">
           <Palette className="size-3" />
           Theme
         </DropdownMenuLabel>
@@ -242,18 +212,12 @@ function SettingsDropdown({ onOpenSettings }: { onOpenSettings?: () => void }) {
               <DropdownMenuRadioItem
                 key={key}
                 value={key}
-                className="
-                  cursor-pointer text-text-secondary
-                  focus:bg-surface-2 focus:text-foreground
-                "
+                className="text-text-secondary focus:bg-surface-2 focus:text-foreground cursor-pointer"
               >
                 <span className="mr-2 flex w-4 items-center justify-center">
                   {iconSvg && iconColor ? (
                     <span
-                      className="
-                        size-4 shrink-0 overflow-hidden
-                        [&_svg]:block [&_svg]:size-full
-                      "
+                      className="size-4 shrink-0 overflow-hidden [&_svg]:block [&_svg]:size-full"
                       style={{ color: iconColor }}
                       title={`${theme.label} mana`}
                       dangerouslySetInnerHTML={{ __html: iconSvg }}
@@ -264,12 +228,7 @@ function SettingsDropdown({ onOpenSettings }: { onOpenSettings?: () => void }) {
                 </span>
                 <span className="flex-1">{theme.label}</span>
                 {key !== 'none' && (
-                  <span
-                    className="
-                      ml-2 hidden text-xs text-text-muted
-                      sm:inline
-                    "
-                  >
+                  <span className="text-text-muted ml-2 hidden text-xs sm:inline">
                     {theme.description.split(',')[0]}
                   </span>
                 )}
@@ -302,38 +261,21 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
   }
 
   return (
-    <header className="border-b border-border-muted bg-surface-0/80 backdrop-blur-md">
+    <header className="border-border-muted bg-surface-0/80 border-b backdrop-blur-md">
       {/* Subtle gradient border effect */}
-      <div
-        className="
-          absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent
-          via-brand/30 to-transparent
-        "
-      />
+      <div className="bg-linear-to-r via-brand/30 absolute inset-x-0 bottom-0 h-px from-transparent to-transparent" />
 
-      <div
-        className="
-          relative container mx-auto flex items-center justify-between p-4
-        "
-      >
+      <div className="container relative mx-auto flex items-center justify-between p-4">
         <Logo />
 
         {/* Desktop Navigation */}
-        <nav
-          className="
-            hidden items-center gap-6
-            md:flex
-          "
-        >
+        <nav className="hidden items-center gap-6 md:flex">
           {navItems.map((item) => (
             <a
               key={item.targetId}
               href={`#${item.targetId}`}
               onClick={(e) => handleNavClick(e, item.targetId)}
-              className="
-                text-text-secondary transition-colors
-                hover:text-text-primary
-              "
+              className="text-text-secondary hover:text-text-primary transition-colors"
             >
               {item.label}
             </a>
@@ -343,10 +285,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
             href="https://github.com/FrimJo/spell-coven-mono"
             target="_blank"
             rel="noopener noreferrer"
-            className="
-              flex items-center gap-1.5 text-text-secondary transition-colors
-              hover:text-text-primary
-            "
+            className="text-text-secondary hover:text-text-primary flex items-center gap-1.5 transition-colors"
             title="View on GitHub"
           >
             <Github className="size-5" />
@@ -357,7 +296,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
 
           {/* Auth section */}
           {isAuthLoading ? (
-            <div className="h-9 w-24 animate-pulse rounded-md bg-surface-2" />
+            <div className="bg-surface-2 h-9 w-24 animate-pulse rounded-md" />
           ) : isAuthenticated ? (
             <UserMenu />
           ) : (
@@ -365,10 +304,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
               variant="outline"
               size="sm"
               onClick={onSignIn}
-              className="
-                gap-2 border-brand/50 text-brand-muted-foreground
-                hover:bg-brand/20 hover:text-brand-muted-foreground
-              "
+              className="border-brand/50 text-brand-muted-foreground hover:bg-brand/20 hover:text-brand-muted-foreground gap-2"
             >
               <LogIn className="size-4" />
               <span>Sign in with Discord</span>
@@ -384,23 +320,22 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                 variant="ghost"
                 size="icon"
                 aria-label="Open navigation menu"
-                className="
-                  text-text-secondary
-                  hover:bg-surface-2 hover:text-text-primary
-                "
+                className="text-text-secondary hover:bg-surface-2 hover:text-text-primary"
               >
                 <Menu className="size-6" />
               </Button>
             </SheetTrigger>
             <SheetContent
               side="right"
-              className="
-                flex w-full flex-col border-l border-border-muted
-                bg-surface-0/95 p-0 backdrop-blur-xl
-                sm:max-w-sm
-              "
+              className="border-border-muted bg-surface-0/95 flex w-full flex-col border-l p-0 backdrop-blur-xl sm:max-w-sm"
+              onInteractOutside={(e) => {
+                const target = e.target as HTMLElement
+                if (target.closest('[data-slot="dropdown-menu-content"]')) {
+                  e.preventDefault()
+                }
+              }}
             >
-              <SheetHeader className="border-b border-border-muted px-6 py-4">
+              <SheetHeader className="border-border-muted border-b px-6 py-4">
                 <div className="flex items-center gap-2">
                   <Logo size="small" />
                 </div>
@@ -413,11 +348,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                     key={item.targetId}
                     href={`#${item.targetId}`}
                     onClick={(e) => handleNavClick(e, item.targetId)}
-                    className="
-                      flex items-center rounded-lg px-4 py-3 text-lg font-medium
-                      text-text-secondary transition-colors
-                      hover:bg-surface-2 hover:text-text-primary
-                    "
+                    className="text-text-secondary hover:bg-surface-2 hover:text-text-primary flex items-center rounded-lg px-4 py-3 text-lg font-medium transition-colors"
                   >
                     {item.label}
                   </a>
@@ -428,55 +359,33 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                   href="https://github.com/FrimJo/spell-coven-mono"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="
-                    flex items-center gap-3 rounded-lg px-4 py-3 text-lg
-                    font-medium text-text-secondary transition-colors
-                    hover:bg-surface-2 hover:text-text-primary
-                  "
+                  className="text-text-secondary hover:bg-surface-2 hover:text-text-primary flex items-center gap-3 rounded-lg px-4 py-3 text-lg font-medium transition-colors"
                 >
                   <Github className="size-5" />
                   GitHub
                 </a>
 
-                {/* Theme toggle in mobile menu */}
-                <div
-                  className="
-                    flex items-center justify-between rounded-lg px-4 py-3
-                  "
-                >
-                  <span className="text-lg font-medium text-text-secondary">
-                    Theme
-                  </span>
-                  <ThemeToggle />
-                </div>
+                {/* Theme picker in mobile menu (inline — avoids dropdown-in-sheet issues) */}
+                <ThemePickerInline />
               </div>
 
-              <div className="border-t border-border-muted p-6">
+              <div className="border-border-muted border-t p-6">
                 {isAuthLoading ? (
-                  <div
-                    className="
-                      h-12 w-full animate-pulse rounded-lg bg-surface-2
-                    "
-                  />
+                  <div className="bg-surface-2 h-12 w-full animate-pulse rounded-lg" />
                 ) : isAuthenticated && user ? (
                   <div className="flex flex-col gap-4">
-                    <div
-                      className="
-                        flex items-center gap-3 rounded-xl border
-                        border-border-muted bg-surface-1/50 p-3
-                      "
-                    >
-                      <Avatar className="size-10 border border-surface-3">
+                    <div className="border-border-muted bg-surface-1/50 flex items-center gap-3 rounded-xl border p-3">
+                      <Avatar className="border-surface-3 size-10 border">
                         <AvatarImage src={user.avatar || undefined} />
                         <AvatarFallback className="bg-brand text-white">
                           {user.username.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
-                        <span className="font-medium text-text-primary">
+                        <span className="text-text-primary font-medium">
                           {user.username}
                         </span>
-                        <span className="text-xs text-text-muted">
+                        <span className="text-text-muted text-xs">
                           Logged in
                         </span>
                       </div>
@@ -484,11 +393,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                     <Button
                       variant="outline"
                       onClick={signOut}
-                      className="
-                        h-12 w-full justify-center gap-2 border-surface-3
-                        text-text-secondary
-                        hover:bg-surface-2 hover:text-text-primary
-                      "
+                      className="border-surface-3 text-text-secondary hover:bg-surface-2 hover:text-text-primary h-12 w-full justify-center gap-2"
                     >
                       <LogOut className="size-4" />
                       Sign Out
@@ -498,27 +403,11 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                   <Button
                     size="lg"
                     onClick={onSignIn}
-                    className="
-                      group relative h-14 w-full gap-3 overflow-hidden border
-                      border-white/10 bg-linear-to-r from-[#5865F2]
-                      to-purple-600 text-lg font-semibold text-white
-                      shadow-[0_0_30px_rgba(88,101,242,0.4)] transition-all
-                      hover:scale-105 hover:from-[#4752C4] hover:to-purple-700
-                      hover:shadow-[0_0_50px_rgba(88,101,242,0.6)]
-                    "
+                    className="bg-linear-to-r group relative h-14 w-full gap-3 overflow-hidden border border-white/10 from-[#5865F2] to-purple-600 text-lg font-semibold text-white shadow-[0_0_30px_rgba(88,101,242,0.4)] transition-all hover:scale-105 hover:from-[#4752C4] hover:to-purple-700 hover:shadow-[0_0_50px_rgba(88,101,242,0.6)]"
                   >
-                    <div
-                      className="
-                        absolute inset-0 bg-white/20 opacity-0
-                        transition-opacity
-                        group-hover:opacity-100
-                      "
-                    />
+                    <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
                     <svg
-                      className="
-                        size-6 transition-transform
-                        group-hover:scale-110
-                      "
+                      className="size-6 transition-transform group-hover:scale-110"
                       viewBox="0 0 24 24"
                       fill="currentColor"
                     >
@@ -553,18 +442,9 @@ function GameHeader({
 }: AppHeaderProps) {
   const shortcut = useSearchShortcutParts()
   return (
-    <header
-      className="
-        shrink-0 border-b border-surface-2 bg-surface-1/80 backdrop-blur-md
-      "
-    >
+    <header className="border-surface-2 bg-surface-1/80 shrink-0 border-b backdrop-blur-md">
       {/* Subtle gradient border effect */}
-      <div
-        className="
-          absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent
-          via-brand/20 to-transparent
-        "
-      />
+      <div className="bg-linear-to-r via-brand/20 absolute inset-x-0 bottom-0 h-px from-transparent to-transparent" />
 
       <div className="relative flex items-center justify-between px-4 py-3">
         {/* Left side */}
@@ -573,10 +453,7 @@ function GameHeader({
             variant="ghost"
             size="sm"
             onClick={onLeave}
-            className="
-              text-text-muted
-              hover:text-text-primary
-            "
+            className="text-text-muted hover:text-text-primary"
             title="Leave game room"
             data-testid="leave-game-button"
           >
@@ -584,23 +461,14 @@ function GameHeader({
             Leave
           </Button>
 
-          <div className="h-6 w-px bg-surface-3" />
+          <div className="bg-surface-3 h-6 w-px" />
 
-          <div
-            className="
-              hidden min-w-0 flex-1 items-center gap-2
-              sm:flex
-            "
-          >
-            <span className="shrink-0 text-sm text-text-muted">
+          <div className="hidden min-w-0 flex-1 items-center gap-2 sm:flex">
+            <span className="text-text-muted shrink-0 text-sm">
               Share Link:
             </span>
             <code
-              className="
-                min-w-0 flex-1 cursor-pointer truncate rounded-sm bg-surface-2
-                px-2 py-1 text-sm text-brand-muted-foreground transition-colors
-                hover:bg-surface-3
-              "
+              className="bg-surface-2 text-brand-muted-foreground hover:bg-surface-3 min-w-0 flex-1 cursor-pointer truncate rounded-sm px-2 py-1 text-sm transition-colors"
               data-testid="game-id-display"
               onClick={onCopyLink}
               title="Click to copy shareable link"
@@ -611,10 +479,7 @@ function GameHeader({
               variant="ghost"
               size="sm"
               onClick={onCopyLink}
-              className="
-                shrink-0 text-text-muted
-                hover:text-text-primary
-              "
+              className="text-text-muted hover:text-text-primary shrink-0"
               title="Copy shareable link"
               data-testid="copy-share-link-button"
             >
@@ -631,11 +496,7 @@ function GameHeader({
             variant="ghost"
             size="sm"
             onClick={onCopyLink}
-            className="
-              text-text-muted
-              hover:text-text-primary
-              sm:hidden
-            "
+            className="text-text-muted hover:text-text-primary sm:hidden"
             title="Copy shareable link"
           >
             {copied ? (
@@ -655,17 +516,11 @@ function GameHeader({
               variant="outline"
               size="sm"
               onClick={onCommandersPanelToggle}
-              className={`
-                gap-2 border-surface-3
-                ${
-                  commandersPanelOpen
-                    ? 'bg-surface-3 text-text-primary'
-                    : `
-                      bg-surface-2 text-text-muted
-                      hover:bg-surface-3 hover:text-text-primary
-                    `
-                }
-              `}
+              className={`border-surface-3 gap-2 ${
+                commandersPanelOpen
+                  ? 'bg-surface-3 text-text-primary'
+                  : `bg-surface-2 text-text-muted hover:bg-surface-3 hover:text-text-primary`
+              } `}
               title={
                 commanderShortcutParts
                   ? `View and edit commanders list (${commanderShortcutParts.join('')})`
@@ -674,23 +529,9 @@ function GameHeader({
               data-testid="commanders-panel-button"
             >
               <Swords className="size-4" />
-              <span
-                className="
-                  hidden
-                  sm:inline
-                "
-              >
-                Commanders
-              </span>
+              <span className="hidden sm:inline">Commanders</span>
               {commanderShortcutParts && commanderShortcutParts.length > 0 && (
-                <kbd
-                  className="
-                    pointer-events-none hidden h-5 items-center gap-1 rounded-sm
-                    border bg-surface-3 px-1.5 font-mono text-[10px] font-medium
-                    text-text-muted opacity-75 select-none
-                    sm:inline-flex
-                  "
-                >
+                <kbd className="bg-surface-3 text-text-muted pointer-events-none hidden h-5 select-none items-center gap-1 rounded-sm border px-1.5 font-mono text-[10px] font-medium opacity-75 sm:inline-flex">
                   {commanderShortcutParts.map((part, i) => (
                     <span key={i} className="text-xs">
                       {part}
@@ -706,30 +547,13 @@ function GameHeader({
             variant="outline"
             size="sm"
             onClick={onSearchClick}
-            className="
-              gap-2 border-surface-3 bg-surface-2 text-text-muted
-              hover:bg-surface-3 hover:text-text-primary
-            "
+            className="border-surface-3 bg-surface-2 text-text-muted hover:bg-surface-3 hover:text-text-primary gap-2"
             title={`Search cards (${shortcut.modifier}${shortcut.modifier.length === 1 ? '' : '+'}${shortcut.key})`}
             data-testid="search-button"
           >
             <Search className="size-4" />
-            <span
-              className="
-                hidden
-                sm:inline
-              "
-            >
-              Search cards
-            </span>
-            <kbd
-              className="
-                pointer-events-none hidden h-5 items-center gap-1 rounded-sm
-                border bg-surface-3 px-1.5 font-mono text-[10px] font-medium
-                text-text-muted opacity-75 select-none
-                sm:inline-flex
-              "
-            >
+            <span className="hidden sm:inline">Search cards</span>
+            <kbd className="bg-surface-3 text-text-muted pointer-events-none hidden h-5 select-none items-center gap-1 rounded-sm border px-1.5 font-mono text-[10px] font-medium opacity-75 sm:inline-flex">
               <span className="text-xs">{shortcut.modifier}</span>
               {shortcut.key}
             </kbd>

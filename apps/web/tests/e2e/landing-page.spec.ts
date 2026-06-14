@@ -175,6 +175,24 @@ test.describe('Landing Page', () => {
       await expect(mobileMenu).toBeVisible()
     })
 
+    test('should close mobile menu sheet when clicking the close button', async ({
+      page,
+    }) => {
+      await setMobileViewport(page)
+
+      const menuButton = page.getByRole('button', {
+        name: /open navigation menu/i,
+      })
+      await menuButton.click()
+
+      const mobileMenu = page.getByRole('dialog')
+      await expect(mobileMenu).toBeVisible()
+
+      await mobileMenu.getByRole('button', { name: /^close$/i }).click()
+
+      await expect(mobileMenu).not.toBeVisible()
+    })
+
     test('should display navigation links in mobile menu', async ({ page }) => {
       await setMobileViewport(page)
 
@@ -399,14 +417,10 @@ test.describe('Landing Page', () => {
 
       await openMobileMenu()
 
-      const toggleButton = page
-        .getByRole('dialog')
-        .getByTestId('theme-toggle-button')
-
       for (const theme of themes) {
-        await toggleButton.click()
         await page
-          .getByRole('menuitemradio', { name: MTG_THEME_LABELS[theme] })
+          .getByRole('dialog')
+          .getByTestId(`theme-option-${theme}`)
           .click()
         await expectThemeApplied(page, theme)
       }
