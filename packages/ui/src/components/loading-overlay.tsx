@@ -24,9 +24,9 @@ export function LoadingOverlay({ isVisible, message }: LoadingOverlayProps) {
           <div className="absolute inset-0 rounded-full border-4 border-muted" />
           <div
             className="
-            absolute inset-0 animate-spin rounded-full border-4 border-primary
-            border-t-transparent
-          "
+              absolute inset-0 animate-spin rounded-full border-4 border-primary
+              border-t-transparent
+            "
           />
         </div>
 

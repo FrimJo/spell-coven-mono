@@ -11,9 +11,9 @@ const inlineMessageVariants = cva(
       variant: {
         error: 'border-destructive/50 bg-destructive/10 text-destructive',
         warning: `
-            border-warning/50 bg-warning/10 text-warning-foreground
-            dark:text-warning-muted-foreground
-          `,
+          border-warning/50 bg-warning/10 text-warning-foreground
+          dark:text-warning-muted-foreground
+        `,
         info: `
           border-info/50 bg-info/10 text-info-foreground
           dark:text-info-muted-foreground

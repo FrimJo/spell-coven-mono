@@ -109,10 +109,10 @@ function DialogContent({
   const overlay = scopeOverlayToContainer ? (
     <DialogOverlay
       className="
-      absolute inset-0 z-50 bg-black/50
-      data-[state=closed]:animate-out data-[state=closed]:fade-out-0
-      data-[state=open]:animate-in data-[state=open]:fade-in-0
-    "
+        absolute inset-0 z-50 bg-black/50
+        data-[state=closed]:animate-out data-[state=closed]:fade-out-0
+        data-[state=open]:animate-in data-[state=open]:fade-in-0
+      "
     />
   ) : (
     <DialogOverlay />
@@ -150,15 +150,15 @@ function DialogContent({
       {children}
       <DialogPrimitive.Close
         className="
-        absolute top-4 right-4 cursor-pointer rounded-xs opacity-70
-        ring-offset-background transition-opacity
-        hover:opacity-100
-        focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden
-        disabled:pointer-events-none
-        data-[state=open]:bg-accent data-[state=open]:text-muted-foreground
-        [&_svg]:pointer-events-none [&_svg]:shrink-0
-        [&_svg:not([class*='size-'])]:size-4
-      "
+          absolute top-4 right-4 cursor-pointer rounded-xs opacity-70
+          ring-offset-background transition-opacity
+          hover:opacity-100
+          focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden
+          disabled:pointer-events-none
+          data-[state=open]:bg-accent data-[state=open]:text-muted-foreground
+          [&_svg]:pointer-events-none [&_svg]:shrink-0
+          [&_svg:not([class*='size-'])]:size-4
+        "
       >
         <XIcon />
         <span className="sr-only">Close</span>
@@ -192,9 +192,9 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
       data-slot="dialog-header"
       className={cn(
         `
-        flex flex-col gap-2 text-center
-        sm:text-left
-      `,
+          flex flex-col gap-2 text-center
+          sm:text-left
+        `,
         className,
       )}
       {...props}

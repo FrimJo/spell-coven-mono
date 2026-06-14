@@ -67,9 +67,9 @@ function TooltipContent({
         {children}
         <TooltipPrimitive.Arrow
           className="
-          z-50 size-2.5 translate-y-[calc(-50%-2px)] rotate-45 rounded-[2px]
-          bg-primary fill-primary
-        "
+            z-50 size-2.5 translate-y-[calc(-50%-2px)] rotate-45 rounded-[2px]
+            bg-primary fill-primary
+          "
         />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>

@@ -206,9 +206,9 @@ function ContextMenuCheckboxItem({
     >
       <span
         className="
-        pointer-events-none absolute left-2 flex size-3.5 items-center
-        justify-center
-      "
+          pointer-events-none absolute left-2 flex size-3.5 items-center
+          justify-center
+        "
       >
         <ContextMenuPrimitive.ItemIndicator>
           <CheckIcon className="size-4" />
@@ -242,9 +242,9 @@ function ContextMenuRadioItem({
     >
       <span
         className="
-        pointer-events-none absolute left-2 flex size-3.5 items-center
-        justify-center
-      "
+          pointer-events-none absolute left-2 flex size-3.5 items-center
+          justify-center
+        "
       >
         <ContextMenuPrimitive.ItemIndicator>
           <CircleIcon className="size-2 fill-current" />

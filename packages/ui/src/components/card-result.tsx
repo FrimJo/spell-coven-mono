@@ -44,9 +44,9 @@ export function CardResult({
       {showLowConfidenceWarning && (
         <div
           className="
-          rounded-md bg-warning/10 px-3 py-2 text-sm text-warning-foreground
-          dark:text-warning-muted-foreground
-        "
+            rounded-md bg-warning/10 px-3 py-2 text-sm text-warning-foreground
+            dark:text-warning-muted-foreground
+          "
         >
           Low confidence match. Try a clearer view of the card.
         </div>

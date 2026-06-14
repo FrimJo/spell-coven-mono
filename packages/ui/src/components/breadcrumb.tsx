@@ -49,9 +49,9 @@ function BreadcrumbLink({
       data-slot="breadcrumb-link"
       className={cn(
         `
-        transition-colors
-        hover:text-foreground
-      `,
+          transition-colors
+          hover:text-foreground
+        `,
         className,
       )}
       {...props}
