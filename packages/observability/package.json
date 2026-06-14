@@ -1,0 +1,24 @@
+{
+  "name": "@repo/observability",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "format": "prettier --check . --ignore-path ./.prettierignore --ignore-path ../../.prettierignore --ignore-path ./.gitignore --ignore-path ../../.gitignore",
+    "format:fix": "prettier --write . --ignore-path ./.prettierignore --ignore-path ../../.prettierignore --ignore-path ./.gitignore --ignore-path ../../.gitignore",
+    "lint": "bun run eslint . --max-warnings 0",
+    "lint:fix": "bun run eslint . --max-warnings 0 --fix",
+    "typecheck": "bun run tsc --noEmit"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/prettier-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "eslint": "catalog:",
+    "typescript": "catalog:"
+  },
+  "prettier": "@repo/prettier-config"
+}
