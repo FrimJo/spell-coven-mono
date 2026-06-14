@@ -138,11 +138,7 @@ export function PlayerList({
           size="sm"
           onClick={() => onChangeSeatCount(-1)}
           disabled={!canDecrease}
-          className="
-            size-5 p-0 text-text-muted
-            hover:text-text-secondary
-            disabled:text-text-muted/30
-          "
+          className="text-text-muted hover:text-text-secondary disabled:text-text-muted/30 size-5 p-0"
           title="Remove seat"
         >
           <Minus className="size-3" />
@@ -152,11 +148,7 @@ export function PlayerList({
           size="sm"
           onClick={() => onChangeSeatCount(1)}
           disabled={!canIncrease}
-          className="
-            size-5 p-0 text-text-muted
-            hover:text-text-secondary
-            disabled:text-text-muted/30
-          "
+          className="text-text-muted hover:text-text-secondary disabled:text-text-muted/30 size-5 p-0"
           title="Add seat"
         >
           <Plus className="size-3" />
@@ -168,10 +160,7 @@ export function PlayerList({
                 variant="ghost"
                 size="sm"
                 onClick={onResetGame}
-                className="
-                  size-5 p-0 text-text-muted
-                  hover:text-text-secondary
-                "
+                className="text-text-muted hover:text-text-secondary size-5 p-0"
                 data-testid="reset-game-button"
               >
                 <RotateCcw className="size-3" />
@@ -188,10 +177,7 @@ export function PlayerList({
             variant="ghost"
             size="sm"
             onClick={onResetGame}
-            className="
-              size-5 p-0 text-text-muted
-              hover:text-text-secondary
-            "
+            className="text-text-muted hover:text-text-secondary size-5 p-0"
             data-testid="reset-game-button"
           >
             <RotateCcw className="size-3" />
@@ -223,15 +209,7 @@ export function PlayerList({
                   type="button"
                   onClick={() => handleCopyLink(index)}
                   disabled={!onCopyShareLink}
-                  className="
-                    border-default group flex min-h-[56px] w-full cursor-pointer
-                    items-center justify-between gap-2 rounded-lg border
-                    border-dashed bg-surface-1/50 p-2 text-left
-                    transition-colors
-                    hover:border-surface-3/80 hover:bg-surface-2/40
-                    active:scale-[0.98]
-                    disabled:cursor-default disabled:opacity-60
-                  "
+                  className="border-border-default bg-surface-1/50 hover:border-surface-3/80 hover:bg-surface-2/40 group flex min-h-[56px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-dashed p-2 text-left transition-colors active:scale-[0.98] disabled:cursor-default disabled:opacity-60"
                   whileHover={
                     onCopyShareLink && !isCopied
                       ? { scale: 1.01, transition: { duration: 0.2 } }
@@ -272,22 +250,14 @@ export function PlayerList({
                               stiffness: 380,
                               damping: 22,
                             }}
-                            className="
-                              flex size-8 shrink-0 items-center justify-center
-                              rounded-full bg-teal-600
-                            "
+                            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-teal-600"
                           >
                             <Check
                               className="size-4 text-white"
                               strokeWidth={2.5}
                             />
                           </m.div>
-                          <span
-                            className="
-                              min-w-0 flex-1 truncate text-sm font-medium
-                              text-teal-500
-                            "
-                          >
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-teal-500">
                             Copied!
                           </span>
                         </m.div>
@@ -298,28 +268,13 @@ export function PlayerList({
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.15 }}
-                          className="
-                            relative flex min-w-0 flex-1 items-center gap-2
-                          "
+                          className="relative flex min-w-0 flex-1 items-center gap-2"
                         >
                           {/* Default: Gamepad2 + Open seat (matches VideoStreamGrid empty slot) */}
-                          <div
-                            className="
-                              flex min-w-0 flex-1 items-center gap-2
-                              transition-opacity duration-200
-                              group-hover:opacity-0
-                            "
-                          >
-                            <m.div
-                              className="
-                                relative flex size-8 shrink-0 items-center
-                                justify-center rounded-full bg-brand/10
-                              "
-                            >
+                          <div className="flex min-w-0 flex-1 items-center gap-2 transition-opacity duration-200 group-hover:opacity-0">
+                            <m.div className="bg-brand/10 relative flex size-8 shrink-0 items-center justify-center rounded-full">
                               <m.div
-                                className="
-                                  absolute inset-0 rounded-full bg-brand/20
-                                "
+                                className="bg-brand/20 absolute inset-0 rounded-full"
                                 animate={{
                                   scale: [1, 1.4, 1],
                                   opacity: [0.5, 0, 0.5],
@@ -338,41 +293,23 @@ export function PlayerList({
                                   ease: 'easeInOut',
                                 }}
                               >
-                                <Gamepad2 className="size-4 text-brand-muted-foreground" />
+                                <Gamepad2 className="text-brand-muted-foreground size-4" />
                               </m.div>
                             </m.div>
                             <div className="min-w-0 flex-1 space-y-0.5">
-                              <p
-                                className="
-                                  truncate text-sm font-medium text-text-muted
-                                "
-                              >
+                              <p className="text-text-muted truncate text-sm font-medium">
                                 Open seat
                               </p>
-                              <p className="truncate text-xs text-text-muted/60">
+                              <p className="text-text-muted/60 truncate text-xs">
                                 Waiting for player...
                               </p>
                             </div>
                           </div>
                           {/* Hover: Link2 + Copy shareable link */}
-                          <div
-                            className="
-                              pointer-events-none absolute inset-0 flex
-                              items-center gap-2 opacity-0 transition-opacity
-                              duration-200
-                              group-hover:opacity-100
-                            "
-                          >
-                            <m.div
-                              className="
-                                relative flex size-8 shrink-0 items-center
-                                justify-center rounded-full bg-brand/10
-                              "
-                            >
+                          <div className="pointer-events-none absolute inset-0 flex items-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                            <m.div className="bg-brand/10 relative flex size-8 shrink-0 items-center justify-center rounded-full">
                               <m.div
-                                className="
-                                  absolute inset-0 rounded-full bg-brand/20
-                                "
+                                className="bg-brand/20 absolute inset-0 rounded-full"
                                 animate={{
                                   scale: [1, 1.4, 1],
                                   opacity: [0.5, 0, 0.5],
@@ -391,10 +328,10 @@ export function PlayerList({
                                   ease: 'easeInOut',
                                 }}
                               >
-                                <Link2 className="size-4 text-brand-muted-foreground" />
+                                <Link2 className="text-brand-muted-foreground size-4" />
                               </m.div>
                             </m.div>
-                            <span className="truncate text-sm text-text-muted">
+                            <span className="text-text-muted truncate text-sm">
                               Copy shareable link
                             </span>
                           </div>
@@ -414,21 +351,15 @@ export function PlayerList({
             return (
               <div
                 key={player.id}
-                className="
-                  flex items-center justify-between rounded-lg border
-                  border-surface-2 bg-surface-2/50 p-2 transition-colors
-                "
+                className="border-surface-2 bg-surface-2/50 flex items-center justify-between rounded-lg border p-2 transition-colors"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <div
-                    className={`
-                      size-2 shrink-0 rounded-full
-                      ${
-                        player.isOnline !== false
-                          ? 'animate-pulse bg-online'
-                          : 'bg-warning'
-                      }
-                    `}
+                    className={`size-2 shrink-0 rounded-full ${
+                      player.isOnline !== false
+                        ? 'bg-online animate-pulse'
+                        : 'bg-warning'
+                    } `}
                     title={
                       player.isOnline !== false ? 'Online' : 'Disconnected'
                     }
@@ -440,17 +371,12 @@ export function PlayerList({
                     {player.name}
                   </span>
                   {isOwner && (
-                    <Crown className="size-3 shrink-0 text-warning" />
+                    <Crown className="text-warning size-3 shrink-0" />
                   )}
                   {player.isOnline === false && (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span
-                          className="
-                            flex shrink-0 items-center gap-1 rounded-sm
-                            bg-warning/20 px-1.5 py-0.5 text-xs text-warning
-                          "
-                        >
+                        <span className="bg-warning/20 text-warning flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs">
                           <Unplug className="size-3" />
                         </span>
                       </TooltipTrigger>
@@ -461,10 +387,7 @@ export function PlayerList({
                   )}
                   {!isLocal && isMuted && (
                     <span
-                      className="
-                        flex shrink-0 items-center justify-center rounded-sm
-                        bg-destructive/20 px-1.5 py-1 text-destructive
-                      "
+                      className="bg-destructive/20 text-destructive flex shrink-0 items-center justify-center rounded-sm px-1.5 py-1"
                       title="Muted"
                     >
                       <VolumeX className="size-3" />
@@ -478,10 +401,7 @@ export function PlayerList({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="
-                          size-6 p-0 text-text-muted
-                          hover:bg-surface-3 hover:text-text-secondary
-                        "
+                        className="text-text-muted hover:bg-surface-3 hover:text-text-secondary size-6 p-0"
                         aria-label="Player actions"
                         data-testid="player-actions-button"
                       >
@@ -495,10 +415,7 @@ export function PlayerList({
                       {onOpenCommanderDamage && (
                         <DropdownMenuItem
                           onClick={() => onOpenCommanderDamage(player.id)}
-                          className="
-                            flex items-center gap-2 text-text-secondary
-                            focus:bg-surface-3 focus:text-white
-                          "
+                          className="text-text-secondary focus:bg-surface-3 flex items-center gap-2 focus:text-white"
                           title="Edit commander damage"
                           data-testid="player-commander-damage-menu-item"
                         >
@@ -509,10 +426,7 @@ export function PlayerList({
                       {!isLocal && (
                         <DropdownMenuItem
                           onClick={() => onToggleMutePlayer(player.id)}
-                          className="
-                            text-text-secondary
-                            focus:bg-surface-3 focus:text-white
-                          "
+                          className="text-text-secondary focus:bg-surface-3 focus:text-white"
                           title={
                             isMuted ? 'Unmute this player' : 'Mute this player'
                           }
@@ -534,10 +448,7 @@ export function PlayerList({
                         <>
                           <DropdownMenuItem
                             onClick={() => openConfirmDialog(player, 'kick')}
-                            className="
-                              text-warning
-                              focus:bg-warning/10 focus:text-warning
-                            "
+                            className="text-warning focus:bg-warning/10 focus:text-warning"
                             title="Can rejoin"
                           >
                             <UserX className="mr-2 size-4" />
@@ -545,10 +456,7 @@ export function PlayerList({
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => openConfirmDialog(player, 'ban')}
-                            className="
-                              text-destructive
-                              focus:bg-destructive/10 focus:text-destructive
-                            "
+                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                             title="Permanent"
                           >
                             <Ban className="mr-2 size-4" />
@@ -593,7 +501,7 @@ export function PlayerList({
                       {confirmDialog.player?.name}
                     </span>
                     ?{' '}
-                    <span className="font-medium text-destructive">
+                    <span className="text-destructive font-medium">
                       This cannot be undone.
                     </span>{' '}
                     They will be permanently blocked from this room. To play
@@ -610,14 +518,8 @@ export function PlayerList({
                 onClick={handleConfirm}
                 className={
                   confirmDialog.action === 'kick'
-                    ? `
-                      bg-warning text-white
-                      hover:bg-warning
-                    `
-                    : `
-                      bg-destructive text-white
-                      hover:bg-destructive
-                    `
+                    ? `bg-warning hover:bg-warning text-white`
+                    : `bg-destructive hover:bg-destructive text-white`
                 }
               >
                 {confirmDialog.action === 'kick' ? 'Kick' : 'Ban'}

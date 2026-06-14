@@ -31,12 +31,7 @@ export function RoomFullDialog({
   return (
     <LazyMotion features={domAnimation}>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent
-          className="
-            border-surface-2 bg-surface-1
-            sm:max-w-[450px]
-          "
-        >
+        <DialogContent className="border-surface-2 bg-surface-1 sm:max-w-[450px]">
           <DialogHeader>
             <div className="mb-4 flex justify-center">
               <m.div
@@ -47,7 +42,7 @@ export function RoomFullDialog({
               >
                 {/* Animated ring */}
                 <m.div
-                  className="absolute inset-0 rounded-full bg-warning/20"
+                  className="bg-warning/20 absolute inset-0 rounded-full"
                   animate={{
                     scale: [1, 1.3, 1],
                     opacity: [0.5, 0, 0.5],
@@ -59,12 +54,7 @@ export function RoomFullDialog({
                   }}
                 />
                 {/* Icon container */}
-                <div
-                  className="
-                    relative flex size-16 items-center justify-center
-                    rounded-full bg-warning/20
-                  "
-                >
+                <div className="bg-warning/20 relative flex size-16 items-center justify-center rounded-full">
                   <m.div
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{
@@ -73,7 +63,7 @@ export function RoomFullDialog({
                       ease: 'easeInOut',
                     }}
                   >
-                    <Users className="size-8 text-warning" />
+                    <Users className="text-warning size-8" />
                   </m.div>
                 </div>
               </m.div>
@@ -94,7 +84,7 @@ export function RoomFullDialog({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <DialogDescription className="text-center text-text-muted">
+              <DialogDescription className="text-text-muted text-center">
                 {roomId ? (
                   <>
                     All seats in room{' '}
@@ -120,28 +110,17 @@ export function RoomFullDialog({
           >
             <button
               onClick={onClose}
-              className="
-                group w-full cursor-pointer rounded-lg border border-brand/30
-                bg-surface-0/30 p-4 text-left transition-all
-                hover:border-brand/60 hover:bg-surface-1/40
-                focus:ring-2 focus:ring-brand/50 focus:outline-none
-              "
+              className="border-brand/30 bg-surface-0/30 hover:border-brand/60 hover:bg-surface-1/40 focus:ring-brand/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
             >
               <div className="flex items-center gap-3">
-                <div
-                  className="
-                    flex size-10 shrink-0 items-center justify-center rounded-lg
-                    bg-brand/20 transition-colors
-                    group-hover:bg-brand/30
-                  "
-                >
-                  <Home className="size-5 text-brand-muted-foreground" />
+                <div className="bg-brand/20 group-hover:bg-brand/30 flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors">
+                  <Home className="text-brand-muted-foreground size-5" />
                 </div>
                 <div>
-                  <p className="font-medium text-brand-muted-foreground">
+                  <p className="text-brand-muted-foreground font-medium">
                     Back to Home
                   </p>
-                  <p className="mt-0.5 text-sm text-text-muted">
+                  <p className="text-text-muted mt-0.5 text-sm">
                     Find or create another game room
                   </p>
                 </div>

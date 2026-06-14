@@ -79,20 +79,15 @@ export function MediaPermissionInline({
     return (
       <div className="flex h-full flex-col items-center justify-center p-4">
         <div className="mx-auto max-w-sm space-y-4">
-          <div
-            className="
-              mx-auto flex size-12 items-center justify-center rounded-full
-              bg-warning/20
-            "
-          >
-            <AlertTriangle className="size-6 text-warning-muted-foreground" />
+          <div className="bg-warning/20 mx-auto flex size-12 items-center justify-center rounded-full">
+            <AlertTriangle className="text-warning-muted-foreground size-6" />
           </div>
 
           <div className="text-center">
-            <h3 className="text-lg font-semibold text-text-primary">
+            <h3 className="text-text-primary text-lg font-semibold">
               Permission Blocked
             </h3>
-            <p className="mt-1 text-sm text-text-muted">
+            <p className="text-text-muted mt-1 text-sm">
               {blocked.camera && blocked.microphone
                 ? 'Camera and microphone access has been blocked.'
                 : blocked.camera
@@ -102,33 +97,19 @@ export function MediaPermissionInline({
           </div>
 
           {!compact && (
-            <div
-              className="
-                rounded-lg border border-border-default bg-surface-2/50 p-3
-              "
-            >
-              <h4 className="mb-2 text-xs font-medium text-text-secondary">
+            <div className="border-border-default bg-surface-2/50 rounded-lg border p-3">
+              <h4 className="text-text-secondary mb-2 text-xs font-medium">
                 To enable access:
               </h4>
-              <ol className="space-y-1.5 text-xs text-text-muted">
+              <ol className="text-text-muted space-y-1.5 text-xs">
                 <li className="flex items-start gap-2">
-                  <span
-                    className="
-                      flex size-4 shrink-0 items-center justify-center
-                      rounded-full bg-surface-3 text-[10px] text-text-secondary
-                    "
-                  >
+                  <span className="bg-surface-3 text-text-secondary flex size-4 shrink-0 items-center justify-center rounded-full text-[10px]">
                     1
                   </span>
                   <span>Click the lock/info icon in browser address bar</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span
-                    className="
-                      flex size-4 shrink-0 items-center justify-center
-                      rounded-full bg-surface-3 text-[10px] text-text-secondary
-                    "
-                  >
+                  <span className="bg-surface-3 text-text-secondary flex size-4 shrink-0 items-center justify-center rounded-full text-[10px]">
                     2
                   </span>
                   <span>
@@ -136,12 +117,7 @@ export function MediaPermissionInline({
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span
-                    className="
-                      flex size-4 shrink-0 items-center justify-center
-                      rounded-full bg-surface-3 text-[10px] text-text-secondary
-                    "
-                  >
+                  <span className="bg-surface-3 text-text-secondary flex size-4 shrink-0 items-center justify-center rounded-full text-[10px]">
                     3
                   </span>
                   <span>
@@ -156,10 +132,7 @@ export function MediaPermissionInline({
             variant="outline"
             size="sm"
             onClick={() => window.location.reload()}
-            className="
-              w-full border-border-default text-text-secondary
-              hover:bg-surface-2
-            "
+            className="border-border-default text-text-secondary hover:bg-surface-2 w-full"
           >
             Refresh Page
           </Button>
@@ -175,81 +148,51 @@ export function MediaPermissionInline({
         {/* Icon cluster */}
         <div className="flex items-center justify-center gap-2">
           {permissions.camera && (
-            <div
-              className="
-                flex size-10 items-center justify-center rounded-full
-                bg-brand/20 ring-2 ring-brand/30
-              "
-            >
-              <Camera className="size-5 text-brand-muted-foreground" />
+            <div className="bg-brand/20 ring-brand/30 flex size-10 items-center justify-center rounded-full ring-2">
+              <Camera className="text-brand-muted-foreground size-5" />
             </div>
           )}
           {permissions.microphone && (
-            <div
-              className="
-                flex size-10 items-center justify-center rounded-full bg-info/20
-                ring-2 ring-info/30
-              "
-            >
-              <Mic className="size-5 text-info-muted-foreground" />
+            <div className="bg-info/20 ring-info/30 flex size-10 items-center justify-center rounded-full ring-2">
+              <Mic className="text-info-muted-foreground size-5" />
             </div>
           )}
         </div>
 
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-text-primary">
+          <h3 className="text-text-primary text-lg font-semibold">
             Enable {permissionLabel}
           </h3>
-          <p className="mt-1 text-sm text-text-muted">
+          <p className="text-text-muted mt-1 text-sm">
             Required to connect with other players
           </p>
         </div>
 
         {!compact && (
           <div className="space-y-2">
-            <div
-              className="
-                flex items-start gap-2 rounded-lg border
-                border-border-default/50 bg-surface-2/30 p-2
-              "
-            >
-              <div
-                className="
-                  flex size-6 shrink-0 items-center justify-center rounded-sm
-                  bg-brand/20
-                "
-              >
-                <Video className="size-3 text-brand-muted-foreground" />
+            <div className="border-border-default/50 bg-surface-2/30 flex items-start gap-2 rounded-lg border p-2">
+              <div className="bg-brand/20 flex size-6 shrink-0 items-center justify-center rounded-sm">
+                <Video className="text-brand-muted-foreground size-3" />
               </div>
               <div>
-                <h4 className="text-xs font-medium text-text-secondary">
+                <h4 className="text-text-secondary text-xs font-medium">
                   Video Chat
                 </h4>
-                <p className="text-[10px] text-text-muted">
+                <p className="text-text-muted text-[10px]">
                   See and be seen by other players
                 </p>
               </div>
             </div>
 
-            <div
-              className="
-                flex items-start gap-2 rounded-lg border
-                border-border-default/50 bg-surface-2/30 p-2
-              "
-            >
-              <div
-                className="
-                  flex size-6 shrink-0 items-center justify-center rounded-sm
-                  bg-success/20
-                "
-              >
-                <Shield className="size-3 text-success-muted-foreground" />
+            <div className="border-border-default/50 bg-surface-2/30 flex items-start gap-2 rounded-lg border p-2">
+              <div className="bg-success/20 flex size-6 shrink-0 items-center justify-center rounded-sm">
+                <Shield className="text-success-muted-foreground size-3" />
               </div>
               <div>
-                <h4 className="text-xs font-medium text-text-secondary">
+                <h4 className="text-text-secondary text-xs font-medium">
                   Privacy
                 </h4>
-                <p className="text-[10px] text-text-muted">
+                <p className="text-text-muted text-[10px]">
                   Video stays between players only
                 </p>
               </div>
@@ -267,10 +210,7 @@ export function MediaPermissionInline({
               <Button
                 variant="outline"
                 size="sm"
-                className="
-                  flex-1 border-border-default text-text-secondary
-                  hover:bg-surface-2
-                "
+                className="border-border-default text-text-secondary hover:bg-surface-2 flex-1"
                 disabled={isRequesting}
               >
                 Not Now
@@ -279,23 +219,17 @@ export function MediaPermissionInline({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
-              className="w-48 border-border-default bg-surface-2"
+              className="border-border-default bg-surface-2 w-48"
             >
               <DropdownMenuItem
                 onClick={() => handleDecline('remind-later')}
-                className="
-                  cursor-pointer text-sm text-text-secondary
-                  focus:bg-surface-3 focus:text-text-primary
-                "
+                className="text-text-secondary focus:bg-surface-3 focus:text-text-primary cursor-pointer text-sm"
               >
                 Remind me later
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => handleDecline('dont-ask')}
-                className="
-                  cursor-pointer text-sm text-text-muted
-                  focus:bg-surface-3 focus:text-text-secondary
-                "
+                className="text-text-muted focus:bg-surface-3 focus:text-text-secondary cursor-pointer text-sm"
               >
                 Don&apos;t ask again
               </DropdownMenuItem>
@@ -306,19 +240,11 @@ export function MediaPermissionInline({
             onClick={handleAccept}
             size="sm"
             disabled={isRequesting}
-            className="
-              flex-1 bg-brand text-brand-foreground
-              hover:bg-brand/90
-            "
+            className="bg-brand text-brand-foreground hover:bg-brand/90 flex-1"
           >
             {isRequesting ? (
               <>
-                <span
-                  className="
-                    mr-1 size-3 animate-spin rounded-full border-2
-                    border-white/30 border-t-white
-                  "
-                />
+                <span className="mr-1 size-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 Requesting...
               </>
             ) : (
@@ -327,7 +253,7 @@ export function MediaPermissionInline({
           </Button>
         </div>
 
-        <p className="text-center text-[10px] text-text-placeholder">
+        <p className="text-text-placeholder text-center text-[10px]">
           Your browser will ask for permission
         </p>
       </div>

@@ -258,7 +258,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <script>{themeBootstrapScript}</script>
         <HeadContent />
       </head>
-      <body className="min-h-screen bg-surface-0">
+      <body className="bg-surface-0 min-h-screen">
         <ThemeProvider
           defaultTheme={themeSnapshot.theme}
           defaultMtgTheme={themeSnapshot.mtgTheme}

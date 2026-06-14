@@ -43,10 +43,10 @@ export function MediaSetupHeader({ hasPermissions, onCancel }: HeaderProps) {
   return (
     <div className="mb-4 flex shrink-0 items-start justify-between">
       <div>
-        <h2 className="text-lg font-semibold text-text-primary">
+        <h2 className="text-text-primary text-lg font-semibold">
           Setup Audio & Video
         </h2>
-        <p className="text-sm text-text-muted">
+        <p className="text-text-muted text-sm">
           {hasPermissions
             ? 'Configure your camera and audio devices before joining the game'
             : 'Grant camera and microphone access for the best experience'}
@@ -54,13 +54,7 @@ export function MediaSetupHeader({ hasPermissions, onCancel }: HeaderProps) {
       </div>
       <button
         onClick={onCancel}
-        className="
-          rounded-sm text-text-muted opacity-70 ring-offset-surface-1
-          transition-opacity
-          hover:text-text-secondary hover:opacity-100
-          focus:ring-2 focus:ring-text-muted focus:ring-offset-2
-          focus:outline-none
-        "
+        className="text-text-muted ring-offset-surface-1 hover:text-text-secondary focus:ring-text-muted rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-2"
         aria-label="Close"
       >
         <X className="size-4" />
@@ -75,12 +69,8 @@ export function MediaSetupErrorAlert({ message }: { message: string }) {
   }
 
   return (
-    <Alert
-      className="
-        border-destructive/30 bg-destructive/50 text-destructive-foreground
-      "
-    >
-      <AlertCircle className="size-4 text-destructive" />
+    <Alert className="border-destructive/30 bg-destructive/50 text-destructive-foreground">
+      <AlertCircle className="text-destructive size-4" />
       <AlertDescription className="text-destructive-foreground/90">
         {message}
       </AlertDescription>
@@ -130,9 +120,9 @@ export function VideoSetupSection({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {videoEnabled ? (
-                <Camera className="size-4 text-brand-muted-foreground" />
+                <Camera className="text-brand-muted-foreground size-4" />
               ) : (
-                <CameraOff className="size-4 text-text-placeholder" />
+                <CameraOff className="text-text-placeholder size-4" />
               )}
               <Label
                 className={
@@ -143,7 +133,7 @@ export function VideoSetupSection({
               </Label>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-text-muted">
+              <span className="text-text-muted text-xs">
                 {videoEnabled ? 'On' : 'Off'}
               </span>
               <Switch
@@ -161,11 +151,7 @@ export function VideoSetupSection({
                 onValueChange={onVideoDeviceChange}
                 disabled={noVideoDevicesAvailable}
               >
-                <SelectTrigger
-                  className="
-                    border-border-default bg-surface-2 text-text-secondary
-                  "
-                >
+                <SelectTrigger className="border-border-default bg-surface-2 text-text-secondary">
                   <SelectValue
                     placeholder={
                       noVideoDevicesAvailable
@@ -181,10 +167,7 @@ export function VideoSetupSection({
                       <SelectItem
                         key={device.deviceId}
                         value={device.deviceId}
-                        className="
-                          text-text-secondary
-                          focus:bg-surface-3
-                        "
+                        className="text-text-secondary focus:bg-surface-3"
                       >
                         {device.label}
                       </SelectItem>
@@ -192,13 +175,7 @@ export function VideoSetupSection({
                 </SelectContent>
               </Select>
 
-              <div
-                className="
-                  relative aspect-video max-h-[40vh] min-h-[180px] w-full
-                  overflow-hidden rounded-lg border border-border-default
-                  bg-surface-0
-                "
-              >
+              <div className="border-border-default bg-surface-0 relative aspect-video max-h-[40vh] min-h-[180px] w-full overflow-hidden rounded-lg border">
                 <video
                   ref={previewRef}
                   playsInline
@@ -206,53 +183,28 @@ export function VideoSetupSection({
                   className="size-full object-cover"
                 />
                 {noVideoDevicesAvailable ? (
-                  <div
-                    className="
-                      absolute inset-0 flex items-center justify-center
-                      bg-surface-1/95
-                    "
-                  >
+                  <div className="bg-surface-1/95 absolute inset-0 flex items-center justify-center">
                     <div className="mx-auto max-w-sm space-y-4 p-4">
-                      <div
-                        className="
-                          mx-auto flex size-12 items-center justify-center
-                          rounded-full bg-warning/20
-                        "
-                      >
-                        <AlertCircle className="size-6 text-warning" />
+                      <div className="bg-warning/20 mx-auto flex size-12 items-center justify-center rounded-full">
+                        <AlertCircle className="text-warning size-6" />
                       </div>
 
                       <div className="text-center">
-                        <h3 className="text-lg font-semibold text-text-primary">
+                        <h3 className="text-text-primary text-lg font-semibold">
                           No Camera Detected
                         </h3>
-                        <p className="mt-1 text-sm text-text-muted">
+                        <p className="text-text-muted mt-1 text-sm">
                           Your camera may be blocked at the system level
                         </p>
                       </div>
 
-                      <div
-                        className="
-                          rounded-lg border border-border-default
-                          bg-surface-2/50 p-3
-                        "
-                      >
-                        <h4
-                          className="
-                            mb-2 text-xs font-medium text-text-secondary
-                          "
-                        >
+                      <div className="border-border-default bg-surface-2/50 rounded-lg border p-3">
+                        <h4 className="text-text-secondary mb-2 text-xs font-medium">
                           To enable camera access:
                         </h4>
-                        <ol className="space-y-1.5 text-xs text-text-muted">
+                        <ol className="text-text-muted space-y-1.5 text-xs">
                           <li className="flex items-start gap-2">
-                            <span
-                              className="
-                                flex size-4 shrink-0 items-center justify-center
-                                rounded-full bg-surface-3 text-[10px]
-                                text-text-secondary
-                              "
-                            >
+                            <span className="bg-surface-3 text-text-secondary flex size-4 shrink-0 items-center justify-center rounded-full text-[10px]">
                               1
                             </span>
                             <span>
@@ -260,25 +212,13 @@ export function VideoSetupSection({
                             </span>
                           </li>
                           <li className="flex items-start gap-2">
-                            <span
-                              className="
-                                flex size-4 shrink-0 items-center justify-center
-                                rounded-full bg-surface-3 text-[10px]
-                                text-text-secondary
-                              "
-                            >
+                            <span className="bg-surface-3 text-text-secondary flex size-4 shrink-0 items-center justify-center rounded-full text-[10px]">
                               2
                             </span>
                             <span>Click Camera in the sidebar</span>
                           </li>
                           <li className="flex items-start gap-2">
-                            <span
-                              className="
-                                flex size-4 shrink-0 items-center justify-center
-                                rounded-full bg-surface-3 text-[10px]
-                                text-text-secondary
-                              "
-                            >
+                            <span className="bg-surface-3 text-text-secondary flex size-4 shrink-0 items-center justify-center rounded-full text-[10px]">
                               3
                             </span>
                             <span>Enable access for your browser</span>
@@ -288,19 +228,10 @@ export function VideoSetupSection({
                     </div>
                   </div>
                 ) : isVideoPending ? (
-                  <div
-                    className="
-                      absolute inset-0 flex items-center justify-center
-                      bg-surface-2/50
-                    "
-                  >
+                  <div className="bg-surface-2/50 absolute inset-0 flex items-center justify-center">
                     <div className="flex flex-col items-center space-y-3">
-                      <Loader2
-                        className="
-                          size-8 animate-spin text-brand-muted-foreground
-                        "
-                      />
-                      <p className="text-sm text-text-secondary">
+                      <Loader2 className="text-brand-muted-foreground size-8 animate-spin" />
+                      <p className="text-text-secondary text-sm">
                         Initializing Camera
                       </p>
                     </div>
@@ -309,29 +240,15 @@ export function VideoSetupSection({
               </div>
             </>
           ) : (
-            <div
-              className="
-                relative aspect-video overflow-hidden rounded-lg border
-                border-border-default bg-surface-1
-              "
-            >
-              <div
-                className="
-                  absolute inset-0 flex flex-col items-center justify-center
-                "
-              >
-                <div
-                  className="
-                    flex size-16 items-center justify-center rounded-full
-                    bg-surface-2
-                  "
-                >
-                  <CameraOff className="size-8 text-text-placeholder" />
+            <div className="border-border-default bg-surface-1 relative aspect-video overflow-hidden rounded-lg border">
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className="bg-surface-2 flex size-16 items-center justify-center rounded-full">
+                  <CameraOff className="text-text-placeholder size-8" />
                 </div>
-                <p className="mt-4 text-sm text-text-muted">
+                <p className="text-text-muted mt-4 text-sm">
                   Camera is turned off
                 </p>
-                <p className="mt-1 text-xs text-text-placeholder">
+                <p className="text-text-placeholder mt-1 text-xs">
                   You can join the game without sharing video
                 </p>
               </div>
@@ -339,15 +256,10 @@ export function VideoSetupSection({
           )}
         </>
       ) : (
-        <div
-          className="
-            aspect-video overflow-hidden rounded-lg border border-border-default
-            bg-surface-0
-          "
-        >
+        <div className="border-border-default bg-surface-0 aspect-video overflow-hidden rounded-lg border">
           {isCheckingPermissions ? (
             <div className="flex h-full items-center justify-center">
-              <Loader2 className="size-8 animate-spin text-brand-muted-foreground" />
+              <Loader2 className="text-brand-muted-foreground size-8 animate-spin" />
             </div>
           ) : (
             <MediaPermissionInline
@@ -388,33 +300,21 @@ export function CameraFocusSection({
 }: FocusSectionProps) {
   return (
     <div
-      className={`
-        mt-3 space-y-3 rounded-lg border border-border-default bg-surface-2/50
-        p-3
-        ${!focusCapabilities?.supportsFocus ? 'opacity-50' : ''}
-      `}
+      className={`border-border-default bg-surface-2/50 mt-3 space-y-3 rounded-lg border p-3 ${!focusCapabilities?.supportsFocus ? 'opacity-50' : ''} `}
     >
       <div className="flex items-center gap-2">
-        <Focus className="size-4 text-brand-muted-foreground" />
-        <Label className="text-sm text-text-secondary">Camera Focus</Label>
+        <Focus className="text-brand-muted-foreground size-4" />
+        <Label className="text-text-secondary text-sm">Camera Focus</Label>
         {!focusCapabilities?.supportsFocus && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span
-                className="
-                  cursor-help rounded-sm bg-surface-3 px-1.5 py-0.5 text-xs
-                  text-text-muted
-                "
-              >
+              <span className="bg-surface-3 text-text-muted cursor-help rounded-sm px-1.5 py-0.5 text-xs">
                 Not supported
               </span>
             </TooltipTrigger>
             <TooltipContent
               side="top"
-              className="
-                max-w-[200px] border border-border-strong bg-surface-2
-                text-text-secondary
-              "
+              className="border-border-strong bg-surface-2 text-text-secondary max-w-[200px] border"
             >
               This camera doesn&apos;t support focus control. Try using an
               external webcam like Logitech C920/C922.
@@ -433,15 +333,11 @@ export function CameraFocusSection({
                 disabled={!focusCapabilities?.supportsFocus}
               >
                 <SelectTrigger
-                  className={`
-                    w-[140px] border-border-strong bg-surface-3 text-sm
-                    text-text-secondary
-                    ${
-                      !focusCapabilities?.supportsFocus
-                        ? 'cursor-not-allowed'
-                        : ''
-                    }
-                  `}
+                  className={`border-border-strong bg-surface-3 text-text-secondary w-[140px] text-sm ${
+                    !focusCapabilities?.supportsFocus
+                      ? 'cursor-not-allowed'
+                      : ''
+                  } `}
                 >
                   <SelectValue placeholder="Focus mode" />
                 </SelectTrigger>
@@ -449,10 +345,7 @@ export function CameraFocusSection({
                   {focusCapabilities?.focusModes.includes('continuous') && (
                     <SelectItem
                       value="continuous"
-                      className="
-                        text-text-secondary
-                        focus:bg-surface-3
-                      "
+                      className="text-text-secondary focus:bg-surface-3"
                     >
                       Auto (Continuous)
                     </SelectItem>
@@ -460,10 +353,7 @@ export function CameraFocusSection({
                   {focusCapabilities?.focusModes.includes('single-shot') && (
                     <SelectItem
                       value="single-shot"
-                      className="
-                        text-text-secondary
-                        focus:bg-surface-3
-                      "
+                      className="text-text-secondary focus:bg-surface-3"
                     >
                       Auto (Single)
                     </SelectItem>
@@ -471,10 +361,7 @@ export function CameraFocusSection({
                   {focusCapabilities?.focusModes.includes('manual') && (
                     <SelectItem
                       value="manual"
-                      className="
-                        text-text-secondary
-                        focus:bg-surface-3
-                      "
+                      className="text-text-secondary focus:bg-surface-3"
                     >
                       Manual
                     </SelectItem>
@@ -483,19 +370,13 @@ export function CameraFocusSection({
                     <>
                       <SelectItem
                         value="continuous"
-                        className="
-                          text-text-secondary
-                          focus:bg-surface-3
-                        "
+                        className="text-text-secondary focus:bg-surface-3"
                       >
                         Auto (Continuous)
                       </SelectItem>
                       <SelectItem
                         value="manual"
-                        className="
-                          text-text-secondary
-                          focus:bg-surface-3
-                        "
+                        className="text-text-secondary focus:bg-surface-3"
                       >
                         Manual
                       </SelectItem>
@@ -508,9 +389,7 @@ export function CameraFocusSection({
           {!focusCapabilities?.supportsFocus && (
             <TooltipContent
               side="bottom"
-              className="
-                border border-border-strong bg-surface-2 text-text-secondary
-              "
+              className="border-border-strong bg-surface-2 text-text-secondary border"
             >
               Focus control not supported by this camera
             </TooltipContent>
@@ -521,27 +400,21 @@ export function CameraFocusSection({
           focusMode === 'manual' &&
           focusCapabilities.focusDistance && (
             <div className="flex flex-1 items-center gap-3">
-              <span className="text-xs text-text-muted">Near</span>
+              <span className="text-text-muted text-xs">Near</span>
               <Slider
                 value={[focusDistance]}
                 onValueChange={onFocusDistanceChange}
                 min={focusCapabilities.focusDistance.min}
                 max={focusCapabilities.focusDistance.max}
                 step={focusCapabilities.focusDistance.step}
-                className="
-                  flex-1
-                  **:data-[slot=slider-range]:bg-brand
-                  **:data-[slot=slider-thumb]:border-brand
-                  **:data-[slot=slider-track]:h-2
-                  **:data-[slot=slider-track]:bg-border-strong
-                "
+                className="**:data-[slot=slider-range]:bg-brand **:data-[slot=slider-thumb]:border-brand **:data-[slot=slider-track]:h-2 **:data-[slot=slider-track]:bg-border-strong flex-1"
               />
-              <span className="text-xs text-text-muted">Far</span>
+              <span className="text-text-muted text-xs">Far</span>
             </div>
           )}
       </div>
 
-      <p className="text-xs text-text-placeholder">
+      <p className="text-text-placeholder text-xs">
         {!focusCapabilities?.supportsFocus
           ? 'Focus control is not available for this camera'
           : focusMode === 'manual'
@@ -549,7 +422,7 @@ export function CameraFocusSection({
             : 'Camera will automatically adjust focus'}
       </p>
       {isFocusSupportForced && (
-        <p className="text-xs text-warning">
+        <p className="text-warning text-xs">
           Browser didn&apos;t report focus support for this camera. Trying focus
           controls anyway.
         </p>
@@ -582,9 +455,9 @@ export function AudioInputSection({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {audioEnabled ? (
-            <Mic className="size-4 text-brand-muted-foreground" />
+            <Mic className="text-brand-muted-foreground size-4" />
           ) : (
-            <MicOff className="size-4 text-text-placeholder" />
+            <MicOff className="text-text-placeholder size-4" />
           )}
           <Label
             className={
@@ -595,7 +468,7 @@ export function AudioInputSection({
           </Label>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-text-muted">
+          <span className="text-text-muted text-xs">
             {audioEnabled ? 'On' : 'Off'}
           </span>
           <Switch
@@ -614,11 +487,7 @@ export function AudioInputSection({
               onValueChange={onAudioInputChange}
               disabled={isAudioInputPending}
             >
-              <SelectTrigger
-                className="
-                  border-border-default bg-surface-2 text-text-secondary
-                "
-              >
+              <SelectTrigger className="border-border-default bg-surface-2 text-text-secondary">
                 <SelectValue placeholder="Select microphone" />
               </SelectTrigger>
               <SelectContent className="border-border-default bg-surface-2">
@@ -628,10 +497,7 @@ export function AudioInputSection({
                     <SelectItem
                       key={device.deviceId}
                       value={device.deviceId}
-                      className="
-                        text-text-secondary
-                        focus:bg-surface-3
-                      "
+                      className="text-text-secondary focus:bg-surface-3"
                     >
                       {device.label}
                     </SelectItem>
@@ -639,8 +505,8 @@ export function AudioInputSection({
               </SelectContent>
             </Select>
             {isAudioInputPending && (
-              <div className="absolute top-1/2 right-10 -translate-y-1/2">
-                <Loader2 className="size-4 animate-spin text-brand-muted-foreground" />
+              <div className="absolute right-10 top-1/2 -translate-y-1/2">
+                <Loader2 className="text-brand-muted-foreground size-4 animate-spin" />
               </div>
             )}
           </div>
@@ -648,21 +514,16 @@ export function AudioInputSection({
           <AudioLevelIndicator audioStream={audioInputStream} />
         </>
       ) : (
-        <div className="rounded-lg border border-border-default bg-surface-1 p-4">
+        <div className="border-border-default bg-surface-1 rounded-lg border p-4">
           <div className="flex items-center gap-3">
-            <div
-              className="
-                flex size-10 items-center justify-center rounded-full
-                bg-surface-2
-              "
-            >
-              <MicOff className="size-5 text-text-placeholder" />
+            <div className="bg-surface-2 flex size-10 items-center justify-center rounded-full">
+              <MicOff className="text-text-placeholder size-5" />
             </div>
             <div>
-              <p className="text-sm text-text-muted">
+              <p className="text-text-muted text-sm">
                 Microphone is turned off
               </p>
-              <p className="text-xs text-text-placeholder">
+              <p className="text-text-placeholder text-xs">
                 You can join the game without sending audio
               </p>
             </div>
@@ -693,7 +554,7 @@ export function AudioOutputSection({
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <Volume2 className="size-4 text-brand-muted-foreground" />
+        <Volume2 className="text-brand-muted-foreground size-4" />
         <Label className="text-text-secondary">Speaker / Headphones</Label>
       </div>
 
@@ -703,11 +564,7 @@ export function AudioOutputSection({
           onValueChange={(deviceId) => void onAudioOutputChange(deviceId)}
           disabled={!isAudioOutputSupported}
         >
-          <SelectTrigger
-            className="
-              flex-1 border-border-default bg-surface-2 text-text-secondary
-            "
-          >
+          <SelectTrigger className="border-border-default bg-surface-2 text-text-secondary flex-1">
             <SelectValue
               placeholder={
                 isAudioOutputSupported
@@ -723,10 +580,7 @@ export function AudioOutputSection({
                 <SelectItem
                   key={device.deviceId}
                   value={device.deviceId}
-                  className="
-                    text-text-secondary
-                    focus:bg-surface-3
-                  "
+                  className="text-text-secondary focus:bg-surface-3"
                 >
                   {device.label}
                 </SelectItem>
@@ -742,16 +596,13 @@ export function AudioOutputSection({
             !selectedAudioOutputDeviceId ||
             !isAudioOutputSupported
           }
-          className="
-            border-border-default bg-surface-2
-            hover:bg-surface-3
-          "
+          className="border-border-default bg-surface-2 hover:bg-surface-3"
         >
           {isTestingOutput ? 'Playing...' : 'Test'}
         </Button>
       </div>
 
-      <p className="text-xs text-text-placeholder">
+      <p className="text-text-placeholder text-xs">
         Click &quot;Test&quot; to play a short sound
       </p>
     </div>
@@ -774,10 +625,7 @@ export function MediaSetupFooter({
       <Button
         variant="ghost"
         onClick={onCancel}
-        className="
-          text-text-muted
-          hover:text-text-secondary
-        "
+        className="text-text-muted hover:text-text-secondary"
         data-testid="media-setup-cancel-button"
       >
         <X className="mr-2 size-4" />
@@ -787,10 +635,7 @@ export function MediaSetupFooter({
       <Button
         onClick={onComplete}
         disabled={!canComplete}
-        className="
-          bg-brand text-white
-          hover:bg-brand
-        "
+        className="bg-brand hover:bg-brand text-white"
         data-testid="media-setup-complete-button"
       >
         <Check className="mr-2 size-4" />

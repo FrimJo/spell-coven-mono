@@ -123,8 +123,8 @@ export function CardSearchPanel() {
       <div className="space-y-3">
         {/* Header */}
         <div className="flex items-center gap-2">
-          <Search className="size-4 text-text-muted" />
-          <span className="text-sm text-text-muted">Card Search</span>
+          <Search className="text-text-muted size-4" />
+          <span className="text-text-muted text-sm">Card Search</span>
         </div>
 
         {/* Search Input */}
@@ -147,11 +147,7 @@ export function CardSearchPanel() {
               variant="ghost"
               size="sm"
               onClick={handleClear}
-              className="
-                absolute top-1/2 right-1 size-6 -translate-y-1/2 p-0
-                text-text-muted
-                hover:text-text-primary
-              "
+              className="text-text-muted hover:text-text-primary absolute right-1 top-1/2 size-6 -translate-y-1/2 p-0"
             >
               <X className="size-4" />
             </Button>
@@ -160,17 +156,17 @@ export function CardSearchPanel() {
 
         {/* Results List */}
         {showResults && (
-          <div className="rounded-lg border border-surface-3 bg-surface-2">
+          <div className="border-surface-3 bg-surface-2 rounded-lg border">
             <ScrollArea className="max-h-48">
               {loading && (
                 <div className="flex items-center justify-center gap-2 py-4">
-                  <Loader2 className="size-4 animate-spin text-text-muted" />
-                  <span className="text-sm text-text-muted">Searching...</span>
+                  <Loader2 className="text-text-muted size-4 animate-spin" />
+                  <span className="text-text-muted text-sm">Searching...</span>
                 </div>
               )}
 
               {!loading && error && (
-                <div className="py-4 text-center text-sm text-text-muted">
+                <div className="text-text-muted py-4 text-center text-sm">
                   {error}
                 </div>
               )}
@@ -182,11 +178,7 @@ export function CardSearchPanel() {
                       key={card.id}
                       type="button"
                       onClick={() => handleSelect(card)}
-                      className="
-                        flex w-full items-center gap-3 px-3 py-2 text-left
-                        transition-colors
-                        hover:bg-surface-3
-                      "
+                      className="hover:bg-surface-3 flex w-full items-center gap-3 px-3 py-2 text-left transition-colors"
                     >
                       {card.image_uris?.small && (
                         <img
@@ -199,7 +191,7 @@ export function CardSearchPanel() {
                         <div className="truncate text-sm text-white">
                           {card.name}
                         </div>
-                        <div className="truncate text-xs text-text-muted">
+                        <div className="text-text-muted truncate text-xs">
                           {card.set_name} ({card.set.toUpperCase()})
                         </div>
                       </div>
@@ -213,7 +205,7 @@ export function CardSearchPanel() {
 
         {/* Help text */}
         {!showResults && (
-          <p className="text-xs text-text-muted">
+          <p className="text-text-muted text-xs">
             Use Scryfall syntax: &quot;type:instant&quot;, &quot;cmc:1&quot;,
             &quot;color:red&quot;
           </p>

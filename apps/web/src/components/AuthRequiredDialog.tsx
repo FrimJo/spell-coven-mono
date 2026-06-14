@@ -53,28 +53,17 @@ export function AuthRequiredDialog({
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent
-        className="
-          border-warning/50 bg-surface-1
-          sm:max-w-[450px]
-          [&>button]:hidden
-        "
-      >
+      <DialogContent className="border-warning/50 bg-surface-1 sm:max-w-[450px] [&>button]:hidden">
         <DialogHeader>
           <div className="mb-2 flex justify-center">
-            <div
-              className="
-                flex size-12 items-center justify-center rounded-full
-                bg-warning/20
-              "
-            >
-              <ShieldAlert className="size-6 text-warning" />
+            <div className="bg-warning/20 flex size-12 items-center justify-center rounded-full">
+              <ShieldAlert className="text-warning size-6" />
             </div>
           </div>
           <DialogTitle className="text-center text-white">
             Sign In Required
           </DialogTitle>
-          <DialogDescription className="text-center text-text-muted">
+          <DialogDescription className="text-text-muted text-center">
             {message}
           </DialogDescription>
         </DialogHeader>
@@ -82,28 +71,17 @@ export function AuthRequiredDialog({
         <div className="space-y-3 py-4">
           <button
             onClick={onSignIn}
-            className="
-              group w-full cursor-pointer rounded-lg border border-brand/30
-              bg-brand/30 p-4 text-left transition-all
-              hover:border-brand/60 hover:bg-brand/40
-              focus:ring-2 focus:ring-brand/50 focus:outline-none
-            "
+            className="border-brand/30 bg-brand/30 hover:border-brand/60 hover:bg-brand/40 focus:ring-brand/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
           >
             <div className="flex items-start gap-3">
-              <div
-                className="
-                  flex size-10 shrink-0 items-center justify-center rounded-lg
-                  bg-brand/20 transition-colors
-                  group-hover:bg-brand/30
-                "
-              >
-                <LogIn className="size-5 text-brand-muted-foreground" />
+              <div className="bg-brand/20 group-hover:bg-brand/30 flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors">
+                <LogIn className="text-brand-muted-foreground size-5" />
               </div>
               <div>
-                <p className="font-medium text-brand-muted-foreground">
+                <p className="text-brand-muted-foreground font-medium">
                   Sign in with Discord
                 </p>
-                <p className="mt-0.5 text-sm text-text-muted">
+                <p className="text-text-muted mt-0.5 text-sm">
                   Connect your Discord account to join the game.
                 </p>
               </div>
@@ -112,28 +90,17 @@ export function AuthRequiredDialog({
 
           <button
             onClick={onClose}
-            className="
-              group w-full cursor-pointer rounded-lg border border-surface-3
-              bg-surface-2/50 p-4 text-left transition-all
-              hover:border-surface-3 hover:bg-surface-2
-              focus:ring-2 focus:ring-surface-3/50 focus:outline-none
-            "
+            className="border-surface-3 bg-surface-2/50 hover:border-surface-3 hover:bg-surface-2 focus:ring-surface-3/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
           >
             <div className="flex items-start gap-3">
-              <div
-                className="
-                  flex size-10 shrink-0 items-center justify-center rounded-lg
-                  bg-surface-3/50 transition-colors
-                  group-hover:bg-surface-3
-                "
-              >
-                <Home className="size-5 text-text-muted" />
+              <div className="bg-surface-3/50 group-hover:bg-surface-3 flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors">
+                <Home className="text-text-muted size-5" />
               </div>
               <div>
-                <p className="font-medium text-text-secondary">
+                <p className="text-text-secondary font-medium">
                   Return to Home
                 </p>
-                <p className="mt-0.5 text-sm text-text-muted">
+                <p className="text-text-muted mt-0.5 text-sm">
                   Go back without signing in.
                 </p>
               </div>
@@ -141,8 +108,8 @@ export function AuthRequiredDialog({
           </button>
 
           {showPreviewAuth ? (
-            <div className="rounded-lg border border-warning/40 p-3">
-              <p className="mb-2 text-sm font-medium text-warning">
+            <div className="border-warning/40 rounded-lg border p-3">
+              <p className="text-warning mb-2 text-sm font-medium">
                 Preview only
               </p>
               <div className="space-y-2">
@@ -160,13 +127,7 @@ export function AuthRequiredDialog({
                 <button
                   onClick={handlePreviewSignIn}
                   disabled={!code.trim() || isSubmitting}
-                  className="
-                    w-full cursor-pointer rounded-lg border border-warning/50
-                    bg-warning/20 px-3 py-2 text-sm text-warning
-                    transition-colors
-                    hover:bg-warning/30
-                    disabled:cursor-not-allowed disabled:opacity-60
-                  "
+                  className="border-warning/50 bg-warning/20 text-warning hover:bg-warning/30 w-full cursor-pointer rounded-lg border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSubmitting ? 'Signing in...' : 'Sign in with Code'}
                 </button>

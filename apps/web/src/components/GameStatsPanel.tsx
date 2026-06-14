@@ -439,14 +439,11 @@ export function GameStatsPanel({
       <SheetContent
         side="right"
         forceMount
-        className="
-          w-[400px] border-l-border-default bg-surface-0 text-white
-          sm:w-[540px]
-        "
+        className="border-l-border-default bg-surface-0 w-[400px] text-white sm:w-[540px]"
       >
         <SheetHeader className="pb-4">
           <SheetTitle className="flex items-center gap-2 text-white">
-            <UserCircle className="size-5 text-brand-muted-foreground" />
+            <UserCircle className="text-brand-muted-foreground size-5" />
             Commanders
           </SheetTitle>
           <SheetDescription className="text-text-muted">
@@ -455,11 +452,7 @@ export function GameStatsPanel({
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-140px)] pr-4">
-          <div
-            className="
-              flex h-full min-h-0 flex-col gap-4 overflow-hidden px-4 pb-8
-            "
-          >
+          <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden px-4 pb-8">
             {/* Joined players - flex so cards share space and shrink when all have two commanders */}
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
               {participants.map((player) => {
@@ -535,16 +528,13 @@ export function GameStatsPanel({
               {vacantSlots.map((slot) => (
                 <div
                   key={`vacant-${slot.index}`}
-                  className="
-                    rounded-lg border border-dashed border-border-default
-                    bg-surface-1/30 p-4
-                  "
+                  className="border-border-default bg-surface-1/30 rounded-lg border border-dashed p-4"
                 >
-                  <div className="flex items-center gap-2 text-text-muted">
+                  <div className="text-text-muted flex items-center gap-2">
                     <User className="size-5" />
                     <span className="font-medium">Open seat</span>
                   </div>
-                  <p className="mt-2 text-sm text-text-muted">
+                  <p className="text-text-muted mt-2 text-sm">
                     Waiting for player to join...
                   </p>
                 </div>
@@ -622,17 +612,10 @@ function PlayerCommanderCard({
 
   return (
     <div
-      className={`
-        flex min-h-0 flex-1 flex-col rounded-lg border border-border-default
-        bg-surface-1/50
-        ${slotPadding}
-      `}
+      className={`border-border-default bg-surface-1/50 flex min-h-0 flex-1 flex-col rounded-lg border ${slotPadding} `}
     >
       <div
-        className={`
-          flex shrink-0 items-center gap-2 border-b border-border-default
-          ${headerSpacing}
-        `}
+        className={`border-border-default flex shrink-0 items-center gap-2 border-b ${headerSpacing} `}
       >
         {player.avatar ? (
           <img
@@ -641,12 +624,12 @@ function PlayerCommanderCard({
             className="size-6 rounded-full"
           />
         ) : (
-          <User className="size-5 text-text-muted" />
+          <User className="text-text-muted size-5" />
         )}
-        <span className="font-semibold text-text-secondary">
+        <span className="text-text-secondary font-semibold">
           {player.username}
           {isCurrentUser && (
-            <span className="ml-1.5 text-xs font-normal text-text-muted">
+            <span className="text-text-muted ml-1.5 text-xs font-normal">
               (You)
             </span>
           )}
@@ -656,10 +639,7 @@ function PlayerCommanderCard({
             <Button
               size="sm"
               variant="outline"
-              className="
-                h-7 border-border-default bg-surface-2 text-text-secondary
-                hover:bg-surface-3 hover:text-white
-              "
+              className="border-border-default bg-surface-2 text-text-secondary hover:bg-surface-3 h-7 hover:text-white"
               onClick={onDoneEdit}
             >
               Done
@@ -668,10 +648,7 @@ function PlayerCommanderCard({
             <Button
               size="icon"
               variant="ghost"
-              className="
-                size-7 text-text-muted
-                hover:bg-surface-2 hover:text-brand-muted-foreground
-              "
+              className="text-text-muted hover:bg-surface-2 hover:text-brand-muted-foreground size-7"
               onClick={() => onStartEditing(player)}
               title="Edit commanders"
               aria-label="Edit commanders"
@@ -689,14 +666,7 @@ function PlayerCommanderCard({
             <button
               type="button"
               onClick={() => onStartEditing(player)}
-              className="
-                flex w-full shrink-0 cursor-pointer flex-col items-center
-                justify-center gap-2 rounded-lg border border-dashed
-                border-border-default bg-surface-1/30 p-6 text-text-muted
-                transition-colors
-                hover:border-border-default hover:bg-surface-1/50
-                hover:text-text-muted
-              "
+              className="border-border-default bg-surface-1/30 text-text-muted hover:border-border-default hover:bg-surface-1/50 hover:text-text-muted flex w-full shrink-0 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 transition-colors"
             >
               <Plus className="size-5" />
               <span className="text-sm font-medium">
@@ -782,37 +752,19 @@ function CommanderSlotView({
 }) {
   const imageUrl = getCommanderImageUrl(commander.id)
   return (
-    <div
-      className="
-        group relative flex min-h-[76px] min-w-0 flex-1 rounded-md border
-        border-border-default bg-surface-0/50
-      "
-    >
+    <div className="border-border-default bg-surface-0/50 group relative flex min-h-[76px] min-w-0 flex-1 rounded-md border">
       {imageUrl && (
         <div className="absolute inset-0 z-0 overflow-hidden rounded-md">
           <img
             src={imageUrl}
             alt={commander.name}
-            className="
-              absolute inset-0 size-full object-cover opacity-40
-              transition-opacity duration-500
-              group-hover:opacity-60
-            "
+            className="absolute inset-0 size-full object-cover opacity-40 transition-opacity duration-500 group-hover:opacity-60"
           />
-          <div
-            className="
-              absolute inset-0 bg-linear-to-r from-slate-950/80 via-slate-950/40
-              to-transparent
-            "
-          />
+          <div className="bg-linear-to-r absolute inset-0 from-slate-950/80 via-slate-950/40 to-transparent" />
         </div>
       )}
       <div className="relative z-10 flex min-h-[76px] flex-1 items-center px-3">
-        <span
-          className="
-            text-sm font-medium text-text-secondary shadow-black text-shadow-sm
-          "
-        >
+        <span className="text-text-secondary text-shadow-sm text-sm font-medium shadow-black">
           {commander.name}
         </span>
       </div>
@@ -863,37 +815,21 @@ function CommanderSlotEdit({
                 ? `Search ${suggestionsLabel?.toLowerCase()}...`
                 : 'Search for a commander...'
             }
-            className="
-              h-9 w-full min-w-0 border-border-default bg-surface-1 pr-10
-              text-sm text-white transition-colors
-              placeholder:text-text-muted
-              hover:border-border-default
-              focus-visible:ring-brand
-            "
+            className="border-border-default bg-surface-1 placeholder:text-text-muted hover:border-border-default focus-visible:ring-brand h-9 w-full min-w-0 pr-10 text-sm text-white transition-colors"
             suggestions={slotNumber === 2 ? suggestions : undefined}
             suggestionsLabel={slotNumber === 2 ? suggestionsLabel : undefined}
             hideLoadingIndicator
             onLoadingChange={setIsSearching}
           />
-          <div
-            className="
-              pointer-events-none absolute top-1/2 right-3 flex -translate-y-1/2
-              items-center
-            "
-          >
+          <div className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center">
             {isSearching ? (
-              <Loader2 className="size-4 animate-spin text-text-muted" />
+              <Loader2 className="text-text-muted size-4 animate-spin" />
             ) : status === 'saving' ? (
-              <Loader2 className="size-4 animate-spin text-brand-muted-foreground" />
+              <Loader2 className="text-brand-muted-foreground size-4 animate-spin" />
             ) : status === 'saved' ? (
               <button
                 type="button"
-                className="
-                  pointer-events-auto rounded-sm p-0.5 text-success
-                  hover:text-destructive
-                  [&:hover_.icon-check]:hidden
-                  [&:hover_.icon-remove]:block
-                "
+                className="text-success hover:text-destructive pointer-events-auto rounded-sm p-0.5 [&:hover_.icon-check]:hidden [&:hover_.icon-remove]:block"
                 onClick={onClear}
                 title="Clear"
                 aria-label="Clear commander"
@@ -902,25 +838,20 @@ function CommanderSlotEdit({
                 <Trash2 className="icon-remove hidden size-4" />
               </button>
             ) : status === 'error' ? (
-              <AlertCircle className="size-4 text-destructive" />
+              <AlertCircle className="text-destructive size-4" />
             ) : null}
           </div>
         </div>
       </div>
       {slotNumber === 1 && dualKeywords && dualKeywords.length > 0 && (
-        <div className="mt-2 text-xs text-brand-muted-foreground">
+        <div className="text-brand-muted-foreground mt-2 text-xs">
           {specificPartner ? (
             <p className="text-xs">
               Partner with{' '}
               <button
                 type="button"
                 onClick={() => onQuickFillCommander2?.(specificPartner)}
-                className="
-                  cursor-pointer text-xs font-medium text-brand-muted-foreground
-                  underline decoration-brand/50 underline-offset-2
-                  hover:text-brand-muted-foreground
-                  hover:decoration-brand-muted-foreground
-                "
+                className="text-brand-muted-foreground decoration-brand/50 hover:text-brand-muted-foreground hover:decoration-brand-muted-foreground cursor-pointer text-xs font-medium underline underline-offset-2"
               >
                 {specificPartner}
               </button>
@@ -935,13 +866,7 @@ function CommanderSlotEdit({
                   <button
                     type="button"
                     onClick={() => onQuickFillCommander2?.(name)}
-                    className="
-                      cursor-pointer text-xs font-medium
-                      text-brand-muted-foreground underline decoration-brand/50
-                      underline-offset-2
-                      hover:text-brand-muted-foreground
-                      hover:decoration-brand-muted-foreground
-                    "
+                    className="text-brand-muted-foreground decoration-brand/50 hover:text-brand-muted-foreground hover:decoration-brand-muted-foreground cursor-pointer text-xs font-medium underline underline-offset-2"
                   >
                     {name}
                   </button>

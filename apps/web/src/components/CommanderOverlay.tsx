@@ -143,12 +143,7 @@ export const CommanderOverlay = memo(function CommanderOverlay({
   }
 
   return (
-    <div
-      className={`
-        absolute z-10 flex flex-col gap-2
-        ${positionClasses}
-      `}
-    >
+    <div className={`absolute z-10 flex flex-col gap-2 ${positionClasses} `}>
       {participant.commanders.map((commander, index) => {
         if (!commander?.name) return null
         return (
@@ -223,14 +218,7 @@ const CommanderTile = memo(function CommanderTile({
         />
       )}
       {/* Commander Image/Card - Square */}
-      <div
-        className="
-          relative size-12 overflow-hidden rounded-lg border-2
-          border-border-muted shadow-lg ring-1 ring-black/20
-          transition-transform
-          group-hover:scale-105 group-hover:border-brand/50
-        "
-      >
+      <div className="border-border-muted group-hover:border-brand/50 relative size-12 overflow-hidden rounded-lg border-2 shadow-lg ring-1 ring-black/20 transition-transform group-hover:scale-105">
         {imageUrl ? (
           <img
             src={imageUrl}
@@ -238,24 +226,14 @@ const CommanderTile = memo(function CommanderTile({
             className="size-full object-cover"
           />
         ) : (
-          <div
-            className="
-              flex size-full items-center justify-center bg-surface-2 text-xs
-              font-bold text-text-muted
-            "
-          >
+          <div className="bg-surface-2 text-text-muted flex size-full items-center justify-center text-xs font-bold">
             {commander.name.substring(0, 2)}
           </div>
         )}
 
         {/* Damage Number - Centered */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <span
-            className="
-              font-mono text-sm font-bold text-white
-              drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]
-            "
-          >
+          <span className="font-mono text-sm font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
             {damage}
           </span>
         </div>
@@ -264,11 +242,7 @@ const CommanderTile = memo(function CommanderTile({
         <Button
           size="icon"
           variant="ghost"
-          className="
-            absolute top-0 left-0 flex h-full w-1/2 items-center justify-center
-            rounded-r-none text-white opacity-0 transition-opacity
-            group-hover:opacity-100
-          "
+          className="absolute left-0 top-0 flex h-full w-1/2 items-center justify-center rounded-r-none text-white opacity-0 transition-opacity group-hover:opacity-100"
           onMouseDown={damageMinus.handleStart}
           onMouseUp={damageMinus.handleStop}
           onMouseLeave={damageMinus.handleStop}
@@ -283,11 +257,7 @@ const CommanderTile = memo(function CommanderTile({
         <Button
           size="icon"
           variant="ghost"
-          className="
-            absolute top-0 right-0 flex h-full w-1/2 items-center justify-center
-            rounded-l-none text-white opacity-0 transition-opacity
-            group-hover:opacity-100
-          "
+          className="absolute right-0 top-0 flex h-full w-1/2 items-center justify-center rounded-l-none text-white opacity-0 transition-opacity group-hover:opacity-100"
           onMouseDown={damagePlus.handleStart}
           onMouseUp={damagePlus.handleStop}
           onMouseLeave={damagePlus.handleStop}

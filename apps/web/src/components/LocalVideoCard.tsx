@@ -107,13 +107,10 @@ export const LocalVideoCard = memo(function LocalVideoCard({
       {isReconnecting && (
         <div
           data-testid="local-player-reconnecting"
-          className="
-            absolute top-3 right-3 z-10 flex size-9 items-center justify-center
-            rounded-lg border border-warning/30 bg-warning/20 backdrop-blur-sm
-          "
+          className="border-warning/30 bg-warning/20 absolute right-3 top-3 z-10 flex size-9 items-center justify-center rounded-lg border backdrop-blur-sm"
           title="Reconnecting video..."
         >
-          <Wifi className="size-4 text-warning" />
+          <Wifi className="text-warning size-4" />
         </div>
       )}
 

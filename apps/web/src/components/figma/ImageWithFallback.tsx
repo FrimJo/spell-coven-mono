@@ -16,10 +16,7 @@ export function ImageWithFallback(
 
   return didError ? (
     <div
-      className={`
-        inline-block bg-surface-1 text-center align-middle
-        ${className ?? ''}
-      `}
+      className={`bg-surface-1 inline-block text-center align-middle ${className ?? ''} `}
       style={style}
     >
       <div className="flex size-full items-center justify-center">

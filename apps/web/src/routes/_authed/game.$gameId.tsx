@@ -152,23 +152,19 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
     return { roomNotFound: false }
   },
   pendingComponent: () => (
-    <div className="flex h-screen items-center justify-center bg-surface-0">
+    <div className="bg-surface-0 flex h-screen items-center justify-center">
       <div className="flex flex-col items-center space-y-4">
         <div className="relative">
-          <div
-            className="
-              flex size-16 items-center justify-center rounded-full bg-brand/20
-            "
-          >
-            <Loader2 className="size-8 animate-spin text-brand-muted-foreground" />
+          <div className="bg-brand/20 flex size-16 items-center justify-center rounded-full">
+            <Loader2 className="text-brand-muted-foreground size-8 animate-spin" />
           </div>
-          <div className="absolute inset-0 animate-ping rounded-full bg-brand/10" />
+          <div className="bg-brand/10 absolute inset-0 animate-ping rounded-full" />
         </div>
         <div className="space-y-1 text-center">
-          <h2 className="text-lg font-medium text-text-secondary">
+          <h2 className="text-text-secondary text-lg font-medium">
             Loading in Game Room
           </h2>
-          <p className="text-sm text-text-muted">Setting up your session...</p>
+          <p className="text-text-muted text-sm">Setting up your session...</p>
         </div>
       </div>
     </div>
@@ -215,21 +211,16 @@ function GameRoomPage() {
   // Show loading state while authenticated room access is being checked
   if (roomAccess === undefined) {
     return (
-      <div className="flex h-screen items-center justify-center bg-surface-0">
+      <div className="bg-surface-0 flex h-screen items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
-            <div
-              className="
-                flex size-16 items-center justify-center rounded-full
-                bg-brand/20
-              "
-            >
-              <Loader2 className="size-8 animate-spin text-brand-muted-foreground" />
+            <div className="bg-brand/20 flex size-16 items-center justify-center rounded-full">
+              <Loader2 className="text-brand-muted-foreground size-8 animate-spin" />
             </div>
-            <div className="absolute inset-0 animate-ping rounded-full bg-brand/10" />
+            <div className="bg-brand/10 absolute inset-0 animate-ping rounded-full" />
           </div>
           <div className="space-y-1 text-center">
-            <h2 className="text-lg font-medium text-text-secondary">
+            <h2 className="text-text-secondary text-lg font-medium">
               Checking room availability...
             </h2>
           </div>
@@ -245,7 +236,7 @@ function GameRoomPage() {
   // Show room full dialog if room is at capacity
   if (roomAccess.status === 'full') {
     return (
-      <div className="h-screen bg-surface-0">
+      <div className="bg-surface-0 h-screen">
         <RoomFullDialog
           open={true}
           onClose={handleClose}

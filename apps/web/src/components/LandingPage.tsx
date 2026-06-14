@@ -245,38 +245,18 @@ export function LandingPage({
   return (
     <div className="relative min-h-screen overflow-hidden">
       {error && (
-        <div
-          className="
-            fixed top-4 right-4 z-50 max-w-md rounded-lg bg-destructive/90 p-4
-            text-white shadow-lg
-          "
-        >
+        <div className="bg-destructive/90 fixed right-4 top-4 z-50 max-w-md rounded-lg p-4 text-white shadow-lg">
           <p className="font-semibold">Error</p>
           <p className="text-sm">{error}</p>
         </div>
       )}
       {/* Background with gradient overlay */}
-      <div
-        className="
-          absolute inset-0 bg-linear-to-br from-purple-900/20 via-background
-          to-blue-900/20
-        "
-      />
+      <div className="bg-linear-to-br via-background absolute inset-0 from-purple-900/20 to-blue-900/20" />
 
       {/* Animated background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="
-            absolute top-20 left-20 size-64 animate-pulse rounded-full
-            bg-brand/10 blur-3xl
-          "
-        />
-        <div
-          className="
-            absolute right-20 bottom-20 size-96 animate-pulse rounded-full
-            bg-info/10 blur-3xl delay-1000
-          "
-        />
+        <div className="bg-brand/10 absolute left-20 top-20 size-64 animate-pulse rounded-full blur-3xl" />
+        <div className="bg-info/10 absolute bottom-20 right-20 size-96 animate-pulse rounded-full blur-3xl delay-1000" />
       </div>
 
       <div className="relative z-10">
@@ -292,13 +272,8 @@ export function LandingPage({
 
         {env.VITE_PREVIEW_AUTH && !isAuthenticated ? (
           <section className="container mx-auto px-4 pt-6">
-            <div
-              className="
-                mx-auto max-w-xl rounded-xl border border-warning/40
-                bg-surface-1/90 p-4 backdrop-blur-md
-              "
-            >
-              <p className="mb-3 text-sm font-semibold text-warning">
+            <div className="border-warning/40 bg-surface-1/90 mx-auto max-w-xl rounded-xl border p-4 backdrop-blur-md">
+              <p className="text-warning mb-3 text-sm font-semibold">
                 Preview Only: Login Code
               </p>
               <div className="grid gap-3">
@@ -324,45 +299,18 @@ export function LandingPage({
         ) : null}
 
         {/* Hero Section */}
-        <section
-          className="
-            container mx-auto px-4 py-12
-            md:py-24
-          "
-        >
-          <div
-            className="
-              grid items-center gap-12
-              md:grid-cols-2
-              lg:gap-20
-            "
-          >
+        <section className="container mx-auto px-4 py-12 md:py-24">
+          <div className="grid items-center gap-12 md:grid-cols-2 lg:gap-20">
             {/* Text Content */}
-            <div
-              className="
-                flex flex-col items-center text-center
-                md:items-start md:text-left
-              "
-            >
-              <div
-                className="
-                  mb-6 inline-flex items-center gap-2 rounded-full border
-                  border-brand/30 bg-brand-muted px-4 py-2 backdrop-blur-md
-                "
-              >
-                <Sparkles className="size-4 text-brand-muted-foreground" />
-                <span className="text-sm font-medium text-brand-muted-foreground">
+            <div className="flex flex-col items-center text-center md:items-start md:text-left">
+              <div className="border-brand/30 bg-brand-muted mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-2 backdrop-blur-md">
+                <Sparkles className="text-brand-muted-foreground size-4" />
+                <span className="text-brand-muted-foreground text-sm font-medium">
                   No downloads. No setup. Just play.
                 </span>
               </div>
 
-              <h1
-                className="
-                  mb-6 text-5xl leading-[1.08] text-text-primary
-                  md:text-7xl
-                  lg:text-8xl
-                "
-              >
+              <h1 className="text-text-primary mb-6 text-5xl leading-[1.08] md:text-7xl lg:text-8xl">
                 Play Magic
                 <span
                   className="mt-2 block bg-clip-text pb-2 text-transparent"
@@ -374,54 +322,26 @@ export function LandingPage({
                 </span>
               </h1>
 
-              <p
-                className="
-                  mb-8 max-w-xl text-lg leading-relaxed text-text-secondary
-                  md:text-xl
-                "
-              >
+              <p className="text-text-secondary mb-8 max-w-xl text-lg leading-relaxed md:text-xl">
                 Spell Coven lets you play paper MTG remotely through video chat
                 and card recognition. Use your physical cards, see your
                 opponents, and enjoy the authentic experience.
               </p>
 
-              <div
-                className="
-                  flex flex-col items-center gap-4
-                  sm:flex-row
-                  md:justify-start
-                "
-              >
+              <div className="flex flex-col items-center gap-4 sm:flex-row md:justify-start">
                 {isAuthLoading ? (
                   <>
-                    <div
-                      className="
-                        h-14 min-w-[200px] animate-pulse rounded-md bg-surface-2
-                      "
-                    />
-                    <div
-                      className="
-                        h-14 min-w-[200px] animate-pulse rounded-md bg-surface-2
-                      "
-                    />
+                    <div className="bg-surface-2 h-14 min-w-[200px] animate-pulse rounded-md" />
+                    <div className="bg-surface-2 h-14 min-w-[200px] animate-pulse rounded-md" />
                   </>
                 ) : isAuthenticated ? (
                   <>
                     <div
-                      className={`
-                        create-game-btn-wrap
-                        relative${gameCreation.isCreating ? `is-loading` : ''}
-                      `}
+                      className={`create-game-btn-wrap relative${gameCreation.isCreating ? `is-loading` : ''} `}
                     >
                       <Button
                         size="lg"
-                        className="
-                          h-14 min-w-[200px] gap-2 bg-brand text-lg
-                          font-semibold text-white shadow-lg shadow-brand/25
-                          transition-all duration-200
-                          hover:bg-brand
-                          disabled:cursor-not-allowed disabled:opacity-50
-                        "
+                        className="bg-brand shadow-brand/25 hover:bg-brand h-14 min-w-[200px] gap-2 text-lg font-semibold text-white shadow-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                         onClick={handleCreateClick}
                         disabled={gameCreation.isCreating}
                         data-testid="create-game-button"
@@ -467,28 +387,12 @@ export function LandingPage({
                 ) : (
                   <Button
                     size="lg"
-                    className="
-                      group relative h-14 min-w-[260px] gap-3 overflow-hidden
-                      border border-white/10 bg-linear-to-r from-[#5865F2]
-                      to-purple-600 text-lg font-semibold text-white
-                      shadow-[0_0_30px_rgba(88,101,242,0.4)] transition-all
-                      hover:scale-105 hover:from-[#4752C4] hover:to-purple-700
-                      hover:shadow-[0_0_50px_rgba(88,101,242,0.6)]
-                    "
+                    className="bg-linear-to-r group relative h-14 min-w-[260px] gap-3 overflow-hidden border border-white/10 from-[#5865F2] to-purple-600 text-lg font-semibold text-white shadow-[0_0_30px_rgba(88,101,242,0.4)] transition-all hover:scale-105 hover:from-[#4752C4] hover:to-purple-700 hover:shadow-[0_0_50px_rgba(88,101,242,0.6)]"
                     onClick={onSignIn}
                   >
-                    <div
-                      className="
-                        absolute inset-0 bg-white/20 opacity-0
-                        transition-opacity
-                        group-hover:opacity-100
-                      "
-                    />
+                    <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
                     <svg
-                      className="
-                        size-6 transition-transform
-                        group-hover:scale-110
-                      "
+                      className="size-6 transition-transform group-hover:scale-110"
                       viewBox="0 0 24 24"
                       fill="currentColor"
                     >
@@ -505,19 +409,9 @@ export function LandingPage({
             </div>
 
             {/* Visual/Logo */}
-            <div
-              className="
-                relative mx-auto size-64
-                md:size-96
-              "
-            >
+            <div className="relative mx-auto size-64 md:size-96">
               <div className="animate-float relative size-full">
-                <div
-                  className="
-                    absolute inset-0 animate-pulse rounded-full bg-brand/20
-                    blur-3xl
-                  "
-                />
+                <div className="bg-brand/20 absolute inset-0 animate-pulse rounded-full blur-3xl" />
                 <img
                   src={logoSrc}
                   alt="Spell Coven Logo"
@@ -528,25 +422,9 @@ export function LandingPage({
                 />
 
                 {/* Decorative sparkles */}
-                <Sparkles
-                  className="
-                    animate-sparkle absolute top-10 -left-8 size-8 text-warning
-                    drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]
-                  "
-                />
-                <Sparkles
-                  className="
-                    animate-sparkle absolute -right-4 bottom-20 size-6 text-info
-                    drop-shadow-[0_0_8px_rgba(147,197,253,0.8)] delay-700
-                  "
-                />
-                <Sparkles
-                  className="
-                    animate-sparkle absolute bottom-0 left-0 size-8
-                    text-brand-muted-foreground
-                    drop-shadow-[0_0_8px_rgba(216,180,254,0.8)] delay-1500
-                  "
-                />
+                <Sparkles className="animate-sparkle text-warning absolute -left-8 top-10 size-8 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />
+                <Sparkles className="animate-sparkle text-info absolute -right-4 bottom-20 size-6 drop-shadow-[0_0_8px_rgba(147,197,253,0.8)] delay-700" />
+                <Sparkles className="animate-sparkle text-brand-muted-foreground delay-1500 absolute bottom-0 left-0 size-8 drop-shadow-[0_0_8px_rgba(216,180,254,0.8)]" />
               </div>
             </div>
           </div>
@@ -554,57 +432,29 @@ export function LandingPage({
           {/* App Preview Placeholder */}
           <div className="group relative mx-auto mt-20 max-w-6xl">
             {/* Glow effects */}
-            <div
-              className="
-                absolute -inset-1 rounded-2xl bg-linear-to-r from-purple-600/50
-                to-blue-600/50 opacity-30 blur-2xl transition-opacity
-                duration-500
-                group-hover:opacity-50
-              "
-            />
+            <div className="bg-linear-to-r absolute -inset-1 rounded-2xl from-purple-600/50 to-blue-600/50 opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-50" />
 
-            <div
-              className="
-                relative rounded-xl border border-border-muted bg-surface-0/80
-                p-2 shadow-2xl ring-1 ring-white/10 backdrop-blur-sm
-              "
-            >
-              <div
-                className="
-                  absolute inset-0 -z-10 bg-linear-to-b from-purple-500/5
-                  to-transparent opacity-50
-                "
-              />
+            <div className="border-border-muted bg-surface-0/80 relative rounded-xl border p-2 shadow-2xl ring-1 ring-white/10 backdrop-blur-sm">
+              <div className="bg-linear-to-b absolute inset-0 -z-10 from-purple-500/5 to-transparent opacity-50" />
 
               {/* Fake Game Interface */}
-              <div
-                className="
-                  flex h-[400px] w-full flex-col overflow-hidden rounded-lg
-                  bg-[#0f1117]
-                  sm:h-[600px]
-                "
-              >
+              <div className="flex h-[400px] w-full flex-col overflow-hidden rounded-lg bg-[#0f1117] sm:h-[600px]">
                 {/* Top Bar */}
-                <div
-                  className="
-                    flex items-center justify-between border-b
-                    border-border-muted bg-surface-1/50 px-4 py-2
-                  "
-                >
+                <div className="border-border-muted bg-surface-1/50 flex items-center justify-between border-b px-4 py-2">
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 text-text-muted">
+                    <div className="text-text-muted flex items-center gap-2">
                       <LogOut className="size-4 rotate-180" />
                       <span className="text-sm">Leave</span>
                     </div>
-                    <div className="h-4 w-px bg-surface-2" />
-                    <span className="text-sm text-text-muted">
+                    <div className="bg-surface-2 h-4 w-px" />
+                    <span className="text-text-muted text-sm">
                       Game ID:{' '}
-                      <span className="font-mono text-brand-muted-foreground">
+                      <span className="text-brand-muted-foreground font-mono">
                         ABC123
                       </span>
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-text-muted">
+                  <div className="text-text-muted flex items-center gap-2">
                     <Users className="size-4" />
                     <span className="text-xs">4/4 Players</span>
                     <Settings className="ml-2 size-4" />
@@ -613,25 +463,9 @@ export function LandingPage({
 
                 <div className="flex flex-1 overflow-hidden">
                   {/* Sidebar */}
-                  <div
-                    className="
-                      hidden w-64 flex-col gap-4 border-r border-border-muted
-                      bg-surface-1/30 p-4
-                      lg:flex
-                    "
-                  >
-                    <div
-                      className="
-                        rounded-lg border border-border-muted bg-surface-2/20
-                        p-4
-                      "
-                    >
-                      <div
-                        className="
-                          mb-2 flex items-center gap-2 text-xs font-medium
-                          text-text-muted
-                        "
-                      >
+                  <div className="border-border-muted bg-surface-1/30 hidden w-64 flex-col gap-4 border-r p-4 lg:flex">
+                    <div className="border-border-muted bg-surface-2/20 rounded-lg border p-4">
+                      <div className="text-text-muted mb-2 flex items-center gap-2 text-xs font-medium">
                         <Play className="size-3" />
                         Current Turn
                       </div>
@@ -639,27 +473,17 @@ export function LandingPage({
                         <div className="text-lg font-medium text-white">
                           Rowan
                         </div>
-                        <div className="text-xs text-text-muted">
+                        <div className="text-text-muted text-xs">
                           is playing
                         </div>
-                        <div
-                          className="
-                            mt-3 w-full rounded-sm bg-brand py-1.5 text-sm
-                            font-medium text-white shadow-lg shadow-brand/20
-                          "
-                        >
+                        <div className="bg-brand shadow-brand/20 mt-3 w-full rounded-sm py-1.5 text-sm font-medium text-white shadow-lg">
                           Next Turn
                         </div>
                       </div>
                     </div>
 
-                    <div
-                      className="
-                        flex-1 rounded-lg border border-border-muted
-                        bg-surface-2/20 p-4
-                      "
-                    >
-                      <div className="mb-3 text-xs font-medium text-text-muted">
+                    <div className="border-border-muted bg-surface-2/20 flex-1 rounded-lg border p-4">
+                      <div className="text-text-muted mb-3 text-xs font-medium">
                         Players (4/4)
                       </div>
                       <div className="space-y-2">
@@ -671,50 +495,32 @@ export function LandingPage({
                         ].map((p) => (
                           <div
                             key={p.name}
-                            className={`
-                              flex items-center justify-between rounded-sm p-2
-                              ${
-                                p.me
-                                  ? `bg-brand/10 ring-1 ring-brand/50`
-                                  : `hover:bg-surface-2/50`
-                              }
-                            `}
+                            className={`flex items-center justify-between rounded-sm p-2 ${
+                              p.me
+                                ? `bg-brand/10 ring-brand/50 ring-1`
+                                : `hover:bg-surface-2/50`
+                            } `}
                           >
                             <div className="flex items-center gap-2">
                               <div
-                                className={`
-                                  size-2 rounded-full
-                                  ${p.me ? `bg-success` : `bg-surface-3`}
-                                `}
+                                className={`size-2 rounded-full ${p.me ? `bg-success` : `bg-surface-3`} `}
                               />
                               <span
-                                className={`
-                                  text-sm
-                                  ${
-                                    p.me
-                                      ? `font-medium text-white`
-                                      : `text-text-secondary`
-                                  }
-                                `}
+                                className={`text-sm ${
+                                  p.me
+                                    ? `font-medium text-white`
+                                    : `text-text-secondary`
+                                } `}
                               >
                                 {p.name}
                                 {p.me && (
-                                  <span
-                                    className="
-                                      ml-2 rounded-sm bg-brand/20 px-1 py-0.5
-                                      text-[10px] text-brand-muted-foreground
-                                    "
-                                  >
+                                  <span className="bg-brand/20 text-brand-muted-foreground ml-2 rounded-sm px-1 py-0.5 text-[10px]">
                                     You
                                   </span>
                                 )}
                               </span>
                             </div>
-                            <div
-                              className="
-                                flex items-center gap-1 text-text-muted
-                              "
-                            >
+                            <div className="text-text-muted flex items-center gap-1">
                               <Heart className="size-3" />
                               <span className="text-xs">{p.hp}</span>
                             </div>
@@ -725,12 +531,7 @@ export function LandingPage({
                   </div>
 
                   {/* Game Grid */}
-                  <div
-                    className="
-                      grid flex-1 grid-cols-2 grid-rows-2 gap-2 p-2
-                      sm:gap-4 sm:p-4
-                    "
-                  >
+                  <div className="grid flex-1 grid-cols-2 grid-rows-2 gap-2 p-2 sm:gap-4 sm:p-4">
                     {[
                       { name: 'Rowan', me: true, card: null, isActive: true },
                       {
@@ -749,81 +550,38 @@ export function LandingPage({
                     ].map((p, i) => (
                       <div
                         key={i}
-                        className={`
-                          relative overflow-hidden rounded-lg border
-                          bg-surface-1/50 shadow-inner transition-all
-                          ${
-                            p.isActive
-                              ? `
-                                border-brand/50
-                                shadow-[0_0_15px_-5px_rgba(168,85,247,0.3)]
-                                ring-1 ring-brand/30
-                              `
-                              : `border-border-muted`
-                          }
-                        `}
+                        className={`bg-surface-1/50 relative overflow-hidden rounded-lg border shadow-inner transition-all ${
+                          p.isActive
+                            ? `border-brand/50 ring-brand/30 shadow-[0_0_15px_-5px_rgba(168,85,247,0.3)] ring-1`
+                            : `border-border-muted`
+                        } `}
                       >
                         {/* Player Header */}
-                        <div
-                          className="
-                            absolute top-2 left-2 z-10 flex items-center gap-2
-                            rounded-sm bg-surface-0/60 px-2 py-1 text-xs
-                            backdrop-blur-sm
-                          "
-                        >
+                        <div className="bg-surface-0/60 absolute left-2 top-2 z-10 flex items-center gap-2 rounded-sm px-2 py-1 text-xs backdrop-blur-sm">
                           <div
-                            className={`
-                              size-1.5 rounded-full
-                              ${p.me ? `bg-success` : `bg-text-muted`}
-                            `}
+                            className={`size-1.5 rounded-full ${p.me ? `bg-success` : `bg-text-muted`} `}
                           />
                           <span className="text-text-secondary">{p.name}</span>
                           {p.me && (
-                            <span
-                              className="
-                                rounded-sm bg-brand/30 px-1 py-0.5 text-[10px]
-                                font-medium text-brand-muted-foreground
-                              "
-                            >
+                            <span className="bg-brand/30 text-brand-muted-foreground rounded-sm px-1 py-0.5 text-[10px] font-medium">
                               You
                             </span>
                           )}
                         </div>
 
                         {/* Life Counter */}
-                        <div
-                          className="
-                            absolute bottom-4 left-4 z-10 rounded-lg border
-                            border-border-muted bg-surface-0/80 p-2 text-center
-                            backdrop-blur-sm
-                          "
-                        >
+                        <div className="border-border-muted bg-surface-0/80 absolute bottom-4 left-4 z-10 rounded-lg border p-2 text-center backdrop-blur-sm">
                           <div className="text-xl font-bold text-white">40</div>
-                          <div
-                            className="
-                              text-[10px] tracking-wider text-text-muted
-                              uppercase
-                            "
-                          >
+                          <div className="text-text-muted text-[10px] uppercase tracking-wider">
                             Life
                           </div>
                         </div>
 
                         {/* Simulated Camera Feed */}
-                        <div
-                          className="
-                            flex size-full items-center justify-center
-                            bg-[radial-gradient(ellipse_at_center,var(--tw-gradient-stops))]
-                            from-surface-2/50 to-surface-0
-                          "
-                        >
-                          <div
-                            className="
-                              flex flex-col items-center gap-3 opacity-20
-                            "
-                          >
-                            <Camera className="size-8 text-text-muted" />
-                            <span className="text-sm font-medium text-text-muted">
+                        <div className="from-surface-2/50 to-surface-0 flex size-full items-center justify-center bg-[radial-gradient(ellipse_at_center,var(--tw-gradient-stops))]">
+                          <div className="flex flex-col items-center gap-3 opacity-20">
+                            <Camera className="text-text-muted size-8" />
+                            <span className="text-text-muted text-sm font-medium">
                               Table View
                             </span>
                           </div>
@@ -831,48 +589,15 @@ export function LandingPage({
 
                         {/* Card Recognition Overlay (Simulated) */}
                         {p.card && (
-                          <div
-                            className="
-                              absolute top-1/2 right-4 z-20 w-24
-                              -translate-y-1/2 rotate-3 transform
-                              transition-transform
-                              hover:scale-150 hover:rotate-0
-                            "
-                          >
-                            <div
-                              className="
-                                group relative aspect-[2.5/3.5] cursor-pointer
-                                overflow-hidden rounded-sm border
-                                border-white/20 shadow-2xl
-                              "
-                            >
+                          <div className="absolute right-4 top-1/2 z-20 w-24 -translate-y-1/2 rotate-3 transform transition-transform hover:rotate-0 hover:scale-150">
+                            <div className="group relative aspect-[2.5/3.5] cursor-pointer overflow-hidden rounded-sm border border-white/20 shadow-2xl">
                               {/* Placeholder for card image since we can't rely on external URLs reliably in preview without being sure they load, using a colored div with icon */}
-                              <div
-                                className="
-                                  flex size-full items-center justify-center
-                                  bg-surface-2
-                                "
-                              >
-                                <div
-                                  className="
-                                    size-full bg-linear-to-br from-amber-900/40
-                                    to-slate-900
-                                  "
-                                ></div>
-                                <Sparkles className="absolute text-warning/50" />
+                              <div className="bg-surface-2 flex size-full items-center justify-center">
+                                <div className="bg-linear-to-br size-full from-amber-900/40 to-slate-900"></div>
+                                <Sparkles className="text-warning/50 absolute" />
                               </div>
-                              <div
-                                className="
-                                  absolute inset-0 bg-linear-to-t from-black/60
-                                  to-transparent opacity-0 transition-opacity
-                                  group-hover:opacity-100
-                                "
-                              >
-                                <div
-                                  className="
-                                    flex h-full items-end justify-center pb-2
-                                  "
-                                >
+                              <div className="bg-linear-to-t absolute inset-0 from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
+                                <div className="flex h-full items-end justify-center pb-2">
                                   <span className="text-[10px] text-white">
                                     Click to zoom
                                   </span>
@@ -883,13 +608,7 @@ export function LandingPage({
                         )}
 
                         {/* Card Recognition Rectangles (Simulated) */}
-                        <div
-                          className="
-                            absolute top-1/2 left-1/2 h-32 w-48 -translate-x-1/2
-                            -translate-y-1/2 rounded-sm border-2 border-dashed
-                            border-white/5 opacity-50
-                          "
-                        />
+                        <div className="absolute left-1/2 top-1/2 h-32 w-48 -translate-x-1/2 -translate-y-1/2 rounded-sm border-2 border-dashed border-white/5 opacity-50" />
                       </div>
                     ))}
                   </div>
@@ -902,35 +621,18 @@ export function LandingPage({
         {/* Features Section */}
         <section id="features" className="container mx-auto px-4 py-20">
           <div className="mx-auto max-w-6xl">
-            <h2
-              className="
-                mb-16 text-center text-4xl text-text-primary
-                md:text-5xl
-              "
-            >
+            <h2 className="text-text-primary mb-16 text-center text-4xl md:text-5xl">
               Everything You Need to Play
             </h2>
-            <div
-              className="
-                grid gap-8
-                md:grid-cols-3
-              "
-            >
+            <div className="grid gap-8 md:grid-cols-3">
               <SpotlightCard
-                className="
-                  border-border-muted bg-surface-1/50 p-6 backdrop-blur-sm
-                "
+                className="border-border-muted bg-surface-1/50 p-6 backdrop-blur-sm"
                 spotlightColor="rgba(168, 85, 247, 0.15)"
               >
-                <div
-                  className="
-                    mb-4 flex size-12 shrink-0 items-center justify-center
-                    rounded-lg bg-brand/20
-                  "
-                >
-                  <Video className="size-6 text-brand-muted-foreground" />
+                <div className="bg-brand/20 mb-4 flex size-12 shrink-0 items-center justify-center rounded-lg">
+                  <Video className="text-brand-muted-foreground size-6" />
                 </div>
-                <h3 className="mb-2 text-xl text-text-primary">
+                <h3 className="text-text-primary mb-2 text-xl">
                   Battlefield Video
                 </h3>
                 <p className="text-text-muted">
@@ -940,20 +642,13 @@ export function LandingPage({
               </SpotlightCard>
 
               <SpotlightCard
-                className="
-                  border-border-muted bg-surface-1/50 p-6 backdrop-blur-sm
-                "
+                className="border-border-muted bg-surface-1/50 p-6 backdrop-blur-sm"
                 spotlightColor="rgba(59, 130, 246, 0.15)"
               >
-                <div
-                  className="
-                    mb-4 flex size-12 shrink-0 items-center justify-center
-                    rounded-lg bg-info/20
-                  "
-                >
-                  <Camera className="size-6 text-info" />
+                <div className="bg-info/20 mb-4 flex size-12 shrink-0 items-center justify-center rounded-lg">
+                  <Camera className="text-info size-6" />
                 </div>
-                <h3 className="mb-2 text-xl text-text-primary">
+                <h3 className="text-text-primary mb-2 text-xl">
                   Card Recognition
                 </h3>
                 <p className="text-text-muted">
@@ -963,20 +658,13 @@ export function LandingPage({
               </SpotlightCard>
 
               <SpotlightCard
-                className="
-                  border-border-muted bg-surface-1/50 p-6 backdrop-blur-sm
-                "
+                className="border-border-muted bg-surface-1/50 p-6 backdrop-blur-sm"
                 spotlightColor="rgba(34, 197, 94, 0.15)"
               >
-                <div
-                  className="
-                    mb-4 flex size-12 shrink-0 items-center justify-center
-                    rounded-lg bg-success/20
-                  "
-                >
-                  <Users className="size-6 text-success" />
+                <div className="bg-success/20 mb-4 flex size-12 shrink-0 items-center justify-center rounded-lg">
+                  <Users className="text-success size-6" />
                 </div>
-                <h3 className="mb-3 text-xl text-text-primary">
+                <h3 className="text-text-primary mb-3 text-xl">
                   Game Management
                 </h3>
                 <p className="text-text-muted">
@@ -991,197 +679,66 @@ export function LandingPage({
         {/* How It Works */}
         <section
           id="how-it-works"
-          className="relative container mx-auto overflow-hidden px-4 py-24"
+          className="container relative mx-auto overflow-hidden px-4 py-24"
         >
           <div className="mx-auto max-w-6xl">
-            <h2
-              className="
-                mb-20 text-center text-4xl text-text-primary
-                md:text-5xl
-              "
-            >
+            <h2 className="text-text-primary mb-20 text-center text-4xl md:text-5xl">
               How It Works
             </h2>
 
-            <div
-              className="
-                relative grid gap-12
-                md:grid-cols-3 md:gap-8
-              "
-            >
+            <div className="relative grid gap-12 md:grid-cols-3 md:gap-8">
               {/* Connector Line (Desktop) */}
-              <div
-                className="
-                  absolute top-12 right-[16%] left-[16%] hidden h-0.5
-                  bg-linear-to-r from-slate-800 via-purple-900/50 to-slate-800
-                  md:block
-                "
-              />
+              <div className="bg-linear-to-r absolute left-[16%] right-[16%] top-12 hidden h-0.5 from-slate-800 via-purple-900/50 to-slate-800 md:block" />
 
               {/* Step 1 */}
-              <div
-                className="
-                  group relative flex flex-col items-center text-center
-                "
-              >
-                <div
-                  className="
-                    relative z-10 mb-6 flex size-24 items-center justify-center
-                    rounded-2xl border border-border-muted bg-surface-0
-                    shadow-xl transition-all duration-300
-                    group-hover:border-brand/50
-                    group-hover:shadow-[0_0_30px_-5px_rgba(168,85,247,0.3)]
-                  "
-                >
-                  <div
-                    className="
-                      absolute inset-0 rounded-2xl bg-linear-to-br
-                      from-purple-500/20 to-blue-500/20 opacity-0
-                      transition-opacity
-                      group-hover:opacity-100
-                    "
-                  />
-                  <Gamepad2
-                    className="
-                      relative z-10 size-10 text-brand-muted-foreground
-                      transition-transform duration-300
-                      group-hover:scale-110
-                      group-hover:text-brand-muted-foreground
-                    "
-                  />
-                  <div
-                    className="
-                      absolute -top-3 -right-3 flex size-8 items-center
-                      justify-center rounded-full border border-border-muted
-                      bg-surface-1 text-sm font-bold text-white shadow-lg ring-4
-                      ring-surface-0
-                    "
-                  >
+              <div className="group relative flex flex-col items-center text-center">
+                <div className="border-border-muted bg-surface-0 group-hover:border-brand/50 relative z-10 mb-6 flex size-24 items-center justify-center rounded-2xl border shadow-xl transition-all duration-300 group-hover:shadow-[0_0_30px_-5px_rgba(168,85,247,0.3)]">
+                  <div className="bg-linear-to-br absolute inset-0 rounded-2xl from-purple-500/20 to-blue-500/20 opacity-0 transition-opacity group-hover:opacity-100" />
+                  <Gamepad2 className="text-brand-muted-foreground group-hover:text-brand-muted-foreground relative z-10 size-10 transition-transform duration-300 group-hover:scale-110" />
+                  <div className="border-border-muted bg-surface-1 ring-surface-0 absolute -right-3 -top-3 flex size-8 items-center justify-center rounded-full border text-sm font-bold text-white shadow-lg ring-4">
                     1
                   </div>
                 </div>
-                <h3
-                  className="
-                    mb-3 text-xl font-semibold text-text-primary
-                    transition-colors
-                    group-hover:text-brand-muted-foreground
-                  "
-                >
+                <h3 className="text-text-primary group-hover:text-brand-muted-foreground mb-3 text-xl font-semibold transition-colors">
                   Create or Join
                 </h3>
-                <p className="max-w-xs leading-relaxed text-text-muted">
+                <p className="text-text-muted max-w-xs leading-relaxed">
                   Start a new game room and share the game ID with your friends,
                   or join an existing game instantly.
                 </p>
               </div>
 
               {/* Step 2 */}
-              <div
-                className="
-                  group relative flex flex-col items-center text-center
-                "
-              >
-                <div
-                  className="
-                    relative z-10 mb-6 flex size-24 items-center justify-center
-                    rounded-2xl border border-border-muted bg-surface-0
-                    shadow-xl transition-all duration-300
-                    group-hover:border-info/50
-                    group-hover:shadow-[0_0_30px_-5px_rgba(59,130,246,0.3)]
-                  "
-                >
-                  <div
-                    className="
-                      absolute inset-0 rounded-2xl bg-linear-to-br
-                      from-blue-500/20 to-cyan-500/20 opacity-0
-                      transition-opacity
-                      group-hover:opacity-100
-                    "
-                  />
-                  <Scan
-                    className="
-                      relative z-10 size-10 text-info transition-transform
-                      duration-300
-                      group-hover:scale-110 group-hover:text-info
-                    "
-                  />
-                  <div
-                    className="
-                      absolute -top-3 -right-3 flex size-8 items-center
-                      justify-center rounded-full border border-border-muted
-                      bg-surface-1 text-sm font-bold text-white shadow-lg ring-4
-                      ring-surface-0
-                    "
-                  >
+              <div className="group relative flex flex-col items-center text-center">
+                <div className="border-border-muted bg-surface-0 group-hover:border-info/50 relative z-10 mb-6 flex size-24 items-center justify-center rounded-2xl border shadow-xl transition-all duration-300 group-hover:shadow-[0_0_30px_-5px_rgba(59,130,246,0.3)]">
+                  <div className="bg-linear-to-br absolute inset-0 rounded-2xl from-blue-500/20 to-cyan-500/20 opacity-0 transition-opacity group-hover:opacity-100" />
+                  <Scan className="text-info group-hover:text-info relative z-10 size-10 transition-transform duration-300 group-hover:scale-110" />
+                  <div className="border-border-muted bg-surface-1 ring-surface-0 absolute -right-3 -top-3 flex size-8 items-center justify-center rounded-full border text-sm font-bold text-white shadow-lg ring-4">
                     2
                   </div>
                 </div>
-                <h3
-                  className="
-                    mb-3 text-xl font-semibold text-text-primary
-                    transition-colors
-                    group-hover:text-info
-                  "
-                >
+                <h3 className="text-text-primary group-hover:text-info mb-3 text-xl font-semibold transition-colors">
                   Set Up Cameras
                 </h3>
-                <p className="max-w-xs leading-relaxed text-text-muted">
+                <p className="text-text-muted max-w-xs leading-relaxed">
                   Position your main camera for your playmat and cards.
                   Optionally add a second camera for video chat.
                 </p>
               </div>
 
               {/* Step 3 */}
-              <div
-                className="
-                  group relative flex flex-col items-center text-center
-                "
-              >
-                <div
-                  className="
-                    relative z-10 mb-6 flex size-24 items-center justify-center
-                    rounded-2xl border border-border-muted bg-surface-0
-                    shadow-xl transition-all duration-300
-                    group-hover:border-success/50
-                    group-hover:shadow-[0_0_30px_-5px_rgba(34,197,94,0.3)]
-                  "
-                >
-                  <div
-                    className="
-                      absolute inset-0 rounded-2xl bg-linear-to-br
-                      from-green-500/20 to-emerald-500/20 opacity-0
-                      transition-opacity
-                      group-hover:opacity-100
-                    "
-                  />
-                  <Swords
-                    className="
-                      relative z-10 size-10 text-success transition-transform
-                      duration-300
-                      group-hover:scale-110 group-hover:text-success
-                    "
-                  />
-                  <div
-                    className="
-                      absolute -top-3 -right-3 flex size-8 items-center
-                      justify-center rounded-full border border-border-muted
-                      bg-surface-1 text-sm font-bold text-white shadow-lg ring-4
-                      ring-surface-0
-                    "
-                  >
+              <div className="group relative flex flex-col items-center text-center">
+                <div className="border-border-muted bg-surface-0 group-hover:border-success/50 relative z-10 mb-6 flex size-24 items-center justify-center rounded-2xl border shadow-xl transition-all duration-300 group-hover:shadow-[0_0_30px_-5px_rgba(34,197,94,0.3)]">
+                  <div className="bg-linear-to-br absolute inset-0 rounded-2xl from-green-500/20 to-emerald-500/20 opacity-0 transition-opacity group-hover:opacity-100" />
+                  <Swords className="text-success group-hover:text-success relative z-10 size-10 transition-transform duration-300 group-hover:scale-110" />
+                  <div className="border-border-muted bg-surface-1 ring-surface-0 absolute -right-3 -top-3 flex size-8 items-center justify-center rounded-full border text-sm font-bold text-white shadow-lg ring-4">
                     3
                   </div>
                 </div>
-                <h3
-                  className="
-                    mb-3 text-xl font-semibold text-text-primary
-                    transition-colors
-                    group-hover:text-success
-                  "
-                >
+                <h3 className="text-text-primary group-hover:text-success mb-3 text-xl font-semibold transition-colors">
                   Play Magic
                 </h3>
-                <p className="max-w-xs leading-relaxed text-text-muted">
+                <p className="text-text-muted max-w-xs leading-relaxed">
                   Cast spells, track life totals, and enjoy authentic paper
                   Magic with your friends anywhere.
                 </p>
@@ -1193,74 +750,34 @@ export function LandingPage({
         {/* Bottom CTA */}
         <section className="container mx-auto px-4 py-20">
           <SpotlightCard
-            className="
-              border-border-muted bg-surface-1/50 px-6 py-16 text-center
-              backdrop-blur-sm
-              md:px-12
-            "
+            className="border-border-muted bg-surface-1/50 px-6 py-16 text-center backdrop-blur-sm md:px-12"
             spotlightColor="rgba(168, 85, 247, 0.15)"
           >
             {/* Background effects */}
-            <div
-              className="
-                absolute -top-20 -left-20 size-64 rounded-full bg-brand/10
-                blur-3xl
-              "
-            />
-            <div
-              className="
-                absolute -right-20 -bottom-20 size-64 rounded-full bg-info/10
-                blur-3xl
-              "
-            />
+            <div className="bg-brand/10 absolute -left-20 -top-20 size-64 rounded-full blur-3xl" />
+            <div className="bg-info/10 absolute -bottom-20 -right-20 size-64 rounded-full blur-3xl" />
 
-            <h2
-              className="
-                relative z-10 mb-6 text-3xl text-text-primary
-                md:text-5xl
-              "
-            >
+            <h2 className="text-text-primary relative z-10 mb-6 text-3xl md:text-5xl">
               Ready to Enter the Coven?
             </h2>
-            <p
-              className="
-                relative z-10 mx-auto mb-8 max-w-2xl text-lg text-text-secondary
-              "
-            >
+            <p className="text-text-secondary relative z-10 mx-auto mb-8 max-w-2xl text-lg">
               Join thousands of planeswalkers playing paper Magic remotely.
               It&apos;s free, runs in your browser, and brings the gathering
               back to Magic.
             </p>
 
-            <div
-              className="
-                relative z-10 flex flex-col items-center justify-center gap-4
-                sm:flex-row
-              "
-            >
+            <div className="relative z-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               {isAuthLoading ? (
                 <>
-                  <div
-                    className="
-                      h-14 min-w-[200px] animate-pulse rounded-md bg-surface-2
-                    "
-                  />
-                  <div
-                    className="
-                      h-14 min-w-[200px] animate-pulse rounded-md bg-surface-2
-                    "
-                  />
+                  <div className="bg-surface-2 h-14 min-w-[200px] animate-pulse rounded-md" />
+                  <div className="bg-surface-2 h-14 min-w-[200px] animate-pulse rounded-md" />
                 </>
               ) : (
                 <>
                   <Button
                     size="lg"
                     onClick={isAuthenticated ? handleCreateClick : onSignIn}
-                    className="
-                      h-14 min-w-[200px] gap-2 bg-brand text-lg font-semibold
-                      text-white shadow-lg shadow-brand/25
-                      hover:bg-brand
-                    "
+                    className="bg-brand shadow-brand/25 hover:bg-brand h-14 min-w-[200px] gap-2 text-lg font-semibold text-white shadow-lg"
                   >
                     <Sparkles className="size-5" />
                     {isAuthenticated
@@ -1271,11 +788,7 @@ export function LandingPage({
                     <Button
                       variant="outline"
                       size="lg"
-                      className="
-                        h-14 min-w-[200px] border-surface-3 bg-surface-1/50
-                        text-lg font-semibold text-text-secondary
-                        hover:bg-surface-2 hover:text-white
-                      "
+                      className="border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2 h-14 min-w-[200px] text-lg font-semibold hover:text-white"
                       onClick={() => {
                         const element = document.getElementById('how-it-works')
                         element?.scrollIntoView({ behavior: 'smooth' })
@@ -1291,39 +804,33 @@ export function LandingPage({
         </section>
 
         {/* Footer */}
-        <footer className="border-t border-border-muted bg-surface-0">
+        <footer className="border-border-muted bg-surface-0 border-t">
           <div className="container mx-auto px-4 py-12">
             <div
-              className={`
-                grid gap-8
-                ${supportUrl ? 'md:grid-cols-6' : 'md:grid-cols-5'}
-              `}
+              className={`grid gap-8 ${supportUrl ? 'md:grid-cols-6' : 'md:grid-cols-5'} `}
             >
               <div className="col-span-2 space-y-4">
                 <div className="flex items-center gap-2">
                   <img
                     src={logo}
                     alt="Spell Coven Logo"
-                    className="
-                      size-8 rounded-lg object-contain grayscale transition-all
-                      hover:grayscale-0
-                    "
+                    className="size-8 rounded-lg object-contain grayscale transition-all hover:grayscale-0"
                   />
-                  <span className="text-lg font-bold text-text-primary">
+                  <span className="text-text-primary text-lg font-bold">
                     Spell Coven
                   </span>
                 </div>
-                <p className="max-w-xs text-sm text-text-muted">
+                <p className="text-text-muted max-w-xs text-sm">
                   The best way to play paper Magic: The Gathering remotely with
                   friends. High-quality video, card recognition, and zero setup.
                 </p>
               </div>
 
               <div>
-                <h4 className="mb-4 text-sm font-semibold text-text-primary">
+                <h4 className="text-text-primary mb-4 text-sm font-semibold">
                   Product
                 </h4>
-                <ul className="space-y-2 text-sm text-text-muted">
+                <ul className="text-text-muted space-y-2 text-sm">
                   <li>
                     <a
                       href="#features"
@@ -1351,10 +858,10 @@ export function LandingPage({
               </div>
 
               <div>
-                <h4 className="mb-4 text-sm font-semibold text-text-primary">
+                <h4 className="text-text-primary mb-4 text-sm font-semibold">
                   Legal
                 </h4>
-                <ul className="space-y-2 text-sm text-text-muted">
+                <ul className="text-text-muted space-y-2 text-sm">
                   <li>
                     <a href="#" className="hover:text-brand-muted-foreground">
                       Privacy Policy
@@ -1382,22 +889,17 @@ export function LandingPage({
               </div>
 
               <div>
-                <h4 className="mb-4 text-sm font-semibold text-text-primary">
+                <h4 className="text-text-primary mb-4 text-sm font-semibold">
                   Open Source
                 </h4>
-                <p className="mb-4 text-sm text-text-muted">
+                <p className="text-text-muted mb-4 text-sm">
                   Spell Coven is open source. Contribute or star us on GitHub!
                 </p>
                 <a
                   href="https://github.com/FrimJo/spell-coven-mono"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="
-                    inline-flex items-center gap-2 rounded-full border
-                    border-surface-3 bg-surface-1/50 px-4 py-2 text-sm
-                    font-medium text-text-secondary transition-colors
-                    hover:bg-surface-2 hover:text-text-primary
-                  "
+                  className="border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2 hover:text-text-primary inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors"
                 >
                   <Github className="size-4" />
                   View on GitHub
@@ -1406,22 +908,17 @@ export function LandingPage({
 
               {supportUrl && (
                 <div>
-                  <h4 className="mb-4 text-sm font-semibold text-text-primary">
+                  <h4 className="text-text-primary mb-4 text-sm font-semibold">
                     Support
                   </h4>
-                  <p className="mb-4 text-sm text-text-muted">
+                  <p className="text-text-muted mb-4 text-sm">
                     Enjoying Spell Coven? Support ongoing development.
                   </p>
                   <a
                     href={supportUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="
-                      inline-flex items-center gap-2 rounded-full bg-brand px-4
-                      py-2 text-sm font-semibold text-white shadow-lg
-                      shadow-brand/30 transition
-                      hover:bg-brand
-                    "
+                    className="bg-brand shadow-brand/30 hover:bg-brand inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-lg transition"
                   >
                     <Heart className="size-4" />
                     Buy me a coffee
@@ -1430,12 +927,7 @@ export function LandingPage({
               )}
             </div>
 
-            <div
-              className="
-                mt-12 border-t border-border-muted pt-8 text-center text-sm
-                text-text-muted
-              "
-            >
+            <div className="border-border-muted text-text-muted mt-12 border-t pt-8 text-center text-sm">
               <p className="mb-2">Spell Coven © {new Date().getFullYear()}</p>
               <p>
                 Spell Coven is unofficial Fan Content permitted under the Fan
@@ -1446,10 +938,7 @@ export function LandingPage({
               <p className="mt-3">
                 Licensed under{' '}
                 <a
-                  className="
-                    text-brand-muted-foreground
-                    hover:text-brand
-                  "
+                  className="text-brand-muted-foreground hover:text-brand"
                   href="https://polyformproject.org/licenses/noncommercial/1.0.0/"
                   rel="noreferrer"
                   target="_blank"
@@ -1511,11 +1000,7 @@ function LandingJoinActions({
           <Button
             size="lg"
             variant="outline"
-            className="
-              h-14 min-w-[160px] gap-2 rounded-r-none border-r-0
-              border-success/40 bg-success/10 text-lg font-semibold text-success
-              hover:bg-success/20 hover:text-white
-            "
+            className="border-success/40 bg-success/10 text-success hover:bg-success/20 h-14 min-w-[160px] gap-2 rounded-r-none border-r-0 text-lg font-semibold hover:text-white"
             onClick={() => onRejoinLastRoom(activeRoomQuery.roomId)}
             data-testid="rejoin-game-button"
           >
@@ -1527,11 +1012,7 @@ function LandingJoinActions({
               <Button
                 size="lg"
                 variant="outline"
-                className="
-                  h-14 rounded-l-none border-success/40 bg-success/10 px-3
-                  text-success
-                  hover:bg-success/20
-                "
+                className="border-success/40 bg-success/10 text-success hover:bg-success/20 h-14 rounded-l-none px-3"
                 data-testid="join-game-dropdown"
               >
                 <ChevronDown className="size-4" />
@@ -1543,10 +1024,7 @@ function LandingJoinActions({
             >
               <DropdownMenuItem
                 onClick={onJoinClick}
-                className="
-                  text-text-secondary
-                  hover:text-white
-                "
+                className="text-text-secondary hover:text-white"
               >
                 <Play className="mr-2 size-4" />
                 Join with Code
@@ -1569,11 +1047,7 @@ function LandingJoinActions({
       <Button
         size="lg"
         variant="outline"
-        className="
-          h-14 min-w-[200px] gap-2 border-surface-3 bg-surface-1/50 text-lg
-          font-semibold text-text-secondary
-          hover:bg-surface-2 hover:text-white
-        "
+        className="border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2 h-14 min-w-[200px] gap-2 text-lg font-semibold hover:text-white"
         onClick={onJoinClick}
         data-testid="join-game-button"
       >
@@ -1594,12 +1068,7 @@ function LandingActionErrorFallback({ resetErrorBoundary }: FallbackProps) {
   return (
     <button
       onClick={resetErrorBoundary}
-      className="
-        flex h-14 min-w-[240px] cursor-pointer items-center gap-2 rounded-xl
-        border border-warning/40 bg-warning/10 px-4 text-sm font-medium
-        text-warning transition-colors
-        hover:bg-warning/20
-      "
+      className="border-warning/40 bg-warning/10 text-warning hover:bg-warning/20 flex h-14 min-w-[240px] cursor-pointer items-center gap-2 rounded-xl border px-4 text-sm font-medium transition-colors"
     >
       <AlertTriangle className="size-4 shrink-0" />
       <span>The portal fizzles. Click to retry.</span>
@@ -1632,79 +1101,26 @@ function LandingLiveStats() {
   )
 
   return (
-    <div
-      className="
-        mt-8 grid w-full max-w-xl grid-cols-2 gap-3
-        sm:gap-4
-        md:justify-start
-      "
-    >
+    <div className="mt-8 grid w-full max-w-xl grid-cols-2 gap-3 sm:gap-4 md:justify-start">
       {liveStats.map((stat) => (
         <div
           key={stat.label}
-          className="
-            relative flex flex-col items-start gap-3 rounded-2xl border
-            border-border-muted bg-surface-0/70 p-3 shadow-lg shadow-brand/10
-            backdrop-blur-sm
-            sm:flex-row sm:items-center sm:gap-4
-            md:flex-col md:items-start md:gap-3
-            lg:flex-row lg:items-center lg:gap-4 lg:px-4
-          "
+          className="border-border-muted bg-surface-0/70 shadow-brand/10 relative flex flex-col items-start gap-3 rounded-2xl border p-3 shadow-lg backdrop-blur-sm sm:flex-row sm:items-center sm:gap-4 md:flex-col md:items-start md:gap-3 lg:flex-row lg:items-center lg:gap-4 lg:px-4"
         >
-          <div
-            className="
-              flex size-10 shrink-0 items-center justify-center rounded-full
-              bg-surface-2/60
-              sm:size-11
-            "
-          >
-            <stat.icon
-              className={`
-                size-4
-                ${stat.accent}
-                sm:size-5
-              `}
-            />
+          <div className="bg-surface-2/60 flex size-10 shrink-0 items-center justify-center rounded-full sm:size-11">
+            <stat.icon className={`size-4 ${stat.accent} sm:size-5`} />
           </div>
           <div className="flex flex-col">
-            <div
-              className="
-                text-lg font-semibold text-text-primary
-                sm:text-xl
-              "
-            >
+            <div className="text-text-primary text-lg font-semibold sm:text-xl">
               {stat.value}
             </div>
-            <div
-              className="
-                text-[10px] tracking-wider text-text-muted uppercase
-                sm:text-xs sm:tracking-[0.2em]
-              "
-            >
+            <div className="text-text-muted text-[10px] uppercase tracking-wider sm:text-xs sm:tracking-[0.2em]">
               {stat.label}
             </div>
           </div>
-          <div
-            className="
-              absolute top-3 right-3 flex items-center gap-2 text-[10px]
-              font-medium text-online
-            "
-          >
-            <span
-              className="
-                size-1.5 animate-pulse rounded-full bg-online
-                sm:size-2
-              "
-            />
-            <span
-              className="
-                xs:inline
-                hidden
-                sm:inline
-              "
-            >
-              {stat.badge}
-            </span>
+          <div className="text-online absolute right-3 top-3 flex items-center gap-2 text-[10px] font-medium">
+            <span className="bg-online size-1.5 animate-pulse rounded-full sm:size-2" />
+            <span className="hidden sm:inline">{stat.badge}</span>
           </div>
         </div>
       ))}
@@ -1714,32 +1130,18 @@ function LandingLiveStats() {
 
 function LandingLiveStatsErrorFallback({ resetErrorBoundary }: FallbackProps) {
   return (
-    <div
-      className="
-        mt-8 w-full max-w-xl rounded-2xl border border-red-500/30 bg-red-950/20
-        p-4 backdrop-blur-sm
-      "
-    >
-      <div
-        className="
-          flex items-center gap-2 text-sm font-semibold tracking-wider
-          text-red-300 uppercase
-        "
-      >
+    <div className="mt-8 w-full max-w-xl rounded-2xl border border-red-500/30 bg-red-950/20 p-4 backdrop-blur-sm">
+      <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-red-300">
         <AlertTriangle className="size-4" />
         Leyline Distortion
       </div>
-      <p className="mt-2 text-sm text-text-secondary">
+      <p className="text-text-secondary mt-2 text-sm">
         We could not read live Convex signals. The battlefield remains stable,
         but live counters are hidden until mana flows again.
       </p>
       <button
         onClick={resetErrorBoundary}
-        className="
-          mt-3 cursor-pointer text-sm font-medium text-brand-muted-foreground
-          underline underline-offset-2 transition-colors
-          hover:text-brand
-        "
+        className="text-brand-muted-foreground hover:text-brand mt-3 cursor-pointer text-sm font-medium underline underline-offset-2 transition-colors"
       >
         Retry
       </button>

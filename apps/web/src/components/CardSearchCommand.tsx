@@ -145,8 +145,8 @@ export function CardSearchCommand({
       <CommandList className="max-h-[400px]">
         {loading && (
           <div className="flex items-center justify-center gap-2 py-6">
-            <Loader2 className="size-4 animate-spin text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Searching...</span>
+            <Loader2 className="text-muted-foreground size-4 animate-spin" />
+            <span className="text-muted-foreground text-sm">Searching...</span>
           </div>
         )}
 
@@ -155,7 +155,7 @@ export function CardSearchCommand({
         )}
 
         {!loading && query.length < MIN_QUERY_LENGTH && (
-          <div className="py-6 text-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground py-6 text-center text-sm">
             <Search className="mx-auto mb-2 size-8 opacity-50" />
             <p>Type at least 2 characters to search</p>
             <p className="mt-1 text-xs opacity-75">
@@ -164,10 +164,7 @@ export function CardSearchCommand({
                 href="https://scryfall.com/docs/syntax"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="
-                  inline-flex items-center gap-1 underline
-                  hover:text-foreground
-                "
+                className="hover:text-foreground inline-flex items-center gap-1 underline"
               >
                 Scryfall search syntax
                 <ExternalLink className="size-3" />
@@ -196,7 +193,7 @@ export function CardSearchCommand({
                   <div className="truncate text-sm font-medium">
                     {card.name}
                   </div>
-                  <div className="truncate text-xs text-muted-foreground">
+                  <div className="text-muted-foreground truncate text-xs">
                     {card.set_name} ({card.set.toUpperCase()})
                   </div>
                 </div>
