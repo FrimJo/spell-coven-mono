@@ -193,6 +193,7 @@ export async function navigateToTestGame(
 }
 
 const CLEANUP_ACTION_TIMEOUT_MS = 3000
+const CLEANUP_NAVIGATION_TIMEOUT_MS = 10_000
 
 function isGameRoute(page: Page): boolean {
   try {
@@ -221,48 +222,61 @@ async function clickIfVisible(locator: Locator): Promise<boolean> {
   return true
 }
 
-/**
- * Leave the current game room via the UI so the user's active-room
- * pointer is cleared server-side. Expects the page to be on a game route
- * with `leave-game-button` visible.
- */
-export async function leaveGameRoom(page: Page): Promise<void> {
-  if (page.isClosed()) {
-    return
+async function resolveDuplicateSessionDialog(page: Page): Promise<boolean> {
+  const duplicateSessionTitle = page.getByText('Already Connected', {
+    exact: true,
+  })
+  if (!(await duplicateSessionTitle.isVisible().catch(() => false))) {
+    return false
   }
 
+  const transferHereButton = page.getByRole('button', {
+    name: /Transfer here/i,
+  })
+  if (await clickIfVisible(transferHereButton)) {
+    await expect(duplicateSessionTitle).toBeHidden({
+      timeout: CLEANUP_ACTION_TIMEOUT_MS,
+    })
+    return true
+  }
+
+  return false
+}
+
+async function waitForHomeNavigation(page: Page): Promise<void> {
+  await expect(page).toHaveURL('/', {
+    timeout: CLEANUP_NAVIGATION_TIMEOUT_MS,
+  })
+}
+
+async function tryConfirmVisibleLeaveDialog(page: Page): Promise<boolean> {
   const confirmButton = page.getByTestId('leave-dialog-confirm-button')
   if (await clickIfVisible(confirmButton)) {
-    await expect(page).toHaveURL('/', { timeout: CLEANUP_ACTION_TIMEOUT_MS })
-    return
+    await waitForHomeNavigation(page)
+    return true
   }
+  return false
+}
 
-  if (!isGameRoute(page)) {
-    return
+async function tryReturnHomeFromDialog(page: Page): Promise<boolean> {
+  if (await resolveDuplicateSessionDialog(page)) {
+    await expect(page).toHaveURL(/\/game\//, {
+      timeout: CLEANUP_ACTION_TIMEOUT_MS,
+    })
   }
 
   const returnHomeButton = page.getByRole('button', {
     name: /Return to Home/i,
   })
   if (await clickIfVisible(returnHomeButton)) {
-    await expect(page).toHaveURL('/', { timeout: CLEANUP_ACTION_TIMEOUT_MS })
-    return
+    await waitForHomeNavigation(page)
+    return true
   }
+  return false
+}
 
-  const duplicateSessionTitle = page.getByText('Already Connected', {
-    exact: true,
-  })
-  if (await duplicateSessionTitle.isVisible().catch(() => false)) {
-    const transferHereButton = page.getByRole('button', {
-      name: /Transfer here/i,
-    })
-    if (await clickIfVisible(transferHereButton)) {
-      await expect(duplicateSessionTitle).toBeHidden({
-        timeout: CLEANUP_ACTION_TIMEOUT_MS,
-      })
-    }
-  }
-
+/** Returns true when a blocking dialog overlay is still visible. */
+async function tryDismissBlockingDialogs(page: Page): Promise<boolean> {
   for (const cancelButton of [
     page.getByTestId('reset-dialog-cancel-button'),
     page.getByTestId('media-setup-cancel-button'),
@@ -279,32 +293,62 @@ export async function leaveGameRoom(page: Page): Promise<void> {
   }
 
   const dialogOverlay = page.locator('[data-slot="dialog-overlay"]')
-  if (
-    await dialogOverlay
+  const isOverlayVisible = () =>
+    dialogOverlay
       .first()
       .isVisible()
       .catch(() => false)
-  ) {
+
+  if (await isOverlayVisible()) {
     await page.keyboard.press('Escape').catch(() => {})
     await expect(dialogOverlay)
       .toHaveCount(0, { timeout: CLEANUP_ACTION_TIMEOUT_MS })
       .catch(() => {})
   }
 
-  if (
-    await dialogOverlay
-      .first()
-      .isVisible()
-      .catch(() => false)
-  ) {
+  return isOverlayVisible()
+}
+
+async function tryOpenAndConfirmLeaveDialog(page: Page): Promise<boolean> {
+  const leaveButton = page.getByTestId('leave-game-button')
+  if (!(await clickIfVisible(leaveButton))) {
+    return false
+  }
+
+  await resolveDuplicateSessionDialog(page)
+  const confirmButton = page.getByTestId('leave-dialog-confirm-button')
+  await confirmButton.click({ timeout: CLEANUP_ACTION_TIMEOUT_MS })
+  await waitForHomeNavigation(page)
+  return true
+}
+
+/**
+ * Leave the current game room via the UI so the user's active-room
+ * pointer is cleared server-side. Expects the page to be on a game route
+ * with `leave-game-button` visible.
+ */
+export async function leaveGameRoom(page: Page): Promise<void> {
+  if (page.isClosed()) {
     return
   }
 
-  const leaveButton = page.getByTestId('leave-game-button')
-  if (await clickIfVisible(leaveButton)) {
-    await confirmButton.click({ timeout: CLEANUP_ACTION_TIMEOUT_MS })
-    await expect(page).toHaveURL('/', { timeout: CLEANUP_ACTION_TIMEOUT_MS })
+  if (await tryConfirmVisibleLeaveDialog(page)) {
+    return
   }
+
+  if (!isGameRoute(page)) {
+    return
+  }
+
+  if (await tryReturnHomeFromDialog(page)) {
+    return
+  }
+
+  if (await tryDismissBlockingDialogs(page)) {
+    return
+  }
+
+  await tryOpenAndConfirmLeaveDialog(page)
 }
 
 /**
@@ -459,60 +503,81 @@ export async function mockGetUserMediaWithTone(
   await page.addInitScript(
     ({ toneHz, labelText }) => {
       navigator.mediaDevices.getUserMedia = async (
-        _constraints: MediaStreamConstraints,
+        constraints?: MediaStreamConstraints,
       ) => {
-        const canvas = document.createElement('canvas')
-        const width = 640
-        const height = 480
-        canvas.width = width
-        canvas.height = height
-        const ctx = canvas.getContext('2d')
-        let frame = 0
+        // Honor the requested constraints like the real getUserMedia so callers
+        // that ask for video-only or audio-only get exactly that. LiveKit
+        // publishes every track on the returned stream, so returning both kinds
+        // unconditionally would double-publish camera and microphone tracks.
+        const wantsVideo = Boolean(constraints?.video)
+        const wantsAudio = Boolean(constraints?.audio)
+        const stream = new MediaStream()
 
-        const drawFrame = () => {
-          if (!ctx) return
-          frame += 1
-          ctx.fillStyle = `hsl(${(frame * 8) % 360}, 70%, 35%)`
-          ctx.fillRect(0, 0, width, height)
-          ctx.fillStyle = '#ffffff'
-          ctx.font = '28px sans-serif'
-          ctx.fillText(labelText, 20, 40)
-          ctx.fillText(`Frame ${frame}`, 20, 80)
-        }
+        if (wantsVideo) {
+          const canvas = document.createElement('canvas')
+          const width = 640
+          const height = 480
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          let frame = 0
 
-        drawFrame()
-        setInterval(drawFrame, 1000 / 15)
-
-        const stream = canvas.captureStream(15)
-
-        try {
-          const audioContext = new AudioContext()
-          const oscillator = audioContext.createOscillator()
-          const gain = audioContext.createGain()
-          const destination = audioContext.createMediaStreamDestination()
-
-          oscillator.frequency.value = toneHz
-          gain.gain.value = 0.2
-          oscillator.connect(gain)
-          gain.connect(destination)
-          oscillator.start()
-
-          // In automation/headless contexts the AudioContext can start suspended,
-          // which yields an all-zero remote audio track unless resumed.
-          if (audioContext.state === 'suspended') {
-            try {
-              await audioContext.resume()
-            } catch {
-              // If resume is blocked, keep the track attached; callers can still
-              // validate track presence and retry playback checks.
-            }
+          const drawFrame = () => {
+            if (!ctx) return
+            frame += 1
+            ctx.fillStyle = `hsl(${(frame * 8) % 360}, 70%, 35%)`
+            ctx.fillRect(0, 0, width, height)
+            ctx.fillStyle = '#ffffff'
+            ctx.font = '28px sans-serif'
+            ctx.fillText(labelText, 20, 40)
+            ctx.fillText(`Frame ${frame}`, 20, 80)
           }
 
-          destination.stream.getAudioTracks().forEach((track) => {
-            stream.addTrack(track)
-          })
-        } catch {
-          // AudioContext might not be available in all contexts
+          drawFrame()
+          const frameIntervalId = setInterval(drawFrame, 1000 / 15)
+
+          canvas
+            .captureStream(15)
+            .getVideoTracks()
+            .forEach((track) => {
+              stream.addTrack(track)
+              track.addEventListener('ended', () => {
+                clearInterval(frameIntervalId)
+              })
+            })
+        }
+
+        if (wantsAudio) {
+          try {
+            const audioContext = new AudioContext()
+            const oscillator = audioContext.createOscillator()
+            const gain = audioContext.createGain()
+            const destination = audioContext.createMediaStreamDestination()
+
+            oscillator.frequency.value = toneHz
+            gain.gain.value = 0.2
+            oscillator.connect(gain)
+            gain.connect(destination)
+            oscillator.start()
+
+            // In automation/headless contexts the AudioContext can start
+            // suspended, which yields an all-zero remote audio track unless
+            // resumed.
+            if (audioContext.state === 'suspended') {
+              try {
+                await audioContext.resume()
+              } catch {
+                // If resume is blocked, keep the track attached; callers can
+                // still validate track presence and retry playback checks.
+              }
+            }
+
+            destination.stream.getAudioTracks().forEach((track) => {
+              stream.addTrack(track)
+            })
+          } catch {
+            // AudioContext might not be available in all contexts
+          }
         }
 
         return stream

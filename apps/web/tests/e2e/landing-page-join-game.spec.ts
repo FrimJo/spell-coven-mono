@@ -222,13 +222,10 @@ test.describe('Join Game Dialog', () => {
     await input.fill(roomId.toLowerCase())
     await page.getByTestId('join-game-submit-button').click()
 
-    // Should show loading state
-    await expect(page.getByText(/Searching the Multiverse/i)).toBeVisible({
-      timeout: 5000,
-    })
-
-    // Should transition to success
-    await expect(page.getByText(/found/i)).toBeVisible({ timeout: 15000 })
+    // Should validate lowercase input as its normalized uppercase room id.
+    await expect(
+      page.getByText(`Room ${roomId} found`, { exact: false }),
+    ).toBeVisible({ timeout: 15000 })
     await expect(page.getByTestId('join-game-enter-button')).toBeVisible()
   })
 

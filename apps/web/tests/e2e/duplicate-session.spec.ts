@@ -124,6 +124,9 @@ test.describe('Duplicate Session Dialog', () => {
 
     await navigateToTestGame(page1, roomId)
     await expect(page1.getByText(roomId)).toBeVisible({ timeout: 10000 })
+    await expect(page1.getByTestId('leave-game-button')).toBeVisible({
+      timeout: 10000,
+    })
 
     await navigateToTestGame(page2, roomId)
     const dialogTitle = page2.getByText('Already Connected', { exact: true })

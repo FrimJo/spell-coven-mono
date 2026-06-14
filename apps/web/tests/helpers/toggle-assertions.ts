@@ -6,6 +6,7 @@
  * error messages.
  */
 
+import type { MediaDiagnosticsSnapshot } from '@/types/media-session'
 import type { Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 
@@ -272,55 +273,77 @@ export async function expectSenderAudioOn(
 // Convenience: click video / audio toggle on a player's page
 // ---------------------------------------------------------------------------
 
-export async function clickVideoToggle(page: Page): Promise<void> {
-  const btn = page.getByTestId('video-toggle-button')
+type LocalPublicationSource = 'camera' | 'microphone'
+type LocalPublicationState = 'muted' | 'unmuted'
+
+async function readLocalPublicationState(
+  page: Page,
+  source: LocalPublicationSource,
+): Promise<LocalPublicationState> {
+  return page.evaluate((publicationSource) => {
+    const snapshot = (
+      window as unknown as {
+        __spellCovenMediaDiagnostics?: MediaDiagnosticsSnapshot
+      }
+    ).__spellCovenMediaDiagnostics
+    const publications = snapshot
+      ? (snapshot.publications[snapshot.localSessionId] ?? [])
+      : []
+    const publication = publications.find(
+      (entry) => entry.source === publicationSource,
+    )
+    return publication?.muted === false ? 'unmuted' : 'muted'
+  }, source)
+}
+
+async function waitForLocalPublicationState(
+  page: Page,
+  source: LocalPublicationSource,
+  expectedState: LocalPublicationState,
+): Promise<void> {
+  await expect
+    .poll(async () => readLocalPublicationState(page, source), {
+      timeout: 10_000,
+    })
+    .toBe(expectedState)
+}
+
+async function clickMediaToggle(
+  page: Page,
+  testId: 'video-toggle-button' | 'audio-toggle-button',
+  dataAttribute: 'data-video-enabled' | 'data-audio-enabled',
+  source: LocalPublicationSource,
+): Promise<void> {
+  const btn = page.getByTestId(testId)
   await expect(btn).toBeVisible({ timeout: 10_000 })
   await expect(btn).toBeEnabled({ timeout: 10_000 })
-  const previousState = await btn.getAttribute('data-video-enabled')
+  const previousState = await btn.getAttribute(dataAttribute)
   await btn.click()
-  await expect(btn).not.toHaveAttribute(
+  await expect(btn).not.toHaveAttribute(dataAttribute, previousState ?? '', {
+    timeout: 10_000,
+  })
+  const nextState = await btn.getAttribute(dataAttribute)
+  const expectedPublicationState: LocalPublicationState =
+    nextState === 'true' ? 'unmuted' : 'muted'
+  await waitForLocalPublicationState(page, source, expectedPublicationState)
+}
+
+export async function clickVideoToggle(page: Page): Promise<void> {
+  await clickMediaToggle(
+    page,
+    'video-toggle-button',
     'data-video-enabled',
-    previousState ?? '',
-    { timeout: 10_000 },
+    'camera',
   )
-  const nextState = await btn.getAttribute('data-video-enabled')
-  const expectedCameraState = nextState === 'true' ? 'unmuted' : 'muted'
-  await expect
-    .poll(
-      async () =>
-        page.evaluate(() => {
-          const snapshot = (
-            window as unknown as {
-              __spellCovenMediaDiagnostics?: {
-                localSessionId: string
-                publications: Record<
-                  string,
-                  Array<{ source: string; muted: boolean }>
-                >
-              }
-            }
-          ).__spellCovenMediaDiagnostics
-          const publications = snapshot
-            ? (snapshot.publications[snapshot.localSessionId] ?? [])
-            : []
-          const camera = publications.find(
-            (publication) => publication.source === 'camera',
-          )
-          return camera?.muted === false ? 'unmuted' : 'muted'
-        }),
-      { timeout: 10_000 },
-    )
-    .toBe(expectedCameraState)
-  // Brief settle time for LiveKit publication updates to reach receivers.
-  await new Promise((r) => setTimeout(r, 2_000))
 }
 
 export async function clickAudioToggle(page: Page): Promise<void> {
-  const btn = page.getByTestId('audio-toggle-button')
-  await expect(btn).toBeVisible({ timeout: 10_000 })
-  await expect(btn).toBeEnabled({ timeout: 10_000 })
-  await btn.click()
-  await new Promise((r) => setTimeout(r, 2_000))
+  await clickMediaToggle(
+    page,
+    'audio-toggle-button',
+    'data-audio-enabled',
+    'microphone',
+  )
 }
 
 // ---------------------------------------------------------------------------
