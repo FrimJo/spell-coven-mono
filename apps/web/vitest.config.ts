@@ -17,6 +17,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@convex': path.resolve(__dirname, '../../convex'),
       '@repo/ui': path.resolve(__dirname, '../../packages/ui/src'),
     },
   },
