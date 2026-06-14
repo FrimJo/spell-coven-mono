@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LicenseRouteImport } from './routes/license'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DebugSentryRouteImport } from './routes/debug.sentry'
 import { Route as AuthedSetupRouteImport } from './routes/_authed/setup'
 import { Route as AuthedGameGameIdRouteImport } from './routes/_authed/game.$gameId'
 
@@ -29,6 +30,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DebugSentryRoute = DebugSentryRouteImport.update({
+  id: '/debug/sentry',
+  path: '/debug/sentry',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthedSetupRoute = AuthedSetupRouteImport.update({
   id: '/setup',
   path: '/setup',
@@ -44,12 +50,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/license': typeof LicenseRoute
   '/setup': typeof AuthedSetupRoute
+  '/debug/sentry': typeof DebugSentryRoute
   '/game/$gameId': typeof AuthedGameGameIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/license': typeof LicenseRoute
   '/setup': typeof AuthedSetupRoute
+  '/debug/sentry': typeof DebugSentryRoute
   '/game/$gameId': typeof AuthedGameGameIdRoute
 }
 export interface FileRoutesById {
@@ -58,19 +66,21 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/license': typeof LicenseRoute
   '/_authed/setup': typeof AuthedSetupRoute
+  '/debug/sentry': typeof DebugSentryRoute
   '/_authed/game/$gameId': typeof AuthedGameGameIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/license' | '/setup' | '/game/$gameId'
+  fullPaths: '/' | '/license' | '/setup' | '/debug/sentry' | '/game/$gameId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/license' | '/setup' | '/game/$gameId'
+  to: '/' | '/license' | '/setup' | '/debug/sentry' | '/game/$gameId'
   id:
     | '__root__'
     | '/'
     | '/_authed'
     | '/license'
     | '/_authed/setup'
+    | '/debug/sentry'
     | '/_authed/game/$gameId'
   fileRoutesById: FileRoutesById
 }
@@ -78,6 +88,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
   LicenseRoute: typeof LicenseRoute
+  DebugSentryRoute: typeof DebugSentryRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -101,6 +112,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/debug/sentry': {
+      id: '/debug/sentry'
+      path: '/debug/sentry'
+      fullPath: '/debug/sentry'
+      preLoaderRoute: typeof DebugSentryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/setup': {
@@ -137,6 +155,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
   LicenseRoute: LicenseRoute,
+  DebugSentryRoute: DebugSentryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

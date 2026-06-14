@@ -8,19 +8,21 @@ separation, session replay, source maps upload, and data scrubbing.
 
 ### Required (all environments)
 
-| Variable              | Description                                                                                   |
-| --------------------- | --------------------------------------------------------------------------------------------- |
-| `SENTRY_DSN`          | Sentry DSN used by both the Convex backend and the web client.                                |
-| `SENTRY_ENVIRONMENT`  | Environment name (`development`, `staging`, `production`). Defaults to `development` locally. |
-| `VITE_SENTRY_RELEASE` | Release identifier shared across backend and frontend (use git SHA or CI build number).       |
+| Variable                  | Description                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------- |
+| `VITE_SENTRY_DSN`         | Browser-exposed Sentry DSN used by the web client.                                        |
+| `SENTRY_DSN`              | Sentry DSN used by the Convex backend.                                                    |
+| `VITE_SENTRY_ENVIRONMENT` | Browser environment name (`development`, `staging`, `production`). Defaults to Vite mode. |
+| `SENTRY_ENVIRONMENT`      | Convex environment name. Defaults to the Convex deployment URL when unset.                |
+| `VITE_SENTRY_RELEASE`     | Release identifier shared across backend and frontend (use git SHA or CI build number).   |
 
 ### Optional tuning
 
-| Variable                            | Description                                             | Default                                 |
-| ----------------------------------- | ------------------------------------------------------- | --------------------------------------- |
-| `SENTRY_TRACES_SAMPLE_RATE`         | Overrides tracing sample rate for both backend and web. | `1` in development, `0.2` in production |
-| `SENTRY_REPLAY_SESSION_SAMPLE_RATE` | Web session replay sampling in production.              | `0.05`                                  |
-| `SENTRY_REPLAY_ERROR_SAMPLE_RATE`   | Web replay sampling for error sessions in production.   | `1`                                     |
+| Variable                                 | Description                                | Default                                 |
+| ---------------------------------------- | ------------------------------------------ | --------------------------------------- |
+| `VITE_SENTRY_TRACES_SAMPLE_RATE`         | Web tracing sample rate.                   | `1` in development, `0.2` in production |
+| `VITE_SENTRY_REPLAY_SESSION_SAMPLE_RATE` | Web session replay sampling in production. | `0.05`                                  |
+| `VITE_SENTRY_REPLAY_ERROR_SAMPLE_RATE`   | Web replay sampling for error sessions.    | `1`                                     |
 
 ### CI-only (source maps)
 
@@ -35,13 +37,15 @@ separation, session replay, source maps upload, and data scrubbing.
 1. Add the required variables to `.env.development.local`:
 
    ```bash
+   VITE_SENTRY_DSN=...
    SENTRY_DSN=...
+   VITE_SENTRY_ENVIRONMENT=development
    SENTRY_ENVIRONMENT=development
    VITE_SENTRY_RELEASE=local-dev
    ```
 
-2. Start Convex and the web app as usual. Both will initialize Sentry automatically when the DSN is
-   present.
+2. Start Convex and the web app as usual. The web client initializes when `VITE_SENTRY_DSN` is
+   present; Convex reporting initializes when `SENTRY_DSN` is present.
 
 ## CI setup for source maps
 
@@ -54,6 +58,7 @@ Recommended steps in your CI workflow:
 
    ```bash
    export VITE_SENTRY_RELEASE=${VITE_GITHUB_SHA}
+   export VITE_SENTRY_ENVIRONMENT=production
    export SENTRY_ENVIRONMENT=production
    ```
 
@@ -77,10 +82,18 @@ Navigate to `/debug/sentry` in development to trigger:
 - A captured exception
 - A captured message
 
+In production, `/debug/sentry` renders the normal app not-found experience.
+
 ### Convex
 
-Use the `triggerSentryError` mutation (development only). This throws intentionally to verify
-backend ingestion.
+Use the `sentryDebug.triggerSentryError` mutation (development only). It supports:
+
+- `{ mode: "message" }` to capture a backend message.
+- `{ mode: "exception" }` or no args to capture and throw a backend exception.
+
+Convex functions should use the shared Sentry wrapper instead of local `try`/`catch` reporting.
+Browser hooks and adapters own operational exception reporting; UI components should keep user-facing
+state, toasts, and dialogs out of Sentry capture policy.
 
 ## Alerting recommendations
 
@@ -92,7 +105,7 @@ Create Sentry alerts for:
 
 ## Verification checklist
 
-- [ ] Confirm `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, and `VITE_SENTRY_RELEASE` are set in local dev.
+- [ ] Confirm `VITE_SENTRY_DSN`, `SENTRY_DSN`, `VITE_SENTRY_ENVIRONMENT`, `SENTRY_ENVIRONMENT`, and `VITE_SENTRY_RELEASE` are set in local dev.
 - [ ] Trigger `/debug/sentry` and verify events in the Sentry project.
 - [ ] Call `triggerSentryError` in Convex to verify backend ingestion.
 - [ ] Validate release tags match across backend and web.
