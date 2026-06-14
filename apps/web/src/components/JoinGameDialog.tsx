@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { addAppBreadcrumb, startAppSpan } from '@/integrations/sentry/reporting'
 import { GAME_ID_PATTERN } from '@/lib/game-id'
-import { api } from '@convex/_generated/api'
+import { checkRoomAccessWithObservability } from '@/lib/observed-room-actions'
 import { AnimatePresence, domAnimation, LazyMotion, m } from 'framer-motion'
 import {
   AlertTriangle,
@@ -21,8 +20,6 @@ import {
 } from '@repo/ui/components/dialog'
 import { Input } from '@repo/ui/components/input'
 import { Label } from '@repo/ui/components/label'
-
-import { convex } from '../integrations/convex/provider.js'
 
 type JoinPhase = 'input' | 'checking' | 'success' | 'not_found' | 'error'
 
@@ -95,13 +92,7 @@ export function JoinGameDialog({
     abortRef.current = controller
 
     try {
-      const result = await startAppSpan(
-        { name: 'Check room access', op: 'convex.query' },
-        () =>
-          convex.query(api.rooms.checkRoomAccess, {
-            roomId: normalized,
-          }),
-      )
+      const result = await checkRoomAccessWithObservability(normalized)
 
       if (controller.signal.aborted) return
 
@@ -109,17 +100,11 @@ export function JoinGameDialog({
         setValidatedGameId(normalized)
         setPhase('success')
       } else if (result.status === 'not_found') {
-        addAppBreadcrumb('room', 'Join room failed: not found')
         setPhase('not_found')
       } else if (result.status === 'full') {
-        addAppBreadcrumb('room', 'Join room failed: full', {
-          currentCount: result.currentCount,
-          maxCount: result.maxCount,
-        })
         setValidationError('That room is full — no seats left at the table.')
         setPhase('error')
       } else if (result.status === 'banned') {
-        addAppBreadcrumb('room', 'Join room failed: banned')
         setValidationError("You've been banished from that room.")
         setPhase('error')
       }
