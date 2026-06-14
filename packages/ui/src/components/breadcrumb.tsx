@@ -13,7 +13,11 @@ function BreadcrumbList({ className, ...props }: React.ComponentProps<'ol'>) {
     <ol
       data-slot="breadcrumb-list"
       className={cn(
-        'gap-1.5 text-sm sm:gap-2.5 flex flex-wrap items-center break-words text-muted-foreground',
+        `
+          flex flex-wrap items-center gap-1.5 text-sm wrap-break-word
+          text-muted-foreground
+          sm:gap-2.5
+        `,
         className,
       )}
       {...props}
@@ -25,7 +29,7 @@ function BreadcrumbItem({ className, ...props }: React.ComponentProps<'li'>) {
   return (
     <li
       data-slot="breadcrumb-item"
-      className={cn('gap-1.5 inline-flex items-center', className)}
+      className={cn('inline-flex items-center gap-1.5', className)}
       {...props}
     />
   )
@@ -43,7 +47,13 @@ function BreadcrumbLink({
   return (
     <Comp
       data-slot="breadcrumb-link"
-      className={cn('transition-colors hover:text-foreground', className)}
+      className={cn(
+        `
+        transition-colors
+        hover:text-foreground
+      `,
+        className,
+      )}
       {...props}
     />
   )
@@ -89,7 +99,7 @@ function BreadcrumbEllipsis({
       data-slot="breadcrumb-ellipsis"
       role="presentation"
       aria-hidden="true"
-      className={cn('size-9 flex items-center justify-center', className)}
+      className={cn('flex size-9 items-center justify-center', className)}
       {...props}
     >
       <MoreHorizontal className="size-4" />

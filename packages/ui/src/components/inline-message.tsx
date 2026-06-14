@@ -10,9 +10,14 @@ const inlineMessageVariants = cva(
     variants: {
       variant: {
         error: 'border-destructive/50 bg-destructive/10 text-destructive',
-        warning:
-          'border-warning/50 bg-warning/10 text-warning-foreground dark:text-warning-muted-foreground',
-        info: 'border-info/50 bg-info/10 text-info-foreground dark:text-info-muted-foreground',
+        warning: `
+            border-warning/50 bg-warning/10 text-warning-foreground
+            dark:text-warning-muted-foreground
+          `,
+        info: `
+          border-info/50 bg-info/10 text-info-foreground
+          dark:text-info-muted-foreground
+        `,
       },
     },
     defaultVariants: {
@@ -53,8 +58,8 @@ export function InlineMessage({
       className={cn(inlineMessageVariants({ variant }), className)}
       {...props}
     >
-      <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-      <div className="space-y-1 flex-1">
+      <Icon className="size-5 shrink-0" aria-hidden="true" />
+      <div className="flex-1 space-y-1">
         {title && <p className="font-medium">{title}</p>}
         <p className={cn(!title && 'font-medium')}>{message}</p>
       </div>
