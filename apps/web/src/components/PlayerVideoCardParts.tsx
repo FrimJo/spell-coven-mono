@@ -6,10 +6,12 @@ import { Camera, ChevronUp, Mic, MicOff, Video, VideoOff } from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@repo/ui/components/popover'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@repo/ui/components/dropdown-menu'
 
 // Shared full-bleed video style for local, remote, and test streams.
 export const VIDEO_STYLE: React.CSSProperties = {
@@ -217,9 +219,14 @@ export const LocalMediaControls = memo(function LocalMediaControls({
             <VideoOff className="size-5" />
           )}
         </Button>
-        <Popover open={cameraPopoverOpen} onOpenChange={setCameraPopoverOpen}>
-          <PopoverTrigger asChild>
+        <DropdownMenu
+          open={cameraPopoverOpen}
+          onOpenChange={setCameraPopoverOpen}
+          modal={false}
+        >
+          <DropdownMenuTrigger asChild>
             <Button
+              data-testid="camera-device-dropdown-button"
               size="sm"
               variant={videoEnabled ? 'outline' : 'destructive'}
               aria-label="Select camera"
@@ -231,13 +238,15 @@ export const LocalMediaControls = memo(function LocalMediaControls({
             >
               <ChevronUp className="size-3" />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            data-testid="camera-device-dropdown"
             className="border-surface-2 bg-surface-0/95 w-80 p-0 backdrop-blur-sm"
             align="center"
             sideOffset={8}
+            onCloseAutoFocus={(event) => event.preventDefault()}
           >
-            <div className="border-surface-2 border-b px-4 py-3">
+            <DropdownMenuLabel className="border-surface-2 border-b px-4 py-3">
               <h3 className="text-sm font-semibold text-white">
                 Select Camera
               </h3>
@@ -245,14 +254,14 @@ export const LocalMediaControls = memo(function LocalMediaControls({
                 {videoDevices.length} camera
                 {videoDevices.length !== 1 ? 's' : ''} available
               </p>
-            </div>
+            </DropdownMenuLabel>
             <div className="max-h-64 overflow-y-auto p-2">
               {videoDevices.map((camera) => (
-                <button
-                  type="button"
+                <DropdownMenuItem
                   key={camera.deviceId}
-                  onClick={() => void handleSelectCamera(camera.deviceId)}
-                  className={`hover:bg-surface-2/50 flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
+                  data-testid="camera-device-option"
+                  onSelect={() => handleSelectCamera(camera.deviceId)}
+                  className={`hover:bg-surface-2/50 focus:bg-surface-2/50 flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
                     selectedVideoDeviceId === camera.deviceId
                       ? 'bg-brand/20 text-white'
                       : 'text-text-secondary'
@@ -263,11 +272,11 @@ export const LocalMediaControls = memo(function LocalMediaControls({
                     {camera.label ||
                       `Camera ${videoDevices.indexOf(camera) + 1}`}
                   </span>
-                </button>
+                </DropdownMenuItem>
               ))}
             </div>
-          </PopoverContent>
-        </Popover>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Audio toggle with microphone selector - Discord style compound button */}
@@ -294,9 +303,14 @@ export const LocalMediaControls = memo(function LocalMediaControls({
             <MicOff className="size-5" />
           )}
         </Button>
-        <Popover open={micPopoverOpen} onOpenChange={setMicPopoverOpen}>
-          <PopoverTrigger asChild>
+        <DropdownMenu
+          open={micPopoverOpen}
+          onOpenChange={setMicPopoverOpen}
+          modal={false}
+        >
+          <DropdownMenuTrigger asChild>
             <Button
+              data-testid="microphone-device-dropdown-button"
               size="sm"
               variant={!isAudioMuted ? 'outline' : 'destructive'}
               aria-label="Select microphone"
@@ -308,13 +322,15 @@ export const LocalMediaControls = memo(function LocalMediaControls({
             >
               <ChevronUp className="size-3" />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            data-testid="microphone-device-dropdown"
             className="border-surface-2 bg-surface-0/95 w-80 p-0 backdrop-blur-sm"
             align="center"
             sideOffset={8}
+            onCloseAutoFocus={(event) => event.preventDefault()}
           >
-            <div className="border-surface-2 border-b px-4 py-3">
+            <DropdownMenuLabel className="border-surface-2 border-b px-4 py-3">
               <h3 className="text-sm font-semibold text-white">
                 Select Microphone
               </h3>
@@ -322,14 +338,14 @@ export const LocalMediaControls = memo(function LocalMediaControls({
                 {audioDevices.length} microphone
                 {audioDevices.length !== 1 ? 's' : ''} available
               </p>
-            </div>
+            </DropdownMenuLabel>
             <div className="max-h-64 overflow-y-auto p-2">
               {audioDevices.map((mic) => (
-                <button
-                  type="button"
+                <DropdownMenuItem
                   key={mic.deviceId}
-                  onClick={() => void handleSelectMicrophone(mic.deviceId)}
-                  className={`hover:bg-surface-2/50 flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
+                  data-testid="microphone-device-option"
+                  onSelect={() => handleSelectMicrophone(mic.deviceId)}
+                  className={`hover:bg-surface-2/50 focus:bg-surface-2/50 flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
                     selectedAudioInputDeviceId === mic.deviceId
                       ? 'bg-brand/20 text-white'
                       : 'text-text-secondary'
@@ -339,11 +355,11 @@ export const LocalMediaControls = memo(function LocalMediaControls({
                   <span className="text-sm">
                     {mic.label || `Microphone ${audioDevices.indexOf(mic) + 1}`}
                   </span>
-                </button>
+                </DropdownMenuItem>
               ))}
             </div>
-          </PopoverContent>
-        </Popover>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )
