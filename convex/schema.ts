@@ -18,6 +18,15 @@ export const playerStatusValues = v.union(
   v.literal('left'),
 )
 
+export const phoneCameraPairingStatusValues = v.union(
+  v.literal('waiting'),
+  v.literal('claimed'),
+  v.literal('connected'),
+  v.literal('disconnected'),
+  v.literal('cancelled'),
+  v.literal('expired'),
+)
+
 export default defineSchema({
   // Include Convex Auth tables (users, sessions, etc.)
   ...authTables,
@@ -131,4 +140,25 @@ export default defineSchema({
     /** Last heartbeat timestamp (for presence TTL) */
     lastSeenAt: v.number(),
   }).index('by_userId', ['userId']),
+
+  /**
+   * phoneCameraPairings - Short-lived QR pairings for using a phone browser
+   * as an app-level camera source.
+   */
+  phoneCameraPairings: defineTable({
+    tokenHash: v.string(),
+    roomId: v.string(),
+    userId: v.string(),
+    desktopSessionId: v.string(),
+    phoneSessionId: v.optional(v.string()),
+    status: phoneCameraPairingStatusValues,
+    expiresAt: v.number(),
+    createdAt: v.number(),
+    claimedAt: v.optional(v.number()),
+    connectedAt: v.optional(v.number()),
+    lastHeartbeatAt: v.optional(v.number()),
+  })
+    .index('by_tokenHash', ['tokenHash'])
+    .index('by_roomId_desktopSessionId', ['roomId', 'desktopSessionId'])
+    .index('by_userId', ['userId']),
 })

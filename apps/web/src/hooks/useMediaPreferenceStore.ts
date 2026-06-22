@@ -13,9 +13,14 @@ export interface MediaPreferencesSnapshot {
   selectedVideoDeviceId: string | null
   selectedAudioInputDeviceId: string | null
   selectedAudioOutputDeviceId: string | null
+  selectedVideoSource: VideoSourceSelection
   videoEnabled: boolean
   audioEnabled: boolean
 }
+
+export type VideoSourceSelection =
+  | { type: 'device'; deviceId: string | null }
+  | { type: 'phone'; pairingId: string }
 
 interface MediaPreferenceStoreState extends MediaPreferencesSnapshot {
   hasCommitted: boolean
@@ -26,6 +31,7 @@ function defaultState(): MediaPreferenceStoreState {
     selectedVideoDeviceId: null,
     selectedAudioInputDeviceId: null,
     selectedAudioOutputDeviceId: null,
+    selectedVideoSource: { type: 'device', deviceId: null },
     videoEnabled: true,
     audioEnabled: true,
     hasCommitted: false,
@@ -49,6 +55,10 @@ function readPersistedMediaDevices(): MediaPreferenceStoreState {
       selectedVideoDeviceId: parsed.videoinput ?? null,
       selectedAudioInputDeviceId: parsed.audioinput ?? null,
       selectedAudioOutputDeviceId: parsed.audiooutput ?? null,
+      selectedVideoSource: {
+        type: 'device',
+        deviceId: parsed.videoinput ?? null,
+      },
       videoEnabled: true,
       audioEnabled: true,
       hasCommitted: Boolean(parsed.timestamp),
@@ -82,10 +92,12 @@ export interface MediaPreferenceStore {
   selectedVideoDeviceId: string | null
   selectedAudioInputDeviceId: string | null
   selectedAudioOutputDeviceId: string | null
+  selectedVideoSource: VideoSourceSelection
   videoEnabled: boolean
   audioEnabled: boolean
   hasCommitted: boolean
   setSelectedVideoDeviceId: (deviceId: string | null) => void
+  setSelectedPhoneCamera: (pairingId: string) => void
   setSelectedAudioInputDeviceId: (deviceId: string | null) => void
   setSelectedAudioOutputDeviceId: (deviceId: string | null) => void
   setVideoEnabled: (enabled: boolean) => void
@@ -121,7 +133,20 @@ export function useMediaPreferenceStore(): MediaPreferenceStore {
     setState((current) =>
       current.selectedVideoDeviceId === deviceId
         ? current
-        : { ...current, selectedVideoDeviceId: deviceId },
+        : {
+            ...current,
+            selectedVideoDeviceId: deviceId,
+            selectedVideoSource: { type: 'device', deviceId },
+          },
+    )
+  }, [])
+
+  const setSelectedPhoneCamera = useCallback((pairingId: string) => {
+    setState((current) =>
+      current.selectedVideoSource.type === 'phone' &&
+      current.selectedVideoSource.pairingId === pairingId
+        ? current
+        : { ...current, selectedVideoSource: { type: 'phone', pairingId } },
     )
   }, [])
 
@@ -168,6 +193,7 @@ export function useMediaPreferenceStore(): MediaPreferenceStore {
       selectedVideoDeviceId: state.selectedVideoDeviceId,
       selectedAudioInputDeviceId: state.selectedAudioInputDeviceId,
       selectedAudioOutputDeviceId: state.selectedAudioOutputDeviceId,
+      selectedVideoSource: state.selectedVideoSource,
       videoEnabled: state.videoEnabled,
       audioEnabled: state.audioEnabled,
     }),
@@ -175,6 +201,7 @@ export function useMediaPreferenceStore(): MediaPreferenceStore {
       state.selectedVideoDeviceId,
       state.selectedAudioInputDeviceId,
       state.selectedAudioOutputDeviceId,
+      state.selectedVideoSource,
       state.videoEnabled,
       state.audioEnabled,
     ],
@@ -186,6 +213,7 @@ export function useMediaPreferenceStore(): MediaPreferenceStore {
       selectedVideoDeviceId: snapshot.selectedVideoDeviceId,
       selectedAudioInputDeviceId: snapshot.selectedAudioInputDeviceId,
       selectedAudioOutputDeviceId: snapshot.selectedAudioOutputDeviceId,
+      selectedVideoSource: snapshot.selectedVideoSource,
       videoEnabled: snapshot.videoEnabled,
       audioEnabled: snapshot.audioEnabled,
     }))
@@ -206,10 +234,12 @@ export function useMediaPreferenceStore(): MediaPreferenceStore {
       selectedVideoDeviceId: state.selectedVideoDeviceId,
       selectedAudioInputDeviceId: state.selectedAudioInputDeviceId,
       selectedAudioOutputDeviceId: state.selectedAudioOutputDeviceId,
+      selectedVideoSource: state.selectedVideoSource,
       videoEnabled: state.videoEnabled,
       audioEnabled: state.audioEnabled,
       hasCommitted: state.hasCommitted,
       setSelectedVideoDeviceId,
+      setSelectedPhoneCamera,
       setSelectedAudioInputDeviceId,
       setSelectedAudioOutputDeviceId,
       setVideoEnabled,
@@ -222,10 +252,12 @@ export function useMediaPreferenceStore(): MediaPreferenceStore {
       state.selectedVideoDeviceId,
       state.selectedAudioInputDeviceId,
       state.selectedAudioOutputDeviceId,
+      state.selectedVideoSource,
       state.videoEnabled,
       state.audioEnabled,
       state.hasCommitted,
       setSelectedVideoDeviceId,
+      setSelectedPhoneCamera,
       setSelectedAudioInputDeviceId,
       setSelectedAudioOutputDeviceId,
       setVideoEnabled,

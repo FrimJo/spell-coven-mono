@@ -17,6 +17,7 @@ import type * as errors from "../errors.js";
 import type * as http from "../http.js";
 import type * as mediaActions from "../mediaActions.js";
 import type * as mediaAuth from "../mediaAuth.js";
+import type * as phoneCamera from "../phoneCamera.js";
 import type * as players from "../players.js";
 import type * as previewAuth from "../previewAuth.js";
 import type * as previewLogin from "../previewLogin.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   mediaActions: typeof mediaActions;
   mediaAuth: typeof mediaAuth;
+  phoneCamera: typeof phoneCamera;
   players: typeof players;
   previewAuth: typeof previewAuth;
   previewLogin: typeof previewLogin;

@@ -200,6 +200,7 @@ function isParticipantOnline(lastSeenAt: number, now: number) {
 function buildRemoteGridSessions({
   players,
   remoteParticipants,
+  phoneCameras,
   roomConnectionState,
   mutedPlayers,
   now,
@@ -210,27 +211,30 @@ function buildRemoteGridSessions({
     participantData: Participant
   }>
   remoteParticipants: Map<string, RemoteMediaParticipant>
+  phoneCameras: Map<string, RemoteMediaParticipant>
   roomConnectionState: MediaConnectionState
   mutedPlayers: Set<string>
   now: number
 }): RemoteGridSession[] {
   return players.map((player) => {
     const remoteMedia = remoteParticipants.get(player.participantData.sessionId)
+    const phoneCamera = phoneCameras.get(player.participantData.sessionId)
+    const videoMedia = phoneCamera ?? remoteMedia
 
     return {
       id: player.id,
       name: player.name,
       participantData: player.participantData,
-      remoteVideoTrack: remoteMedia?.video.track ?? null,
+      remoteVideoTrack: videoMedia?.video.track ?? null,
       remoteAudioTrack: remoteMedia?.audio.track ?? null,
       remoteMediaStatus: {
-        videoSubscribed: remoteMedia?.video.subscribed ?? false,
+        videoSubscribed: videoMedia?.video.subscribed ?? false,
         audioSubscribed: remoteMedia?.audio.subscribed ?? false,
-        videoMuted: remoteMedia?.video.muted ?? true,
+        videoMuted: videoMedia?.video.muted ?? true,
         audioMuted: remoteMedia?.audio.muted ?? true,
       },
       peerMediaPresenceState: resolvePeerMediaPresence(
-        remoteMedia,
+        videoMedia ?? remoteMedia,
         roomConnectionState,
       ),
       isMuted: mutedPlayers.has(player.id),
@@ -275,6 +279,7 @@ export function VideoStreamGrid({
   }, [])
 
   const {
+    mediaPreferences: { selectedVideoSource },
     permissions: {
       isChecking: isCheckingPermissions,
       needsPermissionDialog,
@@ -299,11 +304,20 @@ export function VideoStreamGrid({
     [gameRoomParticipants, localPlayerName],
   )
 
+  const effectiveLocalVideoTrack =
+    selectedVideoSource.type === 'phone'
+      ? localParticipant?.sessionId
+        ? (roomMedia.phoneCameras.get(localParticipant.sessionId)?.video
+            .track ?? null)
+        : null
+      : (roomMedia.local?.video.track ?? null)
+
   const remoteSessions = useMemo(
     () =>
       buildRemoteGridSessions({
         players,
         remoteParticipants: roomMedia.remotes,
+        phoneCameras: roomMedia.phoneCameras,
         roomConnectionState: roomMedia.connectionState,
         mutedPlayers: effectiveMutedPlayers,
         now,
@@ -311,6 +325,7 @@ export function VideoStreamGrid({
     [
       players,
       roomMedia.remotes,
+      roomMedia.phoneCameras,
       roomMedia.connectionState,
       effectiveMutedPlayers,
       now,
@@ -412,7 +427,7 @@ export function VideoStreamGrid({
           </div>
         ) : (
           <LocalVideoCard
-            videoTrack={roomMedia.local?.video.track ?? null}
+            videoTrack={effectiveLocalVideoTrack}
             isReconnecting={roomMedia.isReconnecting}
             enableCardDetection={enableCardDetection}
             detectorType={detectorType}

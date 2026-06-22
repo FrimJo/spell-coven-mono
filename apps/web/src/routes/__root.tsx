@@ -36,11 +36,14 @@ const getThemeFromCookies = createServerFn({ method: 'GET' }).handler(
   },
 )
 
-const siteUrl = 'https://spell-coven.vercel.app/'
+const siteOrigin = 'https://spell-coven.vercel.app'
+const siteUrl = `${siteOrigin}/`
 const siteName = 'Spell Coven'
 const siteDescription =
   'Play paper Magic: The Gathering remotely with video chat and card recognition. Use your physical cards, see your opponents, and enjoy the authentic experience. Free, browser-based, no downloads required.'
-const ogImageUrl = `${siteUrl}/og-image.png`
+const seoAssetVersion = '2026-06-22'
+const versionedAsset = (path: string) => `${path}?v=${seoAssetVersion}`
+const ogImageUrl = `${siteOrigin}${versionedAsset('/og-image.png')}`
 // Runs synchronously before React hydrates to apply the correct theme class
 // and MTG attribute so there is no flash.  Reads from cookies; falls back to
 // localStorage for one-time migration of pre-cookie preferences.
@@ -177,17 +180,23 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       },
       {
         rel: 'icon',
+        type: 'image/png',
+        sizes: '96x96',
+        href: versionedAsset('/favicon-96x96.png'),
+      },
+      {
+        rel: 'shortcut icon',
         type: 'image/x-icon',
-        href: '/favicon.ico',
+        href: versionedAsset('/favicon.ico'),
       },
       {
         rel: 'apple-touch-icon',
-        sizes: '192x192',
-        href: '/logo192.png',
+        sizes: '180x180',
+        href: versionedAsset('/apple-touch-icon.png'),
       },
       {
         rel: 'manifest',
-        href: '/manifest.json',
+        href: versionedAsset('/site.webmanifest'),
       },
       {
         rel: 'canonical',

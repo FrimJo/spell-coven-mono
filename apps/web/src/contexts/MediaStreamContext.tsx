@@ -41,15 +41,17 @@ interface MediaStreamContextValue {
     | 'selectedVideoDeviceId'
     | 'selectedAudioInputDeviceId'
     | 'selectedAudioOutputDeviceId'
+    | 'selectedVideoSource'
     | 'videoEnabled'
     | 'audioEnabled'
     | 'hasCommitted'
     | 'setVideoEnabled'
+    | 'setSelectedPhoneCamera'
     | 'setAudioEnabled'
     | 'captureSnapshot'
     | 'commitPreferences'
   > & {
-    setSelectedVideoDeviceId: (deviceId: string) => void
+    setSelectedVideoDeviceId: (deviceId: string | null) => void
     setSelectedAudioInputDeviceId: (deviceId: string) => void
     setSelectedAudioOutputDeviceId: (deviceId: string) => Promise<void>
     restoreSnapshot: (snapshot: MediaPreferencesSnapshot) => void

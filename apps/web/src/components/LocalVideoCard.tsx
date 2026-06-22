@@ -125,6 +125,7 @@ export const LocalVideoCard = memo(function LocalVideoCard({
       )}
 
       <LocalMediaControls
+        roomId={roomId ?? ''}
         videoEnabled={videoEnabled}
         isAudioMuted={isAudioMuted}
         onToggleVideo={setVideoEnabled}

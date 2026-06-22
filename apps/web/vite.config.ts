@@ -13,7 +13,7 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 export default defineConfig(({ mode: mode }) => {
   const release =
     process.env.VITE_SENTRY_RELEASE ??
-    process.env.VITE_VERCEL_GIT_COMMIT_SHA ??
+    process.env.VERCEL_GIT_COMMIT_SHA ??
     process.env.VITE_GITHUB_SHA ??
     process.env.VITE_BUILD_NUMBER
 
@@ -34,6 +34,7 @@ export default defineConfig(({ mode: mode }) => {
         telemetry: false,
         sourcemaps: {
           assets: './dist/**',
+          filesToDeleteAfterUpload: './dist/**/*.map',
         },
       })
     : false
@@ -73,6 +74,11 @@ export default defineConfig(({ mode: mode }) => {
     },
     build: {
       sourcemap: true,
+    },
+    define: {
+      __VERCEL_ENV__: JSON.stringify(
+        process.env.VERCEL_ENV ?? process.env.VITE_VERCEL_ENV ?? null,
+      ),
     },
     // (optional) if you import files from ../../packages during dev:
     preview: {

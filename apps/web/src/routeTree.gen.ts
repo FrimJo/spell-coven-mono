@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PhoneCameraRouteImport } from './routes/phone-camera'
 import { Route as LicenseRouteImport } from './routes/license'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
@@ -16,6 +17,11 @@ import { Route as DebugSentryRouteImport } from './routes/debug.sentry'
 import { Route as AuthedSetupRouteImport } from './routes/_authed/setup'
 import { Route as AuthedGameGameIdRouteImport } from './routes/_authed/game.$gameId'
 
+const PhoneCameraRoute = PhoneCameraRouteImport.update({
+  id: '/phone-camera',
+  path: '/phone-camera',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LicenseRoute = LicenseRouteImport.update({
   id: '/license',
   path: '/license',
@@ -49,6 +55,7 @@ const AuthedGameGameIdRoute = AuthedGameGameIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/license': typeof LicenseRoute
+  '/phone-camera': typeof PhoneCameraRoute
   '/setup': typeof AuthedSetupRoute
   '/debug/sentry': typeof DebugSentryRoute
   '/game/$gameId': typeof AuthedGameGameIdRoute
@@ -56,6 +63,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/license': typeof LicenseRoute
+  '/phone-camera': typeof PhoneCameraRoute
   '/setup': typeof AuthedSetupRoute
   '/debug/sentry': typeof DebugSentryRoute
   '/game/$gameId': typeof AuthedGameGameIdRoute
@@ -65,20 +73,34 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/license': typeof LicenseRoute
+  '/phone-camera': typeof PhoneCameraRoute
   '/_authed/setup': typeof AuthedSetupRoute
   '/debug/sentry': typeof DebugSentryRoute
   '/_authed/game/$gameId': typeof AuthedGameGameIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/license' | '/setup' | '/debug/sentry' | '/game/$gameId'
+  fullPaths:
+    | '/'
+    | '/license'
+    | '/phone-camera'
+    | '/setup'
+    | '/debug/sentry'
+    | '/game/$gameId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/license' | '/setup' | '/debug/sentry' | '/game/$gameId'
+  to:
+    | '/'
+    | '/license'
+    | '/phone-camera'
+    | '/setup'
+    | '/debug/sentry'
+    | '/game/$gameId'
   id:
     | '__root__'
     | '/'
     | '/_authed'
     | '/license'
+    | '/phone-camera'
     | '/_authed/setup'
     | '/debug/sentry'
     | '/_authed/game/$gameId'
@@ -88,11 +110,19 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
   LicenseRoute: typeof LicenseRoute
+  PhoneCameraRoute: typeof PhoneCameraRoute
   DebugSentryRoute: typeof DebugSentryRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/phone-camera': {
+      id: '/phone-camera'
+      path: '/phone-camera'
+      fullPath: '/phone-camera'
+      preLoaderRoute: typeof PhoneCameraRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/license': {
       id: '/license'
       path: '/license'
@@ -155,6 +185,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
   LicenseRoute: LicenseRoute,
+  PhoneCameraRoute: PhoneCameraRoute,
   DebugSentryRoute: DebugSentryRoute,
 }
 export const routeTree = rootRouteImport
