@@ -16,6 +16,7 @@ function createEmptyRoomMediaSessionState(): RoomMediaSessionState {
     isReconnecting: false,
     local: null,
     remotes: new Map(),
+    phoneCameras: new Map(),
     lastError: null,
     lastDisconnectReason: null,
   }
@@ -45,6 +46,7 @@ export function useRoomMediaSession({
     mediaPreferences: {
       selectedVideoDeviceId,
       selectedAudioInputDeviceId,
+      selectedVideoSource,
       videoEnabled,
       audioEnabled,
     },
@@ -99,9 +101,18 @@ export function useRoomMediaSession({
     if (!canSync || !adapterRef.current) return
 
     void adapterRef.current
-      .setCameraEnabled(videoEnabled, selectedVideoDeviceId)
+      .setCameraEnabled(
+        videoEnabled && selectedVideoSource.type === 'device',
+        selectedVideoDeviceId,
+      )
       .catch(reportError)
-  }, [canSync, videoEnabled, selectedVideoDeviceId, reportError])
+  }, [
+    canSync,
+    videoEnabled,
+    selectedVideoDeviceId,
+    selectedVideoSource.type,
+    reportError,
+  ])
 
   useEffect(() => {
     if (!canSync || !adapterRef.current) return

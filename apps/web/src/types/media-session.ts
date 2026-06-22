@@ -72,6 +72,9 @@ export interface RemoteMediaParticipant {
   sessionId: string
   userId: string | null
   username: string | null
+  role: string | null
+  ownerSessionId: string | null
+  pairingId: string | null
   video: MediaTrackState
   audio: MediaTrackState
 }
@@ -103,6 +106,7 @@ export interface RoomMediaSessionState {
   isReconnecting: boolean
   local: LocalMediaState | null
   remotes: Map<string, RemoteMediaParticipant>
+  phoneCameras: Map<string, RemoteMediaParticipant>
   lastError: Error | null
   lastDisconnectReason: string | null
 }

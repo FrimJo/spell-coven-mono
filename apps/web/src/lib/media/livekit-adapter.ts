@@ -117,6 +117,9 @@ function mapRemoteParticipant(
     sessionId: participant.identity,
     userId: participant.attributes.userId || null,
     username: participant.name ?? participant.attributes.username ?? null,
+    role: participant.attributes.role || null,
+    ownerSessionId: participant.attributes.ownerSessionId || null,
+    pairingId: participant.attributes.pairingId || null,
     video: getTrackState(participant, LiveKitTrack.Source.Camera),
     audio: getTrackState(participant, LiveKitTrack.Source.Microphone),
   }
@@ -218,8 +221,14 @@ export function createLiveKitMediaAdapter({
 
   const emitState = () => {
     const remotes = new Map<string, RemoteMediaParticipant>()
+    const phoneCameras = new Map<string, RemoteMediaParticipant>()
     for (const participant of room.remoteParticipants.values()) {
-      remotes.set(participant.identity, mapRemoteParticipant(participant))
+      const mapped = mapRemoteParticipant(participant)
+      if (mapped.role === 'phone-camera' && mapped.ownerSessionId) {
+        phoneCameras.set(mapped.ownerSessionId, mapped)
+      } else {
+        remotes.set(participant.identity, mapped)
+      }
     }
 
     onStateChange({
@@ -229,6 +238,7 @@ export function createLiveKitMediaAdapter({
         room.state === ConnectionState.SignalReconnecting,
       local: mapLocalParticipant(room.localParticipant, sessionId),
       remotes,
+      phoneCameras,
       lastError,
       lastDisconnectReason,
     })
