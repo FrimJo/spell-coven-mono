@@ -149,3 +149,13 @@ export const isCameraFocusControlsEnabled =
  * Whether to publish media diagnostics to `window` for the e2e harness.
  */
 export const isMediaDiagnosticsEnabled = env.VITE_MEDIA_DIAGNOSTICS
+
+const phoneCameraPairingVercelEnvironments = new Set([
+  'preview',
+  'develop',
+  'development',
+])
+
+export const isPhoneCameraPairingEnabled =
+  !import.meta.env.PROD ||
+  phoneCameraPairingVercelEnvironments.has(__VERCEL_ENV__ ?? '')

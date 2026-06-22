@@ -41,8 +41,15 @@ export function QrCode({ value, size = 240, className }: QrCodeProps) {
 
   return (
     <div
-      className={className}
-      style={{ width: size, height: size }}
+      className={['[&_svg]:block [&_svg]:size-full', className]
+        .filter(Boolean)
+        .join(' ')}
+      style={{
+        width: size,
+        height: size,
+        maxWidth: '100%',
+        maxHeight: '100%',
+      }}
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   )

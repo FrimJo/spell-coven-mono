@@ -1,11 +1,15 @@
 import type { PropsWithChildren } from 'react'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
+import { isPhoneCameraPairingEnabled } from '@/env'
 import { useDeviceList } from '@/hooks/useDeviceList'
 import { usePhoneCameraPairing } from '@/hooks/usePhoneCameraPairing'
 import {
   Camera,
+  Check,
   ChevronUp,
+  Copy,
+  ExternalLink,
   Loader2,
   Mic,
   MicOff,
@@ -198,6 +202,8 @@ export const LocalMediaControls = memo(function LocalMediaControls({
     selectPhoneCamera,
   } = usePhoneCameraPairing({ roomId })
   const [phoneDialogOpen, setPhoneDialogOpen] = useState(false)
+  const [hasCopiedPhonePairingLink, setHasCopiedPhonePairingLink] =
+    useState(false)
 
   // Handle camera selection
   const handleSelectCamera = useCallback(
@@ -214,6 +220,7 @@ export const LocalMediaControls = memo(function LocalMediaControls({
 
   const handleStartPhoneCamera = useCallback(() => {
     setPhoneDialogOpen(true)
+    setHasCopiedPhonePairingLink(false)
     void startPairing().catch((error) => {
       console.error(
         '[LocalMediaControls] Failed to start phone pairing:',
@@ -221,6 +228,27 @@ export const LocalMediaControls = memo(function LocalMediaControls({
       )
     })
   }, [startPairing])
+
+  const handlePhoneDialogOpenChange = useCallback((open: boolean) => {
+    setPhoneDialogOpen(open)
+    if (!open) {
+      setHasCopiedPhonePairingLink(false)
+    }
+  }, [])
+
+  const handleCopyPhonePairingLink = useCallback(() => {
+    if (!pairingUrl) return
+
+    void navigator.clipboard
+      .writeText(pairingUrl)
+      .then(() => setHasCopiedPhonePairingLink(true))
+      .catch((error) => {
+        console.error(
+          '[LocalMediaControls] Failed to copy phone pairing link:',
+          error,
+        )
+      })
+  }, [pairingUrl])
 
   const handleSelectPhoneCamera = useCallback(() => {
     selectPhoneCamera()
@@ -350,39 +378,41 @@ export const LocalMediaControls = memo(function LocalMediaControls({
                     </span>
                   </DropdownMenuItem>
                 ))}
-                <DropdownMenuItem
-                  data-testid="phone-camera-option"
-                  onSelect={
-                    phoneCamera?.video.track
-                      ? handleSelectPhoneCamera
-                      : handleStartPhoneCamera
-                  }
-                  className={`hover:bg-surface-2/50 focus:bg-surface-2/50 flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
-                    selectedVideoSource.type === 'phone'
-                      ? 'bg-brand/20 text-white'
-                      : 'text-text-secondary'
-                  } `}
-                >
-                  <Smartphone className="size-4" />
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="text-sm">
-                      {phoneCamera?.video.track
-                        ? 'Phone camera'
-                        : 'Connect phone camera'}
-                    </span>
-                    {activePairing && (
-                      <span className="text-text-muted text-xs">
-                        {phoneCameraStatus === 'live'
-                          ? 'Connected'
-                          : phoneCameraStatus === 'waiting' ||
-                              phoneCameraStatus === 'claimed'
-                            ? 'Waiting for phone'
-                            : 'Disconnected'}
+                {isPhoneCameraPairingEnabled && (
+                  <DropdownMenuItem
+                    data-testid="phone-camera-option"
+                    onSelect={
+                      phoneCamera?.video.track
+                        ? handleSelectPhoneCamera
+                        : handleStartPhoneCamera
+                    }
+                    className={`hover:bg-surface-2/50 focus:bg-surface-2/50 flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
+                      selectedVideoSource.type === 'phone'
+                        ? 'bg-brand/20 text-white'
+                        : 'text-text-secondary'
+                    } `}
+                  >
+                    <Smartphone className="size-4" />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="text-sm">
+                        {phoneCamera?.video.track
+                          ? 'Phone camera'
+                          : 'Connect phone camera'}
                       </span>
-                    )}
-                  </span>
-                </DropdownMenuItem>
-                {activePairing && (
+                      {activePairing && (
+                        <span className="text-text-muted text-xs">
+                          {phoneCameraStatus === 'live'
+                            ? 'Connected'
+                            : phoneCameraStatus === 'waiting' ||
+                                phoneCameraStatus === 'claimed'
+                              ? 'Waiting for phone'
+                              : 'Disconnected'}
+                        </span>
+                      )}
+                    </span>
+                  </DropdownMenuItem>
+                )}
+                {isPhoneCameraPairingEnabled && activePairing && (
                   <DropdownMenuItem
                     data-testid="phone-camera-disconnect"
                     onSelect={handleDisconnectPhoneCamera}
@@ -482,36 +512,57 @@ export const LocalMediaControls = memo(function LocalMediaControls({
         </div>
       </div>
 
-      <Dialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen}>
-        <DialogContent className="border-surface-2 bg-surface-1 sm:max-w-md">
-          <DialogHeader>
+      <Dialog open={phoneDialogOpen} onOpenChange={handlePhoneDialogOpenChange}>
+        <DialogContent className="border-surface-2 bg-surface-1 w-[calc(100vw-2rem)] overflow-hidden p-0 sm:max-w-[420px]">
+          <DialogHeader className="border-surface-2 border-b px-5 py-4 pr-12">
             <DialogTitle className="text-white">
               Connect phone camera
             </DialogTitle>
-            <DialogDescription className="text-text-muted">
+            <DialogDescription className="text-text-muted leading-5">
               Scan this code with your phone. Keep the phone page open and
               unlocked while streaming.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-4 px-5 pb-5 pt-4">
             {pairingUrl ? (
               <>
-                <div className="rounded-lg bg-white p-3">
-                  <QrCode value={pairingUrl} />
+                <div className="aspect-square w-full max-w-72 rounded-lg bg-white p-3 shadow-sm">
+                  <QrCode value={pairingUrl} size={264} />
                 </div>
-                <a
-                  href={pairingUrl}
-                  className="text-brand max-w-full truncate text-xs underline"
-                >
-                  {pairingUrl}
-                </a>
+                <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyPhonePairingLink}
+                    className="border-surface-3 bg-surface-0/70 hover:bg-surface-2 text-white"
+                  >
+                    {hasCopiedPhonePairingLink ? (
+                      <Check className="size-4" />
+                    ) : (
+                      <Copy className="size-4" />
+                    )}
+                    {hasCopiedPhonePairingLink ? 'Copied' : 'Copy link'}
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="border-surface-3 bg-surface-0/70 hover:bg-surface-2 text-white"
+                  >
+                    <a href={pairingUrl} target="_blank" rel="noreferrer">
+                      <ExternalLink className="size-4" />
+                      Open link
+                    </a>
+                  </Button>
+                </div>
               </>
             ) : (
-              <div className="border-surface-2 bg-surface-2 flex size-64 items-center justify-center rounded-lg border">
+              <div className="border-surface-2 bg-surface-2 flex aspect-square w-full max-w-72 items-center justify-center rounded-lg border">
                 <Loader2 className="text-brand size-8 animate-spin" />
               </div>
             )}
-            <div className="text-text-muted text-center text-sm">
+            <div className="text-text-muted text-center text-sm leading-5">
               {isCreatingPhonePairing
                 ? 'Creating pairing...'
                 : phoneCameraStatus === 'live'
