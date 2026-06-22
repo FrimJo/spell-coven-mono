@@ -34,6 +34,7 @@ export default defineConfig(({ mode: mode }) => {
         telemetry: false,
         sourcemaps: {
           assets: './dist/**',
+          filesToDeleteAfterUpload: './dist/**/*.map',
         },
       })
     : false
