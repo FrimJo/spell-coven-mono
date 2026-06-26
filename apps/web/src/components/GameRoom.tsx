@@ -273,7 +273,7 @@ function GameRoomContent({
   }, [roomId, resetRoomGameState, clearHistory])
 
   return (
-    <div className="bg-surface-0 flex h-screen flex-col">
+    <div className="bg-surface-0 flex h-full flex-col">
       {/* Duplicate Session Dialog - shown when user is already connected from another tab */}
       <DuplicateSessionDialog
         open={showDuplicateDialog}

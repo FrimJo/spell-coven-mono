@@ -152,7 +152,7 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
     return { roomNotFound: false }
   },
   pendingComponent: () => (
-    <div className="bg-surface-0 flex h-screen items-center justify-center">
+    <div className="bg-surface-0 flex h-full items-center justify-center">
       <div className="flex flex-col items-center space-y-4">
         <div className="relative">
           <div className="bg-brand/20 flex size-16 items-center justify-center rounded-full">
@@ -211,7 +211,7 @@ function GameRoomPage() {
   // Show loading state while authenticated room access is being checked
   if (roomAccess === undefined) {
     return (
-      <div className="bg-surface-0 flex h-screen items-center justify-center">
+      <div className="bg-surface-0 flex h-full items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
             <div className="bg-brand/20 flex size-16 items-center justify-center rounded-full">
@@ -236,7 +236,7 @@ function GameRoomPage() {
   // Show room full dialog if room is at capacity
   if (roomAccess.status === 'full') {
     return (
-      <div className="bg-surface-0 h-screen">
+      <div className="bg-surface-0 h-full">
         <RoomFullDialog
           open={true}
           onClose={handleClose}
@@ -258,7 +258,7 @@ function GameRoomPage() {
 
       <Suspense
         fallback={
-          <div className="flex h-screen items-center justify-center">
+          <div className="flex h-full items-center justify-center">
             Loading game room...
           </div>
         }

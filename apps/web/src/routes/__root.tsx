@@ -15,6 +15,7 @@ import type {
   ResolvedTheme,
   Theme,
 } from '../contexts/ThemeContext.js'
+import { BetaBanner } from '../components/BetaBanner.js'
 import { ErrorPage } from '../components/ErrorPage.js'
 import { NotFoundPage } from '../components/NotFoundPage.js'
 import { AuthProvider } from '../contexts/AuthContext.js'
@@ -274,7 +275,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         >
           <ConvexProvider>
             <AuthProvider>
-              {children}
+              <div className="flex h-dvh flex-col overflow-hidden">
+                <BetaBanner />
+                <main className="flex min-h-0 flex-1 flex-col overflow-auto">
+                  {children}
+                </main>
+              </div>
               <Suspense fallback={null}>
                 {showDevtools && (
                   <TanStackDevtoolsProduction

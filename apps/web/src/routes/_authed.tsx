@@ -34,7 +34,7 @@ function AuthedLayout() {
 
   if (isAuthLoading) {
     return (
-      <div className="bg-surface-0 flex h-screen items-center justify-center">
+      <div className="bg-surface-0 flex h-full items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
             <div className="bg-brand/20 flex size-16 items-center justify-center rounded-full">
@@ -60,7 +60,7 @@ function AuthedLayout() {
       : 'You need to sign in with Discord to continue.'
 
     return (
-      <div className="bg-surface-0 h-screen">
+      <div className="bg-surface-0 h-full">
         <AuthRequiredDialog
           open={true}
           onSignIn={handleSignIn}
