@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Scan,
   Settings,
+  Smartphone,
   Sparkles,
   Swords,
   Users,
@@ -323,9 +324,9 @@ export function LandingPage({
               </h1>
 
               <p className="text-text-secondary mb-8 max-w-xl text-lg leading-relaxed md:text-xl">
-                Spell Coven lets you play paper MTG remotely through video chat
-                and card recognition. Use your physical cards, see your
-                opponents, and enjoy the authentic experience.
+                Spell Coven lets you play paper MTG remotely over crisp video
+                chat. Use your physical cards, see your opponents, and enjoy the
+                authentic experience &mdash; right in your browser.
               </p>
 
               <div className="flex flex-col items-center gap-4 sm:flex-row md:justify-start">
@@ -636,8 +637,9 @@ export function LandingPage({
                   Battlefield Video
                 </h3>
                 <p className="text-text-muted">
-                  Clear video feeds of everyone&apos;s battlefield. See your
-                  opponents&apos; playmats, cards, and game state in real-time.
+                  Crystal-clear feeds of every player&apos;s battlefield. Read
+                  cards, follow the board, and never miss a play &mdash; all in
+                  real time.
                 </p>
               </SpotlightCard>
 
@@ -646,14 +648,14 @@ export function LandingPage({
                 spotlightColor="rgba(59, 130, 246, 0.15)"
               >
                 <div className="bg-info/20 mb-4 flex size-12 shrink-0 items-center justify-center rounded-lg">
-                  <Camera className="text-info size-6" />
+                  <Smartphone className="text-info size-6" />
                 </div>
                 <h3 className="text-text-primary mb-2 text-xl">
-                  Card Recognition
+                  Phone as Camera
                 </h3>
                 <p className="text-text-muted">
-                  Point your camera at cards and the system recognizes them for
-                  your opponents to see.
+                  Prop up your phone for a top-down board view, then pair it to
+                  your game room with a quick link. No extra webcam required.
                 </p>
               </SpotlightCard>
 
@@ -665,11 +667,11 @@ export function LandingPage({
                   <Users className="text-success size-6" />
                 </div>
                 <h3 className="text-text-primary mb-3 text-xl">
-                  Game Management
+                  Built-in Game Tools
                 </h3>
                 <p className="text-text-muted">
-                  Life counters, commander damage, and game state tools to keep
-                  everything organized.
+                  Track life totals, commander damage, and turn order right
+                  beside the action &mdash; no extra apps or scratch paper.
                 </p>
               </SpotlightCard>
             </div>
@@ -721,8 +723,8 @@ export function LandingPage({
                   Set Up Cameras
                 </h3>
                 <p className="text-text-muted max-w-xs leading-relaxed">
-                  Position your main camera for your playmat and cards.
-                  Optionally add a second camera for video chat.
+                  Position your webcam for your playmat and cards. For a better
+                  overhead angle, pair your phone as a board camera.
                 </p>
               </div>
 
@@ -822,7 +824,8 @@ export function LandingPage({
                 </div>
                 <p className="text-text-muted max-w-xs text-sm">
                   The best way to play paper Magic: The Gathering remotely with
-                  friends. High-quality video, card recognition, and zero setup.
+                  friends. High-quality video, phone camera pairing, and zero
+                  setup.
                 </p>
               </div>
 
