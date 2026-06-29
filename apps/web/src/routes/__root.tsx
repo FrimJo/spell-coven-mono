@@ -37,12 +37,12 @@ const getThemeFromCookies = createServerFn({ method: 'GET' }).handler(
   },
 )
 
-const siteOrigin = 'https://spell-coven.vercel.app'
+const siteOrigin = 'https://www.spell-coven.com'
 const siteUrl = `${siteOrigin}/`
 const siteName = 'Spell Coven'
 const siteDescription =
   'Play paper Magic: The Gathering remotely with video chat and card recognition. Use your physical cards, see your opponents, and enjoy the authentic experience. Free, browser-based, no downloads required.'
-const seoAssetVersion = '2026-06-22'
+const seoAssetVersion = '2026-06-29'
 const versionedAsset = (path: string) => `${path}?v=${seoAssetVersion}`
 const ogImageUrl = `${siteOrigin}${versionedAsset('/og-image.png')}`
 // Runs synchronously before React hydrates to apply the correct theme class
@@ -128,12 +128,24 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content: ogImageUrl,
       },
       {
+        property: 'og:image:secure_url',
+        content: ogImageUrl,
+      },
+      {
+        property: 'og:image:type',
+        content: 'image/png',
+      },
+      {
         property: 'og:image:width',
         content: '1200',
       },
       {
         property: 'og:image:height',
         content: '630',
+      },
+      {
+        property: 'og:image:alt',
+        content: 'Spell Coven — Play Paper MTG Anywhere',
       },
       {
         property: 'og:site_name',
@@ -159,6 +171,10 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       {
         name: 'twitter:image',
         content: ogImageUrl,
+      },
+      {
+        name: 'twitter:image:alt',
+        content: 'Spell Coven — Play Paper MTG Anywhere',
       },
       // Additional meta tags for better SEO and social sharing
       {
