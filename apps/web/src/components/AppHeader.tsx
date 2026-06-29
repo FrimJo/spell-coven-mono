@@ -261,7 +261,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
   }
 
   return (
-    <header className="border-border-muted bg-surface-0/80 border-b backdrop-blur-md">
+    <header className="border-border-muted bg-surface-0/80 sticky top-0 z-50 border-b backdrop-blur-md">
       {/* Subtle gradient border effect */}
       <div className="bg-linear-to-r via-brand/30 absolute inset-x-0 bottom-0 h-px from-transparent to-transparent" />
 
