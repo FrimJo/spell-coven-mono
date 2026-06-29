@@ -24,6 +24,20 @@ test.describe('Landing Page Visual Tests', () => {
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(500)
 
+      // The app shell scrolls inside <main>. Expose that content to the
+      // document so Playwright's fullPage capture includes the entire page.
+      await page.evaluate(() => {
+        const main = document.querySelector('main')
+        const appShell = main?.parentElement
+
+        if (!(main instanceof HTMLElement) || !appShell) return
+
+        appShell.style.height = 'auto'
+        appShell.style.overflow = 'visible'
+        main.style.flex = 'none'
+        main.style.overflow = 'visible'
+      })
+
       await expect(page).toHaveScreenshot('landing-page-full.png', {
         fullPage: true,
         animations: 'disabled',

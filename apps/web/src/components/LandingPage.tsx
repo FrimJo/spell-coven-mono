@@ -404,6 +404,18 @@ export function LandingPage({
                 )}
               </div>
 
+              <p className="text-text-muted mt-4 text-sm">
+                Looking for players or want to help shape Spell Coven?{' '}
+                <a
+                  href="/discord"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-muted-foreground hover:text-brand font-medium transition-colors"
+                >
+                  Join the community &rarr;
+                </a>
+              </p>
+
               <ErrorBoundary FallbackComponent={LandingLiveStatsErrorFallback}>
                 <LandingLiveStats />
               </ErrorBoundary>
@@ -809,9 +821,9 @@ export function LandingPage({
         <footer className="border-border-muted bg-surface-0 border-t">
           <div className="container mx-auto px-4 py-12">
             <div
-              className={`grid gap-8 ${supportUrl ? 'md:grid-cols-6' : 'md:grid-cols-5'} `}
+              className={`grid gap-8 sm:grid-cols-2 ${supportUrl ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} `}
             >
-              <div className="col-span-2 space-y-4">
+              <div className="space-y-4 sm:col-span-2">
                 <div className="flex items-center gap-2">
                   <img
                     src={logo}
@@ -889,6 +901,24 @@ export function LandingPage({
                     </a>
                   </li>
                 </ul>
+              </div>
+
+              <div>
+                <h4 className="text-text-primary mb-4 text-sm font-semibold">
+                  Community
+                </h4>
+                <p className="text-text-muted mb-4 text-sm">
+                  Find players, share feedback, and help shape Spell Coven.
+                </p>
+                <a
+                  href="/discord"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2 hover:text-text-primary inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors"
+                >
+                  <Users className="size-4" />
+                  Join our Discord
+                </a>
               </div>
 
               <div>

@@ -65,6 +65,15 @@ test.describe('Landing Page', () => {
       await expect(page.getByText('Online Users')).toBeVisible()
       await expect(page.getByText('Active Game Rooms')).toBeVisible()
     })
+
+    test('should redirect the stable Discord route to the permanent invite', async ({
+      request,
+    }) => {
+      const response = await request.get('/discord', { maxRedirects: 0 })
+
+      expect(response.status()).toBe(307)
+      expect(response.headers().location).toBe('https://discord.gg/fndz4wXQGJ')
+    })
   })
 
   test.describe('Page Navigation', () => {
@@ -303,6 +312,35 @@ test.describe('Landing Page', () => {
         'https://github.com/FrimJo/spell-coven-mono',
       )
       await expect(githubLink).toHaveAttribute('target', '_blank')
+    })
+
+    test('should link to the community from the hero and footer', async ({
+      browser,
+    }) => {
+      const context = await browser.newContext({
+        storageState: { cookies: [], origins: [] },
+      })
+      const page = await context.newPage()
+      await page.goto('/')
+
+      const heroLink = page.getByRole('link', {
+        name: /Join the community/i,
+      })
+      const footerLink = page
+        .locator('footer')
+        .getByRole('link', { name: /Join our Discord/i })
+
+      for (const link of [heroLink, footerLink]) {
+        await expect(link).toHaveAttribute('href', '/discord')
+        await expect(link).toHaveAttribute('target', '_blank')
+        await expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+      }
+
+      await expect(
+        page.getByRole('button', { name: /Sign in with Discord/i }).first(),
+      ).toBeVisible()
+
+      await context.close()
     })
 
     test('should display copyright text', async ({ page }) => {
