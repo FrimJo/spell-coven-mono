@@ -244,7 +244,7 @@ export function LandingPage({
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen shrink-0 overflow-hidden">
       {error && (
         <div className="bg-destructive/90 fixed right-4 top-4 z-50 max-w-md rounded-lg p-4 text-white shadow-lg">
           <p className="font-semibold">Error</p>
