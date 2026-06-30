@@ -66,14 +66,29 @@ test.describe('Landing Page', () => {
       await expect(page.getByText('Active Game Rooms')).toBeVisible()
     })
 
-    test('should redirect the stable Discord route to the permanent invite', async ({
-      request,
-    }) => {
-      const response = await request.get('/discord', { maxRedirects: 0 })
+    const externalRedirects = [
+      {
+        name: 'Discord',
+        route: '/discord',
+        destination: 'https://discord.gg/fndz4wXQGJ',
+      },
+      {
+        name: 'GitHub',
+        route: '/github',
+        destination: 'https://github.com/FrimJo/spell-coven-mono',
+      },
+    ]
 
-      expect(response.status()).toBe(307)
-      expect(response.headers().location).toBe('https://discord.gg/fndz4wXQGJ')
-    })
+    for (const { name, route, destination } of externalRedirects) {
+      test(`should redirect the stable ${name} route to its destination`, async ({
+        request,
+      }) => {
+        const response = await request.get(route, { maxRedirects: 0 })
+
+        expect(response.status()).toBe(307)
+        expect(response.headers().location).toBe(destination)
+      })
+    }
   })
 
   test.describe('Page Navigation', () => {

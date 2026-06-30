@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PhoneCameraRouteImport } from './routes/phone-camera'
 import { Route as LicenseRouteImport } from './routes/license'
+import { Route as GithubRouteImport } from './routes/github'
 import { Route as DiscordRouteImport } from './routes/discord'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
@@ -26,6 +27,11 @@ const PhoneCameraRoute = PhoneCameraRouteImport.update({
 const LicenseRoute = LicenseRouteImport.update({
   id: '/license',
   path: '/license',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GithubRoute = GithubRouteImport.update({
+  id: '/github',
+  path: '/github',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiscordRoute = DiscordRouteImport.update({
@@ -61,6 +67,7 @@ const AuthedGameGameIdRoute = AuthedGameGameIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/discord': typeof DiscordRoute
+  '/github': typeof GithubRoute
   '/license': typeof LicenseRoute
   '/phone-camera': typeof PhoneCameraRoute
   '/setup': typeof AuthedSetupRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/discord': typeof DiscordRoute
+  '/github': typeof GithubRoute
   '/license': typeof LicenseRoute
   '/phone-camera': typeof PhoneCameraRoute
   '/setup': typeof AuthedSetupRoute
@@ -81,6 +89,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/discord': typeof DiscordRoute
+  '/github': typeof GithubRoute
   '/license': typeof LicenseRoute
   '/phone-camera': typeof PhoneCameraRoute
   '/_authed/setup': typeof AuthedSetupRoute
@@ -92,6 +101,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/discord'
+    | '/github'
     | '/license'
     | '/phone-camera'
     | '/setup'
@@ -101,6 +111,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/discord'
+    | '/github'
     | '/license'
     | '/phone-camera'
     | '/setup'
@@ -111,6 +122,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authed'
     | '/discord'
+    | '/github'
     | '/license'
     | '/phone-camera'
     | '/_authed/setup'
@@ -122,6 +134,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
   DiscordRoute: typeof DiscordRoute
+  GithubRoute: typeof GithubRoute
   LicenseRoute: typeof LicenseRoute
   PhoneCameraRoute: typeof PhoneCameraRoute
   DebugSentryRoute: typeof DebugSentryRoute
@@ -141,6 +154,13 @@ declare module '@tanstack/react-router' {
       path: '/license'
       fullPath: '/license'
       preLoaderRoute: typeof LicenseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/github': {
+      id: '/github'
+      path: '/github'
+      fullPath: '/github'
+      preLoaderRoute: typeof GithubRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/discord': {
@@ -205,6 +225,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
   DiscordRoute: DiscordRoute,
+  GithubRoute: GithubRoute,
   LicenseRoute: LicenseRoute,
   PhoneCameraRoute: PhoneCameraRoute,
   DebugSentryRoute: DebugSentryRoute,
