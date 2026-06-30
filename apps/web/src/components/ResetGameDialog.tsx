@@ -47,6 +47,7 @@ export function ResetGameDialog({
 
         <div className="flex gap-3 pt-4">
           <button
+            type="button"
             onClick={onCancel}
             disabled={isResetting}
             className="border-surface-3 bg-surface-2/50 text-text-secondary hover:border-surface-3 hover:bg-surface-2 focus:ring-surface-3/50 flex-1 cursor-pointer rounded-lg border px-4 py-2.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 disabled:opacity-50"
@@ -59,6 +60,7 @@ export function ResetGameDialog({
           </button>
 
           <button
+            type="button"
             onClick={onConfirm}
             disabled={isResetting}
             className="border-destructive/30 bg-destructive/30 text-destructive-foreground hover:border-destructive/60 hover:bg-destructive/40 focus:ring-destructive/50 flex-1 cursor-pointer rounded-lg border px-4 py-2.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 disabled:opacity-50"

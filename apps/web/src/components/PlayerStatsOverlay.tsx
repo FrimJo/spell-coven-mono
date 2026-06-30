@@ -158,6 +158,48 @@ interface PlayerStatsOverlayProps {
   videoContainerRef?: React.RefObject<HTMLElement | null>
 }
 
+type RoomPlayer = Doc<'roomPlayers'>
+
+function updatePlayerQueriesOptimistically(
+  localStore: Parameters<
+    Parameters<
+      ReturnType<
+        typeof useMutation<typeof api.rooms.updatePlayerHealth>
+      >['withOptimisticUpdate']
+    >[0]
+  >[0],
+  roomId: string,
+  userId: string,
+  updater: (player: RoomPlayer) => RoomPlayer,
+) {
+  const existingSessions = localStore.getQuery(
+    api.players.listAllPlayerSessions,
+    { roomId },
+  )
+  if (existingSessions !== undefined) {
+    localStore.setQuery(
+      api.players.listAllPlayerSessions,
+      { roomId },
+      existingSessions.map((session: RoomPlayer) =>
+        session.userId === userId ? updater(session) : session,
+      ),
+    )
+  }
+
+  const activePlayers = localStore.getQuery(api.players.listActivePlayers, {
+    roomId,
+  })
+  if (activePlayers !== undefined) {
+    localStore.setQuery(
+      api.players.listActivePlayers,
+      { roomId },
+      activePlayers.map((player: RoomPlayer) =>
+        player.userId === userId ? updater(player) : player,
+      ),
+    )
+  }
+}
+
 export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
   roomId,
   participant,
@@ -167,47 +209,6 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
 }: PlayerStatsOverlayProps) {
   // Use roomId as-is - roomPlayers table stores bare roomId (e.g., "ABC123")
   const convexRoomId = roomId
-
-  // Helper function for optimistic updates on player queries
-  type RoomPlayer = Doc<'roomPlayers'>
-
-  const updatePlayerQueriesOptimistically = (
-    localStore: Parameters<
-      Parameters<
-        ReturnType<
-          typeof useMutation<typeof api.rooms.updatePlayerHealth>
-        >['withOptimisticUpdate']
-      >[0]
-    >[0],
-    roomId: string,
-    userId: string,
-    updater: (player: RoomPlayer) => RoomPlayer,
-  ) => {
-    const existingSessions = localStore.getQuery(
-      api.players.listAllPlayerSessions,
-      { roomId },
-    )
-    if (existingSessions !== undefined) {
-      const nextSessions = existingSessions.map((session: RoomPlayer) =>
-        session.userId === userId ? updater(session) : session,
-      )
-      localStore.setQuery(
-        api.players.listAllPlayerSessions,
-        { roomId },
-        nextSessions,
-      )
-    }
-
-    const activePlayers = localStore.getQuery(api.players.listActivePlayers, {
-      roomId,
-    })
-    if (activePlayers !== undefined) {
-      const nextActive = activePlayers.map((player: RoomPlayer) =>
-        player.userId === userId ? updater(player) : player,
-      )
-      localStore.setQuery(api.players.listActivePlayers, { roomId }, nextActive)
-    }
-  }
 
   // Convex mutations with optimistic updates
   const updateHealth = useMutation(

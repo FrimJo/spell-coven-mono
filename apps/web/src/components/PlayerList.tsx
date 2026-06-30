@@ -41,7 +41,7 @@ import {
   TooltipTrigger,
 } from '@repo/ui/components/tooltip'
 
-import { SidebarCard } from './GameRoomSidebar'
+import { SidebarCard } from './SidebarCard'
 
 interface Player {
   id: string

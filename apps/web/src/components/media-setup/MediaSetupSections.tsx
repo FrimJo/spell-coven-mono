@@ -53,6 +53,7 @@ export function MediaSetupHeader({ hasPermissions, onCancel }: HeaderProps) {
         </p>
       </div>
       <button
+        type="button"
         onClick={onCancel}
         className="text-text-muted ring-offset-surface-1 hover:text-text-secondary focus:ring-text-muted rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-2"
         aria-label="Close"
@@ -180,6 +181,7 @@ export function VideoSetupSection({
                   ref={previewRef}
                   playsInline
                   muted
+                  aria-label="Selected camera preview"
                   className="size-full object-cover"
                 />
                 {noVideoDevicesAvailable ? (

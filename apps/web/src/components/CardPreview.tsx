@@ -17,7 +17,7 @@ import { Alert, AlertDescription } from '@repo/ui/components/alert'
 import { Button } from '@repo/ui/components/button'
 import { Dialog, DialogContent, DialogTitle } from '@repo/ui/components/dialog'
 
-import { SidebarCard } from './GameRoomSidebar'
+import { SidebarCard } from './SidebarCard'
 
 interface CardPreviewProps {
   onClose: () => void
@@ -136,9 +136,9 @@ export function CardPreview({ onClose }: CardPreviewProps) {
                     alt={displayResult.name}
                     className="h-auto w-full rounded-lg"
                   />
-                  <div
-                    role="button"
-                    tabIndex={0}
+                  <button
+                    type="button"
+                    aria-label={`View larger image of ${displayResult.name}`}
                     className="absolute inset-0 flex cursor-pointer flex-col items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                     onClick={() => setCardModalOpen(true)}
                     onMouseEnter={() => {
@@ -146,20 +146,14 @@ export function CardPreview({ onClose }: CardPreviewProps) {
                       const img = new Image()
                       img.src = toScryfallPngUrl(cardImage)
                     }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        setCardModalOpen(true)
-                      }
-                    }}
                   >
-                    <div className="bg-surface-1/90 flex size-12 items-center justify-center rounded-full shadow-lg ring-1 ring-white/20 backdrop-blur-sm">
+                    <span className="bg-surface-1/90 flex size-12 items-center justify-center rounded-full shadow-lg ring-1 ring-white/20 backdrop-blur-sm">
                       <ZoomIn className="size-6 text-white" />
-                    </div>
+                    </span>
                     <span className="text-xs font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                       View larger
                     </span>
-                  </div>
+                  </button>
                 </>
               )}
             </div>
@@ -174,7 +168,7 @@ export function CardPreview({ onClose }: CardPreviewProps) {
               <div className="bg-surface-0 overflow-hidden rounded-lg">
                 <img
                   src={state.queryImageUrl}
-                  alt="Query image used for database lookup"
+                  alt="Query used for database lookup"
                   className="h-auto w-full"
                   style={{ imageRendering: 'pixelated' }}
                 />

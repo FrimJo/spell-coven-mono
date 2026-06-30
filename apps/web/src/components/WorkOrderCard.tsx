@@ -18,14 +18,15 @@ export const WorkOrderCard = ({
   children,
 }: WorkOrderCardProps) => {
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
       className={cn(
         'cursor-pointer rounded-lg border transition-colors',
         isSelected && 'ring-primary ring-2',
       )}
     >
-      <div className="bg-warning flex-1 p-4">{children}</div>
-    </div>
+      <span className="bg-warning block flex-1 p-4">{children}</span>
+    </button>
   )
 }

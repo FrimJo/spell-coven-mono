@@ -29,6 +29,10 @@ interface JoinGameDialogProps {
   onJoin: (gameId: string) => void
 }
 
+function normalizeGameId(raw: string) {
+  return raw.trim().toUpperCase()
+}
+
 export function JoinGameDialog({
   open,
   onOpenChange,
@@ -60,8 +64,6 @@ export function JoinGameDialog({
     }
   }, [open, phase])
 
-  const normalizeId = (raw: string) => raw.trim().toUpperCase()
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value
     setGameId(raw)
@@ -70,7 +72,7 @@ export function JoinGameDialog({
   }
 
   const handleSubmit = async () => {
-    const normalized = normalizeId(gameId)
+    const normalized = normalizeGameId(gameId)
 
     if (!normalized) {
       setValidationError('Enter a game code to open the portal.')
@@ -144,7 +146,7 @@ export function JoinGameDialog({
   }
 
   const isInputDisabled = phase === 'checking' || phase === 'success'
-  const isSubmitDisabled = isInputDisabled || !normalizeId(gameId)
+  const isSubmitDisabled = isInputDisabled || !normalizeGameId(gameId)
 
   return (
     <LazyMotion features={domAnimation}>

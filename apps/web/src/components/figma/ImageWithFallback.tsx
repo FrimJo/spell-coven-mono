@@ -22,7 +22,7 @@ export function ImageWithFallback(
       <div className="flex size-full items-center justify-center">
         <img
           src={ERROR_IMG_SRC}
-          alt="Error loading image"
+          alt={alt ?? ''}
           {...rest}
           data-original-url={src}
         />

@@ -120,6 +120,7 @@ const TestStreamSlot = memo(function TestStreamSlot({
               autoPlay
               playsInline
               muted
+              aria-label="Synthetic test camera preview"
               style={VIDEO_STYLE}
             />
             {enableCardDetection && overlayRef && (

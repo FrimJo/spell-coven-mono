@@ -47,6 +47,7 @@ export function DuplicateSessionDialog({
 
         <div className="space-y-3 py-4">
           <button
+            type="button"
             onClick={onTransfer}
             className="border-brand/30 bg-surface-0/30 hover:border-brand/60 hover:bg-surface-1/40 focus:ring-brand/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
           >
@@ -66,6 +67,7 @@ export function DuplicateSessionDialog({
           </button>
 
           <button
+            type="button"
             onClick={onClose}
             className="border-surface-3 bg-surface-2/50 hover:border-surface-3 hover:bg-surface-2 focus:ring-surface-3/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
           >

@@ -90,8 +90,12 @@ function RouteErrorReporter({
 }
 
 export const Route = createFileRoute('/_authed/game/$gameId')({
+  validateSearch: zodValidator(gameSearchSchema),
+  loaderDeps: ({ search }) => ({ detector: search.detector }),
+  search: {
+    middlewares: [stripSearchParams(defaultValues)],
+  },
   ssr: false,
-  component: GameRoomPage,
   beforeLoad: async ({ params, location }) => {
     // notFound() renders blank with ssr: false — validate here only to
     // skip the media-config redirect for malformed IDs.
@@ -107,7 +111,6 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
       })
     }
   },
-  loaderDeps: ({ search }) => ({ detector: search.detector }),
   loader: async ({ params, deps }) => {
     if (!GAME_ID_PATTERN.test(params.gameId)) {
       return { roomNotFound: true }
@@ -151,6 +154,7 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
 
     return { roomNotFound: false }
   },
+  component: GameRoomPage,
   pendingComponent: () => (
     <div className="bg-surface-0 flex h-full items-center justify-center">
       <div className="flex flex-col items-center space-y-4">
@@ -174,10 +178,6 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
       <ErrorFallback error={error} resetErrorBoundary={reset} />
     </RouteErrorReporter>
   ),
-  validateSearch: zodValidator(gameSearchSchema),
-  search: {
-    middlewares: [stripSearchParams(defaultValues)],
-  },
 })
 
 function GameRoomPage() {

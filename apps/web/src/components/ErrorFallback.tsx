@@ -7,14 +7,14 @@ interface ErrorFallbackProps {
   resetErrorBoundary?: () => void
 }
 
+function returnHome() {
+  window.location.href = '/'
+}
+
 export function ErrorFallback({
   error,
   resetErrorBoundary,
 }: ErrorFallbackProps) {
-  const handleReturnHome = () => {
-    window.location.href = '/'
-  }
-
   return (
     <div className="bg-surface-0 relative min-h-screen overflow-hidden">
       <style>{`
@@ -113,7 +113,7 @@ export function ErrorFallback({
               size="lg"
               variant="outline"
               className="border-surface-3 bg-surface-1/50 text-text-secondary hover:bg-surface-2 h-12 min-w-[160px] gap-2 font-medium hover:text-white"
-              onClick={handleReturnHome}
+              onClick={returnHome}
             >
               <Home className="size-4" />
               Return home

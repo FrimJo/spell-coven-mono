@@ -109,6 +109,7 @@ export function RoomFullDialog({
             transition={{ delay: 0.3 }}
           >
             <button
+              type="button"
               onClick={onClose}
               className="border-brand/30 bg-surface-0/30 hover:border-brand/60 hover:bg-surface-1/40 focus:ring-brand/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
             >

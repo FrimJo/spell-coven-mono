@@ -17,9 +17,9 @@ const setupSearchSchema = z.object({
 })
 
 export const Route = createFileRoute('/_authed/setup')({
+  validateSearch: zodValidator(setupSearchSchema),
   ssr: false,
   component: SetupRoute,
-  validateSearch: zodValidator(setupSearchSchema),
 })
 
 function SetupRoute() {

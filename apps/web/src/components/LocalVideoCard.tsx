@@ -86,6 +86,7 @@ export const LocalVideoCard = memo(function LocalVideoCard({
           <LiveKitTrackElement
             kind="video"
             track={videoTrack}
+            ariaLabel={`${participant?.username ?? 'Your'} camera preview`}
             muted
             style={VIDEO_STYLE}
             onVideoElement={handleVideoRef}

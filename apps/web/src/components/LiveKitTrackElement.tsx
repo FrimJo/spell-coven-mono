@@ -9,6 +9,7 @@ interface LiveKitTrackElementProps {
   className?: string
   style?: CSSProperties
   testId?: string
+  ariaLabel?: string
   onVideoElement?: (element: HTMLVideoElement | null) => void
 }
 
@@ -19,6 +20,7 @@ export function LiveKitTrackElement({
   className,
   style,
   testId,
+  ariaLabel,
   onVideoElement,
 }: LiveKitTrackElementProps) {
   const mediaRef = useRef<HTMLMediaElement | null>(null)
@@ -39,7 +41,15 @@ export function LiveKitTrackElement({
   }, [track])
 
   if (kind === 'audio') {
-    return <audio ref={mediaRef} autoPlay muted={muted} data-testid={testId} />
+    return (
+      <audio
+        ref={mediaRef}
+        autoPlay
+        muted={muted}
+        aria-label={ariaLabel}
+        data-testid={testId}
+      />
+    )
   }
 
   return (
@@ -52,6 +62,7 @@ export function LiveKitTrackElement({
       autoPlay
       playsInline
       muted={muted}
+      aria-label={ariaLabel}
       style={style}
       data-testid={testId}
     />

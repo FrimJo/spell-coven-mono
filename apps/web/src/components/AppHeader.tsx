@@ -53,6 +53,16 @@ import { ThemePickerInline, ThemeToggle } from './ThemeToggle.js'
 // Types
 // ============================================================================
 
+function scrollToSection(
+  event: React.MouseEvent<HTMLAnchorElement>,
+  targetId: string,
+) {
+  event.preventDefault()
+  document
+    .getElementById(targetId)
+    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 interface NavItem {
   label: string
   targetId: string
@@ -88,6 +98,8 @@ interface AppHeaderProps {
   /** Shortcut parts for commanders panel, e.g. ['⌘', 'M'] (game only) */
   commanderShortcutParts?: string[]
 }
+
+const EMPTY_NAV_ITEMS: NavItem[] = []
 
 // ============================================================================
 // Shared Components
@@ -245,20 +257,12 @@ function SettingsDropdown({ onOpenSettings }: { onOpenSettings?: () => void }) {
 // Landing Header
 // ============================================================================
 
-function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
+function LandingHeader({
+  navItems = EMPTY_NAV_ITEMS,
+  onSignIn,
+}: AppHeaderProps) {
   const { user, isLoading: isAuthLoading, signOut } = useAuth()
   const isAuthenticated = !!user
-
-  const handleNavClick = (
-    e: React.MouseEvent<HTMLAnchorElement>,
-    targetId: string,
-  ) => {
-    e.preventDefault()
-    const element = document.getElementById(targetId)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }
 
   return (
     <header className="border-border-muted bg-surface-0/80 sticky top-0 z-50 border-b backdrop-blur-md">
@@ -274,7 +278,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
             <a
               key={item.targetId}
               href={`#${item.targetId}`}
-              onClick={(e) => handleNavClick(e, item.targetId)}
+              onClick={(e) => scrollToSection(e, item.targetId)}
               className="text-text-secondary hover:text-text-primary transition-colors"
             >
               {item.label}
@@ -347,7 +351,7 @@ function LandingHeader({ navItems = [], onSignIn }: AppHeaderProps) {
                   <a
                     key={item.targetId}
                     href={`#${item.targetId}`}
-                    onClick={(e) => handleNavClick(e, item.targetId)}
+                    onClick={(e) => scrollToSection(e, item.targetId)}
                     className="text-text-secondary hover:bg-surface-2 hover:text-text-primary flex items-center rounded-lg px-4 py-3 text-lg font-medium transition-colors"
                   >
                     {item.label}
@@ -467,14 +471,15 @@ function GameHeader({
             <span className="text-text-muted shrink-0 text-sm">
               Share Link:
             </span>
-            <code
-              className="bg-surface-2 text-brand-muted-foreground hover:bg-surface-3 min-w-0 flex-1 cursor-pointer truncate rounded-sm px-2 py-1 text-sm transition-colors"
+            <button
+              type="button"
+              className="bg-surface-2 text-brand-muted-foreground hover:bg-surface-3 min-w-0 flex-1 cursor-pointer truncate rounded-sm px-2 py-1 text-left font-mono text-sm transition-colors"
               data-testid="game-id-display"
               onClick={onCopyLink}
               title="Click to copy shareable link"
             >
               {shareLink}
-            </code>
+            </button>
             <Button
               variant="ghost"
               size="sm"
@@ -532,8 +537,8 @@ function GameHeader({
               <span className="hidden sm:inline">Commanders</span>
               {commanderShortcutParts && commanderShortcutParts.length > 0 && (
                 <kbd className="bg-surface-3 text-text-muted pointer-events-none hidden h-5 select-none items-center gap-1 rounded-sm border px-1.5 font-mono text-[10px] font-medium opacity-75 sm:inline-flex">
-                  {commanderShortcutParts.map((part, i) => (
-                    <span key={i} className="text-xs">
+                  {commanderShortcutParts.map((part) => (
+                    <span key={part} className="text-xs">
                       {part}
                     </span>
                   ))}

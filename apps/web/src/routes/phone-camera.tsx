@@ -51,12 +51,12 @@ type WakeLockSentinelLike = {
 }
 
 export const Route = createFileRoute('/phone-camera')({
-  ssr: false,
-  component: PhoneCameraPage,
   validateSearch: zodValidator(phoneCameraSearchSchema),
   search: {
     middlewares: [stripSearchParams({ pairing: '' })],
   },
+  ssr: false,
+  component: PhoneCameraPage,
 })
 
 function PhoneCameraPage() {
@@ -64,7 +64,11 @@ function PhoneCameraPage() {
   const claimPairing = useMutation(api.phoneCamera.claimPairing)
   const updatePhoneStatus = useMutation(api.phoneCamera.updatePhoneStatus)
   const issueToken = useAction(api.mediaActions.issuePhoneCameraLiveKitToken)
-  const phoneSessionIdRef = useRef(createPhoneSessionId())
+  const phoneSessionIdRef = useRef<string | null>(null)
+  if (phoneSessionIdRef.current === null) {
+    phoneSessionIdRef.current = createPhoneSessionId()
+  }
+  const phoneSessionId = phoneSessionIdRef.current
   const roomRef = useRef<Room | null>(null)
   const trackRef = useRef<LocalVideoTrack | null>(null)
   const wakeLockRef = useRef<WakeLockSentinelLike | null>(null)
@@ -76,9 +80,7 @@ function PhoneCameraPage() {
     roomId: string
     desktopSessionId: string
   } | null>(null)
-  const [cameraFacingMode, setCameraFacingMode] = useState<
-    'environment' | 'user'
-  >('environment')
+  const cameraFacingModeRef = useRef<'environment' | 'user'>('environment')
   const [error, setError] = useState<string | null>(
     pairing ? null : 'Missing phone camera pairing token.',
   )
@@ -89,14 +91,14 @@ function PhoneCameraPage() {
       if (!pairingInfo) return Promise.resolve(null)
       return updatePhoneStatus({
         pairingId: pairingInfo.pairingId,
-        phoneSessionId: phoneSessionIdRef.current,
+        phoneSessionId,
         status: nextStatus,
       }).catch(() => null)
     },
     // Convex's mutation function is stable enough for this callback; the
     // generic TanStack rule cannot distinguish it from query result objects.
     // eslint-disable-next-line @tanstack/query/no-unstable-deps
-    [pairingInfo, updatePhoneStatus],
+    [pairingInfo, phoneSessionId, updatePhoneStatus],
   )
 
   const requestWakeLock = useCallback(async () => {
@@ -137,7 +139,7 @@ function PhoneCameraPage() {
       const tokenHash = await sha256Hex(pairing)
       const claimed = await claimPairing({
         tokenHash,
-        phoneSessionId: phoneSessionIdRef.current,
+        phoneSessionId,
       })
       setPairingInfo(claimed)
       setStatus('ready')
@@ -155,33 +157,35 @@ function PhoneCameraPage() {
     void claim()
   }, [])
 
+  const handleVisibilityChange = useEffectEvent(() => {
+    if (document.visibilityState === 'visible') {
+      if (status === 'live') {
+        void requestWakeLock()
+        void markStatus('connected')
+      }
+    } else if (status === 'live') {
+      void markStatus('disconnected')
+    }
+  })
+
+  const markConnected = useEffectEvent(() => {
+    void markStatus('connected')
+  })
+
   useEffect(() => {
     if (!pairingInfo || status !== 'live') return
 
-    const interval = setInterval(() => {
-      void markStatus('connected')
-    }, 8_000)
+    const interval = setInterval(markConnected, 8_000)
 
     return () => clearInterval(interval)
-  }, [markStatus, pairingInfo, status])
+  }, [pairingInfo, status])
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        if (status === 'live') {
-          void requestWakeLock()
-          void markStatus('connected')
-        }
-      } else if (status === 'live') {
-        void markStatus('disconnected')
-      }
-    }
-
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [markStatus, requestWakeLock, status])
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -192,7 +196,7 @@ function PhoneCameraPage() {
   }, [])
 
   const startStreaming = useCallback(
-    async (facingMode = cameraFacingMode) => {
+    async (facingMode = cameraFacingModeRef.current) => {
       if (!pairingInfo) return
 
       setStatus('requestingCamera')
@@ -213,7 +217,7 @@ function PhoneCameraPage() {
         setStatus('connecting')
         const { serverUrl, token } = await issueToken({
           pairingId: pairingInfo.pairingId,
-          phoneSessionId: phoneSessionIdRef.current,
+          phoneSessionId,
         })
 
         const room = new LiveKitRoom({
@@ -231,8 +235,7 @@ function PhoneCameraPage() {
           source: Track.Source.Camera,
           name: 'phone-camera',
         })
-        await markStatus('connected')
-        await requestWakeLock()
+        await Promise.all([markStatus('connected'), requestWakeLock()])
         setStatus('live')
       } catch (startError) {
         setStatus('error')
@@ -244,20 +247,20 @@ function PhoneCameraPage() {
         await markStatus('disconnected')
       }
     },
-    [cameraFacingMode, issueToken, markStatus, pairingInfo, requestWakeLock],
+    [issueToken, markStatus, pairingInfo, phoneSessionId, requestWakeLock],
   )
 
   const switchCamera = useCallback(async () => {
     const nextFacingMode =
-      cameraFacingMode === 'environment' ? 'user' : 'environment'
-    setCameraFacingMode(nextFacingMode)
+      cameraFacingModeRef.current === 'environment' ? 'user' : 'environment'
+    cameraFacingModeRef.current = nextFacingMode
     if (status === 'live') {
       await stopStreaming()
       setTimeout(() => {
         void startStreaming(nextFacingMode)
       }, 0)
     }
-  }, [cameraFacingMode, startStreaming, status, stopStreaming])
+  }, [startStreaming, status, stopStreaming])
 
   return (
     <main className="bg-surface-0 flex min-h-screen items-center justify-center p-4 text-white">
@@ -278,6 +281,7 @@ function PhoneCameraPage() {
             autoPlay
             playsInline
             muted
+            aria-label="Phone camera preview"
             className="h-full w-full object-cover"
           />
           {status !== 'live' && status !== 'reconnecting' && (

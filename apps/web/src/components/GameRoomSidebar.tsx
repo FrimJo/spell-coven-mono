@@ -6,7 +6,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -27,85 +26,7 @@ import {
 import { CardPreview } from './CardPreview'
 import { GameStatsPanel } from './GameStatsPanel'
 import { PlayerList } from './PlayerList'
-
-/**
- * Shared sidebar card component with header and content
- */
-export function SidebarCard({
-  icon: Icon,
-  title,
-  count,
-  children,
-  maxHeight,
-  fillRemaining,
-  onScrollToTop,
-  scrollTrigger,
-  headerAction,
-  countTestId,
-}: {
-  icon: React.ComponentType<{ className?: string }>
-  title: string
-  count: string | number
-  children: React.ReactNode
-  maxHeight?: string
-  /** When true, card grows to fill remaining flex space and content scrolls inside */
-  fillRemaining?: boolean
-  onScrollToTop?: boolean
-  scrollTrigger?: number
-  headerAction?: React.ReactNode
-  countTestId?: string
-}) {
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const prevScrollTriggerRef = useRef(scrollTrigger ?? 0)
-
-  // Scroll to top when trigger changes (e.g., new item added)
-  useEffect(() => {
-    if (
-      onScrollToTop &&
-      scrollTrigger !== undefined &&
-      scrollTrigger > prevScrollTriggerRef.current &&
-      scrollContainerRef.current
-    ) {
-      scrollContainerRef.current.scrollTo({
-        top: 0,
-        behavior: 'smooth',
-      })
-    }
-    if (scrollTrigger !== undefined) {
-      prevScrollTriggerRef.current = scrollTrigger
-    }
-  }, [scrollTrigger, onScrollToTop])
-
-  const contentClassName = fillRemaining
-    ? 'min-h-0 flex-1 overflow-y-auto'
-    : maxHeight
-      ? `min-h-0 ${maxHeight} overflow-y-auto`
-      : ''
-
-  return (
-    <Card
-      className={`border-surface-2 bg-surface-1 gap-0 overflow-hidden ${fillRemaining ? 'flex max-h-full min-h-0 flex-col' : ''} `}
-    >
-      <div className="border-surface-2 bg-surface-0/50 flex items-center justify-between border-b px-3 py-2">
-        <div className="flex items-center gap-2">
-          <Icon className="text-text-muted size-4" />
-          <span className="text-text-secondary text-sm font-medium">
-            {title}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-text-muted text-xs" data-testid={countTestId}>
-            {count}
-          </span>
-          {headerAction}
-        </div>
-      </div>
-      <div ref={scrollContainerRef} className={contentClassName}>
-        {children}
-      </div>
-    </Card>
-  )
-}
+import { SidebarCard } from './SidebarCard'
 
 /**
  * Compact card history list component
@@ -151,23 +72,18 @@ function CardHistoryList({
         return (
           <div
             key={`${entry.id}-${entry.timestamp}`}
-            role="button"
-            tabIndex={0}
-            onClick={() => onSelect(entry)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onSelect(entry)
-              }
-            }}
             className={`group flex w-full items-center gap-2 border-l-2 transition-colors ${
               isSelected
                 ? 'border-brand bg-surface-2 cursor-default'
                 : `hover:bg-surface-2 cursor-pointer border-transparent`
             } `}
-            aria-pressed={isSelected}
           >
-            <div className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left">
+            <button
+              type="button"
+              onClick={() => onSelect(entry)}
+              className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left"
+              aria-pressed={isSelected}
+            >
               {entry.image_url && (
                 <img
                   src={entry.image_url}
@@ -190,7 +106,7 @@ function CardHistoryList({
                   {entry.set}
                 </div>
               </div>
-            </div>
+            </button>
             <Button
               type="button"
               variant="ghost"

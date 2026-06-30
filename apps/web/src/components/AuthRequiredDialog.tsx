@@ -70,6 +70,7 @@ export function AuthRequiredDialog({
 
         <div className="space-y-3 py-4">
           <button
+            type="button"
             onClick={onSignIn}
             className="border-brand/30 bg-brand/30 hover:border-brand/60 hover:bg-brand/40 focus:ring-brand/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
           >
@@ -89,6 +90,7 @@ export function AuthRequiredDialog({
           </button>
 
           <button
+            type="button"
             onClick={onClose}
             className="border-surface-3 bg-surface-2/50 hover:border-surface-3 hover:bg-surface-2 focus:ring-surface-3/50 group w-full cursor-pointer rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2"
           >
@@ -125,6 +127,7 @@ export function AuthRequiredDialog({
                   />
                 </div>
                 <button
+                  type="button"
                   onClick={handlePreviewSignIn}
                   disabled={!code.trim() || isSubmitting}
                   className="border-warning/50 bg-warning/20 text-warning hover:bg-warning/30 w-full cursor-pointer rounded-lg border px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60"

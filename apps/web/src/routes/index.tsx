@@ -15,9 +15,9 @@ const searchSchema = z.object({
 })
 
 export const Route = createFileRoute('/')({
+  validateSearch: zodValidator(searchSchema),
   ssr: true,
   component: LandingPageRoute,
-  validateSearch: zodValidator(searchSchema),
 })
 
 function LandingPageContent() {

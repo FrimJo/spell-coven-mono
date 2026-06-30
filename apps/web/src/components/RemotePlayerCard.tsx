@@ -149,6 +149,7 @@ export const RemotePlayerCard = memo(function RemotePlayerCard({
                 testId="remote-player-video"
                 kind="video"
                 track={remoteVideoTrack}
+                ariaLabel={`${playerName} camera`}
                 muted={isMuted}
                 style={VIDEO_STYLE}
                 onVideoElement={handleVideoRef}
@@ -158,6 +159,7 @@ export const RemotePlayerCard = memo(function RemotePlayerCard({
               <LiveKitTrackElement
                 kind="audio"
                 track={remoteAudioTrack}
+                ariaLabel={`${playerName} audio`}
                 muted={isMuted}
                 testId="remote-player-audio"
               />

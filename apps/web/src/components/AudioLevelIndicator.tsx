@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface AudioLevelIndicatorProps {
   audioStream: MediaStream | null | undefined
@@ -9,42 +9,46 @@ export const AudioLevelIndicator = ({
 }: AudioLevelIndicatorProps) => {
   const [audioLevel, setAudioLevel] = useState<number>(0)
 
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const analyserRef = useRef<AnalyserNode | null>(null)
-  const animationFrameRef = useRef<number | null>(null)
-
   // Monitor audio input level using the stream from useMediaDevice hook
   useEffect(() => {
     if (!audioStream) return
 
+    let disposed = false
+    let audioContext: AudioContext | null = null
+    let animationFrame: number | null = null
+
     const setupAudioMonitoring = async () => {
       try {
-        const audioContext = new AudioContext()
-        const analyser = audioContext.createAnalyser()
-        const microphone = audioContext.createMediaStreamSource(audioStream)
+        const nextAudioContext = new AudioContext()
+        const analyser = nextAudioContext.createAnalyser()
+        const microphone = nextAudioContext.createMediaStreamSource(audioStream)
+
+        if (disposed) {
+          await nextAudioContext.close()
+          return
+        }
+
+        audioContext = nextAudioContext
 
         analyser.fftSize = 256
         microphone.connect(analyser)
-
-        audioContextRef.current = audioContext
-        analyserRef.current = analyser
 
         const dataArray = new Uint8Array(analyser.frequencyBinCount)
         let lastUpdateTime = 0
         const UPDATE_INTERVAL = 100 // Update every 100ms instead of every frame
 
         const updateLevel = () => {
-          if (!analyserRef.current) return
+          if (disposed) return
 
           const now = Date.now()
           if (now - lastUpdateTime >= UPDATE_INTERVAL) {
-            analyserRef.current.getByteFrequencyData(dataArray)
+            analyser.getByteFrequencyData(dataArray)
             const average = dataArray.reduce((a, b) => a + b) / dataArray.length
             setAudioLevel(Math.min(100, (average / 255) * 100 * 2)) // Amplify a bit
             lastUpdateTime = now
           }
 
-          animationFrameRef.current = requestAnimationFrame(updateLevel)
+          animationFrame = requestAnimationFrame(updateLevel)
         }
 
         updateLevel()
@@ -56,14 +60,9 @@ export const AudioLevelIndicator = ({
     void setupAudioMonitoring()
 
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-        animationFrameRef.current = null
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close()
-        audioContextRef.current = null
-      }
+      disposed = true
+      if (animationFrame !== null) cancelAnimationFrame(animationFrame)
+      void audioContext?.close()
     }
   }, [audioStream])
 

@@ -20,6 +20,48 @@ interface CommanderOverlayProps {
   gridIndex: number
 }
 
+type RoomPlayer = Doc<'roomPlayers'>
+
+function updatePlayerQueriesOptimistically(
+  localStore: Parameters<
+    Parameters<
+      ReturnType<
+        typeof useMutation<typeof api.rooms.updateCommanderDamage>
+      >['withOptimisticUpdate']
+    >[0]
+  >[0],
+  roomId: string,
+  userId: string,
+  updater: (player: RoomPlayer) => RoomPlayer,
+) {
+  const existingSessions = localStore.getQuery(
+    api.players.listAllPlayerSessions,
+    { roomId },
+  )
+  if (existingSessions !== undefined) {
+    localStore.setQuery(
+      api.players.listAllPlayerSessions,
+      { roomId },
+      existingSessions.map((session: RoomPlayer) =>
+        session.userId === userId ? updater(session) : session,
+      ),
+    )
+  }
+
+  const activePlayers = localStore.getQuery(api.players.listActivePlayers, {
+    roomId,
+  })
+  if (activePlayers !== undefined) {
+    localStore.setQuery(
+      api.players.listActivePlayers,
+      { roomId },
+      activePlayers.map((player: RoomPlayer) =>
+        player.userId === userId ? updater(player) : player,
+      ),
+    )
+  }
+}
+
 export const CommanderOverlay = memo(function CommanderOverlay({
   participant,
   currentUser,
@@ -45,48 +87,6 @@ export const CommanderOverlay = memo(function CommanderOverlay({
         return 'bottom-4 right-4 items-end'
     }
   }, [gridIndex])
-
-  // Convex mutation for updating commander damage
-  // Replicating optimistic update logic from GameStatsPanel/PlayerStatsOverlay
-  type RoomPlayer = Doc<'roomPlayers'>
-
-  const updatePlayerQueriesOptimistically = (
-    localStore: Parameters<
-      Parameters<
-        ReturnType<
-          typeof useMutation<typeof api.rooms.updateCommanderDamage>
-        >['withOptimisticUpdate']
-      >[0]
-    >[0],
-    roomId: string,
-    userId: string,
-    updater: (player: RoomPlayer) => RoomPlayer,
-  ) => {
-    const existingSessions = localStore.getQuery(
-      api.players.listAllPlayerSessions,
-      { roomId },
-    )
-    if (existingSessions !== undefined) {
-      const nextSessions = existingSessions.map((session: RoomPlayer) =>
-        session.userId === userId ? updater(session) : session,
-      )
-      localStore.setQuery(
-        api.players.listAllPlayerSessions,
-        { roomId },
-        nextSessions,
-      )
-    }
-
-    const activePlayers = localStore.getQuery(api.players.listActivePlayers, {
-      roomId,
-    })
-    if (activePlayers !== undefined) {
-      const nextActive = activePlayers.map((player: RoomPlayer) =>
-        player.userId === userId ? updater(player) : player,
-      )
-      localStore.setQuery(api.players.listActivePlayers, { roomId }, nextActive)
-    }
-  }
 
   const updateCommanderDamage = useMutation(
     api.rooms.updateCommanderDamage,

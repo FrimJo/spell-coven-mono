@@ -182,46 +182,47 @@ export function CreateGameDialog({
                 </p>
 
                 {/* Share Link Box */}
-                <div
+                <button
+                  type="button"
+                  disabled={!isReady}
                   className={`group flex items-center justify-between rounded-lg border p-3 transition-colors ${
                     isReady
                       ? `border-surface-3 bg-surface-0 hover:border-brand/50 cursor-pointer`
                       : 'border-surface-2 bg-surface-0/50 cursor-default'
                   } `}
-                  onClick={isReady ? handleCopy : undefined}
+                  onClick={handleCopy}
                 >
-                  <div className="min-w-0 flex-1 text-left">
-                    <p className="text-text-muted text-sm">Share Link</p>
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="text-text-muted block text-sm">
+                      Share Link
+                    </span>
                     {isReady ? (
-                      <p className="text-brand-muted-foreground break-all font-mono text-sm">
+                      <span className="text-brand-muted-foreground block break-all font-mono text-sm">
                         {shareLink}
-                      </p>
+                      </span>
                     ) : (
-                      <div className="flex items-center gap-2">
-                        <div className="bg-surface-3 size-4 animate-pulse rounded-sm" />
-                        <p className="text-text-muted font-mono text-sm">
+                      <span className="flex items-center gap-2">
+                        <span className="bg-surface-3 size-4 animate-pulse rounded-sm" />
+                        <span className="text-text-muted font-mono text-sm">
                           Generating link...
-                        </p>
-                      </div>
+                        </span>
+                      </span>
                     )}
-                  </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
+                  </span>
+                  <span
                     className={`ml-2 size-8 shrink-0 ${
                       isReady
-                        ? `text-text-muted group-hover:text-white`
+                        ? `text-text-muted flex items-center justify-center group-hover:text-white`
                         : 'text-text-muted cursor-default'
                     } `}
-                    disabled={!isReady}
                   >
                     {copied ? (
                       <Check className="size-4" />
                     ) : (
                       <Copy className="size-4" />
                     )}
-                  </Button>
-                </div>
+                  </span>
+                </button>
 
                 <p className="text-text-muted text-sm">
                   {isReady

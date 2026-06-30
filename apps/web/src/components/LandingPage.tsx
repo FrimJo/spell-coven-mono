@@ -70,6 +70,16 @@ interface LandingPageProps {
   onPreviewSignIn?: (code: string) => void | Promise<void>
 }
 
+function scrollToLandingSection(
+  event: React.MouseEvent<HTMLAnchorElement>,
+  targetId: string,
+) {
+  event.preventDefault()
+  document
+    .getElementById(targetId)
+    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 export function LandingPage({
   initialError,
   inviteState: _inviteState,
@@ -215,17 +225,6 @@ export function LandingPage({
     setShowRoomNotFoundDialog(false)
     // Clear the error from URL search params
     navigate({ to: '/', search: {} })
-  }
-
-  const handleNavClick = (
-    e: React.MouseEvent<HTMLAnchorElement>,
-    targetId: string,
-  ) => {
-    e.preventDefault()
-    const element = document.getElementById(targetId)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
   }
 
   const handlePreviewSignIn = async () => {
@@ -560,9 +559,9 @@ export function LandingPage({
                         isActive: false,
                       },
                       { name: 'Sam', me: false, card: null, isActive: false },
-                    ].map((p, i) => (
+                    ].map((p) => (
                       <div
-                        key={i}
+                        key={p.name}
                         className={`bg-surface-1/50 relative overflow-hidden rounded-lg border shadow-inner transition-all ${
                           p.isActive
                             ? `border-brand/50 ring-brand/30 shadow-[0_0_15px_-5px_rgba(168,85,247,0.3)] ring-1`
@@ -849,7 +848,7 @@ export function LandingPage({
                   <li>
                     <a
                       href="#features"
-                      onClick={(e) => handleNavClick(e, 'features')}
+                      onClick={(e) => scrollToLandingSection(e, 'features')}
                       className="hover:text-brand-muted-foreground"
                     >
                       Features
@@ -858,16 +857,14 @@ export function LandingPage({
                   <li>
                     <a
                       href="#how-it-works"
-                      onClick={(e) => handleNavClick(e, 'how-it-works')}
+                      onClick={(e) => scrollToLandingSection(e, 'how-it-works')}
                       className="hover:text-brand-muted-foreground"
                     >
                       How It Works
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-brand-muted-foreground">
-                      Changelog
-                    </a>
+                    <span className="text-text-muted">Changelog</span>
                   </li>
                 </ul>
               </div>
@@ -878,19 +875,13 @@ export function LandingPage({
                 </h4>
                 <ul className="text-text-muted space-y-2 text-sm">
                   <li>
-                    <a href="#" className="hover:text-brand-muted-foreground">
-                      Privacy Policy
-                    </a>
+                    <span className="text-text-muted">Privacy Policy</span>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-brand-muted-foreground">
-                      Terms of Service
-                    </a>
+                    <span className="text-text-muted">Terms of Service</span>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-brand-muted-foreground">
-                      Cookie Policy
-                    </a>
+                    <span className="text-text-muted">Cookie Policy</span>
                   </li>
                   <li>
                     <a
@@ -961,7 +952,10 @@ export function LandingPage({
             </div>
 
             <div className="border-border-muted text-text-muted mt-12 border-t pt-8 text-center text-sm [&_p]:mx-auto">
-              <p className="mb-2">Spell Coven © {new Date().getFullYear()}</p>
+              <p className="mb-2">
+                Spell Coven ©{' '}
+                <span suppressHydrationWarning>{new Date().getFullYear()}</span>
+              </p>
               <p>
                 Spell Coven is unofficial Fan Content permitted under the Fan
                 Content Policy. Not approved/endorsed by Wizards. Portions of
@@ -1100,6 +1094,7 @@ function LandingJoinActions({
 function LandingActionErrorFallback({ resetErrorBoundary }: FallbackProps) {
   return (
     <button
+      type="button"
       onClick={resetErrorBoundary}
       className="border-warning/40 bg-warning/10 text-warning hover:bg-warning/20 flex h-14 min-w-[240px] cursor-pointer items-center gap-2 rounded-xl border px-4 text-sm font-medium transition-colors"
     >
@@ -1173,6 +1168,7 @@ function LandingLiveStatsErrorFallback({ resetErrorBoundary }: FallbackProps) {
         but live counters are hidden until mana flows again.
       </p>
       <button
+        type="button"
         onClick={resetErrorBoundary}
         className="text-brand-muted-foreground hover:text-brand mt-3 cursor-pointer text-sm font-medium underline underline-offset-2 transition-colors"
       >
