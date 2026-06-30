@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: web-sbom
@@ -16,26 +16,26 @@ concurrency:
 
 jobs:
   generate:
-    name: Generate CycloneDX SBOM
+    name: Generate and validate CycloneDX SBOM
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      SCAN_ROOT: ${{ runner.temp }}/web-sbom-root
-      SBOM_FILE: ${{ runner.temp }}/web-sbom.cyclonedx.json
       SYFT_DEFAULT_CATALOGERS: javascript-package-cataloger
       SYFT_SOURCE_NAME: '@repo/web'
       SYFT_SOURCE_VERSION: ${{ github.sha }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: '1.3.8'
 
       - name: Prepare isolated web workspace
         shell: bash
+        env:
+          SCAN_ROOT: ${{ runner.temp }}/web-sbom-root
         run: |
           set -euo pipefail
 
@@ -52,12 +52,14 @@ jobs:
 
           sha256sum bun.lock | cut -d ' ' -f 1 > "$RUNNER_TEMP/source-bun-lock.sha256"
 
-      - name: Install resolved web dependencies
+      - name: Install resolved web runtime dependencies
         working-directory: ${{ runner.temp }}/web-sbom-root
-        run: bun install --frozen-lockfile --filter @repo/web --linker isolated
+        run: bun install --production --frozen-lockfile --filter @repo/web --linker isolated
 
       - name: Finalize scan root
         shell: bash
+        env:
+          SCAN_ROOT: ${{ runner.temp }}/web-sbom-root
         run: |
           set -euo pipefail
 
@@ -65,33 +67,53 @@ jobs:
           sha256sum -c <(printf '%s  %s/bun.lock\n' "$(cat "$RUNNER_TEMP/source-bun-lock.sha256")" "$SCAN_ROOT")
 
           cp "$SCAN_ROOT/apps/web/package.json" "$SCAN_ROOT/package.json"
+          find "$SCAN_ROOT/packages" -mindepth 1 -maxdepth 1 \
+            ! -name observability ! -name ui -exec rm -rf {} +
           rm "$SCAN_ROOT/bun.lock"
 
-      - name: Generate and submit SBOM
-        uses: anchore/sbom-action@v0
+      - name: Generate SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
           path: ${{ runner.temp }}/web-sbom-root
           format: cyclonedx-json
           output-file: ${{ runner.temp }}/web-sbom.cyclonedx.json
-          artifact-name: web-sbom.cyclonedx.json
           syft-version: v1.44.0
-          upload-artifact: true
-          upload-artifact-retention: 30
+          upload-artifact: false
           upload-release-assets: false
-          dependency-snapshot: true
+          dependency-snapshot: false
 
       - name: Validate SBOM
         shell: bash
+        env:
+          SBOM_FILE: ${{ runner.temp }}/web-sbom.cyclonedx.json
         run: |
           set -euo pipefail
 
           jq -e '
+            def component_id:
+              if ((.group // "") | length) > 0 then
+                "\(.group)/\(.name)"
+              else
+                .name
+              end;
+
+            [(.components // [])[] | component_id] as $components |
             .bomFormat == "CycloneDX" and
             (.specVersion | test("^1\\.[0-9]+$")) and
             (.metadata.component.name == "@repo/web") and
             (.metadata.component.version == env.GITHUB_SHA) and
+            ((.metadata.tools.components // []) | type == "array") and
+            any((.metadata.tools.components // [])[]; .name == "syft" and .version == "1.44.0") and
+            any((.components // [])[]; .purl != null) and
+            all("react", "@repo/ui"; . as $required | ($components | index($required)) != null) and
+            all(
+              "turbo", "vitest", "playwright", "@playwright/test", "eslint",
+              "@repo/eslint-config", "@repo/prettier-config",
+              "@repo/tailwind-config", "@repo/typescript-config";
+              . as $excluded | ($components | index($excluded)) == null
+            ) and
             any(
-              .components[];
+              (.components // [])[];
               .version != null and
               .version != "UNKNOWN" and
               any(
@@ -101,3 +123,92 @@ jobs:
               )
             )
           ' "$SBOM_FILE" > /dev/null
+
+      - name: Upload validated SBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: web-sbom.cyclonedx.json
+          path: ${{ runner.temp }}/web-sbom.cyclonedx.json
+          if-no-files-found: error
+          retention-days: 30
+
+  submit:
+    name: Submit validated SBOM
+    needs: generate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download validated SBOM
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: web-sbom.cyclonedx.json
+          path: ${{ runner.temp }}/validated-sbom
+
+      - name: Revalidate SBOM
+        shell: bash
+        env:
+          SBOM_FILE: ${{ runner.temp }}/validated-sbom/web-sbom.cyclonedx.json
+        run: |
+          set -euo pipefail
+
+          jq -e '
+            def component_id:
+              if ((.group // "") | length) > 0 then
+                "\(.group)/\(.name)"
+              else
+                .name
+              end;
+
+            [(.components // [])[] | component_id] as $components |
+            .bomFormat == "CycloneDX" and
+            (.specVersion | test("^1\\.[0-9]+$")) and
+            (.metadata.component.name == "@repo/web") and
+            (.metadata.component.version == env.GITHUB_SHA) and
+            ((.metadata.tools.components // []) | type == "array") and
+            any((.metadata.tools.components // [])[]; .name == "syft" and .version == "1.44.0") and
+            any((.components // [])[]; .purl != null) and
+            all("react", "@repo/ui"; . as $required | ($components | index($required)) != null) and
+            all(
+              "turbo", "vitest", "playwright", "@playwright/test", "eslint",
+              "@repo/eslint-config", "@repo/prettier-config",
+              "@repo/tailwind-config", "@repo/typescript-config";
+              . as $excluded | ($components | index($excluded)) == null
+            ) and
+            any(
+              (.components // [])[];
+              .version != null and
+              .version != "UNKNOWN" and
+              any(
+                (.properties // [])[];
+                .name == "syft:location:0:path" and
+                (.value | contains("/node_modules/.bun/"))
+              )
+            )
+          ' "$SBOM_FILE" > /dev/null
+
+      - name: Prepare submission payload
+        shell: bash
+        env:
+          SBOM_FILE: ${{ runner.temp }}/validated-sbom/web-sbom.cyclonedx.json
+          SUBMISSION_FILE: ${{ runner.temp }}/validated-sbom/web-sbom.submission.json
+        run: |
+          set -euo pipefail
+
+          # v0.0.14 expects the pre-CycloneDX-1.5 metadata.tools array shape.
+          jq '
+            .metadata.tools = (.metadata.tools.components // [])
+          ' "$SBOM_FILE" > "$SUBMISSION_FILE"
+
+          jq -e '
+            (.metadata.tools | type) == "array" and
+            any(.metadata.tools[]; .name == "syft" and .version == "1.44.0") and
+            any((.components // [])[]; .purl != null)
+          ' "$SUBMISSION_FILE" > /dev/null
+
+      - name: Submit SBOM to dependency graph
+        uses: evryfs/sbom-dependency-submission-action@4466eb923772acc3bd54081f8e2a0ef601d2f28a # v0.0.14
+        with:
+          sbom-files: ${{ runner.temp }}/validated-sbom/web-sbom.submission.json
