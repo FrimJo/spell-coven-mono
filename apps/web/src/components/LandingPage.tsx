@@ -960,7 +960,7 @@ export function LandingPage({
               )}
             </div>
 
-            <div className="border-border-muted text-text-muted mt-12 border-t pt-8 text-center text-sm">
+            <div className="border-border-muted text-text-muted mt-12 border-t pt-8 text-center text-sm [&_p]:mx-auto">
               <p className="mb-2">Spell Coven © {new Date().getFullYear()}</p>
               <p>
                 Spell Coven is unofficial Fan Content permitted under the Fan
