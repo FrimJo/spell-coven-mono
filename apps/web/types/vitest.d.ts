@@ -10,6 +10,7 @@ declare interface MockInstance<
     results: { type: 'return' | 'throw'; value: Returns }[]
   }
   mockResolvedValue(value: Returns): MockInstance<Args, Returns>
+  mockResolvedValueOnce(value: Returns): MockInstance<Args, Returns>
   mockReturnValue(value: Returns): MockInstance<Args, Returns>
   mockReturnThis(): MockInstance<Args, Returns>
   mockImplementation(
@@ -30,8 +31,10 @@ declare interface ViMocker {
   fn(): MockInstance
   mock(moduleName: string, factory: () => unknown): void
   clearAllMocks(): void
+  hoisted<T>(factory: () => T): T
   useRealTimers(): void
   useFakeTimers(): void
+  advanceTimersByTime(milliseconds: number): void
   spyOn<T, K extends keyof T>(object: T, method: K): MockInstance
 }
 

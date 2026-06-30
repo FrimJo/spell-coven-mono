@@ -50,9 +50,23 @@ export function CardSearchCommand({
   const [error, setError] = useState<string | null>(null)
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchRequestRef = useRef(0)
+
+  const resetSearch = useCallback(() => {
+    searchRequestRef.current += 1
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+    }
+    setQuery('')
+    setResults([])
+    setLoading(false)
+    setError(null)
+  }, [])
 
   // Debounced search
   const performSearch = useCallback(async (searchQuery: string) => {
+    const requestId = ++searchRequestRef.current
     if (searchQuery.length < MIN_QUERY_LENGTH) {
       setResults([])
       setError(null)
@@ -64,16 +78,18 @@ export function CardSearchCommand({
 
     try {
       const cards = await searchCards(searchQuery, 20)
+      if (requestId !== searchRequestRef.current) return
       setResults(cards)
       if (cards.length === 0) {
         setError('No cards found')
       }
     } catch (err) {
+      if (requestId !== searchRequestRef.current) return
       console.error('[CardSearchCommand] Search failed:', err)
       setError('Search failed')
       setResults([])
     } finally {
-      setLoading(false)
+      if (requestId === searchRequestRef.current) setLoading(false)
     }
   }, [])
 
@@ -100,39 +116,34 @@ export function CardSearchCommand({
     (card: ScryfallCard) => {
       const result = scryfallToCardQueryResult(card)
       setResult(result)
+      resetSearch()
       onOpenChange(false)
-      // Reset state after closing
-      setTimeout(() => {
-        setQuery('')
-        setResults([])
-        setError(null)
-      }, 200)
     },
-    [setResult, onOpenChange],
+    [setResult, resetSearch, onOpenChange],
+  )
+
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen) resetSearch()
+      onOpenChange(nextOpen)
+    },
+    [onOpenChange, resetSearch],
   )
 
   // Cleanup debounce on unmount
   useEffect(() => {
     return () => {
+      searchRequestRef.current += 1
       if (debounceRef.current) {
         clearTimeout(debounceRef.current)
       }
     }
   }, [])
 
-  // Reset state when dialog closes
-  useEffect(() => {
-    if (!open) {
-      setQuery('')
-      setResults([])
-      setError(null)
-    }
-  }, [open])
-
   return (
     <CommandDialog
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={handleOpenChange}
       title="Card Search"
       description="Search for Magic: The Gathering cards using Scryfall syntax"
       contentClassName="top-[33%] translate-y-0"

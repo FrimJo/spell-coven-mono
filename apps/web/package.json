@@ -80,7 +80,7 @@
     "vite": "^7.1.7",
     "vite-plugin-mkcert": "^1.17.9",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.2.0"
+    "vitest": "^3.2.6"
   },
   "prettier": "@repo/prettier-config"
 }
