@@ -1,6 +1,6 @@
 import type { Participant } from '@/types/participant'
 import type { Doc } from '@convex/_generated/dataModel'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import { useCommanderDamageDialog } from '@/contexts/CommanderDamageDialogContext'
 import { useCommandersPanel } from '@/contexts/CommandersPanelContext'
 import { useDeltaDisplay } from '@/hooks/useDeltaDisplay'
@@ -398,24 +398,16 @@ export const PlayerStatsOverlay = memo(function PlayerStatsOverlay({
 
   const commandersPanel = useCommandersPanel()
   const commanderDamageDialog = useCommanderDamageDialog()
-  const [commanderDialogOpen, setCommanderDialogOpen] = useState(false)
+  const commanderDialogOpen =
+    commanderDamageDialog?.openForPlayerId === participant.id
+  const setCommanderDialogOpen = (open: boolean) => {
+    commanderDamageDialog?.setOpenForPlayerId(open ? participant.id : null)
+  }
   const fallbackContainerRef = useRef<HTMLElement | null>(null)
   const setStatsOverlayRef = useCallback((el: HTMLDivElement | null) => {
     fallbackContainerRef.current = el?.parentElement ?? null
   }, [])
   const videoContainerRef = videoContainerRefProp ?? fallbackContainerRef
-
-  // Open dialog when requested from sidebar menu (e.g. "Damage taken")
-  useEffect(() => {
-    if (
-      commanderDamageDialog &&
-      commanderDamageDialog.openForPlayerId === participant.id
-    ) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCommanderDialogOpen(true)
-      commanderDamageDialog.setOpenForPlayerId(null)
-    }
-  }, [commanderDamageDialog, participant.id])
 
   return (
     <>
