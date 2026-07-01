@@ -23,4 +23,12 @@ export default [
       ],
     },
   },
+  {
+    files: ['src/components/carousel.tsx'],
+    // The effect subscribes to Embla's external carousel state and performs an
+    // initial synchronization when the browser-owned carousel API is created.
+    rules: {
+      'react-hooks/set-state-in-effect': 'off',
+    },
+  },
 ]

@@ -3,8 +3,8 @@ export default {
   ignore: {
     files: ['.output/**', 'dist/**', 'src/routeTree.gen.ts'],
     rules: [
-      // React Compiler is linted for future compatibility but is not enabled
-      // by the Vite build. Manual memoization remains meaningful today.
+      // React Compiler is enabled. Preserve existing manual memoization during
+      // the initial rollout because some call sites rely on stable identity.
       'react-doctor/react-compiler-no-manual-memoization',
       'react-hooks-js/todo',
     ],

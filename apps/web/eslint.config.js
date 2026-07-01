@@ -1,5 +1,3 @@
-import reactCompiler from 'eslint-plugin-react-compiler'
-
 import { config as reactConfig } from '@repo/eslint-config/react-internal'
 
 /** @type {import('typescript-eslint').Config} */
@@ -60,14 +58,26 @@ export default [
         tsconfigRootDir: import.meta.dirname,
       },
     },
-    plugins: {
-      'react-compiler': reactCompiler,
-    },
     rules: {
-      'react-compiler/react-compiler': 'error',
       '@tanstack/query/exhaustive-deps': 'off',
       'react/prop-types': 'off', // TypeScript provides type checking
       '@typescript-eslint/no-non-null-assertion': 'warn',
+    },
+  },
+  {
+    files: [
+      'src/components/VideoStreamGrid.tsx',
+      'src/hooks/useAudioOutput.ts',
+      'src/hooks/useCardQuery.ts',
+      'src/hooks/useConvexPresence.ts',
+      'src/hooks/useMediaPermissions.ts',
+      'src/routes/__root.tsx',
+      'src/routes/phone-camera.tsx',
+    ],
+    // These effects initialize or synchronize browser, storage, media, and
+    // live Convex state. Their state updates are part of that external sync.
+    rules: {
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
   // Test files - use main tsconfig (which includes tests)
