@@ -47,8 +47,7 @@ jobs:
             destination="$SCAN_ROOT/$(dirname "$manifest")"
             mkdir -p "$destination"
             cp "$manifest" "$destination/package.json"
-          done < <(find packages -mindepth 2 -maxdepth 2 -name package.json \
-            ! -path 'packages/mtg-image-db/package.json' -print | sort)
+          done < <(find packages -mindepth 2 -maxdepth 2 -name package.json -print | sort)
 
           sha256sum bun.lock | cut -d ' ' -f 1 > "$RUNNER_TEMP/source-bun-lock.sha256"
 
