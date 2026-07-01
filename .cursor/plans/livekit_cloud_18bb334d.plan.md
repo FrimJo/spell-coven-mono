@@ -21,7 +21,7 @@ todos:
     content: Feed VideoStreamGrid remote tiles from LiveKit participant track publications keyed by Convex sessionId.
     status: pending
   - id: track-element
-    content: Add a small LiveKit track attach/detach component compatible with card detection refs.
+    content: Add a small LiveKit track attach/detach component for media elements.
     status: pending
   - id: diagnostics-tests
     content: Add diagnostics and tests for token issuance, mocked LiveKit room events, participant mapping, and E2E helper output.
@@ -62,16 +62,15 @@ flowchart LR
   MediaSession --> LiveKitAdapter[LiveKit Adapter]
   LiveKitAdapter --> LiveKitCloud[LiveKit Cloud Room]
   MediaProvider --> VideoGrid[VideoStreamGrid]
-  VideoGrid --> CardDetector[Card Detection Overlays]
 ```
 
 ## Separation of Concerns
 
-- Convex authorization lives in Convex-only modules. Token issuance should verify room/session access and return `{ serverUrl, token }`, but it should not know about React components, video tiles, or card detection.
+- Convex authorization lives in Convex-only modules. Token issuance should verify room/session access and return `{ serverUrl, token }`, but it should not know about React components or video tiles.
 - LiveKit SDK usage lives behind a small media transport boundary. UI components should consume app-level media state and actions, not raw `Room` objects except in narrow diagnostics or adapter code.
 - Device preferences and setup UI remain separate from transport publishing. The preference store owns selected device IDs and committed setup state; the LiveKit media layer consumes those IDs and owns capture/publish behavior.
 - Tile rendering remains presentation-focused. `VideoStreamGrid`, `LocalVideoCard`, and remote tile components should render participants, controls, overlays, and track elements, but should not connect rooms or issue tokens.
-- Track attachment is isolated to one component/hook. Card detection can receive video element refs, but it should not care whether the underlying media came from LiveKit or another future provider.
+- Track attachment is isolated to one component/hook and remains independent of the media provider.
 - Diagnostics are read-only snapshots produced by the media layer. Playwright helpers and Sentry reporting should consume these snapshots instead of reaching into LiveKit internals throughout the UI.
 - Define app-level media types in one place, for example `[apps/web/src/types/media-session.ts](apps/web/src/types/media-session.ts)`, so a future provider swap would mostly replace an adapter rather than the whole grid.
 
@@ -123,7 +122,7 @@ flowchart LR
 - Pass selected camera and microphone device IDs from the existing media preference store into LiveKit capture/publish calls.
 - Avoid rebuilding a combined `MediaStream` for transport; LiveKit owns the published camera and microphone tracks.
 - Map local toggles in `[apps/web/src/components/LocalVideoCard.tsx](apps/web/src/components/LocalVideoCard.tsx)` directly to LiveKit mute/unmute or camera enable/disable.
-- Keep local preview working for card detection by exposing the LiveKit local camera track to an attached local video element.
+- Keep local preview working by exposing the LiveKit local camera track to an attached local video element.
 
 5. Replace remote tile transport data
 
