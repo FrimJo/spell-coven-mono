@@ -5,16 +5,9 @@
  */
 
 import type { ReactNode } from 'react'
-import { env } from '@/env'
 import { ConvexAuthProvider } from '@convex-dev/auth/react'
-import { ConvexReactClient } from 'convex/react'
 
-/**
- * Convex client instance
- *
- * Single instance shared across the app.
- */
-const convex = new ConvexReactClient(env.VITE_CONVEX_URL)
+import { convex } from './client'
 
 interface ConvexProviderProps {
   children: ReactNode
@@ -30,8 +23,3 @@ interface ConvexProviderProps {
 export function ConvexProvider({ children }: ConvexProviderProps) {
   return <ConvexAuthProvider client={convex}>{children}</ConvexAuthProvider>
 }
-
-/**
- * Export the client for direct access if needed
- */
-export { convex }

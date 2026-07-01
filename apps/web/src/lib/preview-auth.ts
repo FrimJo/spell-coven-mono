@@ -1,4 +1,4 @@
-import { convex } from '@/integrations/convex/provider'
+import { convex } from '@/integrations/convex/client'
 import { api } from '@convex/_generated/api'
 import z from 'zod'
 

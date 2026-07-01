@@ -1,7 +1,7 @@
 import { addAppBreadcrumb, startAppSpan } from '@/integrations/sentry/reporting'
 import { api } from '@convex/_generated/api'
 
-import { convex } from '../integrations/convex/provider.js'
+import { convex } from '../integrations/convex/client.js'
 
 interface CreateRoomResult {
   roomId: string | null

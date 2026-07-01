@@ -1,12 +1,6 @@
+import type { QueryClient } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-
-export function getContext() {
-  const queryClient = new QueryClient()
-  return {
-    queryClient,
-  }
-}
+import { QueryClientProvider } from '@tanstack/react-query'
 
 interface ProviderProps {
   children: ReactNode
