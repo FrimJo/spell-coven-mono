@@ -19,7 +19,6 @@ import {
   Play,
   Plus,
   RotateCcw,
-  Scan,
   Settings,
   Smartphone,
   Sparkles,
@@ -545,20 +544,18 @@ export function LandingPage({
                   {/* Game Grid */}
                   <div className="grid flex-1 grid-cols-2 grid-rows-2 gap-2 p-2 sm:gap-4 sm:p-4">
                     {[
-                      { name: 'Rowan', me: true, card: null, isActive: true },
+                      { name: 'Rowan', me: true, isActive: true },
                       {
                         name: 'Alex',
                         me: false,
-                        card: 'https://cards.scryfall.io/large/front/3/a/3aec0e25-240e-44e5-9f40-0a6c6b9dc206.jpg',
                         isActive: false,
-                      }, // Example card URL for visual
+                      },
                       {
                         name: 'Jordan',
                         me: false,
-                        card: null,
                         isActive: false,
                       },
-                      { name: 'Sam', me: false, card: null, isActive: false },
+                      { name: 'Sam', me: false, isActive: false },
                     ].map((p) => (
                       <div
                         key={p.name}
@@ -598,29 +595,6 @@ export function LandingPage({
                             </span>
                           </div>
                         </div>
-
-                        {/* Card Recognition Overlay (Simulated) */}
-                        {p.card && (
-                          <div className="absolute right-4 top-1/2 z-20 w-24 -translate-y-1/2 rotate-3 transform transition-transform hover:rotate-0 hover:scale-150">
-                            <div className="group relative aspect-[2.5/3.5] cursor-pointer overflow-hidden rounded-sm border border-white/20 shadow-2xl">
-                              {/* Placeholder for card image since we can't rely on external URLs reliably in preview without being sure they load, using a colored div with icon */}
-                              <div className="bg-surface-2 flex size-full items-center justify-center">
-                                <div className="bg-linear-to-br size-full from-amber-900/40 to-slate-900"></div>
-                                <Sparkles className="text-warning/50 absolute" />
-                              </div>
-                              <div className="bg-linear-to-t absolute inset-0 from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
-                                <div className="flex h-full items-end justify-center pb-2">
-                                  <span className="text-[10px] text-white">
-                                    Click to zoom
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Card Recognition Rectangles (Simulated) */}
-                        <div className="absolute left-1/2 top-1/2 h-32 w-48 -translate-x-1/2 -translate-y-1/2 rounded-sm border-2 border-dashed border-white/5 opacity-50" />
                       </div>
                     ))}
                   </div>
@@ -725,7 +699,7 @@ export function LandingPage({
               <div className="group relative flex flex-col items-center text-center">
                 <div className="border-border-muted bg-surface-0 group-hover:border-info/50 relative z-10 mb-6 flex size-24 items-center justify-center rounded-2xl border shadow-xl transition-all duration-300 group-hover:shadow-[0_0_30px_-5px_rgba(59,130,246,0.3)]">
                   <div className="bg-linear-to-br absolute inset-0 rounded-2xl from-blue-500/20 to-cyan-500/20 opacity-0 transition-opacity group-hover:opacity-100" />
-                  <Scan className="text-info group-hover:text-info relative z-10 size-10 transition-transform duration-300 group-hover:scale-110" />
+                  <Camera className="text-info group-hover:text-info relative z-10 size-10 transition-transform duration-300 group-hover:scale-110" />
                   <div className="border-border-muted bg-surface-1 ring-surface-0 absolute -right-3 -top-3 flex size-8 items-center justify-center rounded-full border text-sm font-bold text-white shadow-lg ring-4">
                     2
                   </div>

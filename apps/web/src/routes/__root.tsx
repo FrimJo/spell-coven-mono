@@ -41,7 +41,7 @@ const siteOrigin = 'https://www.spell-coven.com'
 const siteUrl = `${siteOrigin}/`
 const siteName = 'Spell Coven'
 const siteDescription =
-  'Play paper Magic: The Gathering remotely with video chat and card recognition. Use your physical cards, see your opponents, and enjoy the authentic experience. Free, browser-based, no downloads required.'
+  'Play paper Magic: The Gathering remotely with video chat, game tracking, and manual card search. Free, browser-based, no downloads required.'
 const seoAssetVersion = '2026-06-29'
 const versionedAsset = (path: string) => `${path}?v=${seoAssetVersion}`
 const ogImageUrl = `${siteOrigin}${versionedAsset('/og-image.png')}`

@@ -6,8 +6,7 @@ This guide consolidates the most relevant operational knowledge for agents worki
 
 ## Repository Scope
 
-- **Tech stack:** TypeScript 5.x, React 18+/19, Vite 7, Tailwind CSS 4.x, TanStack Router, Radix UI, Node.js 20+ build tooling, Transformers.js for browser ML workloads.
-- **Supporting tooling:** Python 3.10+ (embedding/data pipelines), browser IndexedDB for model caching, FAISS index + JSONL metadata for offline assets.
+- **Tech stack:** TypeScript 5.x, React 18+/19, Vite 7, Tailwind CSS 4.x, TanStack Router, Radix UI, and Node.js 20+ build tooling.
 - **Structure:** Primary packages live under `packages/` and `apps/`; shared scripts sit in `scripts/`.
 
 ## Coding Guidelines

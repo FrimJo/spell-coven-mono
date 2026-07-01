@@ -23,14 +23,14 @@ If you want to use this project commercially, contact the maintainer to obtain a
 
 ## About This Project
 
-**This is a hobby project.** I'm a full-time web developer, and Spell Coven is my playground for exploring cutting-edge AI tools and staying in the loop with what's possible in modern web development. It's a passion project born from my love of Magic: The Gathering and curiosity about emerging technologies like browser-based machine learning, WebRTC, and computer vision.
+**This is a hobby project.** I'm a full-time web developer, and Spell Coven is my playground for exploring modern web development. It's a passion project born from my love of Magic: The Gathering and real-time browser applications.
 
 ## Vision
 
 Spell Coven aims to provide a comprehensive remote play experience for Magic: The Gathering players, competing with platforms like SpellTable by offering:
 
 - **Multi-party Video & Voice**: Browser-based video chat optimized for overhead camera views of playmats (2-4 players per game)
-- **Intelligent Card Recognition**: Computer vision powered by CLIP to identify cards in real-time and display rulings/details
+- **Manual Card Search**: Look up cards through Scryfall and keep a recent-card history
 - **Game Management Tools**: Life total tracking, commander damage tracking, and game timers
 - **Flexible Room System**: Create or join private/public game rooms with format and power level metadata for better matchmaking
 - **Device Flexibility**: Use standard webcams or mobile devices as overhead cameras without separate apps
@@ -47,14 +47,6 @@ The following features are currently available and working:
 - ✅ **Life Total Tracking**: Keep track of life totals for all players
 - ✅ **Commander Damage Tracking**: Track commander damage across multiple opponents
 - ✅ **Invite by URL**: Share a link to invite friends to your game room
-
-## Coming Soon
-
-These features are actively being developed:
-
-- 🚧 **Card Recognition**: Click-to-identify cards using CLIP-based visual search and Scryfall integration (in progress)
-- 🚧 **Card Boundary Detection**: OpenCV.js for real-time card detection in video feeds (in progress)
-- 🚧 **Pre-computed Embeddings**: Database of ~20k+ MTG card embeddings for fast similarity search (in progress)
 
 ## Planned Features
 
@@ -182,18 +174,14 @@ This Turborepo monorepo houses all applications and packages needed to drive the
 - **`web`**: Main web application for remote MTG play (Vite + React + TanStack Router)
   - Room system with real-time player presence
   - WebRTC video/audio chat
-  - Card recognition (in development)
-- **`@repo/mtg-image-db`**: Pre-generated CLIP embeddings and metadata for MTG card database
-  - Python pipeline for downloading Scryfall data
-  - FAISS index builder for efficient similarity search
-  - Browser-optimized export (int8 quantization)
+  - Manual Scryfall card search and recent-card history
 - **`@repo/ui`**: Shared React component library
 - **`@repo/eslint-config`**: Shared ESLint configurations
 - **`@repo/typescript-config`**: Shared TypeScript configurations
 - **`@repo/tailwind-config`**: Shared Tailwind CSS configuration
 - **`@repo/prettier-config`**: Shared Prettier configuration
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/) (Python for data pipeline).
+Each package/app is written in [TypeScript](https://www.typescriptlang.org/).
 
 ### Key Technologies
 
@@ -208,16 +196,9 @@ Each package/app is 100% [TypeScript](https://www.typescriptlang.org/) (Python f
 - WebRTC for peer-to-peer video/audio
 - Convex for real-time data sync and room management
 
-**Card Recognition** (in development):
-
-- CLIP (via [@huggingface/transformers](https://huggingface.co/docs/transformers.js)) for image feature extraction
-- OpenCV.js for real-time card boundary detection
-- FAISS for efficient similarity search
-
 **Infrastructure**:
 
 - Turborepo managed with Bun workspaces
-- Python data pipeline with PyTorch, FAISS, Scryfall API
 
 ### Utilities
 
@@ -260,7 +241,7 @@ bunx turbo run build --filter=docs
 This is an open-source project and contributions are welcome! Whether you're interested in:
 
 - Adding new features (game tools, UI improvements)
-- Improving card recognition accuracy
+- Improving game-room usability
 - Optimizing performance
 - Writing documentation
 - Reporting bugs
