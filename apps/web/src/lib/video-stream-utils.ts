@@ -47,33 +47,3 @@ export function attachVideoStream(
     videoElement.srcObject = null
   }
 }
-
-/**
- * Attach a MediaStream to a video element without auto-play
- *
- * Useful for preview scenarios where you want to control playback separately
- *
- * @param videoElement - The video element to attach the stream to
- * @param stream - The MediaStream to attach (or null to detach)
- * @returns Cleanup function to detach the stream
- */
-export function attachVideoStreamNoAutoPlay(
-  videoElement: HTMLVideoElement | null,
-  stream: MediaStream | null,
-): (() => void) | undefined {
-  if (videoElement == null) return
-  // If no stream, clear the element
-  if (stream == null) {
-    videoElement.srcObject = null
-    return
-  }
-
-  console.log('[attachVideoStreamNoAutoPlay] Attaching stream to video element')
-
-  videoElement.srcObject = stream
-
-  // Return cleanup function
-  return () => {
-    videoElement.srcObject = null
-  }
-}

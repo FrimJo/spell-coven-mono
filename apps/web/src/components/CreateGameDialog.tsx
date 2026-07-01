@@ -99,7 +99,7 @@ export function CreateGameDialog({
                   {isReady ? (
                     <m.div
                       key="success"
-                      initial={{ scale: 0, rotate: -180, opacity: 0 }}
+                      initial={{ scale: 0.95, rotate: -180, opacity: 0 }}
                       animate={{ scale: 1, rotate: 0, opacity: 1 }}
                       transition={{
                         type: 'spring',
@@ -114,7 +114,7 @@ export function CreateGameDialog({
                     <m.div
                       key="pending"
                       exit={{
-                        scale: 0,
+                        scale: 0.95,
                         rotate: 180,
                         opacity: 0,
                       }}

@@ -2,7 +2,6 @@
 
 import type { ScryfallCard } from '@/lib/scryfall'
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
-import { detectDualCommanderKeywords, getSpecificPartner } from '@/lib/scryfall'
 import { commanderSearchMachine } from '@/state/commanderSearchMachine'
 import { useMachine } from '@xstate/react'
 import { Loader2 } from 'lucide-react'
@@ -360,4 +359,3 @@ export function CommanderSearchInput({
 // ─────────────────────────────────────────────────────────────────────────────
 // Re-exported utilities for external use
 // ─────────────────────────────────────────────────────────────────────────────
-export { detectDualCommanderKeywords, getSpecificPartner }

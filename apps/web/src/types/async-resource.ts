@@ -53,46 +53,12 @@ export type AsyncResource<
   | AsyncResourceSuccess<TBase, TData>
 
 /**
- * Type guard to check if an async resource is in success state
- */
-export function isAsyncResourceSuccess<
-  TBase extends Record<string, unknown> = Record<string, unknown>,
-  TData extends Record<string, unknown> = Record<string, unknown>,
->(
-  resource: AsyncResource<TBase, TData>,
-): resource is AsyncResourceSuccess<TBase, TData> {
-  return !resource.isPending && resource.error === null
-}
-
-/**
  * Generic type guard for any object with isPending and error properties
  */
 export function isSuccessState<
   T extends { isPending: boolean; error: Error | null },
 >(resource: T): resource is T & { isPending: false; error: null } {
   return !resource.isPending && resource.error === null
-}
-
-/**
- * Type guard to check if an async resource is in error state
- */
-export function isAsyncResourceError<
-  TBase extends Record<string, unknown> = Record<string, unknown>,
->(
-  resource: AsyncResource<TBase, Record<string, unknown>>,
-): resource is AsyncResourceError<TBase> {
-  return !resource.isPending && resource.error !== null
-}
-
-/**
- * Type guard to check if an async resource is pending
- */
-export function isAsyncResourcePending<
-  TBase extends Record<string, unknown> = Record<string, unknown>,
->(
-  resource: AsyncResource<TBase, Record<string, unknown>>,
-): resource is AsyncResourcePending<TBase> {
-  return resource.isPending === true
 }
 
 /**

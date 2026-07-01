@@ -15,11 +15,6 @@ function getIsMac(): boolean {
   )
 }
 
-/** Shortcut label for search: "⌘K" on Mac, "Ctrl+K" on Windows/Linux */
-export function useSearchShortcutLabel(): string {
-  return getIsMac() ? '⌘K' : 'Ctrl+K'
-}
-
 /**
  * Returns the modifier symbol and key for the search shortcut.
  * Mac: { modifier: '⌘', key: 'K' }

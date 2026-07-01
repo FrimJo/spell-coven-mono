@@ -9,7 +9,3 @@
  */
 
 export const GAME_ID_PATTERN = /^[A-Z0-9]{6}$/
-
-export function isValidGameId(raw: string): boolean {
-  return GAME_ID_PATTERN.test(raw.trim().toUpperCase())
-}

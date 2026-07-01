@@ -3,8 +3,6 @@ import * as Sentry from '@sentry/react'
 import type { SentryData } from '@repo/observability'
 import { sanitizeSentryData } from '@repo/observability'
 
-export { sanitizeSentryData }
-
 interface CaptureAppExceptionOptions {
   tags?: Record<string, string | number | boolean | undefined>
   contexts?: Record<string, Record<string, SentryData>>
@@ -50,20 +48,6 @@ export async function startAppSpan<T>(
   callback: () => Promise<T>,
 ): Promise<T> {
   return await Sentry.startSpan(
-    {
-      name: options.name,
-      op: options.op,
-      attributes: options.attributes,
-    },
-    callback,
-  )
-}
-
-export function startAppSpanSync<T>(
-  options: AppSpanOptions,
-  callback: () => T,
-): T {
-  return Sentry.startSpan(
     {
       name: options.name,
       op: options.op,

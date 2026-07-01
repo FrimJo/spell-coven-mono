@@ -23,10 +23,3 @@ export function registerSentryRouterInstrumentation(router: AnyRouter) {
     })
   })
 }
-
-export function unregisterSentryRouterInstrumentation() {
-  if (unsubscribe) {
-    unsubscribe()
-    unsubscribe = null
-  }
-}

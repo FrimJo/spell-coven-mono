@@ -5,11 +5,11 @@ export interface ConvexAuthTokens {
   previewName?: string
 }
 
-export function getConvexAuthNamespace(convexUrl: string): string {
+function getConvexAuthNamespace(convexUrl: string): string {
   return convexUrl.replace(/[^a-zA-Z0-9]/g, '')
 }
 
-export function getConvexAuthStorageKeys(convexUrl: string): {
+function getConvexAuthStorageKeys(convexUrl: string): {
   jwtKey: string
   refreshTokenKey: string
   previewNameKey: string
