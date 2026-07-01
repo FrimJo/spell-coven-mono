@@ -9,8 +9,8 @@
 import type { ReactNode } from 'react'
 import {
   createContext,
+  use,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -34,8 +34,8 @@ function svgForInline(raw: string) {
 // in __root.tsx (they are duplicated there as string literals).
 // ============================================================================
 
-export const THEME_COOKIE = 'sc-theme'
-export const MTG_THEME_COOKIE = 'sc-mtg-theme'
+const THEME_COOKIE = 'sc-theme'
+const MTG_THEME_COOKIE = 'sc-mtg-theme'
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
 
 const VALID_THEMES = ['light', 'dark', 'system'] as const
@@ -62,10 +62,7 @@ const DEFAULT_THEME: Theme = 'dark'
 const DEFAULT_MTG_THEME: MtgColorTheme = 'none'
 
 /** Extract a single cookie value from a raw Cookie header string. */
-export function parseCookieValue(
-  cookieHeader: string,
-  name: string,
-): string | null {
+function parseCookieValue(cookieHeader: string, name: string): string | null {
   const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))
   return match?.[1] != null ? decodeURIComponent(match[1]) : null
 }
@@ -316,7 +313,7 @@ export function ThemeProvider({
  * Hook to access theme context
  */
 export function useTheme(): ThemeContextValue {
-  const context = useContext(ThemeContext)
+  const context = use(ThemeContext)
 
   if (!context) {
     throw new Error('useTheme must be used within a ThemeProvider')

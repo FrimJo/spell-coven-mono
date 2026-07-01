@@ -1,6 +1,6 @@
 import type { RoomMediaSessionState } from '@/types/media-session'
 import type { ReactNode } from 'react'
-import { createContext, useContext } from 'react'
+import { createContext, use } from 'react'
 import { usePresence } from '@/contexts/PresenceContext'
 import { useMediaDiagnostics } from '@/hooks/useMediaDiagnostics'
 import { useRoomMediaSession } from '@/hooks/useRoomMediaSession'
@@ -33,7 +33,7 @@ export function RoomMediaProvider({
 }
 
 export function useRoomMedia(): RoomMediaSessionState {
-  const context = useContext(RoomMediaContext)
+  const context = use(RoomMediaContext)
   if (!context) {
     throw new Error('useRoomMedia must be used within a RoomMediaProvider')
   }

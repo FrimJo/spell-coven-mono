@@ -5,7 +5,7 @@
  */
 
 import type { ReactNode } from 'react'
-import { createContext, useContext, useEffect, useMemo } from 'react'
+import { createContext, use, useEffect, useMemo } from 'react'
 import { useConvexAuthHook } from '@/hooks/useConvexAuth'
 import * as Sentry from '@sentry/react'
 
@@ -101,7 +101,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
  * Hook to access auth context
  */
 export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext)
+  const context = use(AuthContext)
 
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider')

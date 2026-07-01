@@ -12,13 +12,7 @@
  */
 
 import type { Participant } from '@/types/participant'
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-} from 'react'
+import { createContext, use, useCallback, useMemo, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useConvexPresence } from '@/hooks/useConvexPresence'
 
@@ -218,7 +212,7 @@ export function PresenceProvider({
  * Hook to access presence data and actions from any child component
  */
 export function usePresence(): PresenceContextValue {
-  const context = useContext(PresenceContext)
+  const context = use(PresenceContext)
 
   if (!context) {
     throw new Error('usePresence must be used within a PresenceProvider')

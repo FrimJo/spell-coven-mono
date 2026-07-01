@@ -1,12 +1,6 @@
 'use client'
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-} from 'react'
+import { createContext, use, useCallback, useMemo, useState } from 'react'
 
 type CommanderDamageDialogContextValue = {
   /** When set, the overlay for this player id should open its commander damage dialog */
@@ -40,5 +34,5 @@ export function CommanderDamageDialogProvider({
 }
 
 export function useCommanderDamageDialog(): CommanderDamageDialogContextValue | null {
-  return useContext(CommanderDamageDialogContext)
+  return use(CommanderDamageDialogContext)
 }

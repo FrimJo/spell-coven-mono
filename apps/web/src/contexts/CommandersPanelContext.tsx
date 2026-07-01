@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useMemo } from 'react'
+import { createContext, use, useMemo } from 'react'
 
 type CommandersPanelContextValue = {
   openCommandersPanel: () => void
@@ -30,5 +30,5 @@ export function CommandersPanelProvider({
 }
 
 export function useCommandersPanel(): CommandersPanelContextValue | null {
-  return useContext(CommandersPanelContext)
+  return use(CommandersPanelContext)
 }

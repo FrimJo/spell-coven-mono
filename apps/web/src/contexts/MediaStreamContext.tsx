@@ -11,13 +11,7 @@ import type {
   MediaPreferenceStore,
 } from '@/hooks/useMediaPreferenceStore'
 import type { ReactNode } from 'react'
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-} from 'react'
+import { createContext, use, useCallback, useEffect, useMemo } from 'react'
 import { useAudioOutput } from '@/hooks/useAudioOutput'
 import { useMediaPermissions } from '@/hooks/useMediaPermissions'
 import { useMediaPreferenceStore } from '@/hooks/useMediaPreferenceStore'
@@ -263,7 +257,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
 }
 
 export function useMediaStreams(): MediaStreamContextValue {
-  const context = useContext(MediaStreamContext)
+  const context = use(MediaStreamContext)
   if (!context) {
     throw new Error('useMediaStreams must be used within a MediaStreamProvider')
   }
