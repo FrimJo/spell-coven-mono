@@ -162,17 +162,19 @@ export function VideoSetupSection({
                   />
                 </SelectTrigger>
                 <SelectContent className="border-border-default bg-surface-2">
-                  {videoDevices
-                    .filter((device) => device.deviceId !== '')
-                    .map((device) => (
-                      <SelectItem
-                        key={device.deviceId}
-                        value={device.deviceId}
-                        className="text-text-secondary focus:bg-surface-3"
-                      >
-                        {device.label}
-                      </SelectItem>
-                    ))}
+                  {videoDevices.flatMap((device) =>
+                    device.deviceId === ''
+                      ? []
+                      : [
+                          <SelectItem
+                            key={device.deviceId}
+                            value={device.deviceId}
+                            className="text-text-secondary focus:bg-surface-3"
+                          >
+                            {device.label}
+                          </SelectItem>,
+                        ],
+                  )}
                 </SelectContent>
               </Select>
 
@@ -493,17 +495,19 @@ export function AudioInputSection({
                 <SelectValue placeholder="Select microphone" />
               </SelectTrigger>
               <SelectContent className="border-border-default bg-surface-2">
-                {audioInputDevices
-                  .filter((device) => device.deviceId !== '')
-                  .map((device) => (
-                    <SelectItem
-                      key={device.deviceId}
-                      value={device.deviceId}
-                      className="text-text-secondary focus:bg-surface-3"
-                    >
-                      {device.label}
-                    </SelectItem>
-                  ))}
+                {audioInputDevices.flatMap((device) =>
+                  device.deviceId === ''
+                    ? []
+                    : [
+                        <SelectItem
+                          key={device.deviceId}
+                          value={device.deviceId}
+                          className="text-text-secondary focus:bg-surface-3"
+                        >
+                          {device.label}
+                        </SelectItem>,
+                      ],
+                )}
               </SelectContent>
             </Select>
             {isAudioInputPending && (
@@ -576,17 +580,19 @@ export function AudioOutputSection({
             />
           </SelectTrigger>
           <SelectContent className="border-border-default bg-surface-2">
-            {audioOutputDevices
-              .filter((device) => device.deviceId !== '')
-              .map((device) => (
-                <SelectItem
-                  key={device.deviceId}
-                  value={device.deviceId}
-                  className="text-text-secondary focus:bg-surface-3"
-                >
-                  {device.label}
-                </SelectItem>
-              ))}
+            {audioOutputDevices.flatMap((device) =>
+              device.deviceId === ''
+                ? []
+                : [
+                    <SelectItem
+                      key={device.deviceId}
+                      value={device.deviceId}
+                      className="text-text-secondary focus:bg-surface-3"
+                    >
+                      {device.label}
+                    </SelectItem>,
+                  ],
+            )}
           </SelectContent>
         </Select>
 

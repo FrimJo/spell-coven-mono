@@ -32,10 +32,6 @@ export const env = createEnv({
 
     // App config
     VITE_BASE_URL: z.url().optional().default('https://localhost:1234'),
-    VITE_EMBEDDINGS_VERSION: z
-      .string()
-      .min(1, 'Embeddings version is required'),
-    VITE_BLOB_STORAGE_URL: z.url().min(1, 'Blob storage URL is required'),
     VITE_SUPPORT_URL: z.url().optional(),
     VITE_CAMERA_FOCUS_CONTROLS_ENABLED: z.coerce.boolean().default(false),
     VITE_PREVIEW_AUTH: z.coerce.boolean().default(false),
@@ -61,8 +57,6 @@ export const env = createEnv({
   runtimeEnv: {
     VITE_CONVEX_URL: import.meta.env.VITE_CONVEX_URL,
     VITE_BASE_URL: import.meta.env.VITE_BASE_URL,
-    VITE_EMBEDDINGS_VERSION: import.meta.env.VITE_EMBEDDINGS_VERSION,
-    VITE_BLOB_STORAGE_URL: import.meta.env.VITE_BLOB_STORAGE_URL,
     VITE_SUPPORT_URL: import.meta.env.VITE_SUPPORT_URL,
     VITE_PREVIEW_AUTH: import.meta.env.VITE_PREVIEW_AUTH,
     VITE_SENTRY_DSN: import.meta.env.VITE_SENTRY_DSN,
@@ -122,8 +116,6 @@ export function getClientEnv() {
   return {
     VITE_CONVEX_URL: env.VITE_CONVEX_URL,
     VITE_BASE_URL: env.VITE_BASE_URL,
-    VITE_EMBEDDINGS_VERSION: env.VITE_EMBEDDINGS_VERSION,
-    VITE_BLOB_STORAGE_URL: env.VITE_BLOB_STORAGE_URL,
     VITE_SUPPORT_URL: env.VITE_SUPPORT_URL,
     VITE_CAMERA_FOCUS_CONTROLS_ENABLED: env.VITE_CAMERA_FOCUS_CONTROLS_ENABLED,
     VITE_PREVIEW_AUTH: env.VITE_PREVIEW_AUTH,

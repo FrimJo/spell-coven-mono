@@ -243,7 +243,7 @@ export function PlayerList({
                           className="flex min-w-0 flex-1 items-center gap-2"
                         >
                           <m.div
-                            initial={{ scale: 0 }}
+                            initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1 }}
                             transition={{
                               type: 'spring',

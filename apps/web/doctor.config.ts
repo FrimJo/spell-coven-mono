@@ -6,9 +6,10 @@ export default {
       // React Compiler is enabled. Preserve existing manual memoization during
       // the initial rollout because some call sites rely on stable identity.
       'react-doctor/react-compiler-no-manual-memoization',
+      // React Compiler currently reports unsupported syntax (for example,
+      // try/finally) that application code cannot meaningfully remediate.
       'react-hooks-js/todo',
     ],
-    tags: ['migration-hint'],
     overrides: [
       {
         files: ['src/components/LiveKitTrackElement.tsx'],
@@ -25,6 +26,7 @@ export default {
         // These effects create or synchronize browser-owned resources. State
         // updates occur as part of that external synchronization.
         rules: [
+          // Underlying React Compiler rule; not listed by `doctor rules`.
           'react-hooks-js/set-state-in-effect',
           'react-doctor/no-initialize-state',
         ],
@@ -62,7 +64,6 @@ export default {
       {
         files: [
           'src/components/CardSearchCommand.tsx',
-          'src/components/CardSearchPanel.tsx',
           'src/routes/phone-camera.tsx',
         ],
         // Unmount cleanup must read the latest timer/browser resource ref.

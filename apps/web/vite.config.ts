@@ -68,10 +68,6 @@ export default defineConfig(({ mode: mode }) => {
         '@convex': path.resolve(__dirname, '../../convex'),
       },
     },
-    optimizeDeps: {
-      // Note: @techstark/opencv-js is used only for TypeScript types
-      // The actual OpenCV.js is loaded via CDN script tag to avoid Vite bundling issues
-    },
     ssr: {
       external: [],
       noExternal: [],

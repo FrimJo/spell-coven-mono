@@ -8,44 +8,15 @@ import { useAuth } from '@/contexts/AuthContext'
 import { env } from '@/env'
 import { MEDIA_DEVICE_STORAGE_KEY } from '@/hooks/useMediaPreferenceStore'
 import { checkRoomAccessServer } from '@/integrations/convex/server-client'
-import {
-  addAppBreadcrumb,
-  captureAppException,
-  startAppSpan,
-} from '@/integrations/sentry/reporting'
-import { loadEmbeddingsAndMetaFromPackage } from '@/lib/clip-search'
+import { addAppBreadcrumb, startAppSpan } from '@/integrations/sentry/reporting'
 import { GAME_ID_PATTERN } from '@/lib/game-id'
 import { sessionStorage } from '@/lib/session-storage'
 import { api } from '@convex/_generated/api'
 import * as Sentry from '@sentry/react'
-import {
-  createFileRoute,
-  redirect,
-  stripSearchParams,
-  useNavigate,
-} from '@tanstack/react-router'
-import { zodValidator } from '@tanstack/zod-adapter'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
 import { Loader2 } from 'lucide-react'
 import { ErrorBoundary } from 'react-error-boundary'
-import { z } from 'zod'
-
-const defaultValues = {
-  usePerspectiveWarp: true, // Use OpenCV quad for precise perspective correction
-  testStream: false, // Show a synthetic test stream in an empty slot
-}
-
-const gameSearchSchema = z.object({
-  detector: z.enum(['opencv', 'detr', 'owl-vit', 'yolov8']).optional(),
-  usePerspectiveWarp: z
-    .boolean()
-    .default(defaultValues.usePerspectiveWarp)
-    .describe('Enable perspective correction (corner refinement + warp)'),
-  testStream: z
-    .boolean()
-    .default(defaultValues.testStream)
-    .describe('Show a synthetic test stream in an empty slot for development'),
-})
 
 /**
  * Check if user has completed media setup.
@@ -90,11 +61,6 @@ function RouteErrorReporter({
 }
 
 export const Route = createFileRoute('/_authed/game/$gameId')({
-  validateSearch: zodValidator(gameSearchSchema),
-  loaderDeps: ({ search }) => ({ detector: search.detector }),
-  search: {
-    middlewares: [stripSearchParams(defaultValues)],
-  },
   ssr: false,
   beforeLoad: async ({ params, location }) => {
     // notFound() renders blank with ssr: false — validate here only to
@@ -111,7 +77,7 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
       })
     }
   },
-  loader: async ({ params, deps }) => {
+  loader: async ({ params }) => {
     if (!GAME_ID_PATTERN.test(params.gameId)) {
       return { roomNotFound: true }
     }
@@ -123,33 +89,6 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
     if (access.status === 'not_found') {
       addAppBreadcrumb('room', 'Game route room not found')
       return { roomNotFound: true }
-    }
-
-    if (deps.detector) {
-      Sentry.setTag('detector', deps.detector)
-      console.log(
-        '[game.$gameId loader] Detector enabled, preloading embeddings database...',
-      )
-      try {
-        await startAppSpan(
-          {
-            name: 'Preload embeddings database',
-            op: 'ml.embeddings.load',
-            attributes: { detector: deps.detector },
-          },
-          () => loadEmbeddingsAndMetaFromPackage(),
-        )
-        console.log('[game.$gameId loader] Embeddings database loaded')
-      } catch (err) {
-        console.error('[game.$gameId loader] Failed to load embeddings:', err)
-        captureAppException(err, {
-          tags: {
-            feature: 'scanner',
-            operation: 'route_preload_embeddings',
-            detector: deps.detector,
-          },
-        })
-      }
     }
 
     return { roomNotFound: false }
@@ -183,7 +122,6 @@ export const Route = createFileRoute('/_authed/game/$gameId')({
 function GameRoomPage() {
   const { gameId } = Route.useParams()
   const { roomNotFound } = Route.useLoaderData()
-  const { detector, usePerspectiveWarp, testStream } = Route.useSearch()
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -267,9 +205,6 @@ function GameRoomPage() {
           roomId={gameId}
           playerName={user?.username ?? 'Player'}
           onLeaveGame={handleLeaveGame}
-          detectorType={detector}
-          usePerspectiveWarp={usePerspectiveWarp}
-          showTestStream={testStream}
         />
       </Suspense>
     </ErrorBoundary>

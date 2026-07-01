@@ -1,4 +1,3 @@
-import type { DetectorType } from '@/lib/detectors'
 import type {
   MediaTrack,
   PeerMediaPresence,
@@ -6,8 +5,7 @@ import type {
 } from '@/types/media-session'
 import type { Participant } from '@/types/participant'
 import type { LucideIcon } from 'lucide-react'
-import { memo, useCallback, useRef } from 'react'
-import { useCardDetector } from '@/hooks/useCardDetector'
+import { memo, useRef } from 'react'
 import { MicOff, Unplug, Wifi, WifiOff } from 'lucide-react'
 
 import { Card } from '@repo/ui/components/card'
@@ -20,13 +18,10 @@ import {
 import { LiveKitTrackElement } from './LiveKitTrackElement'
 import { PlayerStatsOverlay } from './PlayerStatsOverlay'
 import {
-  CardDetectionOverlay,
-  CroppedCanvas,
-  FullResCanvas,
   PlayerNameBadge,
-  VIDEO_STYLE,
   VideoDisabledPlaceholder,
 } from './PlayerVideoCardParts'
+import { VIDEO_STYLE } from './videoStyles'
 
 type WarningPeerMediaPresence = Exclude<PeerMediaPresence, 'connected'>
 
@@ -73,11 +68,6 @@ interface RemotePlayerCardProps {
   localParticipant: Participant | undefined
   gameRoomParticipants: Participant[]
   isOnline: boolean // Presence-based online status (matches sidebar)
-  // Card detection props
-  enableCardDetection: boolean
-  detectorType?: DetectorType
-  usePerspectiveWarp: boolean
-  onCardCrop?: (canvas: HTMLCanvasElement) => void
 }
 
 export const RemotePlayerCard = memo(function RemotePlayerCard({
@@ -93,31 +83,9 @@ export const RemotePlayerCard = memo(function RemotePlayerCard({
   localParticipant,
   gameRoomParticipants,
   isOnline,
-  enableCardDetection,
-  detectorType,
-  usePerspectiveWarp,
-  onCardCrop,
 }: RemotePlayerCardProps) {
   const peerVideoEnabled = !remoteMediaStatus.videoMuted
   const peerAudioEnabled = !remoteMediaStatus.audioMuted
-
-  // Local video ref for card detection (separate from the shared remoteVideoRefs map)
-  const videoRef = useRef<HTMLVideoElement>(null)
-
-  // Initialize card detector for this remote player's stream
-  const { overlayRef, croppedRef, fullResRef } = useCardDetector({
-    videoRef: videoRef,
-    enableCardDetection:
-      enableCardDetection && peerVideoEnabled && !!remoteVideoTrack,
-    detectorType,
-    usePerspectiveWarp,
-    onCrop: onCardCrop,
-    reinitializeTrigger: remoteVideoTrack ? 1 : 0,
-  })
-
-  const handleVideoRef = useCallback((element: HTMLVideoElement | null) => {
-    videoRef.current = element
-  }, [])
 
   const videoContainerRef = useRef<HTMLDivElement>(null)
   const peerMediaPresenceWarning =
@@ -152,7 +120,6 @@ export const RemotePlayerCard = memo(function RemotePlayerCard({
                 ariaLabel={`${playerName} camera`}
                 muted={isMuted}
                 style={VIDEO_STYLE}
-                onVideoElement={handleVideoRef}
               />
             )}
             {peerAudioEnabled && remoteAudioTrack && (
@@ -163,15 +130,6 @@ export const RemotePlayerCard = memo(function RemotePlayerCard({
                 muted={isMuted}
                 testId="remote-player-audio"
               />
-            )}
-            {enableCardDetection && overlayRef && (
-              <CardDetectionOverlay overlayRef={overlayRef} />
-            )}
-            {enableCardDetection && croppedRef && (
-              <CroppedCanvas croppedRef={croppedRef} />
-            )}
-            {enableCardDetection && fullResRef && (
-              <FullResCanvas fullResRef={fullResRef} />
             )}
           </>
         ) : (

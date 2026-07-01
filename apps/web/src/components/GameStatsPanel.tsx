@@ -1,8 +1,8 @@
 import type { ScryfallCard } from '@/lib/scryfall'
-import type { CardQueryResult } from '@/types/card-query'
+import type { CardSearchResult } from '@/types/card-search'
 import type { Participant } from '@/types/participant'
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
-import { useCardQueryContext } from '@/contexts/CardQueryContext'
+import { useCardSearchContext } from '@/contexts/CardSearchContext'
 import { usePresence } from '@/contexts/PresenceContext'
 import {
   detectDualCommanderKeywords,
@@ -38,11 +38,10 @@ import {
 
 import { CommanderSearchInput } from './CommanderSearchInput'
 
-function scryfallToQueryResult(card: ScryfallCard): CardQueryResult {
+function scryfallToSearchResult(card: ScryfallCard): CardSearchResult {
   return {
     name: card.name,
     set: card.set,
-    score: 1.0,
     image_url:
       card.image_uris?.art_crop ?? getCommanderImageUrl(card.id) ?? undefined,
     scryfall_uri: card.scryfall_uri,
@@ -70,7 +69,7 @@ export function GameStatsPanel({
   // Get seat count from presence context
   const { roomSeatCount } = usePresence()
   // Add selected commanders to Recent Cards in the sidebar
-  const { setResult } = useCardQueryContext()
+  const { setResult } = useCardSearchContext()
 
   // XState machine for commander panel state
   const [state, send] = useMachine(commanderPanelMachine)
@@ -293,7 +292,7 @@ export function GameStatsPanel({
       saveCommanders(playerId, '', editState?.commander2Name ?? '', 1)
       return
     }
-    setResult(scryfallToQueryResult(card))
+    setResult(scryfallToSearchResult(card))
     const newKeywords = detectDualCommanderKeywords(card)
     const newAllowsSecond = newKeywords.length > 0
     let commander2ForSave = ''
@@ -326,7 +325,7 @@ export function GameStatsPanel({
     const editState = editStateByPlayerId[playerId]
     baseOnCommander2Resolved(playerId, card)
     if (card) {
-      setResult(scryfallToQueryResult(card))
+      setResult(scryfallToSearchResult(card))
       saveCommanders(playerId, editState?.commander1Name ?? '', card.name, 2, {
         c2: card.id,
       })
@@ -341,7 +340,7 @@ export function GameStatsPanel({
     setCommander2Name(playerId, name)
     const card = await getCardByName(name, false)
     if (card) {
-      setResult(scryfallToQueryResult(card))
+      setResult(scryfallToSearchResult(card))
       baseOnCommander2Resolved(playerId, card)
       saveCommanders(playerId, editState?.commander1Name ?? '', name, 2, {
         c2: card.id,

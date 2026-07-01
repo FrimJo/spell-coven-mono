@@ -1,4 +1,4 @@
-import type { CardHistoryEntry } from '@/types/card-query'
+import type { CardSearchHistoryEntry } from '@/types/card-search'
 import type { Participant } from '@/types/participant'
 import {
   Activity,
@@ -9,7 +9,7 @@ import {
   useState,
 } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useCardQueryContext } from '@/contexts/CardQueryContext'
+import { useCardSearchContext } from '@/contexts/CardSearchContext'
 import { useCommanderDamageDialog } from '@/contexts/CommanderDamageDialogContext'
 import { usePresence } from '@/contexts/PresenceContext'
 import { History, Trash2 } from 'lucide-react'
@@ -38,11 +38,11 @@ function CardHistoryList({
   onClear,
   onRemove,
 }: {
-  history: CardHistoryEntry[]
-  onSelect: (entry: CardHistoryEntry) => void
+  history: CardSearchHistoryEntry[]
+  onSelect: (entry: CardSearchHistoryEntry) => void
   selectedCardId: string | null
   onClear: () => void
-  onRemove: (entry: CardHistoryEntry) => void
+  onRemove: (entry: CardSearchHistoryEntry) => void
 }) {
   const hasHistory = history.length > 0
 
@@ -177,40 +177,28 @@ function SidebarContent({
   const { user } = useAuth()
   const commanderDamageDialog = useCommanderDamageDialog()
   const {
-    state,
+    currentResult,
     history,
     setResultWithoutHistory,
     clearResult,
     clearHistory,
     removeFromHistory,
-  } = useCardQueryContext()
+  } = useCardSearchContext()
 
   // Determine the currently selected card ID for highlighting
   const selectedCardIdForHighlight = useMemo(() => {
-    // Prefer state.result, fallback to history[0]
-    const firstHistoryEntry = history[0]
-    const displayResult =
-      state.result ??
-      (firstHistoryEntry && (state.status !== 'idle' || state.result != null)
-        ? {
-            name: firstHistoryEntry.name,
-            set: firstHistoryEntry.set,
-          }
-        : null)
-
-    if (!displayResult) return null
+    if (!currentResult) return null
 
     // Match by name:set (same format as history entry id)
-    return `${displayResult.name}:${displayResult.set}`
-  }, [state.result, state.status, history])
+    return `${currentResult.name}:${currentResult.set}`
+  }, [currentResult])
 
   // Handler to re-select a history entry (doesn't add to history)
   const handleHistorySelect = useCallback(
-    (entry: CardHistoryEntry) => {
+    (entry: CardSearchHistoryEntry) => {
       setResultWithoutHistory({
         name: entry.name,
         set: entry.set,
-        score: 1.0, // Re-selection = full confidence
         scryfall_uri: entry.scryfall_uri,
         image_url: entry.image_url,
         card_url: entry.card_url,

@@ -1,9 +1,9 @@
 'use client'
 
 import type { ScryfallCard } from '@/lib/scryfall'
-import type { CardQueryResult } from '@/types/card-query'
+import type { CardSearchResult } from '@/types/card-search'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useCardQueryContext } from '@/contexts/CardQueryContext'
+import { useCardSearchContext } from '@/contexts/CardSearchContext'
 import { searchCards } from '@/lib/scryfall'
 import { ExternalLink, Loader2, Search } from 'lucide-react'
 
@@ -20,13 +20,12 @@ const DEBOUNCE_MS = 300
 const MIN_QUERY_LENGTH = 2
 
 /**
- * Convert a ScryfallCard to CardQueryResult format
+ * Convert a Scryfall card to the manual search result format.
  */
-function scryfallToCardQueryResult(card: ScryfallCard): CardQueryResult {
+function scryfallToCardSearchResult(card: ScryfallCard): CardSearchResult {
   return {
     name: card.name,
     set: card.set.toUpperCase(),
-    score: 1.0, // Manual selection = full confidence
     scryfall_uri: card.scryfall_uri,
     image_url: card.image_uris?.art_crop,
     card_url: card.image_uris?.normal,
@@ -42,7 +41,7 @@ export function CardSearchCommand({
   open,
   onOpenChange,
 }: CardSearchCommandProps) {
-  const { setResult } = useCardQueryContext()
+  const { setResult } = useCardSearchContext()
 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<ScryfallCard[]>([])
@@ -114,7 +113,7 @@ export function CardSearchCommand({
   // Handle card selection
   const handleSelect = useCallback(
     (card: ScryfallCard) => {
-      const result = scryfallToCardQueryResult(card)
+      const result = scryfallToCardSearchResult(card)
       setResult(result)
       resetSearch()
       onOpenChange(false)

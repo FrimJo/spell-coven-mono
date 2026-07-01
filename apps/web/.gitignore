@@ -10,16 +10,6 @@ count.txt
 .vinxi
 todos.json
 
-# Ignore old index_out directory (deprecated)
-public/index_out/
-
-# Keep versioned MTG embeddings data (committed to repo for deployment)
-# These files are large but necessary for the app to function
-# Update version when copying new embeddings from packages/mtg-image-db
-!public/data/
-!public/data/mtg-embeddings/
-!public/data/mtg-embeddings/**
-
 test-results/
 .playwright-storage/*.demo.ts
 
@@ -30,4 +20,3 @@ playwright-report/
 results.xml
 
 public/latest-dev/
-

@@ -6,9 +6,7 @@
  *
  * Activation methods:
  * 1. Query parameter: Add ?mockMedia=true to the URL
- *    - Use ?mockMedia=video to use the card_demo.webm video file
  * 2. Console command: Run window.enableMockMedia() then refresh
- *    - Use window.enableMockMedia('video') to use video file
  * 3. Programmatic: Call enableMockMedia() before app initialization
  *
  * The mock provides:
@@ -20,12 +18,6 @@
 
 // Storage key for persisting mock mode
 const MOCK_MEDIA_STORAGE_KEY = 'spell-coven-mock-media-enabled'
-const MOCK_MEDIA_MODE_KEY = 'spell-coven-mock-media-mode'
-
-// Default video URL for realistic mock (card demo video)
-const DEFAULT_VIDEO_URL = '/card_demo.webm'
-
-export type MockMediaMode = 'canvas' | 'video'
 
 // Source of mock media activation
 type MockMediaSource = 'url' | 'localStorage' | 'manual'
@@ -33,11 +25,9 @@ type MockMediaSource = 'url' | 'localStorage' | 'manual'
 // Check if mock media should be enabled and what mode
 export function getMockMediaConfig(): {
   enabled: boolean
-  mode: MockMediaMode
   source: MockMediaSource | null
 } {
-  if (typeof window === 'undefined')
-    return { enabled: false, mode: 'canvas', source: null }
+  if (typeof window === 'undefined') return { enabled: false, source: null }
 
   // Check URL parameter first (takes precedence)
   const urlParams = new URLSearchParams(window.location.search)
@@ -47,41 +37,32 @@ export function getMockMediaConfig(): {
   if (mockParam === 'false') {
     try {
       localStorage.removeItem(MOCK_MEDIA_STORAGE_KEY)
-      localStorage.removeItem(MOCK_MEDIA_MODE_KEY)
     } catch {
       // Ignore
     }
-    return { enabled: false, mode: 'canvas', source: null }
+    return { enabled: false, source: null }
   }
 
   if (mockParam === 'true' || mockParam === 'canvas') {
-    return { enabled: true, mode: 'canvas', source: 'url' }
-  }
-  if (mockParam === 'video') {
-    return { enabled: true, mode: 'video', source: 'url' }
+    return { enabled: true, source: 'url' }
   }
 
   // Check localStorage (set via console command) - only if no URL param
   try {
     if (localStorage.getItem(MOCK_MEDIA_STORAGE_KEY) === 'true') {
-      const mode =
-        (localStorage.getItem(MOCK_MEDIA_MODE_KEY) as MockMediaMode) || 'canvas'
-      return { enabled: true, mode, source: 'localStorage' }
+      return { enabled: true, source: 'localStorage' }
     }
   } catch {
     // localStorage may be blocked
   }
 
-  return { enabled: false, mode: 'canvas', source: null }
+  return { enabled: false, source: null }
 }
 
 // Legacy compatibility
 export function shouldEnableMockMedia(): boolean {
   return getMockMediaConfig().enabled
 }
-
-// Test card image URL (Birds of Paradise)
-const TEST_CARD_IMAGE_URL = '/cn2-176-birds-of-paradise.jpg'
 
 // Create a synthetic video stream from a canvas
 export function createSyntheticVideoStream(): MediaStream {
@@ -97,21 +78,6 @@ export function createSyntheticVideoStream(): MediaStream {
   const canvasCtx = ctx
 
   let frameCount = 0
-
-  // Load the test card image
-  const cardImage = new Image()
-  cardImage.src = TEST_CARD_IMAGE_URL
-  let cardImageLoaded = false
-  cardImage.onload = () => {
-    cardImageLoaded = true
-    console.log('[MockMedia] Test card image loaded:', TEST_CARD_IMAGE_URL)
-  }
-  cardImage.onerror = () => {
-    console.warn(
-      '[MockMedia] Failed to load test card image:',
-      TEST_CARD_IMAGE_URL,
-    )
-  }
 
   // Animate the canvas
   function drawFrame() {
@@ -163,61 +129,6 @@ export function createSyntheticVideoStream(): MediaStream {
     const timestamp = new Date().toLocaleTimeString()
     canvasCtx.fillText(timestamp, canvas.width / 2, canvas.height - 40)
 
-    // Draw the test card (Birds of Paradise) in the center
-    // Standard MTG card aspect ratio is approximately 63mm x 88mm (roughly 2.5:3.5 or 5:7)
-    const cardHeight = 280
-    const cardWidth = cardHeight * (63 / 88) // Maintain proper MTG card aspect ratio
-    const cardX = canvas.width / 2 - cardWidth / 2
-    const cardY = canvas.height / 2 - cardHeight / 2 + 10
-
-    if (cardImageLoaded) {
-      // Draw the actual card image rotated 180 degrees (cards are usually upside down in streams)
-      canvasCtx.save()
-      // Translate to card center, rotate 180°, then draw centered
-      const cardCenterX = cardX + cardWidth / 2
-      const cardCenterY = cardY + cardHeight / 2
-      canvasCtx.translate(cardCenterX, cardCenterY)
-      canvasCtx.rotate(Math.PI) // 180 degrees
-      canvasCtx.drawImage(
-        cardImage,
-        -cardWidth / 2,
-        -cardHeight / 2,
-        cardWidth,
-        cardHeight,
-      )
-      canvasCtx.restore()
-
-      // Add a subtle border/glow effect
-      canvasCtx.strokeStyle = '#818cf8' // indigo-400
-      canvasCtx.lineWidth = 2
-      canvasCtx.strokeRect(cardX - 1, cardY - 1, cardWidth + 2, cardHeight + 2)
-    } else {
-      // Fallback: Draw placeholder while image loads
-      canvasCtx.strokeStyle = '#818cf8' // indigo-400
-      canvasCtx.lineWidth = 3
-      canvasCtx.strokeRect(cardX, cardY, cardWidth, cardHeight)
-
-      const artGradient = canvasCtx.createLinearGradient(
-        cardX,
-        cardY,
-        cardX + cardWidth,
-        cardY + cardHeight,
-      )
-      artGradient.addColorStop(0, '#4338ca')
-      artGradient.addColorStop(1, '#7c3aed')
-      canvasCtx.fillStyle = artGradient
-      canvasCtx.fillRect(
-        cardX + 10,
-        cardY + 10,
-        cardWidth - 20,
-        cardHeight - 20,
-      )
-
-      canvasCtx.font = 'bold 14px system-ui'
-      canvasCtx.fillStyle = '#fff'
-      canvasCtx.fillText('Loading...', canvas.width / 2, cardY + cardHeight / 2)
-    }
-
     requestAnimationFrame(drawFrame)
   }
 
@@ -226,66 +137,6 @@ export function createSyntheticVideoStream(): MediaStream {
   // Capture stream from canvas at 30fps
   const stream = canvas.captureStream(30)
   return stream
-}
-
-// Create a video stream from a video file URL
-async function createVideoFileStream(videoUrl: string): Promise<MediaStream> {
-  return new Promise((resolve, reject) => {
-    const video = document.createElement('video')
-    video.src = videoUrl
-    video.muted = true
-    video.loop = true
-    video.playsInline = true
-    video.crossOrigin = 'anonymous'
-
-    video.onloadedmetadata = async () => {
-      try {
-        await video.play()
-
-        // Use captureStream to get MediaStream from video element
-        const stream =
-          (
-            video as HTMLVideoElement & {
-              captureStream?: (frameRate?: number) => MediaStream
-              mozCaptureStream?: (frameRate?: number) => MediaStream
-            }
-          ).captureStream?.(30) ??
-          (
-            video as HTMLVideoElement & {
-              captureStream?: (frameRate?: number) => MediaStream
-              mozCaptureStream?: (frameRate?: number) => MediaStream
-            }
-          ).mozCaptureStream?.(30)
-
-        if (!stream) {
-          console.warn(
-            '[MockMedia] captureStream not supported, falling back to canvas',
-          )
-          resolve(createSyntheticVideoStream())
-          return
-        }
-
-        console.log('[MockMedia] Video file stream created from:', videoUrl)
-        resolve(stream)
-      } catch (err) {
-        console.error('[MockMedia] Error playing video:', err)
-        reject(err)
-      }
-    }
-
-    video.onerror = () => {
-      console.warn('[MockMedia] Failed to load video, falling back to canvas')
-      resolve(createSyntheticVideoStream())
-    }
-
-    // Timeout fallback
-    setTimeout(() => {
-      if (video.readyState < 2) {
-        console.warn('[MockMedia] Video load timeout, falling back to canvas')
-        resolve(createSyntheticVideoStream())
-      }
-    }, 5000)
-  })
 }
 
 // Create a silent audio stream
@@ -339,29 +190,18 @@ let originalEnumerateDevices:
   | null = null
 let originalPermissionsQuery: typeof navigator.permissions.query | null = null
 let isMockEnabled = false
-let currentMode: MockMediaMode = 'canvas'
-
 // Enable mock media APIs
 // persist: true = save to localStorage (for console commands), false = session only (for URL params)
-export function enableMockMedia(
-  mode: MockMediaMode = 'canvas',
-  persist: boolean = true,
-): void {
+export function enableMockMedia(persist: boolean = true): void {
   if (typeof window === 'undefined') return
   if (isMockEnabled) {
     console.log('[MockMedia] Already enabled')
     return
   }
 
-  currentMode = mode
-
   console.log(
     '%c[MockMedia] 🎭 Enabling mock media mode',
     'color: #818cf8; font-weight: bold; font-size: 14px',
-  )
-  console.log(
-    `%c[MockMedia] Mode: ${mode === 'video' ? '📹 Video file (card_demo.webm)' : '🎨 Animated canvas'}`,
-    'color: #a5b4fc',
   )
   console.log(
     `%c[MockMedia] Persistence: ${persist ? '💾 Saved to localStorage' : '⏱️ Session only (use ?mockMedia=true to persist)'}`,
@@ -391,12 +231,7 @@ export function enableMockMedia(
 
     // Add video track if requested
     if (constraints?.video) {
-      let videoStream: MediaStream
-      if (currentMode === 'video') {
-        videoStream = await createVideoFileStream(DEFAULT_VIDEO_URL)
-      } else {
-        videoStream = createSyntheticVideoStream()
-      }
+      const videoStream = createSyntheticVideoStream()
       tracks.push(...videoStream.getVideoTracks())
     }
 
@@ -462,7 +297,6 @@ export function enableMockMedia(
   if (persist) {
     try {
       localStorage.setItem(MOCK_MEDIA_STORAGE_KEY, 'true')
-      localStorage.setItem(MOCK_MEDIA_MODE_KEY, mode)
     } catch {
       // Ignore
     }
@@ -471,10 +305,6 @@ export function enableMockMedia(
   console.log(
     '%c[MockMedia] ✅ Mock media enabled!',
     'color: #4ade80; font-weight: bold',
-  )
-  console.log(
-    '%c[MockMedia] 💡 Commands: disableMockMedia() to disable, enableMockMedia("video") for video file',
-    'color: #94a3b8',
   )
 }
 
@@ -500,12 +330,9 @@ export function disableMockMedia(): void {
   }
 
   isMockEnabled = false
-  currentMode = 'canvas'
-
   // Clear localStorage
   try {
     localStorage.removeItem(MOCK_MEDIA_STORAGE_KEY)
-    localStorage.removeItem(MOCK_MEDIA_MODE_KEY)
   } catch {
     // Ignore
   }
@@ -522,10 +349,8 @@ export function isMockMediaEnabled(): boolean {
 export function initMockMedia(): void {
   if (typeof window === 'undefined')
     return // Expose global functions for console access (these always persist)
-  ;(
-    window as unknown as { enableMockMedia: (mode?: MockMediaMode) => void }
-  ).enableMockMedia = (mode: MockMediaMode = 'canvas') =>
-    enableMockMedia(mode, true)
+  ;(window as unknown as { enableMockMedia: () => void }).enableMockMedia =
+    () => enableMockMedia(true)
   ;(
     window as unknown as { disableMockMedia: typeof disableMockMedia }
   ).disableMockMedia = disableMockMedia
@@ -538,18 +363,18 @@ export function initMockMedia(): void {
   if (config.enabled) {
     // URL params don't persist, localStorage does
     const shouldPersist = config.source === 'localStorage'
-    enableMockMedia(config.mode, shouldPersist)
+    enableMockMedia(shouldPersist)
   } else {
     console.log(
       '%c[MockMedia] 💡 To enable mock camera/microphone:',
       'color: #94a3b8; font-style: italic',
     )
     console.log(
-      '%c   • URL param: ?mockMedia=true (session only) or ?mockMedia=video',
+      '%c   • URL param: ?mockMedia=true (session only)',
       'color: #94a3b8',
     )
     console.log(
-      '%c   • Console: enableMockMedia() (persists) or enableMockMedia("video")',
+      '%c   • Console: enableMockMedia() (persists)',
       'color: #94a3b8',
     )
     console.log(

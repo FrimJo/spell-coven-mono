@@ -16,7 +16,7 @@ describe('FeedbackDialog', () => {
     render(<FeedbackDialog open onOpenChange={vi.fn()} />)
 
     fireEvent.change(screen.getByLabelText('Feedback'), {
-      target: { value: '  The card scanner is great.  ' },
+      target: { value: '  The game room is great.  ' },
     })
     fireEvent.change(screen.getByLabelText('Email (optional)'), {
       target: { value: ' player@example.com ' },
@@ -24,7 +24,7 @@ describe('FeedbackDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send feedback' }))
 
     expect(Sentry.captureFeedback).toHaveBeenCalledWith({
-      message: 'The card scanner is great.',
+      message: 'The game room is great.',
       email: 'player@example.com',
       source: 'beta_banner',
       tags: { feature: 'beta_feedback' },

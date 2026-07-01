@@ -1,9 +1,11 @@
-import { forwardRef, memo } from 'react'
+import type { ReactNode, Ref } from 'react'
+import { memo } from 'react'
 
 import { Card } from '@repo/ui/components/card'
 
 interface PlayerVideoCardProps {
-  children?: React.ReactNode
+  children?: ReactNode
+  ref?: Ref<HTMLDivElement>
 }
 
 /**
@@ -25,17 +27,15 @@ interface PlayerVideoCardProps {
  * </PlayerVideoCard>
  * ```
  */
-export const PlayerVideoCard = memo(
-  forwardRef<HTMLDivElement, PlayerVideoCardProps>(function PlayerVideoCard(
-    { children },
-    ref,
-  ) {
-    return (
-      <Card className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden">
-        <div ref={ref} className="relative min-h-0 flex-1 bg-black">
-          {children}
-        </div>
-      </Card>
-    )
-  }),
-)
+export const PlayerVideoCard = memo(function PlayerVideoCard({
+  children,
+  ref,
+}: PlayerVideoCardProps) {
+  return (
+    <Card className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden">
+      <div ref={ref} className="relative min-h-0 flex-1 bg-black">
+        {children}
+      </div>
+    </Card>
+  )
+})

@@ -1,4 +1,3 @@
-import type { DetectorType } from '@/lib/detectors'
 import type {
   MediaConnectionState,
   MediaTrack,
@@ -7,24 +6,10 @@ import type {
   RemoteMediaStatus,
 } from '@/types/media-session'
 import type { Participant } from '@/types/participant'
-import {
-  memo,
-  Suspense,
-  useEffect,
-  useEffectEvent,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useMediaStreams } from '@/contexts/MediaStreamContext'
 import { usePresence } from '@/contexts/PresenceContext'
 import { useRoomMedia } from '@/contexts/RoomMediaContext'
-import { useCardDetector } from '@/hooks/useCardDetector'
-import {
-  createSilentAudioStream,
-  createSyntheticVideoStream,
-} from '@/lib/mockMedia'
-import { attachVideoStream } from '@/lib/video-stream-utils'
 import { resolvePeerMediaPresence } from '@/types/media-session'
 import { domAnimation, LazyMotion, m } from 'framer-motion'
 import { AlertCircle, Gamepad2, Loader2 } from 'lucide-react'
@@ -33,13 +18,6 @@ import { Card } from '@repo/ui/components/card'
 
 import { LocalVideoCard } from './LocalVideoCard'
 import { MediaPermissionGate } from './MediaPermissionGate'
-import {
-  CardDetectionOverlay,
-  CroppedCanvas,
-  FullResCanvas,
-  PlayerNameBadge,
-  VIDEO_STYLE,
-} from './PlayerVideoCardParts'
 import { RemotePlayerCard } from './RemotePlayerCard'
 
 /**
@@ -52,124 +30,13 @@ const ONLINE_THRESHOLD_MS = 15_000
 // Always a 2x2 grid: 1 local + up to 3 remote slots.
 const GRID_CLASS = 'grid-cols-1 grid-rows-2 lg:grid-cols-2 lg:grid-rows-2'
 
-/**
- * Test stream slot component - renders a synthetic video stream for development testing.
- * Uses the mock media functions to create an animated canvas stream with a test card image.
- */
-interface TestStreamSlotProps {
-  enableCardDetection: boolean
-  detectorType?: DetectorType
-  usePerspectiveWarp: boolean
-  onCardCrop?: (canvas: HTMLCanvasElement) => void
-}
-
-const TestStreamSlot = memo(function TestStreamSlot({
-  enableCardDetection,
-  detectorType,
-  usePerspectiveWarp,
-  onCardCrop,
-}: TestStreamSlotProps) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const [testStream, setTestStream] = useState<MediaStream | null>(null)
-
-  // Effect Event: create synthetic test stream (mount-only setup)
-  const initTestStream = useEffectEvent((): MediaStream => {
-    const videoStream = createSyntheticVideoStream()
-    const audioStream = createSilentAudioStream()
-    const combinedStream = new MediaStream([
-      ...videoStream.getVideoTracks(),
-      ...audioStream.getAudioTracks(),
-    ])
-    setTestStream(combinedStream)
-    return combinedStream
-  })
-
-  // Create the test stream on mount
-  useEffect(() => {
-    const combinedStream = initTestStream()
-    return () => {
-      combinedStream.getTracks().forEach((track) => track.stop())
-    }
-  }, [])
-
-  // Attach stream to video element when ready
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video || !testStream) return
-
-    attachVideoStream(video, testStream)
-  }, [testStream])
-
-  // Initialize card detector for the test stream
-  const { overlayRef, croppedRef, fullResRef } = useCardDetector({
-    videoRef: videoRef,
-    enableCardDetection: enableCardDetection && !!testStream,
-    detectorType,
-    usePerspectiveWarp,
-    onCrop: onCardCrop,
-    reinitializeTrigger: testStream ? 1 : 0,
-  })
-
-  return (
-    <Card className="border-surface-2 bg-surface-1 flex h-full flex-col overflow-hidden">
-      <div className="relative min-h-0 flex-1 bg-black">
-        {testStream ? (
-          <>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              aria-label="Synthetic test camera preview"
-              style={VIDEO_STYLE}
-            />
-            {enableCardDetection && overlayRef && (
-              <CardDetectionOverlay overlayRef={overlayRef} />
-            )}
-            {enableCardDetection && croppedRef && (
-              <CroppedCanvas croppedRef={croppedRef} />
-            )}
-            {enableCardDetection && fullResRef && (
-              <FullResCanvas fullResRef={fullResRef} />
-            )}
-          </>
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Loader2 className="text-brand-muted-foreground size-8 animate-spin" />
-          </div>
-        )}
-
-        <PlayerNameBadge position="bottom-center">
-          <span className="text-white">Test Stream</span>
-        </PlayerNameBadge>
-
-        {/* Indicator that this is a test stream */}
-        <div className="absolute left-3 top-3 z-10">
-          <div className="border-brand/30 bg-brand/20 flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs backdrop-blur-sm">
-            <span className="text-brand-foreground">🧪 Test</span>
-          </div>
-        </div>
-      </div>
-    </Card>
-  )
-})
-
 interface VideoStreamGridProps {
   // Room and user identification (for fetching participants)
   roomId: string
   userId: string
   localPlayerName: string
-  // Card detection
-  /** Detector type to use (opencv, detr, owl-vit) */
-  detectorType?: DetectorType
-  /** Enable perspective warp for corner refinement */
-  usePerspectiveWarp?: boolean
-  /** Callback when a card is cropped */
-  onCardCrop?: (canvas: HTMLCanvasElement) => void
   /** Set of muted player IDs (controlled by parent) */
   mutedPlayers?: Set<string>
-  /** Show a synthetic test stream in an empty slot (for development) */
-  showTestStream?: boolean
 }
 
 interface RemoteGridSession {
@@ -185,13 +52,17 @@ interface RemoteGridSession {
 }
 
 function buildRemotePlayers(participants: Participant[], userId: string) {
-  return participants
-    .filter((participant) => participant.id !== userId)
-    .map((participant) => ({
-      id: participant.id,
-      name: participant.username,
-      participantData: participant,
-    }))
+  return participants.flatMap((participant) =>
+    participant.id === userId
+      ? []
+      : [
+          {
+            id: participant.id,
+            name: participant.username,
+            participantData: participant,
+          },
+        ],
+  )
 }
 
 function isParticipantOnline(lastSeenAt: number, now: number) {
@@ -244,17 +115,12 @@ function buildRemoteGridSessions({
   })
 }
 
-export function VideoStreamGrid({
+function VideoStreamGrid({
   roomId,
   userId,
   localPlayerName,
-  detectorType,
-  usePerspectiveWarp = true,
-  onCardCrop,
   mutedPlayers,
-  showTestStream = false,
 }: VideoStreamGridProps) {
-  const enableCardDetection = !!detectorType
   const effectiveMutedPlayers = useMemo(
     () => mutedPlayers ?? new Set<string>(),
     [mutedPlayers],
@@ -430,10 +296,6 @@ export function VideoStreamGrid({
           <LocalVideoCard
             videoTrack={effectiveLocalVideoTrack}
             isReconnecting={roomMedia.isReconnecting}
-            enableCardDetection={enableCardDetection}
-            detectorType={detectorType}
-            usePerspectiveWarp={usePerspectiveWarp}
-            onCardCrop={onCardCrop}
             roomId={roomId}
             participant={localParticipant}
             currentUser={localParticipant}
@@ -458,27 +320,12 @@ export function VideoStreamGrid({
             localParticipant={localParticipant}
             gameRoomParticipants={gameRoomParticipants}
             isOnline={player.isOnline}
-            enableCardDetection={enableCardDetection}
-            detectorType={detectorType}
-            usePerspectiveWarp={usePerspectiveWarp}
-            onCardCrop={onCardCrop}
           />
         ))}
 
-        {/* Test stream slot - rendered when showTestStream is true and there are empty slots */}
-        {showTestStream && emptySlots > 0 && (
-          <TestStreamSlot
-            key="test-stream-slot"
-            enableCardDetection={enableCardDetection}
-            detectorType={detectorType}
-            usePerspectiveWarp={usePerspectiveWarp}
-            onCardCrop={onCardCrop}
-          />
-        )}
-
         {/* Empty slots for players who haven't joined yet */}
         {Array.from({
-          length: showTestStream ? emptySlots - 1 : emptySlots,
+          length: emptySlots,
         }).map((_, index) => (
           <Card
             key={`empty-slot-${index}`}

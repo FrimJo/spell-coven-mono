@@ -1,10 +1,9 @@
-import type { DetectorType } from '@/lib/detectors'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
-  CardQueryProvider,
-  useCardQueryContext,
-} from '@/contexts/CardQueryContext'
+  CardSearchProvider,
+  useCardSearchContext,
+} from '@/contexts/CardSearchContext'
 import {
   CommanderDamageDialogProvider,
   useCommanderDamageDialog,
@@ -39,17 +38,11 @@ interface GameRoomProps {
   roomId: string
   playerName: string
   onLeaveGame: () => void
-  detectorType?: DetectorType
-  usePerspectiveWarp?: boolean
-  showTestStream?: boolean
 }
 
 function GameRoomContent({
   roomId,
   onLeaveGame,
-  detectorType,
-  usePerspectiveWarp = true,
-  showTestStream = false,
 }: Omit<GameRoomProps, 'playerName'>) {
   // Get authenticated user from Convex Auth (Discord OAuth)
   const { user } = useAuth()
@@ -59,7 +52,7 @@ function GameRoomContent({
   const userId = user?.id ?? ''
   const username = user?.username ?? 'Unknown'
 
-  const { query, clearHistory } = useCardQueryContext()
+  const { clearHistory } = useCardSearchContext()
 
   // Get presence data and actions from context
   const {
@@ -120,20 +113,9 @@ function GameRoomContent({
       isOwner,
       isConnected,
       disconnectReason,
-      detectorType: detectorType ?? 'none',
-      usePerspectiveWarp,
-      showTestStream,
     })
-    Sentry.setTag('detector', detectorType ?? 'none')
     Sentry.setTag('room_connected', String(isConnected))
-  }, [
-    detectorType,
-    disconnectReason,
-    isConnected,
-    isOwner,
-    showTestStream,
-    usePerspectiveWarp,
-  ])
+  }, [disconnectReason, isConnected, isOwner])
 
   // Compute shareable link (only on client)
   const shareLink = useMemo(() => {
@@ -353,10 +335,6 @@ function GameRoomContent({
               onCommandersPanelOpenChange={setCommandersPanelOpen}
               onCopyShareLink={handleCopyShareLink}
               onResetGame={handleResetClick}
-              detectorType={detectorType}
-              usePerspectiveWarp={usePerspectiveWarp}
-              onCardCrop={query}
-              showTestStream={showTestStream}
               onToggleSearchCards={toggleSearchDialog}
             />
           </CommanderDamageDialogProvider>
@@ -380,10 +358,6 @@ interface GameRoomMainLayoutProps {
   onCommandersPanelOpenChange: (open: boolean) => void
   onCopyShareLink: () => void
   onResetGame?: () => void
-  detectorType?: DetectorType
-  usePerspectiveWarp: boolean
-  onCardCrop: ReturnType<typeof useCardQueryContext>['query']
-  showTestStream: boolean
   onToggleSearchCards: () => void
 }
 
@@ -401,10 +375,6 @@ function GameRoomMainLayout({
   onCommandersPanelOpenChange,
   onCopyShareLink,
   onResetGame,
-  detectorType,
-  usePerspectiveWarp,
-  onCardCrop,
-  showTestStream,
   onToggleSearchCards,
 }: GameRoomMainLayoutProps) {
   const commanderDamageDialog = useCommanderDamageDialog()
@@ -455,11 +425,7 @@ function GameRoomMainLayout({
           roomId={roomId}
           userId={userId}
           localPlayerName={username}
-          detectorType={detectorType}
-          usePerspectiveWarp={usePerspectiveWarp}
-          onCardCrop={onCardCrop}
           mutedPlayers={mutedPlayers}
-          showTestStream={showTestStream}
         />
       </div>
     </div>
@@ -470,9 +436,6 @@ function GameRoomMainLayout({
 function GameRoomWithPresence({
   roomId,
   onLeaveGame,
-  detectorType,
-  usePerspectiveWarp,
-  showTestStream,
 }: Omit<GameRoomProps, 'playerName'>) {
   const handleDuplicateSession = useCallback(() => {
     console.log('[GameRoom] Duplicate session detected, showing dialog')
@@ -497,13 +460,7 @@ function GameRoomWithPresence({
       onSessionTransferred={handleSessionTransferred}
     >
       <RoomMediaProvider roomId={roomId}>
-        <GameRoomContent
-          roomId={roomId}
-          onLeaveGame={onLeaveGame}
-          detectorType={detectorType}
-          usePerspectiveWarp={usePerspectiveWarp}
-          showTestStream={showTestStream}
-        />
+        <GameRoomContent roomId={roomId} onLeaveGame={onLeaveGame} />
       </RoomMediaProvider>
     </PresenceProvider>
   )
@@ -512,9 +469,9 @@ function GameRoomWithPresence({
 export function GameRoom(props: GameRoomProps) {
   return (
     <MediaStreamProvider>
-      <CardQueryProvider roomId={props.roomId}>
+      <CardSearchProvider roomId={props.roomId}>
         <GameRoomWithPresence {...props} />
-      </CardQueryProvider>
+      </CardSearchProvider>
     </MediaStreamProvider>
   )
 }

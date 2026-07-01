@@ -68,7 +68,7 @@ export default [
     files: [
       'src/components/VideoStreamGrid.tsx',
       'src/hooks/useAudioOutput.ts',
-      'src/hooks/useCardQuery.ts',
+      'src/hooks/useCardSearchHistory.ts',
       'src/hooks/useConvexPresence.ts',
       'src/hooks/useMediaPermissions.ts',
       'src/routes/__root.tsx',

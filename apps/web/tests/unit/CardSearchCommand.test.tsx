@@ -7,8 +7,8 @@ const mocks = vi.hoisted(() => ({
   setResult: vi.fn(),
 }))
 
-vi.mock('@/contexts/CardQueryContext', () => ({
-  useCardQueryContext: () => ({ setResult: mocks.setResult }),
+vi.mock('@/contexts/CardSearchContext', () => ({
+  useCardSearchContext: () => ({ setResult: mocks.setResult }),
 }))
 
 vi.mock('@/lib/scryfall', () => ({
