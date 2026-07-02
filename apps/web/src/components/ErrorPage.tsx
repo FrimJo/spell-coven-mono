@@ -1,9 +1,17 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as Sentry from '@sentry/react'
 import { useNavigate } from '@tanstack/react-router'
-import { AlertTriangle, Home, RefreshCw, Sparkles } from 'lucide-react'
+import {
+  AlertTriangle,
+  Home,
+  MessageSquareWarning,
+  RefreshCw,
+  Sparkles,
+} from 'lucide-react'
 
 import { Button } from '@repo/ui/components/button'
+
+import { FeedbackDialog } from './FeedbackDialog'
 
 interface ErrorPageProps {
   error?: Error
@@ -12,16 +20,35 @@ interface ErrorPageProps {
 
 export function ErrorPage({ error, reset }: ErrorPageProps) {
   const navigate = useNavigate()
-  const reportedRef = useRef(false)
+  const reportedRef = useRef<{ error: Error; eventId: string } | null>(null)
+  const [feedbackEventId, setFeedbackEventId] = useState<string>()
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
 
   useEffect(() => {
-    if (error && !reportedRef.current) {
-      reportedRef.current = true
-      Sentry.captureException(error, {
-        tags: { source: 'router_default_error' },
-      })
+    if (error && reportedRef.current?.error !== error) {
+      reportedRef.current = {
+        error,
+        eventId: Sentry.captureException(error, {
+          tags: { source: 'router_default_error' },
+        }),
+      }
     }
   }, [error])
+
+  const handleReportIssue = () => {
+    if (!error) return
+
+    if (reportedRef.current?.error !== error) {
+      reportedRef.current = {
+        error,
+        eventId: Sentry.captureException(error, {
+          tags: { source: 'router_default_error' },
+        }),
+      }
+    }
+    setFeedbackEventId(reportedRef.current.eventId)
+    setIsFeedbackOpen(true)
+  }
 
   const handleReturnHome = () => {
     // Use replace: true to properly handle navigation from error states
@@ -30,7 +57,7 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
   }
 
   return (
-    <div className="bg-surface-0 relative min-h-screen overflow-hidden">
+    <div className="bg-surface-0 relative min-h-screen overflow-x-hidden">
       <style>{`
         @keyframes float {
           0% { transform: translateY(0px); }
@@ -61,7 +88,7 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
         <div className="bg-brand/10 absolute bottom-20 right-20 size-96 animate-pulse rounded-full blur-3xl delay-1000" />
       </div>
 
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 text-center">
+      <main className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 py-12 text-center">
         {/* Logo/Icon Area */}
         <div className="animate-float relative mb-8">
           <div className="bg-destructive/20 absolute inset-0 animate-pulse rounded-full blur-3xl" />
@@ -114,13 +141,35 @@ export function ErrorPage({ error, reset }: ErrorPageProps) {
               Return Home
             </Button>
           </div>
+
+          {error && (
+            <div className="border-surface-2 mx-auto max-w-md border-t pt-5">
+              <p className="text-text-muted mb-2 text-sm">
+                Help us trace the miscast by adding a note to this issue.
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-brand-muted-foreground hover:bg-brand/10 hover:text-brand-muted-foreground gap-2"
+                onClick={handleReportIssue}
+              >
+                <MessageSquareWarning className="size-4" />
+                Report this fizzle
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Footer Text */}
-        <div className="text-text-muted absolute bottom-8 text-sm">
-          Spell Coven
-        </div>
-      </div>
+        <div className="text-text-muted mt-12 text-sm">Spell Coven</div>
+      </main>
+
+      <FeedbackDialog
+        open={isFeedbackOpen}
+        onOpenChange={setIsFeedbackOpen}
+        associatedEventId={feedbackEventId}
+        variant="error"
+      />
     </div>
   )
 }

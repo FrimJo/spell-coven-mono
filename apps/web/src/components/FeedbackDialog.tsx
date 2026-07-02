@@ -18,15 +18,23 @@ import { Textarea } from '@repo/ui/components/textarea'
 interface FeedbackDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  associatedEventId?: string
+  variant?: 'general' | 'error'
 }
 
 type SubmissionState = 'editing' | 'submitted' | 'error'
 
-export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
+export function FeedbackDialog({
+  open,
+  onOpenChange,
+  associatedEventId,
+  variant = 'general',
+}: FeedbackDialogProps) {
   const [message, setMessage] = useState('')
   const [email, setEmail] = useState('')
   const [submissionState, setSubmissionState] =
     useState<SubmissionState>('editing')
+  const isErrorReport = variant === 'error'
 
   const resetForm = () => {
     setMessage('')
@@ -48,9 +56,12 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
     try {
       Sentry.captureFeedback({
         message: trimmedMessage,
-        email: email.trim() || undefined,
-        source: 'beta_banner',
-        tags: { feature: 'beta_feedback' },
+        email: isErrorReport ? undefined : email.trim() || undefined,
+        source: isErrorReport ? 'error_page' : 'beta_banner',
+        ...(associatedEventId ? { associatedEventId } : {}),
+        tags: {
+          feature: isErrorReport ? 'error_feedback' : 'beta_feedback',
+        },
       })
       setSubmissionState('submitted')
     } catch {
@@ -67,7 +78,9 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
             <DialogHeader className="text-center sm:text-center">
               <DialogTitle className="text-white">Feedback sent</DialogTitle>
               <DialogDescription className="text-text-muted">
-                Thanks for helping improve Spell Coven.
+                {isErrorReport
+                  ? 'Your note is now attached to this fizzle. Thanks for helping the coven investigate.'
+                  : 'Thanks for helping improve Spell Coven.'}
               </DialogDescription>
             </DialogHeader>
             <Button type="button" onClick={() => handleOpenChange(false)}>
@@ -83,15 +96,20 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                   aria-hidden="true"
                 />
               </div>
-              <DialogTitle className="text-white">Share feedback</DialogTitle>
+              <DialogTitle className="text-white">
+                {isErrorReport ? 'Report this fizzle' : 'Share feedback'}
+              </DialogTitle>
               <DialogDescription className="text-text-muted">
-                Tell us what worked, what did not, or what would make Spell
-                Coven better.
+                {isErrorReport
+                  ? 'The mishap is already logged. Add what you were doing so the coven can trace the miscast.'
+                  : 'Tell us what worked, what did not, or what would make Spell Coven better.'}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-2">
-              <Label htmlFor="feedback-message">Feedback</Label>
+              <Label htmlFor="feedback-message">
+                {isErrorReport ? 'What happened?' : 'Feedback'}
+              </Label>
               <Textarea
                 id="feedback-message"
                 name="feedback"
@@ -102,7 +120,11 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                     setSubmissionState('editing')
                   }
                 }}
-                placeholder="What would you like us to know?"
+                placeholder={
+                  isErrorReport
+                    ? 'What did you try, and what did you expect to happen?'
+                    : 'What would you like us to know?'
+                }
                 required
                 maxLength={2000}
                 rows={6}
@@ -114,21 +136,23 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="feedback-email">Email (optional)</Label>
-              <Input
-                id="feedback-email"
-                name="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                autoComplete="email"
-              />
-              <p className="text-text-muted text-xs">
-                Include your email only if you are happy for us to follow up.
-              </p>
-            </div>
+            {!isErrorReport && (
+              <div className="space-y-2">
+                <Label htmlFor="feedback-email">Email (optional)</Label>
+                <Input
+                  id="feedback-email"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                />
+                <p className="text-text-muted text-xs">
+                  Include your email only if you are happy for us to follow up.
+                </p>
+              </div>
+            )}
 
             {submissionState === 'error' && (
               <p role="alert" className="text-destructive text-sm">
@@ -145,7 +169,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                 Cancel
               </Button>
               <Button type="submit" disabled={!message.trim()}>
-                Send feedback
+                {isErrorReport ? 'Send report' : 'Send feedback'}
               </Button>
             </DialogFooter>
           </form>

@@ -44,4 +44,29 @@ describe('FeedbackDialog', () => {
       expect.objectContaining({ email: undefined }),
     )
   })
+
+  it('attaches an error report to its Sentry issue', () => {
+    render(
+      <FeedbackDialog
+        open
+        onOpenChange={vi.fn()}
+        associatedEventId="error-event-id"
+        variant="error"
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('What happened?'), {
+      target: { value: '  The room failed while I joined.  ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send report' }))
+
+    expect(Sentry.captureFeedback).toHaveBeenCalledWith({
+      message: 'The room failed while I joined.',
+      email: undefined,
+      source: 'error_page',
+      associatedEventId: 'error-event-id',
+      tags: { feature: 'error_feedback' },
+    })
+    expect(screen.getByText('Feedback sent')).toBeTruthy()
+  })
 })
